@@ -229,6 +229,34 @@ const LogisticsManager = () => {
     setTasks(tasks.filter(t => t.id !== id));
   };
 
+  const handleEditTask = (task: MainTask) => {
+    setActiveTab(task.type);
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      date: task.deadline,
+      time: '',
+      location: '',
+      url: '',
+      priority: task.priority
+    });
+    setEditingTask(task);
+    setIsAddDialogOpen(true);
+  };
+
+  const handleShareTask = (task: MainTask) => {
+    const text = `Check out this ${task.type}: ${task.title}\n${task.description || ''}\nDue: ${task.deadline}`;
+    if (navigator.share) {
+      navigator.share({
+        title: task.title,
+        text: text,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(text);
+      toast({ title: "تم نسخ التفاصيل", description: "تم نسخ تفاصيل المهمة للحافظة" });
+    }
+  };
+
   const addSubtask = (taskId: string, title: string) => {
     if (!title.trim()) return;
     const updatedTasks = tasks.map(t => {
@@ -340,7 +368,10 @@ const LogisticsManager = () => {
           <p className="arabic-body text-sm text-muted-foreground">مساحتك لإدارة الوقت والمشاريع</p>
         </div>
 
-        <Dialog open={isaddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isaddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) setEditingTask(null); // Reset editing state on close
+        }}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="gap-2 bg-primary hover:bg-primary/90">
@@ -369,11 +400,12 @@ const LogisticsManager = () => {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="text-right arabic-title">
-                {activeTab === 'task' ? 'إضافة مهمة جديدة' :
-                  activeTab === 'project' ? 'إنشاء مشروع جديد' : 'حجز موعد جديد'}
+                {editingTask ? 'تعديل المهمة' :
+                  activeTab === 'task' ? 'إضافة مهمة جديدة' :
+                    activeTab === 'project' ? 'إنشاء مشروع جديد' : 'حجز موعد جديد'}
               </DialogTitle>
               <DialogDescription className="text-right">
-                قم بتعبئة التفاصيل أدناه
+                {editingTask ? 'قم بتعديل التفاصيل أدناه' : 'قم بتعبئة التفاصيل أدناه'}
               </DialogDescription>
             </DialogHeader>
 
@@ -462,28 +494,28 @@ const LogisticsManager = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-        {/* Column 1: Saved Resources & Shopping */}
+        {/* Column 1: Saved Locations & Shopping */}
         <div className="space-y-6">
-          {/* Saved Sites */}
+          {/* Saved Locations */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="arabic-title text-base flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4 text-blue-500" />
-                  المواقع المحفوظة
+                  <MapPin className="w-4 h-4 text-blue-500" />
+                  المواقع الجغرافية المحفوظة
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2 mb-4">
                 <Input
-                  placeholder="عنوان الموقع"
+                  placeholder="اسم الموقع"
                   className="h-8 text-xs"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 />
                 <Input
-                  placeholder="URL"
+                  placeholder="الرابط أو الإحداثيات"
                   className="h-8 text-xs dir-ltr"
                   value={formData.url}
                   onChange={(e) => setFormData({ ...formData, url: e.target.value })}
@@ -496,7 +528,7 @@ const LogisticsManager = () => {
                 {resources.map(res => (
                   <a key={res.id} href={res.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg group">
                     <div className="bg-blue-100 p-1.5 rounded-full">
-                      <LinkIcon className="w-3 h-3 text-blue-600" />
+                      <MapPin className="w-3 h-3 text-blue-600" />
                     </div>
                     <span className="text-sm font-medium flex-1 truncate">{res.title}</span>
                     <Share2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
@@ -527,7 +559,7 @@ const LogisticsManager = () => {
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {logisticsData?.shopping_list?.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
                     <span className={`text-sm ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.name}</span>
@@ -619,10 +651,10 @@ const LogisticsManager = () => {
 
                   {/* Actions (3 Buttons) */}
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600" onClick={() => handleEditTask(task)}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-purple-600">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-purple-600" onClick={() => handleShareTask(task)}>
                       <Share2 className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => deleteMainTask(task.id)}>

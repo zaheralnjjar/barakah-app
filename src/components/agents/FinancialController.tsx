@@ -63,16 +63,22 @@ const FinancialController = () => {
 
     const totalBalance = financeData.current_balance_ars + (financeData.current_balance_usd * financeData.exchange_rate);
     const availableBalance = totalBalance - financeData.emergency_buffer - financeData.total_debt;
-    const remainingDays = 30; // Assuming monthly calculation
 
-    return Math.max(0, availableBalance / remainingDays);
+    // Exact days calculation with 3 days buffer
+    const today = new Date();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const remainingDays = daysInMonth - today.getDate();
+
+    // Add 3 days buffer as requested
+    return Math.max(0, availableBalance / (remainingDays + 3));
   };
 
   const addTransaction = async () => {
-    if (!newTransaction.amount || !newTransaction.description) {
+    // Description is now optional
+    if (!newTransaction.amount) {
       toast({
         title: "بيانات ناقصة",
-        description: "يرجى إدخال المبلغ والوصف",
+        description: "يرجى إدخال المبلغ",
         variant: "destructive",
       });
       return;
@@ -101,7 +107,8 @@ const FinancialController = () => {
         amount,
         currency: newTransaction.currency,
         type: newTransaction.type,
-        description: newTransaction.description,
+        // Allow empty description
+        description: newTransaction.description || (isExpense ? 'مصروف بدون وصف' : 'دخل بدون وصف'),
         timestamp: new Date().toISOString(),
         source: 'manual_entry'
       }];

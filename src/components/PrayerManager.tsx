@@ -269,7 +269,7 @@ const PrayerManager = () => {
                         `DTSTART;TZID=America/Argentina/Buenos_Aires:${dtStart}`,
                         `DTEND;TZID=America/Argentina/Buenos_Aires:${dtEnd}`,
                         `SUMMARY:${arName}`,
-                        `DESCRIPTION:موعد صلاة ${arName}`,
+                        `DESCRIPTION:موعد صلاة ${arName} في الساعة ${timeStr}\\nالتنبيه قبل الصلاة بـ ${reminderMinutes} دقيقة`,
                         'BEGIN:VALARM',
                         `TRIGGER:-PT${reminderMinutes}M`,
                         'ACTION:DISPLAY',
