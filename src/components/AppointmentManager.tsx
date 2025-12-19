@@ -12,8 +12,19 @@ import {
     Trash2,
     Check,
     ChevronDown,
-    ChevronUp
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Edit2
 } from 'lucide-react';
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Appointment {
     id: string;
@@ -35,6 +46,12 @@ const AppointmentManager: React.FC = () => {
     const [newTime, setNewTime] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [showCompleted, setShowCompleted] = useState(false);
+    const [showCompleted, setShowCompleted] = useState(false);
+
+    // Edit State
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingApt, setEditingApt] = useState<Appointment | null>(null);
+
     const { toast } = useToast();
 
     // Load appointments
@@ -119,14 +136,34 @@ const AppointmentManager: React.FC = () => {
     const deleteAppointment = (id: string) => {
         setAppointments(prev => prev.filter(apt => apt.id !== id));
         toast({ title: '🗑️ تم الحذف' });
-    };
+        const deleteAppointment = (id: string) => {
+            setAppointments(prev => prev.filter(apt => apt.id !== id));
+            toast({ title: '🗑️ تم الحذف' });
+        };
 
-    const exportToCalendar = (apt: Appointment) => {
-        const startDate = new Date(`${apt.date}T${apt.time}`);
-        const endDate = new Date(startDate.getTime() + 3600000); // 1 hour duration
+        const startEdit = (apt: Appointment) => {
+            setEditingApt(apt);
+            setIsEditDialogOpen(true);
+        };
 
-        // Create ICS content
-        const ics = `BEGIN:VCALENDAR
+        const saveEdit = () => {
+            if (!editingApt || !editingApt.title.trim()) return;
+
+            setAppointments(prev => prev.map(a =>
+                a.id === editingApt.id ? editingApt : a
+            ));
+
+            setIsEditDialogOpen(false);
+            setEditingApt(null);
+            toast({ title: '✅ تم تعديل الموعد' });
+        };
+
+        const exportToCalendar = (apt: Appointment) => {
+            const startDate = new Date(`${apt.date}T${apt.time}`);
+            const endDate = new Date(startDate.getTime() + 3600000); // 1 hour duration
+
+            // Create ICS content
+            const ics = `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
 DTSTART:${startDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}
@@ -141,81 +178,81 @@ END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 
-        const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${apt.title}.ics`;
-        link.click();
-        URL.revokeObjectURL(url);
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${apt.title}.ics`;
+            link.click();
+            URL.revokeObjectURL(url);
 
-        toast({ title: '📅 تم تصدير الموعد للتقويم' });
-    };
+            toast({ title: '📅 تم تصدير الموعد للتقويم' });
+        };
 
-    const pendingApts = appointments.filter(a => !a.isCompleted);
-    const completedApts = appointments.filter(a => a.isCompleted);
+        const pendingApts = appointments.filter(a => !a.isCompleted);
+        const completedApts = appointments.filter(a => a.isCompleted);
 
-    const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('ar-EG', {
-            weekday: 'short', month: 'short', day: 'numeric'
-        });
-    };
+        const formatDate = (date: string) => {
+            return new Date(date).toLocaleDateString('ar-EG', {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+        };
 
-    return (
-        <Card>
-            <CardHeader className="pb-3">
-                <CardTitle className="arabic-title text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-500" />
-                    المواعيد والتذكيرات
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Add New Appointment */}
-                <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
-                    <Input
-                        value={newTitle}
-                        onChange={e => setNewTitle(e.target.value)}
-                        placeholder="عنوان الموعد..."
-                        className="arabic-body"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
+        return (
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="arabic-title text-lg flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-500" />
+                        المواعيد والتذكيرات
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Add New Appointment */}
+                    <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
                         <Input
-                            type="date"
-                            value={newDate}
-                            onChange={e => setNewDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
+                            value={newTitle}
+                            onChange={e => setNewTitle(e.target.value)}
+                            placeholder="عنوان الموعد..."
+                            className="arabic-body"
                         />
-                        <Input
-                            type="time"
-                            value={newTime}
-                            onChange={e => setNewTime(e.target.value)}
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <Input
+                                type="date"
+                                value={newDate}
+                                onChange={e => setNewDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                            />
+                            <Input
+                                type="time"
+                                value={newTime}
+                                onChange={e => setNewTime(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={reminderMinutes}
+                                onChange={e => setReminderMinutes(Number(e.target.value))}
+                                className="flex-1 h-10 rounded-md border px-3 arabic-body text-sm"
+                            >
+                                <option value={5}>تذكير قبل 5 دقائق</option>
+                                <option value={15}>تذكير قبل 15 دقيقة</option>
+                                <option value={30}>تذكير قبل 30 دقيقة</option>
+                                <option value={60}>تذكير قبل ساعة</option>
+                            </select>
+                            <Button onClick={addAppointment} size="sm">
+                                <Plus className="w-4 h-4 ml-1" /> إضافة
+                            </Button>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <select
-                            value={reminderMinutes}
-                            onChange={e => setReminderMinutes(Number(e.target.value))}
-                            className="flex-1 h-10 rounded-md border px-3 arabic-body text-sm"
-                        >
-                            <option value={5}>تذكير قبل 5 دقائق</option>
-                            <option value={15}>تذكير قبل 15 دقيقة</option>
-                            <option value={30}>تذكير قبل 30 دقيقة</option>
-                            <option value={60}>تذكير قبل ساعة</option>
-                        </select>
-                        <Button onClick={addAppointment} size="sm">
-                            <Plus className="w-4 h-4 ml-1" /> إضافة
-                        </Button>
-                    </div>
-                </div>
 
-                {/* Pending Appointments */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {pendingApts.length === 0 ? (
-                        <p className="text-center text-muted-foreground arabic-body text-sm py-4">
-                            لا توجد مواعيد قادمة
-                        </p>
-                    ) : (
-                        pendingApts.map(apt => (
+                    {/* Pending Appointments */}
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {pendingApts.length === 0 ? (
+                            <p className="text-center text-muted-foreground arabic-body text-sm py-4">
+                                لا توجد مواعيد قادمة
+                            </p>
+                        ) : (
+                            pendingApts.map(apt => (
                             <div key={apt.id} className="flex items-center gap-2 p-2 bg-white rounded border">
                                 <button onClick={() => toggleComplete(apt.id)} className="text-gray-400 hover:text-green-500">
                                     <Check className="w-5 h-5" />
@@ -229,7 +266,11 @@ END:VCALENDAR`;
                                             <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
                                         </Badge>
                                     </div>
+                                    </div>
                                 </div>
+                                <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
+                                    <Edit2 className="w-4 h-4 text-gray-500" />
+                                </Button>
                                 <Button size="icon" variant="ghost" onClick={() => exportToCalendar(apt)} className="h-8 w-8">
                                     <Calendar className="w-4 h-4 text-blue-500" />
                                 </Button>
@@ -237,7 +278,7 @@ END:VCALENDAR`;
                                     <Trash2 className="w-4 h-4 text-red-500" />
                                 </Button>
                             </div>
-                        ))
+                    ))
                     )}
                 </div>
 
@@ -263,7 +304,54 @@ END:VCALENDAR`;
                     </div>
                 )}
             </CardContent>
-        </Card>
+
+            {/* Edit Dialog */ }
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="arabic-title text-right">تعديل الموعد</DialogTitle>
+                </DialogHeader>
+                {editingApt && (
+                    <div className="space-y-4 py-4">
+                        <Input
+                            value={editingApt.title}
+                            onChange={e => setEditingApt({ ...editingApt, title: e.target.value })}
+                            placeholder="العنوان"
+                            className="text-right"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <Input
+                                type="date"
+                                value={editingApt.date}
+                                onChange={e => setEditingApt({ ...editingApt, date: e.target.value })}
+                            />
+                            <Input
+                                type="time"
+                                value={editingApt.time}
+                                onChange={e => setEditingApt({ ...editingApt, time: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm arabic-body">وقت التذكير (دقيقة)</label>
+                            <select
+                                value={editingApt.reminderMinutes}
+                                onChange={e => setEditingApt({ ...editingApt, reminderMinutes: Number(e.target.value) })}
+                                className="w-full h-10 rounded-md border px-3"
+                            >
+                                <option value={5}>5 دقائق</option>
+                                <option value={15}>15 دقيقة</option>
+                                <option value={30}>30 دقيقة</option>
+                                <option value={60}>ساعة</option>
+                            </select>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={saveEdit} className="w-full">حفظ التعديلات</Button>
+                        </DialogFooter>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+        </Card >
     );
 };
 

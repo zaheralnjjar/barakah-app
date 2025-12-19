@@ -145,6 +145,16 @@ interface SavedResource {
 
 import ShoppingList from '@/components/ShoppingList';
 
+const parseLocation = (loc: string) => {
+  if (!loc) return null;
+  const parts = loc.split(',');
+  if (parts.length !== 2) return null;
+  const lat = parseFloat(parts[0]);
+  const lng = parseFloat(parts[1]);
+  if (isNaN(lat) || isNaN(lng)) return null;
+  return { lat, lng };
+};
+
 const LogisticsManager = () => {
   const [logisticsData, setLogisticsData] = useState(null);
   const [tasks, setTasks] = useState<MainTask[]>([]);

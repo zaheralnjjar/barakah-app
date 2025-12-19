@@ -23,6 +23,7 @@ import SmartDashboard from '@/components/SmartDashboard';
 import SettingsPanel from '@/components/SettingsPanel';
 import AuthForm from '@/components/AuthForm';
 import LocationSaver from '@/components/LocationSaver';
+import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
@@ -162,11 +163,6 @@ const Index = () => {
           <TabsContent value="dashboard" className="animate-fade-in space-y-6">
             <SmartDashboard onNavigateToTab={setActiveTab} />
 
-            {/* Location Saver Full Width */}
-            <div className="w-full">
-              <LocationSaver />
-            </div>
-
             {/* Split Section: Appointments (70%) & Shopping (30%) */}
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
               {/* 70% Width - Appointments & Reminders (First Section) */}
@@ -178,6 +174,11 @@ const Index = () => {
               <div className="lg:col-span-3 h-full">
                 <ShoppingList />
               </div>
+            </div>
+
+            {/* Interactive Map (Bottom Section) */}
+            <div className="w-full">
+              <InteractiveMap />
             </div>
           </TabsContent>
 
