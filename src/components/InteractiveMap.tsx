@@ -22,7 +22,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -215,12 +215,13 @@ const InteractiveMap = () => {
             </CardHeader>
             <CardContent className="p-0">
                 <div className="h-[400px] relative z-0">
-                    <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                    <MapContainer center={mapCenter} zoom={13} zoomControl={false} style={{ height: '100%', width: '100%' }}>
                         <ChangeView center={mapCenter} zoom={15} />
                         <TileLayer
                             attribution='&copy; OpenStreetMap contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
+                        <ZoomControl position="bottomleft" />
                         <LocationMarker
                             position={newItem.location ? { lat: parseFloat(newItem.location.split(',')[0]), lng: parseFloat(newItem.location.split(',')[1]) } : null}
                             setPosition={(pos) => {
@@ -241,11 +242,11 @@ const InteractiveMap = () => {
                         />
                     </MapContainer>
 
-                    {/* Search Overlay */}
-                    <div className="absolute top-4 left-4 right-4 z-[1000] flex gap-2">
+                    {/* Locate Button (Moved to Bottom Left) */}
+                    <div className="absolute bottom-24 left-4 z-[1000]">
                         <Button
                             size="icon"
-                            className="h-10 w-10 bg-white text-blue-600 hover:bg-blue-50 shadow-lg border border-blue-100 rounded-full"
+                            className="h-10 w-10 bg-white text-blue-600 hover:bg-blue-50 shadow-lg border border-blue-100 rounded-md"
                             onClick={() => {
                                 if (navigator.geolocation) {
                                     toast({ title: "جاري تحديد موقعك..." });
@@ -261,9 +262,12 @@ const InteractiveMap = () => {
                                 }
                             }}
                         >
-                            <Locate className="w-5 h-5" />
+                            <Locate className="w-6 h-6" />
                         </Button>
+                    </div>
 
+                    {/* Search Overlay */}
+                    <div className="absolute top-4 left-4 right-4 z-[1000] flex gap-2">
                         <Input
                             placeholder="بحث عن مكان (الشارع، المنطقة)..."
                             className="bg-white/95 backdrop-blur-md h-10 shadow-lg dir-rtl flex-1 rounded-full border-blue-100 px-4"
@@ -400,4 +404,3 @@ const InteractiveMap = () => {
 };
 
 export default InteractiveMap;
-```
