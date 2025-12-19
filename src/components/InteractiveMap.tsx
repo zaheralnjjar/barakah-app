@@ -10,7 +10,8 @@ import {
     Globe,
     Plus,
     Check,
-    Trash2
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -73,30 +74,14 @@ const InteractiveMap = () => {
     const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]);
     const [newItem, setNewItem] = useState({ name: '', location: '' });
     const [formData, setFormData] = useState({ title: '', url: '' });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isLocating, setIsLocating] = useState(false);
     const { toast } = useToast();
 
     const handleSaveLocation = async () => {
         if (!formData.title || !newItem.location) return;
 
         try {
-            const user = (await supabase.auth.getUser()).data.user;
-            if (!user) return;
-
-            // Fetch current list to append
-            const { data } = await supabase.from('logistics_data_2025_12_18_18_42').select('shopping_list').eq('user_id', user.id).single();
-            // Note: We are saving to 'shopping_list' or 'resources'? 
-            // Logic in LogisticsManager was appending to 'shopping_list' or 'resources'. 
-            // Ideally we should have a 'saved_locations' array? 
-            // Looking at LogisticsManager: "handleAddResource" saved to 'resources' state but didn't seem to persist clearly to DB in the shared snippet? 
-            // Actually line 354 of LogisticsManager snippet shows `updatedShoppingList` logic but `handleAddResource` was separate (lines 246+). 
-            // Wait, `handleAddResource` in LogisticsManager updated local state `resources`. 
-            // I will implement a proper DB save here if possible, or just local for now if schema is unknown.
-            // Re-reading LogisticsManager: It had `updateLogisticsData` but `handleAddResource` only updated local `resources` state! It didn't persist to DB!
-            // That explains why user might have issues. 
-            // I will try to save to `resources` column if it exists, or just use `shopping_list` as a fallback or creating a new way.
-            // Actually, the user wants "Saved Locations". I'll stick to a local storage approach or basic visual save for now to match existing behavior unless I see a `resources` column in DB. 
-            // The LogisticsManager had `savedResources` in localStorage (line 167). I will assume LocalStorage is the primary persistence for Resources for now.
-
             const newRes = {
                 id: Date.now().toString(),
                 title: formData.title,
@@ -111,8 +96,76 @@ const InteractiveMap = () => {
             toast({ title: "تم حفظ الموقع", description: "تمت الإضافة للمواقع المحفوظة" });
             setFormData({ title: '', url: '' });
             setNewItem({ name: '', location: '' });
+            setSearchQuery('');
 
         } catch (e) { console.error(e); }
+    };
+
+    const performSearch = async () => {
+        if (!searchQuery) return;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1`);
+            const data = await res.json();
+            if (data && data[0]) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                setMapCenter([lat, lon]);
+                setNewItem({
+                    name: searchQuery,
+                    location: `${lat}, ${lon}`
+                });
+                // Pre-fill save form
+                setFormData({ ...formData, title: searchQuery });
+                toast({ title: "تم العثور على الموقع", description: data[0].display_name });
+            } else {
+                toast({ title: "لم يتم العثور على نتائج", variant: "destructive" });
+            }
+        } catch (err) {
+            console.error(err);
+            toast({ title: "خطأ في البحث", variant: "destructive" });
+        }
+    };
+
+    const handleQuickSave = () => {
+        if (!navigator.geolocation) {
+            toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+            return;
+        }
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const { latitude, longitude } = pos.coords;
+            setMapCenter([latitude, longitude]);
+            setNewItem({ name: 'موقعي الحالي', location: `${latitude}, ${longitude}` });
+
+            // Reverse Geocode
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
+                const data = await res.json();
+                const addressName = data.display_name || `موقع ${new Date().toLocaleTimeString('ar-EG')}`;
+
+                // Save directly
+                const newRes = {
+                    id: Date.now().toString(),
+                    title: addressName.split(',')[0], // Shorten name
+                    url: `geo:${latitude},${longitude}`,
+                    category: 'other'
+                };
+                const existing = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+                localStorage.setItem('baraka_resources', JSON.stringify([...existing, newRes]));
+
+                toast({ title: "تم الحفظ السريع!", description: addressName.split(',')[0] });
+                // Force update UI
+                setFormData({ ...formData });
+
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setIsLocating(false);
+            }
+        }, (err) => {
+            setIsLocating(false);
+            toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" });
+        }, { enableHighAccuracy: true });
     };
 
     return (
@@ -123,6 +176,16 @@ const InteractiveMap = () => {
                         <MapPin className="w-5 h-5 text-blue-600" />
                         <span className="text-primary">الخريطة التفاعلية والمواقع</span>
                     </div>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-2 bg-white text-blue-600 hover:bg-blue-50 border-blue-200"
+                        onClick={handleQuickSave}
+                        disabled={isLocating}
+                    >
+                        {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        حفظ موقعي
+                    </Button>
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -177,27 +240,19 @@ const InteractiveMap = () => {
                         </Button>
 
                         <Input
-                            placeholder="بحث عن مكان..."
+                            placeholder="بحث عن مكان (الشارع، المنطقة)..."
                             className="bg-white/95 backdrop-blur-md h-10 shadow-lg dir-rtl flex-1 rounded-full border-blue-100 px-4"
-                            onKeyDown={async (e) => {
-                                if (e.key === 'Enter') {
-                                    const q = e.currentTarget.value;
-                                    if (!q) return;
-                                    try {
-                                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-                                        const data = await res.json();
-                                        if (data && data[0]) {
-                                            const lat = parseFloat(data[0].lat);
-                                            const lon = parseFloat(data[0].lon);
-                                            setMapCenter([lat, lon]);
-                                            setNewItem({ ...newItem, location: `${lat}, ${lon}`, name: q });
-                                            toast({ title: "تم العثور على الموقع" });
-                                        }
-                                    } catch (err) { console.error(err); }
-                                }
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') performSearch();
                             }}
                         />
-                        <Button size="icon" className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shadow-lg rounded-full">
+                        <Button
+                            size="icon"
+                            className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shadow-lg rounded-full"
+                            onClick={performSearch}
+                        >
                             <Search className="w-5 h-5" />
                         </Button>
                     </div>
