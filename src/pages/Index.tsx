@@ -33,7 +33,17 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('baraka_dashboard_order');
+    if (savedOrder) {
+      try {
+        setDashboardOrder(JSON.parse(savedOrder));
+      } catch (e) { }
+    }
+  }, [activeTab]); // Refresh when switching back to dashboard
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -161,25 +171,29 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="animate-fade-in space-y-6">
-            <SmartDashboard onNavigateToTab={setActiveTab} />
+            {dashboardOrder.map(section => (
+              <div key={section} className="w-full">
+                {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
 
-            {/* Split Section: Appointments (70%) & Shopping (30%) */}
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-              {/* 70% Width - Appointments & Reminders (First Section) */}
-              <div className="lg:col-span-7 h-full">
-                <AppointmentManager />
+                {section === 'appointments' && (
+                  <div className="w-full">
+                    <AppointmentManager />
+                  </div>
+                )}
+
+                {section === 'shopping' && (
+                  <div className="w-full">
+                    <ShoppingList />
+                  </div>
+                )}
+
+                {section === 'map' && (
+                  <div className="w-full">
+                    <InteractiveMap />
+                  </div>
+                )}
               </div>
-
-              {/* 30% Width - Shopping List (On the Right/Side) */}
-              <div className="lg:col-span-3 h-full">
-                <ShoppingList />
-              </div>
-            </div>
-
-            {/* Interactive Map (Bottom Section) */}
-            <div className="w-full">
-              <InteractiveMap />
-            </div>
+            ))}
           </TabsContent>
 
           <TabsContent value="finance" className="animate-fade-in">
