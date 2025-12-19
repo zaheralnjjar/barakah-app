@@ -9,7 +9,8 @@ import {
     Locate,
     Globe,
     Plus,
-    Check
+    Check,
+    Trash2
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -202,7 +203,6 @@ const InteractiveMap = () => {
                     </div>
                 </div>
 
-                {/* Save/Action Form */}
                 <div className="p-4 bg-gray-50 border-t flex gap-2 items-center">
                     <div className="flex-1">
                         <Input
@@ -216,6 +216,52 @@ const InteractiveMap = () => {
                     <Button onClick={handleSaveLocation} className="bg-green-600 hover:bg-green-700 h-10 px-6">
                         حفظ <Check className="w-4 h-4 mr-2" />
                     </Button>
+                </div>
+
+                {/* Saved Locations List */}
+                <div className="max-h-60 overflow-y-auto border-t bg-white">
+                    <div className="p-3 text-xs font-semibold text-gray-500 bg-gray-50 border-b">
+                        المواقع المحفوظة ({JSON.parse(localStorage.getItem('baraka_resources') || '[]').length})
+                    </div>
+                    {JSON.parse(localStorage.getItem('baraka_resources') || '[]').map((res: any) => (
+                        <div key={res.id} className="flex items-center justify-between p-3 border-b hover:bg-blue-50 transition-colors">
+                            <button
+                                className="flex items-center gap-3 flex-1 text-right"
+                                onClick={() => {
+                                    if (res.url.startsWith('geo:')) {
+                                        const [lat, lng] = res.url.replace('geo:', '').split(',').map(Number);
+                                        setMapCenter([lat, lng]);
+                                        setNewItem({ name: res.title, location: `${lat}, ${lng}` });
+                                        toast({ title: "تم الانتقال للموقع", description: res.title });
+                                    }
+                                }}
+                            >
+                                <div className="bg-blue-100 p-2 rounded-full">
+                                    <MapPin className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div>
+                                    <div className="font-medium text-sm text-gray-800">{res.title}</div>
+                                    <div className="text-[10px] text-gray-400 dir-ltr truncate max-w-[200px]">{res.url}</div>
+                                </div>
+                            </button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                    const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+                                    const filtered = current.filter((i: any) => i.id !== res.id);
+                                    localStorage.setItem('baraka_resources', JSON.stringify(filtered));
+                                    toast({ title: "تم الحذف" });
+                                    // Trigger re-render by updating dummy state or relying on parent state if lifted (here strictly local)
+                                    // Simple hack: Update formData to trigger re-render or just use a state for the list.
+                                    setFormData({ ...formData });
+                                }}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    ))}
                 </div>
             </CardContent>
         </Card>
