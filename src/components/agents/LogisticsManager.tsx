@@ -40,7 +40,15 @@ L.Icon.Default.mergeOptions({
 });
 
 // Map Helper Components
-function LocationMarker({ position, setPosition, setLocationName }: any) {
+interface LocationMarkerProps {
+  position: { lat: number; lng: number } | null;
+  setPosition: (pos: L.LatLng) => void;
+  setLocationName: (name: string) => void;
+  onSave: () => void;
+  onShare: (pos: L.LatLng) => void;
+}
+
+function LocationMarker({ position, setPosition, setLocationName, onSave, onShare }: LocationMarkerProps) {
   const map = useMapEvents({
     click(e) {
       setPosition(e.latlng);
@@ -49,7 +57,23 @@ function LocationMarker({ position, setPosition, setLocationName }: any) {
     },
   });
 
-  return position ? <Marker position={position} /> : null;
+  return position ? (
+    <Marker position={position}>
+      <Popup>
+        <div className="flex flex-col gap-2 p-1 min-w-[120px]">
+          <p className="text-xs font-bold text-center mb-1">الموقع المحدد</p>
+          <div className="flex gap-2 justify-center">
+            <Button size="sm" onClick={onSave} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
+              حفظ
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onShare(position as any)} className="h-7 text-xs">
+              مشاركة
+            </Button>
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  ) : null;
 }
 
 function ChangeView({ center, zoom }: any) {
@@ -567,6 +591,16 @@ const LogisticsManager = () => {
                       setMapCenter([pos.lat, pos.lng]);
                     }}
                     setLocationName={(name: string) => setNewItem({ ...newItem, location: name })}
+                    onSave={handleAddResource}
+                    onShare={(pos: any) => {
+                      const url = `https://www.google.com/maps/search/?api=1&query=${pos.lat},${pos.lng}`;
+                      if (navigator.share) {
+                        navigator.share({ title: 'موقع', url }).catch(() => { });
+                      } else {
+                        navigator.clipboard.writeText(url);
+                        toast({ title: "تم نسخ الرابط" });
+                      }
+                    }}
                   />
                 </MapContainer>
 
