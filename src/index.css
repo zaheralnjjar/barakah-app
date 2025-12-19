@@ -1,11 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Barakah (بركة) - Islamic Life Management System Design */
 /* Arabic RTL Support & Islamic Design Tokens */
-
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap');
 
 @layer base {
   :root {
@@ -89,7 +89,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 142 76% 46%;
-    
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 142 76% 46%;
@@ -149,6 +149,7 @@
 }
 
 @layer components {
+
   /* Agent Card Styles */
   .agent-card {
     @apply bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all duration-300;
@@ -177,6 +178,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -188,6 +190,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -199,6 +202,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -206,18 +210,24 @@
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 5px hsl(var(--primary) / 0.3);
   }
+
   50% {
     box-shadow: 0 0 20px hsl(var(--primary) / 0.6);
   }
 }
 
 @keyframes bounce-subtle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-5px);
   }
@@ -244,19 +254,42 @@
 }
 
 /* Staggered animations for lists */
-.stagger-animation > * {
+.stagger-animation>* {
   opacity: 0;
   animation: fade-in 0.4s ease-out forwards;
 }
 
-.stagger-animation > *:nth-child(1) { animation-delay: 0.1s; }
-.stagger-animation > *:nth-child(2) { animation-delay: 0.2s; }
-.stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
-.stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
-.stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
-.stagger-animation > *:nth-child(6) { animation-delay: 0.6s; }
-.stagger-animation > *:nth-child(7) { animation-delay: 0.7s; }
-.stagger-animation > *:nth-child(8) { animation-delay: 0.8s; }
+.stagger-animation>*:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.stagger-animation>*:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stagger-animation>*:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.stagger-animation>*:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.stagger-animation>*:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.stagger-animation>*:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.stagger-animation>*:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.stagger-animation>*:nth-child(8) {
+  animation-delay: 0.8s;
+}
 
 /* Responsive Improvements */
 @media (max-width: 768px) {
