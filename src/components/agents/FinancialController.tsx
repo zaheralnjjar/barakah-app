@@ -224,7 +224,7 @@ const FinancialController = () => {
           <Calculator className="w-10 h-10 text-white" />
         </div>
         <h1 className="text-3xl arabic-title text-primary mb-2">
-          محمد - المراقب المالي
+          المراقب المالي
         </h1>
         <p className="arabic-body text-muted-foreground">
           إدارة الميزانية والحد اليومي وتتبع الديون
