@@ -179,6 +179,13 @@ const LogisticsManager = () => {
     localStorage.setItem('baraka_resources', JSON.stringify(resources));
   }, [resources]);
 
+  // Sync newItem map selection to formData
+  useEffect(() => {
+    if (newItem.location) {
+      setFormData(prev => ({ ...prev, url: `geo:${newItem.location}` }));
+    }
+  }, [newItem.location]);
+
   const loadLogisticsData = async () => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
@@ -608,10 +615,7 @@ const LogisticsManager = () => {
                   {newItem.location && <Check className="w-3 h-3 text-green-500" />}
                 </div>
 
-                {/* Hidden Sync Logic: Ensure formData.url/location gets the map value */}
-                {React.useEffect(() => {
-                  if (newItem.location) setFormData(prev => ({ ...prev, url: `geo:${newItem.location}` }));
-                }, [newItem.location]) as any}
+
               </div>
 
               {/* List */}
