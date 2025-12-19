@@ -12,8 +12,6 @@ import {
     Trash2,
     Check,
     ChevronDown,
-    Check,
-    ChevronDown,
     ChevronUp,
     Edit2
 } from 'lucide-react';
@@ -262,7 +260,6 @@ END:VCALENDAR`;
                                             <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
                                         </Badge>
                                     </div>
-                                    </div>
                                 </div>
                                 <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
                                     <Edit2 className="w-4 h-4 text-gray-500" />
@@ -274,80 +271,80 @@ END:VCALENDAR`;
                                     <Trash2 className="w-4 h-4 text-red-500" />
                                 </Button>
                             </div>
-                ))
+                        ))
                     )}
-            </div>
+                </div>
 
-            {/* Completed Toggle */}
-            {completedApts.length > 0 && (
-                <button
-                    onClick={() => setShowCompleted(!showCompleted)}
-                    className="flex items-center gap-1 text-sm text-muted-foreground arabic-body"
-                >
-                    {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    {completedApts.length} في السجل (سابق)
-                </button>
-            )}
+                {/* Completed Toggle */}
+                {completedApts.length > 0 && (
+                    <button
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        className="flex items-center gap-1 text-sm text-muted-foreground arabic-body"
+                    >
+                        {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {completedApts.length} في السجل (سابق)
+                    </button>
+                )}
 
-            {showCompleted && (
-                <div className="space-y-1 opacity-60">
-                    {completedApts.map(apt => (
-                        <div key={apt.id} className="flex items-center gap-2 p-2 rounded line-through">
-                            <Check className="w-4 h-4 text-green-500" />
-                            <span className="arabic-body text-sm">{apt.title}</span>
+                {showCompleted && (
+                    <div className="space-y-1 opacity-60">
+                        {completedApts.map(apt => (
+                            <div key={apt.id} className="flex items-center gap-2 p-2 rounded line-through">
+                                <Check className="w-4 h-4 text-green-500" />
+                                <span className="arabic-body text-sm">{apt.title}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="arabic-title text-right">تعديل الموعد</DialogTitle>
+                    </DialogHeader>
+                    {editingApt && (
+                        <div className="space-y-4 py-4">
+                            <Input
+                                value={editingApt.title}
+                                onChange={e => setEditingApt({ ...editingApt, title: e.target.value })}
+                                placeholder="العنوان"
+                                className="text-right"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                    type="date"
+                                    value={editingApt.date}
+                                    onChange={e => setEditingApt({ ...editingApt, date: e.target.value })}
+                                />
+                                <Input
+                                    type="time"
+                                    value={editingApt.time}
+                                    onChange={e => setEditingApt({ ...editingApt, time: e.target.value })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm arabic-body">وقت التذكير (دقيقة)</label>
+                                <select
+                                    value={editingApt.reminderMinutes}
+                                    onChange={e => setEditingApt({ ...editingApt, reminderMinutes: Number(e.target.value) })}
+                                    className="w-full h-10 rounded-md border px-3"
+                                >
+                                    <option value={5}>5 دقائق</option>
+                                    <option value={15}>15 دقيقة</option>
+                                    <option value={30}>30 دقيقة</option>
+                                    <option value={60}>ساعة</option>
+                                </select>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={saveEdit} className="w-full">حفظ التعديلات</Button>
+                            </DialogFooter>
                         </div>
-                    ))}
-                </div>
-            )}
-        </CardContent>
-
-            {/* Edit Dialog */ }
-    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle className="arabic-title text-right">تعديل الموعد</DialogTitle>
-            </DialogHeader>
-            {editingApt && (
-                <div className="space-y-4 py-4">
-                    <Input
-                        value={editingApt.title}
-                        onChange={e => setEditingApt({ ...editingApt, title: e.target.value })}
-                        placeholder="العنوان"
-                        className="text-right"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input
-                            type="date"
-                            value={editingApt.date}
-                            onChange={e => setEditingApt({ ...editingApt, date: e.target.value })}
-                        />
-                        <Input
-                            type="time"
-                            value={editingApt.time}
-                            onChange={e => setEditingApt({ ...editingApt, time: e.target.value })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm arabic-body">وقت التذكير (دقيقة)</label>
-                        <select
-                            value={editingApt.reminderMinutes}
-                            onChange={e => setEditingApt({ ...editingApt, reminderMinutes: Number(e.target.value) })}
-                            className="w-full h-10 rounded-md border px-3"
-                        >
-                            <option value={5}>5 دقائق</option>
-                            <option value={15}>15 دقيقة</option>
-                            <option value={30}>30 دقيقة</option>
-                            <option value={60}>ساعة</option>
-                        </select>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={saveEdit} className="w-full">حفظ التعديلات</Button>
-                    </DialogFooter>
-                </div>
-            )}
-        </DialogContent>
-    </Dialog>
-        </Card >
+                    )}
+                </DialogContent>
+            </Dialog>
+        </Card>
     );
 };
 
