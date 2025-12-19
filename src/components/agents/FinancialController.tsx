@@ -16,6 +16,7 @@ import {
   MinusCircle,
   RefreshCw
 } from 'lucide-react';
+import { fetchBNARate } from '@/lib/currency';
 
 const FinancialController = () => {
   const [financeData, setFinanceData] = useState(null);
@@ -46,6 +47,22 @@ const FinancialController = () => {
 
       if (error) throw error;
       setFinanceData(data);
+
+      // Auto-fetch BNA Rate
+      const bnaRate = await fetchBNARate();
+      if (bnaRate && bnaRate !== data.exchange_rate) {
+        // Update local state temporarily to show live data
+        setFinanceData(prev => ({ ...prev, exchange_rate: bnaRate }));
+
+        // Background update to Supabase
+        supabase.from('finance_data_2025_12_18_18_42')
+          .update({ exchange_rate: bnaRate, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .then(({ error }) => {
+            if (error) console.error("Failed to auto-update rate", error);
+            else toast({ title: "تم تحديث سعر الدولار", description: `تم جلب السعر الرسمي: ${bnaRate} ARS` });
+          });
+      }
     } catch (error) {
       console.error('Error loading finance data:', error);
       toast({

@@ -24,7 +24,8 @@ import {
   Clock,
   Layers,
   Search,
-  Globe
+  Globe,
+  Locate
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -146,6 +147,7 @@ const LogisticsManager = () => {
 
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({ name: '', location: '', priority: 'medium' });
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]); // Default: Buenos Aires
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -550,27 +552,52 @@ const LogisticsManager = () => {
             <CardContent className="p-0">
               {/* Map Interface */}
               <div className="h-[250px] relative z-0">
-                <MapContainer center={[-34.6037, -58.3816]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
+                  <ChangeView center={mapCenter} zoom={15} />
                   <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <LocationMarker
                     position={newItem.location ? { lat: parseFloat(newItem.location.split(',')[0]), lng: parseFloat(newItem.location.split(',')[1]) } : null}
-                    setPosition={(pos: any) => setNewItem({ ...newItem, location: `${pos.lat}, ${pos.lng}` })}
+                    setPosition={(pos: any) => {
+                      setNewItem({ ...newItem, location: `${pos.lat}, ${pos.lng}` });
+                      setMapCenter([pos.lat, pos.lng]);
+                    }}
                     setLocationName={(name: string) => setNewItem({ ...newItem, location: name })}
                   />
-                  {/* If search result usually updates center, we handle it via state/effect if needed, simplified here */}
                 </MapContainer>
 
-                {/* Search Overlay */}
-                <div className="absolute top-2 left-2 right-2 z-[1000] flex gap-2">
+                {/* Search & Locate Overlay */}
+                <div className="absolute top-2 left-2 right-2 z-[400] flex gap-2">
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 bg-white text-blue-600 hover:bg-blue-50 shadow-md border border-blue-100"
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        toast({ title: "جاري تحديد موقعك..." });
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            const { latitude, longitude } = pos.coords;
+                            setMapCenter([latitude, longitude]);
+                            setNewItem({ ...newItem, location: `${latitude}, ${longitude}` });
+                            toast({ title: "تم تحديد موقعك الحالي" });
+                          },
+                          (err) => toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" })
+                        );
+                      } else {
+                        toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Locate className="w-5 h-5" />
+                  </Button>
+
                   <Input
                     placeholder="بحث في الخريطة..."
-                    className="bg-white/90 backdrop-blur-sm h-8 text-xs shadow-sm"
+                    className="bg-white/95 backdrop-blur-sm h-8 text-xs shadow-md dir-rtl flex-1"
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter') {
-                        // Simple Nominatim Search
                         const q = e.currentTarget.value;
                         if (!q) return;
                         try {
@@ -579,17 +606,15 @@ const LogisticsManager = () => {
                           if (data && data[0]) {
                             const lat = parseFloat(data[0].lat);
                             const lon = parseFloat(data[0].lon);
-                            // We would ideally use a context or ref to flyTo, but for now user can move manualy or we rely on re-render if we had ChangeView hooked to state.
-                            // Let's rely on manual interaction or simple re-render if I added state for map center.
-                            // For simplicity in this diff, I'll just toast success and let user find it or set the location text directly.
-                            setNewItem({ ...newItem, location: `${lat}, ${lon}`, name: q }); // Auto-fill name?
-                            toast({ title: "تم العثور على الموقع", description: "اضغط على الخريطة للتثبيت الدقيق" });
+                            setMapCenter([lat, lon]);
+                            setNewItem({ ...newItem, location: `${lat}, ${lon}`, name: q });
+                            toast({ title: "تم العثور على الموقع" });
                           }
                         } catch (err) { console.error(err); }
                       }
                     }}
                   />
-                  <Button size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 shadow-sm" onClick={() => { }}>
+                  <Button size="icon" className="h-8 w-8 bg-blue-600 hover:bg-blue-700 shadow-md">
                     <Search className="w-4 h-4" />
                   </Button>
                 </div>
