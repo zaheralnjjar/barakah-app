@@ -119,6 +119,8 @@ interface SavedResource {
   category: 'tool' | 'article' | 'other';
 }
 
+import ShoppingList from '@/components/ShoppingList';
+
 const LogisticsManager = () => {
   const [logisticsData, setLogisticsData] = useState(null);
   const [tasks, setTasks] = useState<MainTask[]>([]);
@@ -662,43 +664,10 @@ const LogisticsManager = () => {
             </CardContent>
           </Card>
 
-          {/* Shopping List */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="arabic-title text-base flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-green-500" />
-                قائمة التسوق
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-3">
-                <Input
-                  placeholder="منتج جديد..."
-                  value={newItem.name}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                  className="h-9 text-sm"
-                />
-                <Button onClick={addShoppingItem} size="sm" className="h-9 w-9 p-0 bg-green-600">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                {logisticsData?.shopping_list?.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-2 rounded-lg border border-gray-100 hover:bg-gray-50">
-                    <span className={`text-sm ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.name}</span>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleShoppingItem(item.id)}>
-                        <Check className={`w-3 h-3 ${item.completed ? 'text-green-500' : 'text-gray-300'}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => deleteShoppingItem(item.id)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Shopping List - Unified Component */}
+          <div className="h-full">
+            <ShoppingList />
+          </div>
         </div>
 
         {/* Column 2 & 3: Tasks and Appointments */}

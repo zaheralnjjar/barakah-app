@@ -11,50 +11,93 @@ interface ShoppingItem {
     completed: boolean;
 }
 
+import { supabase } from '@/integrations/supabase/client';
+
 const STORAGE_KEY = 'baraka_shopping_list';
 
 const ShoppingList = () => {
     const [items, setItems] = useState<ShoppingItem[]>([]);
     const [newItem, setNewItem] = useState('');
+    const [loading, setLoading] = useState(true);
 
+    // Initial Load
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                setItems(JSON.parse(saved));
-            } catch (e) { }
-        } else {
-            // Default items
-            setItems([
-                { id: '1', text: 'خبز', completed: false },
-                { id: '2', text: 'حليب', completed: true },
-            ]);
-        }
+        loadItems();
     }, []);
 
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }, [items]);
+    const loadItems = async () => {
+        try {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (user) {
+                // Fetch from Supabase
+                const { data } = await supabase.from('logistics_data_2025_12_18_18_42').select('shopping_list').eq('user_id', user.id).single();
+                if (data?.shopping_list) {
+                    // Map old format if necessary, or just use it
+                    setItems(data.shopping_list.map((i: any) => ({
+                        id: i.id?.toString() || Date.now().toString(),
+                        text: i.name || i.text,
+                        completed: i.completed
+                    })));
+                } else {
+                    // Fallback/Init empty or migrate local?
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) setItems(JSON.parse(saved));
+                }
+            } else {
+                // Local Storage
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) setItems(JSON.parse(saved));
+                else {
+                    setItems([
+                        { id: '1', text: 'خبز', completed: false },
+                        { id: '2', text: 'حليب', completed: true },
+                    ]);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const addItem = () => {
+    // Save Changes
+    const saveItems = async (newItems: ShoppingItem[]) => {
+        setItems(newItems);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+
+        // Sync to Supabase
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+            const formattedList = newItems.map(i => ({ id: i.id, name: i.text, completed: i.completed }));
+            await supabase.from('logistics_data_2025_12_18_18_42')
+                .update({ shopping_list: formattedList, updated_at: new Date().toISOString() })
+                .eq('user_id', user.id);
+        }
+    };
+
+    const addItem = async () => {
         if (!newItem.trim()) return;
         const item: ShoppingItem = {
             id: Date.now().toString(),
             text: newItem.trim(),
             completed: false
         };
-        setItems([item, ...items]);
+        const updated = [item, ...items];
+        await saveItems(updated);
         setNewItem('');
     };
 
     const toggleItem = (id: string) => {
-        setItems(items.map(item =>
+        const updated = items.map(item =>
             item.id === id ? { ...item, completed: !item.completed } : item
-        ));
+        );
+        saveItems(updated);
     };
 
     const deleteItem = (id: string) => {
-        setItems(items.filter(item => item.id !== id));
+        const updated = items.filter(item => item.id !== id);
+        saveItems(updated);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
