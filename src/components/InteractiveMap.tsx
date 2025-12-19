@@ -11,8 +11,17 @@ import {
     Plus,
     Check,
     Trash2,
-    Loader2
+    Loader2,
+    Share2,
+    Edit2
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -76,6 +85,11 @@ const InteractiveMap = () => {
     const [formData, setFormData] = useState({ title: '', url: '' });
     const [searchQuery, setSearchQuery] = useState('');
     const [isLocating, setIsLocating] = useState(false);
+
+    // Edit State
+    const [editingResource, setEditingResource] = useState<any | null>(null);
+    const [isEditOpen, setIsEditOpen] = useState(false);
+
     const { toast } = useToast();
 
     const handleSaveLocation = async () => {
@@ -168,6 +182,17 @@ const InteractiveMap = () => {
         }, { enableHighAccuracy: true });
     };
 
+    const saveEditResource = () => {
+        if (!editingResource || !editingResource.title.trim()) return;
+        const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+        const updated = current.map((r: any) => r.id === editingResource.id ? editingResource : r);
+        localStorage.setItem('baraka_resources', JSON.stringify(updated));
+        toast({ title: "تم تحديث الاسم" });
+        setIsEditOpen(false);
+        setEditingResource(null);
+        setFormData({ ...formData }); // Trigger re-render
+    };
+
     return (
         <Card className="overflow-hidden border shadow-md bg-white">
             <CardHeader className="pb-3 bg-blue-50/50 border-b">
@@ -217,7 +242,7 @@ const InteractiveMap = () => {
                     </MapContainer>
 
                     {/* Search Overlay */}
-                    <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2">
+                    <div className="absolute top-4 left-4 right-4 z-[1000] flex gap-2">
                         <Button
                             size="icon"
                             className="h-10 w-10 bg-white text-blue-600 hover:bg-blue-50 shadow-lg border border-blue-100 rounded-full"
@@ -299,28 +324,80 @@ const InteractiveMap = () => {
                                     <div className="text-[10px] text-gray-400 dir-ltr truncate max-w-[200px]">{res.url}</div>
                                 </div>
                             </button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => {
-                                    const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-                                    const filtered = current.filter((i: any) => i.id !== res.id);
-                                    localStorage.setItem('baraka_resources', JSON.stringify(filtered));
-                                    toast({ title: "تم الحذف" });
-                                    // Trigger re-render by updating dummy state or relying on parent state if lifted (here strictly local)
-                                    // Simple hack: Update formData to trigger re-render or just use a state for the list.
-                                    setFormData({ ...formData });
-                                }}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                                    onClick={() => {
+                                        let url = res.url;
+                                        if (res.url.startsWith('geo:')) {
+                                            url = `https://www.google.com/maps/search/?api=1&query=${res.url.replace('geo:', '')}`;
+                                        }
+                                        if (navigator.share) {
+                                            navigator.share({ title: res.title, url }).catch(() => { });
+                                        } else {
+                                            navigator.clipboard.writeText(url);
+                                            toast({ title: "تم نسخ الرابط" });
+                                        }
+                                    }}
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-orange-400 hover:text-orange-600 hover:bg-orange-50"
+                                    onClick={() => {
+                                        setEditingResource(res);
+                                        setIsEditOpen(true);
+                                    }}
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                    onClick={() => {
+                                        const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+                                        const filtered = current.filter((i: any) => i.id !== res.id);
+                                        localStorage.setItem('baraka_resources', JSON.stringify(filtered));
+                                        toast({ title: "تم الحذف" });
+                                        setFormData({ ...formData });
+                                    }}
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
             </CardContent>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-right">تعديل اسم الموقع</DialogTitle>
+                    </DialogHeader>
+                    {editingResource && (
+                        <div className="py-4 space-y-4">
+                            <Input
+                                value={editingResource.title}
+                                onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
+                                className="text-right"
+                            />
+                            <DialogFooter>
+                                <Button onClick={saveEditResource} className="w-full">حفظ</Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 };
 
 export default InteractiveMap;
+```
