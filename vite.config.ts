@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import nodePath from 'node:path';
 import { componentTagger } from 'lovable-tagger';
 import path from "path";
+import { VitePWA } from 'vite-plugin-pwa';
 
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
@@ -13,8 +14,8 @@ import * as t from '@babel/types';
 
 
 // CJS/ESM interop for Babel libs
-const traverse: typeof _traverse.default = ( (_traverse as any).default ?? _traverse ) as any;
-const generate: typeof _generate.default = ( (_generate as any).default ?? _generate ) as any;
+const traverse: typeof _traverse.default = ((_traverse as any).default ?? _traverse) as any;
+const generate: typeof _generate.default = ((_generate as any).default ?? _generate) as any;
 
 function cdnPrefixImages(): Plugin {
   const DEBUG = process.env.CDN_IMG_DEBUG === '1';
@@ -216,6 +217,65 @@ export default defineConfig(({ mode }) => {
       mode === 'development' &&
       componentTagger(),
       cdnPrefixImages(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
+        manifest: {
+          name: 'Barakah Life Management',
+          short_name: 'Barakah',
+          description: 'تطبيق إدارة الحياة الشامل',
+          theme_color: '#3b82f6',
+          background_color: '#ffffff',
+          display: 'standalone',
+          orientation: 'portrait',
+          lang: 'ar',
+          dir: 'rtl',
+          icons: [
+            {
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable',
+            },
+          ],
+        },
+        workbox: {
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/nominatim\.openstreetmap\.org/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'map-api-cache',
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/.*tile\.openstreetmap\.org/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'map-tiles-cache',
+                expiration: {
+                  maxEntries: 500,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+              },
+            },
+          ],
+        },
+      }),
     ].filter(Boolean),
     resolve: {
       alias: {
@@ -231,7 +291,7 @@ export default defineConfig(({ mode }) => {
       // In production, this will be false by default unless explicitly set to 'true'
       // In development and test, this will be true by default
       __ROUTE_MESSAGING_ENABLED__: JSON.stringify(
-        mode === 'production' 
+        mode === 'production'
           ? process.env.VITE_ENABLE_ROUTE_MESSAGING === 'true'
           : process.env.VITE_ENABLE_ROUTE_MESSAGING !== 'false'
       ),

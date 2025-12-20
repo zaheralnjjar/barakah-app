@@ -12,7 +12,8 @@ import {
   LayoutDashboard,
   Clock,
   LogOut,
-  Moon
+  Moon,
+  BarChart3
 } from 'lucide-react';
 
 // Components
@@ -27,6 +28,7 @@ import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -147,10 +149,14 @@ const Index = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="w-full grid grid-cols-5 bg-white/50 backdrop-blur-sm p-1">
-            <TabsTrigger value="dashboard" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
+          <TabsList className="w-full grid grid-cols-6 bg-white/50 backdrop-blur-sm p-1">
+            <TabsTrigger value="dashboard" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1" data-tab="dashboard">
               <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-[10px] md:text-sm">الرئيسية</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
+              <BarChart3 className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-[10px] md:text-sm">إحصائيات</span>
             </TabsTrigger>
             <TabsTrigger value="finance" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
               <Calculator className="w-4 h-4 md:w-5 md:h-5" />
@@ -194,6 +200,10 @@ const Index = () => {
                 )}
               </div>
             ))}
+          </TabsContent>
+
+          <TabsContent value="analytics" className="animate-fade-in">
+            <AnalyticsDashboard />
           </TabsContent>
 
           <TabsContent value="finance" className="animate-fade-in">

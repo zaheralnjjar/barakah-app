@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useAppStore } from '@/stores/useAppStore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import QuickActions from '@/components/QuickActions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -134,7 +136,20 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     ];
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6 p-4">
+            {/* Quick Actions Shortcuts */}
+            <div>
+                <h2 className="text-lg font-semibold arabic-title mb-4">اختصارات سريعة</h2>
+                <QuickActions
+                    onAddExpense={() => onNavigateToTab('finance')}
+                    onAddIncome={() => onNavigateToTab('finance')}
+                    onAddAppointment={() => onNavigateToTab('appointments')}
+                    onOpenShoppingList={() => onNavigateToTab('shopping')}
+                    onAddTask={() => onNavigateToTab('productivity')}
+                    onSaveLocation={() => onNavigateToTab('map')}
+                />
+            </div>
+
             {/* Header */}
             <div className="bg-gradient-to-r from-primary/10 to-emerald-500/10 rounded-xl p-4 shadow-sm border border-emerald-100/50">
                 <div className="flex items-center justify-between mb-3">

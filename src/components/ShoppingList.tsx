@@ -3,22 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ShoppingCart, Plus, Trash2, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ShoppingCart, Plus, Trash2, Edit, Share2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShoppingItem {
     id: string;
     text: string;
+    quantity: number;
+    unit: 'kg' | 'unit' | 'liter' | 'gram';
     completed: boolean;
 }
-
-import { supabase } from '@/integrations/supabase/client';
 
 const STORAGE_KEY = 'baraka_shopping_list';
 
 const ShoppingList = () => {
     const [items, setItems] = useState<ShoppingItem[]>([]);
     const [newItem, setNewItem] = useState('');
+    const [newQuantity, setNewQuantity] = useState(1);
+    const [newUnit, setNewUnit] = useState<'kg' | 'unit' | 'liter' | 'gram'>('unit');
     const [loading, setLoading] = useState(true);
+    const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+    const { toast } = useToast();
 
     // Initial Load
     useEffect(() => {
@@ -29,30 +37,22 @@ const ShoppingList = () => {
         try {
             const user = (await supabase.auth.getUser()).data.user;
             if (user) {
-                // Fetch from Supabase
                 const { data } = await supabase.from('logistics_data_2025_12_18_18_42').select('shopping_list').eq('user_id', user.id).single();
                 if (data?.shopping_list) {
-                    // Map old format if necessary, or just use it
                     setItems(data.shopping_list.map((i: any) => ({
                         id: i.id?.toString() || Date.now().toString(),
                         text: i.name || i.text,
+                        quantity: i.quantity || 1,
+                        unit: i.unit || 'unit',
                         completed: i.completed
                     })));
                 } else {
-                    // Fallback/Init empty or migrate local?
                     const saved = localStorage.getItem(STORAGE_KEY);
                     if (saved) setItems(JSON.parse(saved));
                 }
             } else {
-                // Local Storage
                 const saved = localStorage.getItem(STORAGE_KEY);
                 if (saved) setItems(JSON.parse(saved));
-                else {
-                    setItems([
-                        { id: '1', text: 'خبز', completed: false },
-                        { id: '2', text: 'حليب', completed: true },
-                    ]);
-                }
             }
         } catch (e) {
             console.error(e);
@@ -61,17 +61,23 @@ const ShoppingList = () => {
         }
     };
 
-    // Save Changes
     const saveItems = async (newItems: ShoppingItem[]) => {
         setItems(newItems);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
 
-        // Sync to Supabase
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
-            const formattedList = newItems.map(i => ({ id: i.id, name: i.text, completed: i.completed }));
             await supabase.from('logistics_data_2025_12_18_18_42')
-                .update({ shopping_list: formattedList, updated_at: new Date().toISOString() })
+                .update({
+                    shopping_list: newItems.map(i => ({
+                        id: i.id,
+                        name: i.text,
+                        quantity: i.quantity,
+                        unit: i.unit,
+                        completed: i.completed
+                    })),
+                    updated_at: new Date().toISOString()
+                })
                 .eq('user_id', user.id);
         }
     };
@@ -81,11 +87,16 @@ const ShoppingList = () => {
         const item: ShoppingItem = {
             id: Date.now().toString(),
             text: newItem.trim(),
+            quantity: newQuantity,
+            unit: newUnit,
             completed: false
         };
         const updated = [item, ...items];
         await saveItems(updated);
         setNewItem('');
+        setNewQuantity(1);
+        setNewUnit('unit');
+        toast({ title: 'تمت الإضافة', description: 'تم إضافة العنصر للقائمة' });
     };
 
     const toggleItem = (id: string) => {
@@ -98,66 +109,200 @@ const ShoppingList = () => {
     const deleteItem = (id: string) => {
         const updated = items.filter(item => item.id !== id);
         saveItems(updated);
+        toast({ title: 'تم الحذف', description: 'تم حذف العنصر من القائمة' });
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            addItem();
+    const startEdit = (item: ShoppingItem) => {
+        setEditingItem(item);
+    };
+
+    const saveEdit = () => {
+        if (!editingItem) return;
+        const updated = items.map(item =>
+            item.id === editingItem.id ? editingItem : item
+        );
+        saveItems(updated);
+        setEditingItem(null);
+        toast({ title: 'تم التحديث', description: 'تم تحديث العنصر بنجاح' });
+    };
+
+    const shareList = async () => {
+        const listText = items
+            .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}`)
+            .join('\n');
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'قائمة التسوق - بركة',
+                    text: listText,
+                });
+                toast({ title: 'تمت المشاركة', description: 'تم مشاركة القائمة بنجاح' });
+            } catch (err) {
+                console.error(err);
+            }
+        } else {
+            // Fallback: copy to clipboard
+            await navigator.clipboard.writeText(listText);
+            toast({ title: 'تم النسخ', description: 'تم نسخ القائمة للحافظة' });
         }
     };
 
+    const getUnitLabel = (unit: string) => {
+        const labels = {
+            'kg': 'كيلو',
+            'unit': 'وحدة',
+            'liter': 'لتر',
+            'gram': 'جرام'
+        };
+        return labels[unit as keyof typeof labels] || unit;
+    };
+
+    if (loading) return <div className="text-center p-4">جاري التحميل...</div>;
+
+    const completedCount = items.filter(i => i.completed).length;
+
     return (
-        <Card className="h-full bg-white shadow-sm border-gray-100 flex flex-col">
-            <CardHeader className="pb-3 border-b border-gray-50 px-4 py-3 shrink-0">
-                <CardTitle className="arabic-title text-base flex items-center gap-2 text-primary">
-                    <ShoppingCart className="w-4 h-4 text-orange-500" />
-                    قائمة التسوق
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 flex-1 flex flex-col min-h-0">
-                <div className="flex gap-2 mb-3 mt-1 shrink-0">
-                    <Button
-                        size="sm"
-                        onClick={addItem}
-                        className="bg-orange-500 hover:bg-orange-600 text-white h-8 w-8 p-0 rounded-full shrink-0"
-                    >
-                        <Plus className="w-4 h-4" />
+        <Card className="w-full">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-xl">
+                            <ShoppingCart className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-xl arabic-title">قائمة التسوق</CardTitle>
+                            <p className="text-sm text-gray-500">
+                                {completedCount} من {items.length} مكتمل
+                            </p>
+                        </div>
+                    </div>
+                    <Button onClick={shareList} variant="outline" size="sm">
+                        <Share2 className="w-4 h-4 ml-2" />
+                        مشاركة
                     </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {/* Add Item Form */}
+                <div className="flex gap-2 mb-4 flex-wrap">
                     <Input
+                        placeholder="أضف عنصر جديد..."
                         value={newItem}
                         onChange={(e) => setNewItem(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                        placeholder="إضافة غرض..."
-                        className="h-8 text-right text-sm"
+                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                        className="flex-1 min-w-[150px]"
                     />
+                    <Input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={newQuantity}
+                        onChange={(e) => setNewQuantity(parseFloat(e.target.value) || 1)}
+                        className="w-24"
+                        placeholder="الكمية"
+                    />
+                    <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
+                        <SelectTrigger className="w-28">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="unit">وحدة</SelectItem>
+                            <SelectItem value="kg">كيلو</SelectItem>
+                            <SelectItem value="gram">جرام</SelectItem>
+                            <SelectItem value="liter">لتر</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button onClick={addItem} className="bg-green-600 hover:bg-green-700">
+                        <Plus className="w-4 h-4" />
+                    </Button>
                 </div>
 
-                <div className="space-y-1 overflow-y-auto custom-scrollbar flex-1 -mr-2 pr-2">
-                    {items.length === 0 ? (
-                        <p className="text-center text-gray-400 text-xs py-4 arabic-body">القائمة فارغة</p>
-                    ) : (
-                        items.map(item => (
-                            <div key={item.id} className="group flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteItem(item.id)}
-                                    className="h-6 w-6 p-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="w-3 h-3" />
-                                </Button>
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                    <span className={`arabic-body text-sm truncate ${item.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                                        {item.text}
-                                    </span>
-                                    <Checkbox
-                                        checked={item.completed}
-                                        onCheckedChange={() => toggleItem(item.id)}
-                                        className="h-4 w-4 border-gray-300 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                                    />
-                                </div>
+                {/* Items List */}
+                <div className="space-y-2">
+                    {items.map((item) => (
+                        <div
+                            key={item.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border ${item.completed ? 'bg-gray-50' : 'bg-white'
+                                }`}
+                        >
+                            <Checkbox
+                                checked={item.completed}
+                                onCheckedChange={() => toggleItem(item.id)}
+                            />
+                            <div className="flex-1">
+                                <p className={`${item.completed ? 'line-through text-gray-400' : ''}`}>
+                                    {item.text}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {item.quantity} {getUnitLabel(item.unit)}
+                                </p>
                             </div>
-                        ))
+                            <div className="flex gap-1">
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => startEdit(item)}
+                                            className="h-8 w-8"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>تعديل العنصر</DialogTitle>
+                                        </DialogHeader>
+                                        {editingItem && editingItem.id === item.id && (
+                                            <div className="space-y-4">
+                                                <Input
+                                                    value={editingItem.text}
+                                                    onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
+                                                    placeholder="اسم العنصر"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    min="0.1"
+                                                    step="0.1"
+                                                    value={editingItem.quantity}
+                                                    onChange={(e) => setEditingItem({ ...editingItem, quantity: parseFloat(e.target.value) })}
+                                                    placeholder="الكمية"
+                                                />
+                                                <Select
+                                                    value={editingItem.unit}
+                                                    onValueChange={(v: any) => setEditingItem({ ...editingItem, unit: v })}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="unit">وحدة</SelectItem>
+                                                        <SelectItem value="kg">كيلو</SelectItem>
+                                                        <SelectItem value="gram">جرام</SelectItem>
+                                                        <SelectItem value="liter">لتر</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button onClick={saveEdit} className="w-full">
+                                                    حفظ
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </DialogContent>
+                                </Dialog>
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => deleteItem(item.id)}
+                                    className="h-8 w-8 text-red-500 hover:text-red-700"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                    {items.length === 0 && (
+                        <p className="text-center text-gray-400 py-8">لا توجد عناصر في القائمة</p>
                     )}
                 </div>
             </CardContent>

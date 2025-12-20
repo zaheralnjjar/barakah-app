@@ -9,14 +9,25 @@ import {
     LogOut,
     Layout,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    RefreshCw,
+    Download,
+    Globe
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import DataBackup from '@/components/DataBackup';
+import { useCloudSync } from '@/hooks/useCloudSync';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
+import { useAppStore } from '@/stores/useAppStore';
+import CategoryManager from '@/components/CategoryManager';
 
 const SettingsPanel = () => {
     const { toast } = useToast();
+    const { t } = useTranslation();
+    const { syncNow, pullData, isSyncing } = useCloudSync();
+    const lastSync = useAppStore(s => s.lastSync);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -97,32 +108,67 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
-            {/* Profile Section */}
+            {/* Cloud Sync Section */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <User className="w-5 h-5 text-primary" />
-                        الملف الشخصي
+                        <RefreshCw className="w-5 h-5 text-green-600" />
+                        {t('sync.syncNow')}
                     </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        مزامنة البيانات مع السحابة
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-2xl">👤</span>
-                        </div>
-                        <div>
-                            <p className="font-bold">المستخدم</p>
-                            <p className="text-sm text-gray-500">user@example.com</p>
-                        </div>
+                    {lastSync && (
+                        <p className="text-sm text-gray-500">
+                            {t('sync.lastSync')}: {new Date(lastSync).toLocaleString('ar-EG')}
+                        </p>
+                    )}
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={syncNow}
+                            disabled={isSyncing}
+                            className="flex-1"
+                            data-action="sync-now"
+                        >
+                            {isSyncing ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                                    {t('sync.syncing')}
+                                </>
+                            ) : (
+                                <>
+                                    <RefreshCw className="w-4 h-4 ml-2" />
+                                    {t('sync.syncNow')}
+                                </>
+                            )}
+                        </Button>
+                        <Button
+                            onClick={pullData}
+                            disabled={isSyncing}
+                            variant="outline"
+                            className="flex-1"
+                        >
+                            <Download className="w-4 h-4 ml-2" />
+                            {t('sync.pullData')}
+                        </Button>
                     </div>
-                    <Button variant="outline" className="w-full justify-start text-red-500 hover:text-red-600" onClick={handleLogout}>
-                        <LogOut className="w-4 h-4 ml-2" />
-                        تسجيل خروج
-                    </Button>
                 </CardContent>
             </Card>
 
-            {/* Prayer Times Section Removed from here - Moved to PrayerManager */}
+            {/* Financial Categories */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Database className="w-5 h-5 text-purple-600" />
+                        الفئات المالية
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CategoryManager />
+                </CardContent>
+            </Card>
 
             {/* Backup & Data */}
             <Card>

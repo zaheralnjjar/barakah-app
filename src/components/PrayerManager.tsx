@@ -14,7 +14,8 @@ import {
     FileText,
     Eye,
     LogOut,
-    Edit2
+    Edit2,
+    CheckCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatNumberToLocale } from '@/lib/utils';
+import { generatePrayerTimesICS } from '@/lib/icsExport';
 
 interface DailyPrayer {
     date: string;
@@ -48,7 +50,10 @@ const PrayerManager = () => {
 
     // Export Calendar States
     const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-    const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0].substring(0, 7));
+    const [exportUrl, setExportUrl] = useState<string | null>(null);
+    const [exportCount, setExportCount] = useState(0);
+    const [showDownloadDialog, setShowDownloadDialog] = useState(false);
     const [exportEndDate, setExportEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [selectedPrayers, setSelectedPrayers] = useState({
@@ -196,36 +201,45 @@ const PrayerManager = () => {
             return;
         }
 
-        const prayers = [
-            { name: 'Fajr', arName: 'الفجر', hour: 5, minute: 30 },
-            { name: 'Dhuhr', arName: 'الظهر', hour: 12, minute: 45 },
-            { name: 'Asr', arName: 'العصر', hour: 16, minute: 15 },
-            { name: 'Maghrib', arName: 'المغرب', hour: 19, minute: 30 },
-            { name: 'Isha', arName: 'العشاء', hour: 21, minute: 0 },
-        ];
-
-        // Use standard line endings for ICS (CRLF)
         const CRLF = '\r\n';
+        const now = new Date();
+        const dtStamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-        let icsContent = [
+        // Helper to format date for ICS
+        const formatDate = (dateStr: string, timeStr: string): { start: string, end: string } => {
+            const [hour, minute] = timeStr.split(':').map(Number);
+            // Create date in local time
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(5, 7)) - 1;
+            const day = parseInt(dateStr.substring(8, 10));
+
+            const startDate = new Date(year, month, day, hour, minute);
+            const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 mins later
+
+            // Format as YYYYMMDDTHHMMSS
+            const format = (d: Date) => {
+                return d.getFullYear() +
+                    (d.getMonth() + 1).toString().padStart(2, '0') +
+                    d.getDate().toString().padStart(2, '0') + 'T' +
+                    d.getHours().toString().padStart(2, '0') +
+                    d.getMinutes().toString().padStart(2, '0') + '00';
+            };
+
+            return { start: format(startDate), end: format(endDate) };
+        };
+
+        const headers = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             'PRODID:-//Barakah System//Prayer Times//EN',
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
-            'X-WR-CALNAME:أوقات الصلاة - نظام بركة',
-            'X-WR-TIMEZONE:America/Argentina/Buenos_Aires',
-            'BEGIN:VTIMEZONE',
-            'TZID:America/Argentina/Buenos_Aires',
-            'X-LIC-LOCATION:America/Argentina/Buenos_Aires',
-            'BEGIN:STANDARD',
-            'TZOFFSETFROM:-0300',
-            'TZOFFSETTO:-0300',
-            'TZNAME:-03',
-            'DTSTART:19700101T000000',
-            'END:STANDARD',
-            'END:VTIMEZONE'
-        ].join(CRLF);
+            'X-WR-CALNAME:أوقات الصلاة',
+            'X-WR-TIMEZONE:Asia/Riyadh' // Defaulting to Riyadh as common baseline for Arabic apps, or can be omitted for floating time
+        ];
+
+        let events: string[] = [];
+        let eventCount = 0;
 
         const mapping = {
             Fajr: 'fajr',
@@ -235,12 +249,7 @@ const PrayerManager = () => {
             Isha: 'isha'
         };
 
-        let eventCount = 0;
-
-        monthlySchedule.forEach(day => {
-            const dateStr = day.date.replace(/-/g, ''); // YYYYMMDD
-
-            // Validate date
+        monthlySchedule.forEach((day, index) => {
             if (!day.date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
 
             Object.keys(selectedPrayers).forEach(prayerKey => {
@@ -248,61 +257,50 @@ const PrayerManager = () => {
                     const timeStr = day[mapping[prayerKey as keyof typeof mapping] as keyof DailyPrayer];
                     if (!timeStr) return;
 
-                    const [hour, minute] = timeStr.split(':').map(Number);
-                    if (isNaN(hour) || isNaN(minute)) return;
-
-                    const dtStart = `${dateStr}T${hour.toString().padStart(2, '0')}${minute.toString().padStart(2, '0')}00`;
-
-                    // Assume 30 mins duration
-                    let endHour = hour;
-                    let endMinute = minute + 30;
-                    if (endMinute >= 60) {
-                        endHour += 1;
-                        endMinute -= 60;
-                    }
-                    const dtEnd = `${dateStr}T${endHour.toString().padStart(2, '0')}${endMinute.toString().padStart(2, '0')}00`;
-
+                    const dates = formatDate(day.date, timeStr);
                     const arName = prayerKey === 'Fajr' ? 'الفجر' : prayerKey === 'Dhuhr' ? 'الظهر' : prayerKey === 'Asr' ? 'العصر' : prayerKey === 'Maghrib' ? 'المغرب' : 'العشاء';
+                    const uid = `${day.date}-${prayerKey}-${now.getTime()}-${index}@barakah.app`;
 
-                    const eventBlock = [
+                    const event = [
                         'BEGIN:VEVENT',
-                        `DTSTART;TZID=America/Argentina/Buenos_Aires:${dtStart}`,
-                        `DTEND;TZID=America/Argentina/Buenos_Aires:${dtEnd}`,
-                        `SUMMARY:${arName}`,
-                        `DESCRIPTION:موعد صلاة ${arName} في الساعة ${timeStr}\\nالتنبيه قبل الصلاة بـ ${reminderMinutes} دقيقة`,
+                        `UID:${uid}`,
+                        `DTSTAMP:${dtStamp}`,
+                        `DTSTART:${dates.start}`,
+                        `DTEND:${dates.end}`,
+                        `SUMMARY:صلاة ${arName}`,
+                        `DESCRIPTION:موعد صلاة ${arName}`,
                         'BEGIN:VALARM',
                         `TRIGGER:-PT${reminderMinutes}M`,
                         'ACTION:DISPLAY',
-                        `DESCRIPTION:تذكير: اقترب موعد صلاة ${arName}`,
+                        `DESCRIPTION:تذكير للصلاة`,
                         'END:VALARM',
                         'END:VEVENT'
                     ].join(CRLF);
 
-                    icsContent += CRLF + eventBlock;
+                    events.push(event);
                     eventCount++;
                 }
             });
         });
 
-        icsContent += CRLF + 'END:VCALENDAR';
-
         if (eventCount === 0) {
-            toast({ title: 'خطأ', description: 'لم يتم العثور على أحداث صالحة للتصدير', variant: "destructive" });
+            toast({ title: 'خطأ', description: 'لم يتم العثور على أحداث صالحة', variant: "destructive" });
             return;
         }
 
+        const icsContent = [...headers, ...events, 'END:VCALENDAR'].join(CRLF);
+
+        // Create blob with strict MIME type
         const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `prayer-times-${exportStartDate}.ics`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
 
+        // Manual Download Trigger
+        setExportUrl(url);
+        setExportCount(eventCount);
+        setShowDownloadDialog(true);
         setIsExportDialogOpen(false);
-        toast({ title: '✅ تم تصدير التقويم', description: `تم تصدير ${eventCount} موعد صلاة` });
     };
+
 
     return (
         <Card className="max-w-4xl mx-auto shadow-md">
@@ -421,6 +419,41 @@ const PrayerManager = () => {
                                             <Download className="w-4 h-4 ml-2" />
                                             تحميل ملف .ics
                                         </Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Manual Download Confirmation Dialog */}
+                            <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle className="arabic-text text-green-700 flex items-center gap-2">
+                                            <CheckCircle className="w-5 h-5" />
+                                            تم تجهيز ملف التقويم
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                                            <p className="font-bold text-lg mb-2">{exportCount} موعد صلاة</p>
+                                            <p className="text-sm text-gray-600">جاهزة للتحميل والإضافة إلى تقويمك</p>
+                                        </div>
+
+                                        <a
+                                            href={exportUrl || '#'}
+                                            download={`prayers-${exportStartDate}.ics`}
+                                            className="flex items-center justify-center gap-2 w-full p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                            onClick={() => {
+                                                setTimeout(() => setShowDownloadDialog(false), 2000);
+                                                toast({ title: "جاري التحميل..." });
+                                            }}
+                                        >
+                                            <Download className="w-5 h-5" />
+                                            اضغط هنا لتحميل الملف
+                                        </a>
+
+                                        <p className="text-xs text-center text-gray-500 mt-2">
+                                            بعد التحميل، افتح الملف لإضافة المواعيد إلى التقويم
+                                        </p>
                                     </div>
                                 </DialogContent>
                             </Dialog>
