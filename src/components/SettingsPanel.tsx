@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
     Settings,
@@ -28,6 +29,7 @@ const SettingsPanel = () => {
     const { t } = useTranslation();
     const { syncNow, pullData, isSyncing } = useCloudSync();
     const lastSync = useAppStore(s => s.lastSync);
+    const quickActions = useAppStore(s => s.quickActions);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -105,6 +107,51 @@ const SettingsPanel = () => {
                             </div>
                         </div>
                     ))}
+                </CardContent>
+            </Card>
+
+            {/* Quick Actions Customization */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Settings className="w-5 h-5 text-orange-600" />
+                        تخصيص الاختصارات السريعة
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">اختر الأزرار التي تظهر في لوحة التحكم</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                        {[
+                            { id: 'expense', label: 'إضافة مصروف' },
+                            { id: 'income', label: 'إضافة دخل' },
+                            { id: 'appointment', label: 'إضافة موعد' },
+                            { id: 'shopping', label: 'قائمة التسوق' },
+                            { id: 'task', label: 'إضافة مهمة' },
+                            { id: 'location', label: 'حفظ الموقع' },
+                        ].map((action) => (
+                            <div key={action.id} className="flex items-center space-x-2 space-x-reverse justify-end bg-gray-50 p-3 rounded-lg border">
+                                <label
+                                    htmlFor={`action-${action.id}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 text-right"
+                                >
+                                    {action.label}
+                                </label>
+                                <Checkbox
+                                    id={`action-${action.id}`}
+                                    checked={quickActions.includes(action.id)}
+                                    onCheckedChange={(checked) => {
+                                        let newActions;
+                                        if (checked) {
+                                            newActions = [...quickActions, action.id];
+                                        } else {
+                                            newActions = quickActions.filter(id => id !== action.id);
+                                        }
+                                        useAppStore.getState().setQuickActions(newActions);
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -198,7 +245,7 @@ const SettingsPanel = () => {
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 };
 

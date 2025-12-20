@@ -38,11 +38,13 @@ interface SavedLocation {
     createdAt: string;
 }
 
-const STORAGE_KEY = 'baraka_saved_locations';
+import { supabase } from '@/integrations/supabase/client';
+import { TABLES } from '@/lib/tableNames';
 
 const LocationSaver: React.FC = () => {
     const [locations, setLocations] = useState<SavedLocation[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Add Dialog
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -59,22 +61,59 @@ const LocationSaver: React.FC = () => {
 
     const { toast } = useToast();
 
-    // Load saved locations & Initialize with requested defaults if empty
+    // Load saved locations from Supabase
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                setLocations(JSON.parse(saved));
-            } catch (e) { }
-        } else {
-            setLocations([]);
-        }
-    }, [toast]);
+        fetchLocations();
+    }, []);
 
-    // Save to localStorage
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
-    }, [locations]);
+    const fetchLocations = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from(TABLES.logistics)
+                .select('locations')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data && data.locations) {
+                // Ensure data.locations is strictly treated as SavedLocation[]
+                const locs = Array.isArray(data.locations) ? data.locations as any[] : [];
+                setLocations(locs);
+            }
+        } catch (error) {
+            console.error('Error fetching locations:', error);
+        }
+    };
+
+    const updateLocationsInDB = async (newLocations: SavedLocation[]) => {
+        setIsSyncing(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { error } = await supabase
+                .from(TABLES.logistics)
+                .update({
+                    locations: newLocations as any, // Cast to any for JSONB compatibility
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error syncing locations:', error);
+            toast({ title: 'فشل المزامنة', variant: 'destructive' });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    // Replace localStorage effect with DB sync effect
+    // We only want to sync when locations change due to USER ACTION, not initial load.
+    // However, React effects run on mount. So we need to be careful not to overwrite DB with empty array if fetch is slow.
+    // Better pattern: Call updateLocationsInDB directly in add/edit/delete functions instead of useEffect.
 
     const getCurrentLocation = useCallback(async (): Promise<GeolocationPosition> => {
         return new Promise((resolve, reject) => {
@@ -150,7 +189,10 @@ const LocationSaver: React.FC = () => {
             createdAt: new Date().toISOString(),
         };
 
-        setLocations(prev => [newLocation, ...prev]);
+        const updated = [newLocation, ...locations];
+        setLocations(updated);
+        updateLocationsInDB(updated);
+
         setIsAddDialogOpen(false);
         setCapturedPosition(null);
         toast({ title: '✅ تم حفظ الموقع بنجاح' });
@@ -167,11 +209,15 @@ const LocationSaver: React.FC = () => {
     const saveEditLocation = () => {
         if (!editingLocation || !formName.trim()) return;
 
-        setLocations(prev => prev.map(loc =>
+        const updated = locations.map(loc =>
             loc.id === editingLocation.id
                 ? { ...loc, name: formName.trim(), type: formType }
                 : loc
-        ));
+        );
+
+        setLocations(updated);
+        updateLocationsInDB(updated);
+
         setIsEditDialogOpen(false);
         setEditingLocation(null);
         toast({ title: '✅ تم تعديل الموقع' });
@@ -179,7 +225,12 @@ const LocationSaver: React.FC = () => {
 
     const deleteLocation = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        setLocations(prev => prev.filter(loc => loc.id !== id));
+        if (!window.confirm('هل أنت متأكد من حذف هذا الموقع؟')) return;
+
+        const updated = locations.filter(loc => loc.id !== id);
+        setLocations(updated);
+        updateLocationsInDB(updated);
+
         toast({ title: '🗑️ تم الحذف' });
     };
 

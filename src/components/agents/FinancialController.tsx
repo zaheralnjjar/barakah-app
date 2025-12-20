@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -18,7 +17,6 @@ import {
   Edit,
   Trash2,
   Share2,
-  FileDown,
   X
 } from 'lucide-react';
 import { fetchBNARate } from '@/lib/currency';
@@ -27,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAppStore } from '@/stores/useAppStore';
 
 const FinancialController = () => {
-  const [financeData, setFinanceData] = useState(null);
+  const [financeData, setFinanceData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
@@ -37,9 +35,13 @@ const FinancialController = () => {
     description: '',
     category: 'أخرى'
   });
-  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterDate, setFilterDate] = useState('');
+
+  // Hardcoded automated source
+  const exchangeRateSource = 'Banco de la Nación Argentina';
+
   const expenseCategories = useAppStore((s) => s.expenseCategories);
   const incomeCategories = useAppStore((s) => s.incomeCategories);
   const { toast } = useToast();
@@ -65,10 +67,8 @@ const FinancialController = () => {
       // Auto-fetch BNA Rate
       const bnaRate = await fetchBNARate();
       if (bnaRate && bnaRate !== data.exchange_rate) {
-        // Update local state temporarily to show live data
-        setFinanceData(prev => ({ ...prev, exchange_rate: bnaRate }));
+        setFinanceData((prev: any) => ({ ...prev, exchange_rate: bnaRate }));
 
-        // Background update to Supabase
         supabase.from('finance_data_2025_12_18_18_42')
           .update({ exchange_rate: bnaRate, updated_at: new Date().toISOString() })
           .eq('user_id', user.id)
@@ -77,7 +77,7 @@ const FinancialController = () => {
             else toast({ title: "تم تحديث سعر الدولار", description: `تم جلب السعر الرسمي: ${bnaRate} ARS` });
           });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading finance data:', error);
       toast({
         title: "خطأ في تحميل البيانات المالية",
@@ -91,21 +91,15 @@ const FinancialController = () => {
 
   const calculateDailyLimit = () => {
     if (!financeData) return 0;
-
     const totalBalance = financeData.current_balance_ars + (financeData.current_balance_usd * financeData.exchange_rate);
     const availableBalance = totalBalance - financeData.emergency_buffer - financeData.total_debt;
-
-    // Exact days calculation with 3 days buffer
     const today = new Date();
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const remainingDays = daysInMonth - today.getDate();
-
-    // Add 3 days buffer as requested
     return Math.max(0, availableBalance / (remainingDays + 3));
   };
 
   const addTransaction = async () => {
-    // Description is now optional
     if (!newTransaction.amount) {
       toast({
         title: "بيانات ناقصة",
@@ -132,14 +126,12 @@ const FinancialController = () => {
         updatedBalanceUSD += isExpense ? -amount : amount;
       }
 
-      // Update pending expenses
       const updatedPendingExpenses = [...(financeData.pending_expenses || []), {
         id: Date.now(),
         amount,
         currency: newTransaction.currency,
         type: newTransaction.type,
         category: newTransaction.category,
-        // Allow empty description
         description: newTransaction.description || (isExpense ? 'مصروف بدون وصف' : 'دخل بدون وصف'),
         timestamp: new Date().toISOString(),
         source: 'manual_entry'
@@ -164,7 +156,7 @@ const FinancialController = () => {
 
       setNewTransaction({ amount: '', currency: 'ARS', type: 'expense', description: '', category: 'أخرى' });
       loadFinanceData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding transaction:', error);
       toast({
         title: "خطأ في تسجيل المعاملة",
@@ -176,7 +168,8 @@ const FinancialController = () => {
     }
   };
 
-  const updateExchangeRate = async (newRate) => {
+  // Only updates rate value, source is fixed
+  const updateExchangeRate = async (newRate: string) => {
     setUpdating(true);
     try {
       const user = (await supabase.auth.getUser()).data.user;
@@ -198,7 +191,7 @@ const FinancialController = () => {
       });
 
       loadFinanceData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating exchange rate:', error);
       toast({
         title: "خطأ في تحديث سعر الصرف",
@@ -207,6 +200,31 @@ const FinancialController = () => {
       });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleShare = async (transaction: any) => {
+    const text = `
+معاملة مالية - بركة
+-------------------
+المبلغ: ${transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()} ${transaction.currency}
+الوصف: ${transaction.description}
+التاريخ: ${new Date(transaction.timestamp).toLocaleDateString('ar')}
+الفئة: ${transaction.category}
+    `.trim();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'معاملة مالية - بركة',
+          text: text,
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'تم النسخ', description: 'تم نسخ تفاصيل المعاملة للحافظة' });
     }
   };
 
@@ -246,7 +264,7 @@ const FinancialController = () => {
         </p>
       </div>
 
-      {/* Add Transaction (Moved to Top) */}
+      {/* Add Transaction */}
       <Card>
         <CardHeader>
           <CardTitle className="arabic-title">إضافة معاملة جديدة</CardTitle>
@@ -376,8 +394,6 @@ const FinancialController = () => {
           </CardContent>
         </Card>
 
-
-
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="arabic-title text-sm flex items-center">
@@ -396,7 +412,7 @@ const FinancialController = () => {
         </Card>
       </div>
 
-      {/* Exchange Rate */}
+      {/* Exchange Rate - Automated */}
       <Card>
         <CardHeader>
           <CardTitle className="arabic-title flex items-center justify-between">
@@ -412,21 +428,23 @@ const FinancialController = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4">
             <div className="flex-1">
               <p className="text-3xl font-bold text-primary">
                 {financeData.exchange_rate.toLocaleString()} ARS/USD
               </p>
               <p className="text-sm text-muted-foreground">
-                آخر تحديث: {new Date(financeData.updated_at).toLocaleDateString('ar')}
+                المصدر: {exchangeRateSource}
               </p>
             </div>
-            <div className="flex gap-2">
+            {/* Manual Update Override (Hidden but available if needed, actually kept for quick fixes) */}
+            <div className="flex gap-2 items-center">
+              <Label className="text-xs text-muted-foreground">تعديل يدوي:</Label>
               <Input
                 type="number"
-                placeholder="سعر جديد"
-                className="w-32"
-                onKeyPress={(e) => {
+                placeholder="0.00"
+                className="w-24 h-8 text-xs"
+                onKeyPress={(e: any) => {
                   if (e.key === 'Enter') {
                     updateExchangeRate(e.target.value);
                     e.target.value = '';
@@ -438,7 +456,7 @@ const FinancialController = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Transactions */}
+      {/* Recent Transactions - Reordered and Improved */}
       {financeData.pending_expenses && financeData.pending_expenses.length > 0 && (
         <Card>
           <CardHeader>
@@ -487,155 +505,145 @@ const FinancialController = () => {
             <div className="space-y-3">
               {financeData.pending_expenses.slice(-10).reverse()
                 .filter((expense: any) => {
-                  // Filter by category
                   if (filterCategory !== 'all' && expense.category !== filterCategory) return false;
-                  // Filter by date
                   if (filterDate) {
                     const expenseDate = new Date(expense.timestamp).toISOString().split('T')[0];
                     if (expenseDate !== filterDate) return false;
                   }
                   return true;
                 })
-                .map((expense, index) => (
+                .map((expense: any, index: number) => (
                   <div key={expense.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3 flex-1">
+                    {/* Icon & Amount Section (Reordered as requested) */}
+                    <div className="flex items-center gap-3">
                       {expense.type === 'expense' ? (
-                        <MinusCircle className="w-5 h-5 text-red-500" />
-                      ) : (
-                        <PlusCircle className="w-5 h-5 text-green-500" />
-                      )}
-                      <div className="flex-1">
-                        <p className="arabic-body font-semibold">{expense.description}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(expense.timestamp).toLocaleDateString('ar')}
-                          </p>
-                          {expense.category && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                              {expense.category}
-                            </span>
-                          )}
+                        <div className="p-2 bg-red-100 rounded-full">
+                          <MinusCircle className="w-5 h-5 text-red-600" />
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-left mr-3">
-                        <span className={`font-bold ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      ) : (
+                        <div className="p-2 bg-green-100 rounded-full">
+                          <PlusCircle className="w-5 h-5 text-green-600" />
+                        </div>
+                      )}
+
+                      <div className="text-right">
+                        <span className={`font-bold block ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                           {expense.type === 'income' ? '+' : '-'}
                           {expense.amount.toLocaleString()} {expense.currency}
                         </span>
+                        {/* Description and Date below */}
+                        <p className="text-xs text-muted-foreground flex gap-1 items-center">
+                          <span>{expense.description}</span>
+                          <span className="text-gray-300">|</span>
+                          <span>{new Date(expense.timestamp).toLocaleDateString('ar')}</span>
+                        </p>
                       </div>
-                      <div className="flex gap-1">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => setEditingTransaction(expense)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>تعديل المعاملة</DialogTitle>
-                            </DialogHeader>
-                            {editingTransaction && editingTransaction.id === expense.id && (
-                              <div className="space-y-4">
-                                <Input
-                                  value={editingTransaction.description}
-                                  onChange={(e) => setEditingTransaction({ ...editingTransaction, description: e.target.value })}
-                                  placeholder="الوصف"
-                                />
-                                <Input
-                                  type="number"
-                                  value={editingTransaction.amount}
-                                  onChange={(e) => setEditingTransaction({ ...editingTransaction, amount: parseFloat(e.target.value) })}
-                                  placeholder="المبلغ"
-                                />
-                                <div className="space-y-2">
-                                  <Label className="arabic-body">الفئة</Label>
-                                  <Select
-                                    value={editingTransaction.category}
-                                    onValueChange={(v) => setEditingTransaction({ ...editingTransaction, category: v })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="اختر الفئة" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {(editingTransaction.type === 'expense' ? expenseCategories : incomeCategories).map(cat => (
-                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <Button
-                                  onClick={async () => {
-                                    const user = (await supabase.auth.getUser()).data.user;
-                                    if (!user) return;
+                    </div>
 
-                                    const updatedExpenses = financeData.pending_expenses.map((e: any, i: number) =>
-                                      financeData.pending_expenses.length - 1 - i === index ? editingTransaction : e
-                                    );
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                        onClick={() => handleShare(expense)}
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </Button>
 
-                                    await supabase
-                                      .from('finance_data_2025_12_18_18_42')
-                                      .update({ pending_expenses: updatedExpenses })
-                                      .eq('user_id', user.id);
-
-                                    await loadFinanceData();
-                                    setEditingTransaction(null);
-                                    toast({ title: 'تم التحديث', description: 'تم تحديث المعاملة بنجاح' });
-                                  }}
-                                  className="w-full"
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 hover:bg-gray-200"
+                            onClick={() => setEditingTransaction(expense)}
+                          >
+                            <Edit className="w-4 h-4 text-gray-500" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>تعديل المعاملة</DialogTitle>
+                          </DialogHeader>
+                          {editingTransaction && editingTransaction.id === expense.id && (
+                            <div className="space-y-4">
+                              <Input
+                                value={editingTransaction.description}
+                                onChange={(e) => setEditingTransaction({ ...editingTransaction, description: e.target.value })}
+                                placeholder="الوصف"
+                              />
+                              <Input
+                                type="number"
+                                value={editingTransaction.amount}
+                                onChange={(e) => setEditingTransaction({ ...editingTransaction, amount: parseFloat(e.target.value) })}
+                                placeholder="المبلغ"
+                              />
+                              <div className="space-y-2">
+                                <Label className="arabic-body">الفئة</Label>
+                                <Select
+                                  value={editingTransaction.category}
+                                  onValueChange={(v) => setEditingTransaction({ ...editingTransaction, category: v })}
                                 >
-                                  حفظ التعديلات
-                                </Button>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر الفئة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(editingTransaction.type === 'expense' ? expenseCategories : incomeCategories).map(cat => (
+                                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={async () => {
-                            const text = `${expense.description}\n${expense.type === 'income' ? '+' : '-'}${expense.amount} ${expense.currency}\n${new Date(expense.timestamp).toLocaleDateString('ar')}`;
-                            if (navigator.share) {
-                              await navigator.share({ title: 'معاملة مالية', text });
-                            } else {
-                              await navigator.clipboard.writeText(text);
-                              toast({ title: 'تم النسخ', description: 'تم نسخ المعاملة' });
-                            }
-                          }}
-                        >
-                          <Share2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-red-500"
-                          onClick={async () => {
-                            const user = (await supabase.auth.getUser()).data.user;
-                            if (!user) return;
+                              <Button
+                                onClick={async () => {
+                                  const user = (await supabase.auth.getUser()).data.user;
+                                  if (!user) return;
 
-                            const updatedExpenses = financeData.pending_expenses.filter((_, i) =>
-                              financeData.pending_expenses.length - 1 - i !== index
-                            );
+                                  const updatedExpenses = financeData.pending_expenses.map((e: any, i: number) =>
+                                    financeData.pending_expenses.length - 1 - i === index ? editingTransaction : e
+                                  );
 
-                            await supabase
-                              .from('finance_data_2025_12_18_18_42')
-                              .update({ pending_expenses: updatedExpenses })
-                              .eq('user_id', user.id);
+                                  await supabase
+                                    .from('finance_data_2025_12_18_18_42')
+                                    .update({ pending_expenses: updatedExpenses })
+                                    .eq('user_id', user.id);
 
-                            await loadFinanceData();
-                            toast({ title: 'تم الحذف', description: 'تم حذف المعاملة' });
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                                  await loadFinanceData();
+                                  setEditingTransaction(null);
+                                  toast({ title: 'تم التحديث', description: 'تم تحديث المعاملة بنجاح' });
+                                }}
+                                className="w-full"
+                              >
+                                حفظ التعديلات
+                              </Button>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-red-500 hover:bg-red-50"
+                        onClick={async () => {
+                          const user = (await supabase.auth.getUser()).data.user;
+                          if (!user) return;
+
+                          const updatedExpenses = financeData.pending_expenses.filter((_, i) =>
+                            financeData.pending_expenses.length - 1 - i !== index
+                          );
+
+                          await supabase
+                            .from('finance_data_2025_12_18_18_42')
+                            .update({ pending_expenses: updatedExpenses })
+                            .eq('user_id', user.id);
+
+                          await loadFinanceData();
+                          toast({ title: 'تم الحذف', description: 'تم حذف المعاملة' });
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -643,8 +651,6 @@ const FinancialController = () => {
           </CardContent>
         </Card>
       )}
-
-
     </div>
   );
 };

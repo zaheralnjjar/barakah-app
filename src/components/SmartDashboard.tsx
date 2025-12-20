@@ -17,52 +17,98 @@ import {
     CalendarPlus,
     LogOut,
     Sparkles,
-    MapPin
+    MapPin,
+    Clock,
+    Activity
 } from 'lucide-react';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { useToast } from "@/components/ui/use-toast";
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
 }
 
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
-    const [data, setData] = useState<any>(null);
+    const [financeData, setFinanceData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string; remaining: string; icon: any } | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
 
-    // New consolidated state
+    // Stats State
+    const [stats, setStats] = useState({
+        appointmentsCount: 0,
+        savedLocationsCount: 0,
+        prayerSource: '',
+        nextPrayer: ''
+    });
+
     const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
     const [shoppingListSummary, setShoppingListSummary] = useState<any[]>([]);
     const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
+    const { toast } = useToast();
+
     useEffect(() => {
-        loadDashboardData();
-        loadLocalData();
+        fetchDashboardData();
     }, []);
 
-    const loadLocalData = () => {
+    const fetchDashboardData = async () => {
+        setLoading(true);
         try {
-            const apts = JSON.parse(localStorage.getItem('baraka_appointments') || '[]');
-            setRecentAppointments(apts.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 3));
-
-            const locs = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-            setSavedLocations(locs.slice(0, 4));
-        } catch (e) { console.error(e); }
-    }
-
-    const loadDashboardData = async () => {
-        try {
-            const user = (await supabase.auth.getUser()).data.user;
+            const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const { data: financeData } = await supabase.from(TABLES.finance).select('*').eq('user_id', user.id).single();
-            const { data: logisticsData } = await supabase.from(TABLES.logistics).select('shopping_list').eq('user_id', user.id).single();
+            // 1. Fetch Finance
+            const { data: finance } = await supabase
+                .from('finance_data_2025_12_18_18_42')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+            setFinanceData(finance || {});
 
-            setData({ finance: financeData, logistics: logisticsData });
-            if (logisticsData?.shopping_list) {
-                setShoppingListSummary(logisticsData.shopping_list.filter((i: any) => !i.completed).slice(0, 3));
+            // 2. Fetch Shopping List
+            const { data: logistics } = await supabase
+                .from(TABLES.logistics)
+                .select('shopping_list, locations')
+                .eq('user_id', user.id)
+                .single();
+
+            if (logistics?.shopping_list) {
+                setShoppingListSummary(logistics.shopping_list.filter((i: any) => !i.completed).slice(0, 10));
             }
+            if (logistics?.locations) {
+                const locs = Array.isArray(logistics.locations) ? logistics.locations as any[] : [];
+                setSavedLocations(locs.slice(0, 5));
+            }
+
+            // 3. Fetch Appointments
+            const { data: apts, count: aptCount } = await supabase
+                .from('appointments')
+                .select('*', { count: 'exact' })
+                .eq('user_id', user.id)
+                .eq('is_completed', false)
+                .order('date', { ascending: true })
+                .limit(5);
+
+            setRecentAppointments(apts || []);
+
+            // 4. Fetch Prayer Settings
+            const { data: prayerSettings } = await supabase
+                .from('prayer_settings')
+                .select('source, schedule')
+                .eq('user_id', user.id)
+                .single();
+
+            // Calculate Next Prayer (Simplified logic for stats)
+            // (Real-time calculation handled by hook, this is just for the summary card if needed)
+
+            setStats({
+                appointmentsCount: aptCount || 0,
+                savedLocationsCount: logistics?.locations ? (Array.isArray(logistics.locations) ? logistics.locations.length : 0) : 0,
+                prayerSource: prayerSettings?.source || 'غير محدد',
+                nextPrayer: '--:--' // Handled by hook
+            });
+
         } catch (error) {
             console.error('Error loading dashboard data:', error);
         } finally {
@@ -117,7 +163,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
     const gregorianDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
 
-    const financeData = data?.finance;
     const exchangeRate = financeData?.exchange_rate || 1200;
 
     const totalBalanceARS = financeData ? (financeData.current_balance_ars + (financeData.current_balance_usd * exchangeRate)) : 0;
@@ -137,18 +182,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     return (
         <div className="space-y-6 p-4">
-            {/* Quick Actions Shortcuts */}
-            <div>
-                <h2 className="text-lg font-semibold arabic-title mb-4">اختصارات سريعة</h2>
-                <QuickActions
-                    onAddExpense={() => onNavigateToTab('finance')}
-                    onAddIncome={() => onNavigateToTab('finance')}
-                    onAddAppointment={() => onNavigateToTab('appointments')}
-                    onOpenShoppingList={() => onNavigateToTab('shopping')}
-                    onAddTask={() => onNavigateToTab('productivity')}
-                    onSaveLocation={() => onNavigateToTab('map')}
-                />
-            </div>
+
 
             {/* Header */}
             <div className="bg-gradient-to-r from-primary/10 to-emerald-500/10 rounded-xl p-4 shadow-sm border border-emerald-100/50">
@@ -182,8 +216,76 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </div>
             </div>
 
+            {/* Daily Expense Widget (New) */}
+            <div
+                className="bg-gradient-to-l from-red-50 to-white rounded-xl p-4 shadow-sm border border-red-100 cursor-pointer hover:shadow-md transition-all"
+                onClick={() => onNavigateToTab('finance')}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-red-100 p-2 rounded-full">
+                            <DollarSign className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <span className="text-xs text-gray-500 font-medium">مصروف اليوم</span>
+                            <h3 className="text-xl font-bold text-red-600 tabular-nums">
+                                {(() => {
+                                    if (!financeData?.pending_expenses) return 0;
+                                    const today = new Date().toISOString().split('T')[0];
+                                    const dailySum = financeData.pending_expenses
+                                        .filter((t: any) => t.type === 'expense' && t.timestamp.startsWith(today))
+                                        .reduce((acc: number, curr: any) => acc + (curr.currency === 'USD' ? curr.amount * exchangeRate : curr.amount), 0);
+                                    return dailySum.toLocaleString();
+                                })()} <span className="text-xs">ARS</span>
+                            </h3>
+                        </div>
+                    </div>
+                    <div className="bg-white px-2 py-1 rounded-md text-[10px] text-gray-400 border shadow-sm">
+                        اضغط للتفاصيل
+                    </div>
+                </div>
+            </div>
+
+            {/* Quick Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card className="bg-blue-50 border-blue-100">
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <Calendar className="w-6 h-6 text-blue-500 mb-2" />
+                        <span className="text-2xl font-bold text-blue-700">{stats.appointmentsCount}</span>
+                        <span className="text-xs text-blue-600">مهام نشطة</span>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 border-green-100">
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <MapPin className="w-6 h-6 text-green-500 mb-2" />
+                        <span className="text-2xl font-bold text-green-700">{stats.savedLocationsCount}</span>
+                        <span className="text-xs text-green-600">مواقع محفوظة</span>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-purple-50 border-purple-100">
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <Clock className="w-6 h-6 text-purple-500 mb-2" />
+                        <span className="text-lg font-bold text-purple-700 truncate w-full">{nextPrayer?.remaining || '--:--'}</span>
+                        <span className="text-xs text-purple-600">الصلاة القادمة</span>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-orange-50 border-orange-100">
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <Activity className="w-6 h-6 text-orange-500 mb-2" />
+                        <span className="text-lg font-bold text-orange-700 truncate w-full">{stats.prayerSource}</span>
+                        <span className="text-xs text-orange-600">مصدر الأوقات</span>
+                    </CardContent>
+                </Card>
+            </div>
+
             {/* Prayer Times Widget */}
-            <Card className="bg-white border-primary/20 shadow-sm overflow-hidden">
+            <Card
+                className="bg-white border-primary/20 shadow-sm overflow-hidden cursor-pointer hover:border-primary/40 transition-all"
+                onClick={() => onNavigateToTab('prayer')}
+            >
                 <div className="p-3 bg-primary/5 flex items-center justify-between border-b border-primary/10">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-primary/20 rounded-full animate-pulse-slow">
@@ -214,7 +316,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </Card>
 
             {/* Financial Status */}
-            <Card className="shadow-sm border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30">
+            <Card
+                className="shadow-sm border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30 cursor-pointer hover:shadow-md transition-all"
+                onClick={() => onNavigateToTab('finance')}
+            >
                 <CardContent className="p-4">
                     <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
@@ -248,76 +353,108 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* Synced Info: Shopping & Appointments */}
             <div className="grid grid-cols-2 gap-3">
                 {/* Next Appointment */}
-                <Card className="shadow-sm border-orange-100 relative overflow-hidden">
+                <Card
+                    className="shadow-sm border-orange-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-40"
+
+                >
                     <div className="absolute top-0 right-0 w-1 h-full bg-orange-400"></div>
-                    <CardContent className="p-3">
-                        <div className="flex items-center gap-2 mb-2">
+                    <CardContent className="p-3 h-full flex flex-col">
+                        <div className="flex items-center gap-2 mb-2" onClick={() => onNavigateToTab('appointments')}>
                             <CalendarPlus className="w-4 h-4 text-orange-500" />
-                            <span className="text-xs font-bold text-gray-700">القادم</span>
+                            <span className="text-xs font-bold text-gray-700">المواعيد</span>
                         </div>
-                        {recentAppointments.length > 0 ? (
-                            <div className="text-sm">
-                                <p className="font-semibold text-gray-800 line-clamp-1">{recentAppointments[0].title}</p>
-                                <p className="text-xs text-gray-500 mt-1">{recentAppointments[0].time} - {recentAppointments[0].date}</p>
-                            </div>
-                        ) : (
-                            <p className="text-xs text-gray-400">لا يوجد مواعيد قادمة</p>
-                        )}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {recentAppointments.length > 0 ? (
+                                <div className="space-y-2">
+                                    {recentAppointments.slice(0, 5).map((apt: any, i) => (
+                                        <div key={i} className="text-sm border-b border-gray-100 pb-1 last:border-0" onClick={() => onNavigateToTab('appointments')}>
+                                            <p className="font-semibold text-gray-800 line-clamp-1">{apt.title}</p>
+                                            <p className="text-[10px] text-gray-500">{apt.time} - {apt.date}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center" onClick={() => onNavigateToTab('appointments')}>
+                                    <p className="text-xs text-gray-400">لا يوجد مواعيد</p>
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 
                 {/* Shopping Summary */}
-                <Card className="shadow-sm border-blue-100 relative overflow-hidden">
+                <Card
+                    className="shadow-sm border-blue-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-40"
+                >
                     <div className="absolute top-0 right-0 w-1 h-full bg-blue-400"></div>
-                    <CardContent className="p-3">
-                        <div className="flex items-center gap-2 mb-2">
+                    <CardContent className="p-3 h-full flex flex-col">
+                        <div className="flex items-center gap-2 mb-2" onClick={() => onNavigateToTab('shopping')}>
                             <ShoppingCart className="w-4 h-4 text-blue-500" />
-                            <span className="text-xs font-bold text-gray-700">للتسوق</span>
+                            <span className="text-xs font-bold text-gray-700">التسوق</span>
                         </div>
-                        {shoppingListSummary.length > 0 ? (
-                            <div className="text-sm">
-                                <p className="font-semibold text-gray-800">{shoppingListSummary.length} منتجات متبقية</p>
-                                <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-                                    {shoppingListSummary.map((i: any) => i.name).join(', ')}
-                                </p>
-                            </div>
-                        ) : (
-                            <p className="text-xs text-gray-400">القائمة فارغة</p>
-                        )}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {shoppingListSummary.length > 0 ? (
+                                <div className="space-y-1">
+                                    {shoppingListSummary.map((i: any, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-2 text-xs border-b border-gray-50 pb-1 last:border-0" onClick={() => onNavigateToTab('shopping')}>
+                                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0" />
+                                            <span className="text-gray-700 truncate">{i.name}</span>
+                                        </div>
+                                    ))}
+                                    {shoppingListSummary.length > 5 && (
+                                        <p className="text-[10px] text-blue-500 text-center mt-1">المزيد...</p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center" onClick={() => onNavigateToTab('shopping')}>
+                                    <p className="text-xs text-gray-400">القائمة فارغة</p>
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-3 gap-3">
-                {quickActions.map((action) => (
-                    <Button
-                        key={action.id}
-                        variant="outline"
-                        className="h-20 flex flex-col gap-2 bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
-                        onClick={action.action}
-                    >
-                        <div className={`p-2 rounded-full ${action.color} text-white shadow-sm`}>
-                            <action.icon className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs font-medium text-gray-600">{action.label}</span>
-                    </Button>
-                ))}
+            <div>
+                <h2 className="text-lg font-semibold arabic-title mb-4">اختصارات سريعة</h2>
+                <QuickActions
+                    onAddExpense={() => onNavigateToTab('finance')}
+                    onAddIncome={() => onNavigateToTab('finance')}
+                    onAddAppointment={() => onNavigateToTab('appointments')}
+                    onOpenShoppingList={() => onNavigateToTab('shopping')}
+                    onAddTask={() => onNavigateToTab('productivity')}
+                    onSaveLocation={() => onNavigateToTab('map')}
+                />
             </div>
 
             {/* Saved Locations Summary */}
             {savedLocations.length > 0 && (
                 <Card className="shadow-sm">
                     <CardContent className="p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            <span className="text-xs font-bold text-gray-700">مواقع محفوظة حديثاً</span>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-gray-500" />
+                                <span className="text-xs font-bold text-gray-700">مواقع محفوظة</span>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => onNavigateToTab('map')}>
+                                عرض الكل
+                            </Button>
                         </div>
                         <div className="flex gap-2 common-scroll overflow-x-auto pb-2">
                             {savedLocations.map((loc: any, i: number) => (
-                                <div key={i} className="min-w-[100px] p-2 bg-gray-50 rounded-lg text-center border">
+                                <div
+                                    key={i}
+                                    className="min-w-[100px] p-2 bg-gray-50 rounded-lg text-center border cursor-pointer hover:bg-gray-100 active:scale-95 transition-all relative group"
+                                    onClick={() => onNavigateToTab('map')}
+                                >
+                                    <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="bg-blue-500 p-1 rounded-full text-white">
+                                            <MapPin className="w-3 h-3" />
+                                        </div>
+                                    </div>
                                     <MapPin className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                                    <p className="text-xs font-semibold truncate">{loc.title}</p>
+                                    <p className="text-xs font-semibold truncate">{loc.name || loc.title || 'موقع'}</p>
                                 </div>
                             ))}
                         </div>

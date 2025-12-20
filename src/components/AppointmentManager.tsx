@@ -35,7 +35,8 @@ interface Appointment {
     createdAt: string;
 }
 
-const STORAGE_KEY = 'baraka_appointments';
+import { supabase } from '@/integrations/supabase/client';
+// ... other imports
 
 const AppointmentManager: React.FC = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -44,6 +45,7 @@ const AppointmentManager: React.FC = () => {
     const [newTime, setNewTime] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [showCompleted, setShowCompleted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Edit State
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -51,22 +53,51 @@ const AppointmentManager: React.FC = () => {
 
     const { toast } = useToast();
 
-    // Load appointments
+    // Load appointments from Supabase
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                setAppointments(JSON.parse(saved));
-            } catch (e) { }
-        }
+        fetchAppointments();
     }, []);
 
-    // Save appointments
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
-    }, [appointments]);
+    const fetchAppointments = async () => {
+        setIsLoading(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-    // Schedule notifications
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('date', { ascending: true });
+
+            if (error) throw error;
+
+            if (data) {
+                // Map DB columns to frontend interface
+                const mappedAppointments: Appointment[] = data.map(apt => ({
+                    id: apt.id,
+                    title: apt.title,
+                    date: apt.date,
+                    time: apt.time,
+                    reminderMinutes: apt.reminder_minutes,
+                    isCompleted: apt.is_completed,
+                    createdAt: apt.created_at
+                }));
+                // Sort by full timestamp
+                mappedAppointments.sort((a, b) =>
+                    new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime()
+                );
+                setAppointments(mappedAppointments);
+            }
+        } catch (error) {
+            console.error('Error fetching appointments:', error);
+            toast({ title: 'خطأ في تحميل المواعيد', variant: 'destructive' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Schedule notifications (Client side logic remains same, runs dynamically based on state)
     useEffect(() => {
         if (!('Notification' in window)) return;
 
@@ -93,46 +124,94 @@ const AppointmentManager: React.FC = () => {
         });
     }, [appointments]);
 
-    const addAppointment = () => {
+    const addAppointment = async () => {
         if (!newTitle.trim() || !newDate || !newTime) {
             toast({ title: 'يرجى ملء جميع الحقول', variant: 'destructive' });
             return;
         }
 
-        const newApt: Appointment = {
-            id: Date.now().toString(),
-            title: newTitle.trim(),
-            date: newDate,
-            time: newTime,
-            reminderMinutes,
-            isCompleted: false,
-            createdAt: new Date().toISOString()
-        };
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                toast({ title: 'يرجى تسجيل الدخول', variant: 'destructive' });
+                return;
+            }
 
-        setAppointments(prev => [...prev, newApt].sort((a, b) =>
-            new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime()
-        ));
+            const newApt = {
+                id: crypto.randomUUID(), // Generate UUID for DB
+                user_id: user.id,
+                title: newTitle.trim(),
+                date: newDate,
+                time: newTime,
+                reminder_minutes: reminderMinutes,
+                is_completed: false,
+            };
 
-        setNewTitle('');
-        setNewDate('');
-        setNewTime('');
-        toast({ title: '✅ تم إضافة الموعد' });
+            const { error } = await supabase
+                .from('appointments')
+                .insert(newApt);
 
-        // Request notification permission
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+            if (error) throw error;
+
+            toast({ title: '✅ تم إضافة الموعد' });
+
+            // Clear inputs
+            setNewTitle('');
+            setNewDate('');
+            setNewTime('');
+
+            // Reload data
+            fetchAppointments();
+
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+
+        } catch (error) {
+            console.error('Error adding appointment:', error);
+            toast({ title: 'فشل حفظ الموعد', variant: 'destructive' });
         }
     };
 
-    const toggleComplete = (id: string) => {
-        setAppointments(prev => prev.map(apt =>
-            apt.id === id ? { ...apt, isCompleted: !apt.isCompleted } : apt
-        ));
+    const toggleComplete = async (id: string) => {
+        try {
+            const apt = appointments.find(a => a.id === id);
+            if (!apt) return;
+
+            const { error } = await supabase
+                .from('appointments')
+                .update({ is_completed: !apt.isCompleted })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Optimistic update
+            setAppointments(prev => prev.map(a =>
+                a.id === id ? { ...a, isCompleted: !a.isCompleted } : a
+            ));
+
+        } catch (error) {
+            console.error(error);
+            toast({ title: 'خطأ في التحديث', variant: 'destructive' });
+        }
     };
 
-    const deleteAppointment = (id: string) => {
-        setAppointments(prev => prev.filter(apt => apt.id !== id));
-        toast({ title: '🗑️ تم الحذف' });
+    const deleteAppointment = async (id: string) => {
+        try {
+            const { error } = await supabase
+                .from('appointments')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setAppointments(prev => prev.filter(apt => apt.id !== id));
+            toast({ title: '🗑️ تم الحذف' });
+        } catch (error) {
+            console.error(error);
+            toast({ title: 'خطأ في الحذف', variant: 'destructive' });
+        }
     };
 
     const startEdit = (apt: Appointment) => {
@@ -351,28 +430,34 @@ END:VCALENDAR`;
 export default AppointmentManager;
 
 // Export function for AI assistant
-export const addAppointmentFromAI = (title: string, date?: string, time?: string, reminderMinutes = 15): boolean => {
+// Export function for AI assistant
+export const addAppointmentFromAI = async (title: string, date?: string, time?: string, reminderMinutes = 15): Promise<boolean> => {
     try {
-        const appointments = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
 
         // Default to tomorrow if no date
         const aptDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
         const aptTime = time || '09:00';
 
-        const newApt: Appointment = {
-            id: Date.now().toString(),
+        const newApt = {
+            id: crypto.randomUUID(),
+            user_id: user.id,
             title,
             date: aptDate,
             time: aptTime,
-            reminderMinutes,
-            isCompleted: false,
-            createdAt: new Date().toISOString()
+            reminder_minutes: reminderMinutes,
+            is_completed: false,
         };
 
-        appointments.push(newApt);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+        const { error } = await supabase
+            .from('appointments')
+            .insert(newApt);
+
+        if (error) throw error;
         return true;
-    } catch {
+    } catch (e) {
+        console.error('Error adding appointment from AI:', e);
         return false;
     }
 };

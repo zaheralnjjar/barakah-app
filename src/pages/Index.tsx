@@ -1,20 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Calculator,
-  MapPin,
-  Settings,
-  LayoutDashboard,
-  Clock,
-  LogOut,
-  Moon,
-  BarChart3
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -23,12 +13,12 @@ import InitializationWizard from '@/components/InitializationWizard';
 import SmartDashboard from '@/components/SmartDashboard';
 import SettingsPanel from '@/components/SettingsPanel';
 import AuthForm from '@/components/AuthForm';
-import LocationSaver from '@/components/LocationSaver';
-import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
+import BottomNavBar from '@/components/BottomNavBar';
+import InteractiveMap from '@/components/InteractiveMap';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -38,6 +28,56 @@ const Index = () => {
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const { toast } = useToast();
 
+  // Pull to Home Logic
+  const startY = useRef(0);
+  const currentY = useRef(0);
+  const isDragging = useRef(false);
+  const PULL_THRESHOLD = 150;
+
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only enable pull if at the top of the page
+      if (window.scrollY === 0) {
+        startY.current = e.touches[0].clientY;
+        isDragging.current = true;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      currentY.current = e.touches[0].clientY;
+
+      // If pulling down significantly
+      if (currentY.current - startY.current > 50 && window.scrollY <= 0 && activeTab !== 'dashboard') {
+        // Visual feedback could be added here
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isDragging.current) return;
+
+      const diff = currentY.current - startY.current;
+      if (diff > PULL_THRESHOLD && activeTab !== 'dashboard' && window.scrollY <= 0) {
+        setActiveTab('dashboard');
+        toast({ title: "العودة للرئيسية", duration: 1500 });
+      }
+
+      isDragging.current = false;
+      startY.current = 0;
+      currentY.current = 0;
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [activeTab]);
+
   useEffect(() => {
     const savedOrder = localStorage.getItem('baraka_dashboard_order');
     if (savedOrder) {
@@ -45,7 +85,7 @@ const Index = () => {
         setDashboardOrder(JSON.parse(savedOrder));
       } catch (e) { }
     }
-  }, [activeTab]); // Refresh when switching back to dashboard
+  }, [activeTab]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -107,16 +147,11 @@ const Index = () => {
     }
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    toast({ title: "تم تسجيل الخروج", description: "إلى اللقاء" });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-lg arabic-body">جاري التحميل...</p>
         </div>
       </div>
@@ -143,86 +178,109 @@ const Index = () => {
     return <InitializationWizard onComplete={() => setIsInitialized(true)} />;
   }
 
+  // Map BottomNavBar IDs to Tab Values
+  // 'mohamed' -> finance
+  // 'fatima' -> productivity
+  // 'dashboard' -> dashboard
+  // 'settings' -> settings
+  const handleNavChange = (id: string) => {
+    if (id === 'mohamed') setActiveTab('finance');
+    else if (id === 'fatima') setActiveTab('productivity');
+    else setActiveTab(id);
+  };
+
+  // Reverse mapping for BottomNavBar active state
+  const getActiveNavId = () => {
+    if (activeTab === 'finance') return 'mohamed';
+    if (activeTab === 'productivity') return 'fatima';
+    return activeTab;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-safe">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24">
+      {/* Content Area - No Padding Container for full width */}
+      <div className="w-full">
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="w-full grid grid-cols-6 bg-white/50 backdrop-blur-sm p-1">
-            <TabsTrigger value="dashboard" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1" data-tab="dashboard">
-              <LayoutDashboard className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">الرئيسية</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
-              <BarChart3 className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">إحصائيات</span>
-            </TabsTrigger>
-            <TabsTrigger value="finance" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
-              <Calculator className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">المالية</span>
-            </TabsTrigger>
-            <TabsTrigger value="prayer" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
-              <Moon className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">الصلاة</span>
-            </TabsTrigger>
-            <TabsTrigger value="productivity" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
-              <MapPin className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">الإنتاجية</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="arabic-body flex md:flex-row flex-col items-center justify-center gap-1 md:gap-2 px-1">
-              <Settings className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm">الإعدادات</span>
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
 
-          <TabsContent value="dashboard" className="animate-fade-in space-y-6">
-            {dashboardOrder.map(section => (
-              <div key={section} className="w-full">
-                {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
+          {/* Note: We removed TabsList from here. Controlled by BottomNavBar */}
 
-                {section === 'appointments' && (
-                  <div className="w-full">
-                    <AppointmentManager />
-                  </div>
-                )}
+          <div className="px-2 pt-2 md:container md:mx-auto md:px-4 md:pt-6">
+            <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
+              {dashboardOrder.map(section => (
+                <div key={section} className="w-full">
+                  {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
 
-                {section === 'shopping' && (
-                  <div className="w-full">
-                    <ShoppingList />
-                  </div>
-                )}
+                  {section === 'appointments' && (
+                    <div className="w-full">
+                      <AppointmentManager />
+                    </div>
+                  )}
 
-                {section === 'map' && (
-                  <div className="w-full">
-                    <InteractiveMap />
-                  </div>
-                )}
+                  {section === 'shopping' && (
+                    <div className="w-full">
+                      {/* Pass prop? ShoppingList doesn't seem to have one, but wrapper is fine */}
+                      <ShoppingList />
+                    </div>
+                  )}
+
+                  {section === 'map' && (
+                    <div className="w-full h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                      <InteractiveMap />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </TabsContent>
+
+            <TabsContent value="analytics" className="animate-fade-in data-[state=active]:block">
+              <AnalyticsDashboard />
+            </TabsContent>
+
+            <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
+              <FinancialController />
+            </TabsContent>
+
+            <TabsContent value="prayer" className="animate-fade-in data-[state=active]:block">
+              <PrayerManager />
+            </TabsContent>
+
+            <TabsContent value="productivity" className="animate-fade-in data-[state=active]:block">
+              <LogisticsManager />
+            </TabsContent>
+
+            <TabsContent value="settings" className="animate-fade-in data-[state=active]:block">
+              <SettingsPanel />
+            </TabsContent>
+
+            <TabsContent value="appointments" className="animate-fade-in data-[state=active]:block">
+              <AppointmentManager />
+            </TabsContent>
+
+            <TabsContent value="shopping" className="animate-fade-in data-[state=active]:block">
+              <ShoppingList />
+            </TabsContent>
+
+            <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
+              <div className="h-[80vh] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                <InteractiveMap />
               </div>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="analytics" className="animate-fade-in">
-            <AnalyticsDashboard />
-          </TabsContent>
-
-          <TabsContent value="finance" className="animate-fade-in">
-            <FinancialController />
-          </TabsContent>
-
-          <TabsContent value="prayer" className="animate-fade-in">
-            <PrayerManager />
-          </TabsContent>
-
-          <TabsContent value="productivity" className="animate-fade-in">
-            <LogisticsManager />
-          </TabsContent>
-
-          <TabsContent value="settings" className="animate-fade-in">
-            <SettingsPanel />
-          </TabsContent>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
+
+      {/* Floating Action Button (Optional, can be added here) */}
+
+      {/* Bottom Navigation */}
+      <BottomNavBar
+        activeTab={getActiveNavId()}
+        onNavigate={handleNavChange}
+      />
+
+      {/* Voice Assistant Modal */}
+
     </div>
   );
 };

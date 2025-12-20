@@ -1,19 +1,19 @@
 import React from 'react';
-import { Calculator, MapPin, Home, Settings, Mic } from 'lucide-react';
+import { Calculator, MapPin, Home, Settings, Moon, PieChart } from 'lucide-react';
 
 interface BottomNavBarProps {
     activeTab: string;
     onNavigate: (tab: string) => void;
-    onOpenAssistant: () => void;
 }
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onOpenAssistant }) => {
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) => {
     const navItems = [
         { id: 'mohamed', label: 'المالية', icon: Calculator, color: 'text-green-500' },
         { id: 'fatima', label: 'الإنتاجية', icon: MapPin, color: 'text-blue-500' },
         { id: 'dashboard', label: 'الرئيسية', icon: Home, color: 'text-purple-500', isHome: true },
+        { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-500' },
+        { id: 'analytics', label: 'الإحصائيات', icon: PieChart, color: 'text-orange-500' },
         { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-500' },
-        { id: 'assistant', label: 'المساعد', icon: Mic, color: 'text-emerald-500', isAssistant: true },
     ];
 
     return (
@@ -26,13 +26,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onOp
                     return (
                         <button
                             key={item.id}
-                            onClick={() => {
-                                if (item.isAssistant) {
-                                    onOpenAssistant();
-                                } else {
-                                    onNavigate(item.id);
-                                }
-                            }}
+                            onClick={() => onNavigate(item.id)}
                             className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all ${isActive
                                 ? 'bg-primary/10 scale-105'
                                 : 'hover:bg-gray-100'

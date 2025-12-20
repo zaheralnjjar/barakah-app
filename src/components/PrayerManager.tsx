@@ -1,663 +1,338 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import {
-    Calendar,
-    Upload,
-    Loader2,
-    Download,
-    Check,
-    Table,
-    FileText,
-    Eye,
-    LogOut,
-    Edit2,
-    CheckCircle
-} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Moon, Clock, MapPin, Share2, FileDown } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { formatNumberToLocale } from '@/lib/utils';
-import { generatePrayerTimesICS } from '@/lib/icsExport';
 
 interface DailyPrayer {
     date: string;
-    day: string;
     fajr: string;
-    sunrise: string;
     dhuhr: string;
     asr: string;
     maghrib: string;
     isha: string;
+    [key: string]: string;
 }
 
 const PrayerManager = () => {
+    const [prayerData, setPrayerData] = useState<DailyPrayer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [nextPrayer, setNextPrayer] = useState<string>('');
+    const [timeToNext, setTimeToNext] = useState<string>('');
+    const [currentDate, setCurrentDate] = useState(new Date());
+
+    // Automated Source - Fixed to Online
+    const prayerSource = 'aladhan';
+
     const { toast } = useToast();
 
-    // File Upload States
-    const [isUploading, setIsUploading] = useState(false);
-    const pdfInputRef = useRef<HTMLInputElement>(null);
-    const imageInputRef = useRef<HTMLInputElement>(null);
+    useEffect(() => {
+        loadPrayerData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentDate]);
 
-    // Export Calendar States
-    const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-    const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().split('T')[0].substring(0, 7));
-    const [exportUrl, setExportUrl] = useState<string | null>(null);
-    const [exportCount, setExportCount] = useState(0);
-    const [showDownloadDialog, setShowDownloadDialog] = useState(false);
-    const [exportEndDate, setExportEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
-    const [reminderMinutes, setReminderMinutes] = useState(15);
-    const [selectedPrayers, setSelectedPrayers] = useState({
-        Fajr: true,
-        Dhuhr: true,
-        Asr: true,
-        Maghrib: true,
-        Isha: true
-    });
+    // Update time to next prayer every minute
+    useEffect(() => {
+        const timer = setInterval(calculateNextPrayer, 60000);
+        calculateNextPrayer();
+        return () => clearInterval(timer);
+    }, [prayerData]);
 
-    // Monthly Schedule State
-    const [monthlySchedule, setMonthlySchedule] = useState<DailyPrayer[]>([]);
-    const [viewMode, setViewMode] = useState<'list' | 'upload'>('upload');
-    const [isEditing, setIsEditing] = useState(false);
+    const loadPrayerData = async () => {
+        setLoading(true);
+        try {
+            const user = (await supabase.auth.getUser()).data.user;
 
-    const generateMockMonthData = () => {
-        const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-        const data: DailyPrayer[] = [];
-        const today = new Date();
+            // 1. Try to fetch from Supabase (cache) first if we saved it previously
+            // But since user wants automation, fetching fresh online is safer for correctness,
+            // or we can verify if the cached data matches the current month/year.
+            // For now, let's prioritize fetching fresh data to ensure accuracy.
 
-        // Generate for 60 days (2 months) to satisfy "every month" request
-        for (let i = 0; i < 60; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + i);
-            const dayName = days[date.getDay()];
+            await fetchOnlinePrayerTimes(user?.id);
 
-            // Random variation in minutes to look real
-            const r = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
-
-            data.push({
-                date: date.toISOString().split('T')[0],
-                day: dayName,
-                fajr: `05:${r(10, 20)}`,
-                sunrise: `06:${r(30, 45)}`,
-                dhuhr: `12:${r(40, 50)}`,
-                asr: `16:${r(10, 20)}`,
-                maghrib: `19:${r(20, 35)}`,
-                isha: `21:${r(0, 15)}`
-            });
+        } catch (error) {
+            console.error('Error loading prayer data:', error);
+            toast({ title: "خطأ", description: "فشل تحميل مواقيت الصلاة", variant: "destructive" });
+        } finally {
+            setLoading(false);
         }
-        return data;
     };
 
-    // Load schedule from localStorage
-    useEffect(() => {
-        const saved = localStorage.getItem('baraka_monthly_schedule');
-        if (saved) {
+    const fetchOnlinePrayerTimes = async (userId?: string) => {
+        // Default to Buenos Aires (as per previous context) or saved location
+        let lat = -34.6037;
+        let lng = -58.3816;
+
+        const savedLocation = localStorage.getItem('baraka_user_location');
+        if (savedLocation) {
             try {
-                setMonthlySchedule(JSON.parse(saved));
-                setViewMode('list');
-            } catch (e) {
-                console.error("Failed to parse saved schedule");
-            }
+                const loc = JSON.parse(savedLocation);
+                lat = loc.latitude;
+                lng = loc.longitude;
+            } catch (e) { }
         }
-    }, []);
 
-    // Save schedule to localStorage whenever it changes
-    useEffect(() => {
-        if (monthlySchedule.length > 0) {
-            localStorage.setItem('baraka_monthly_schedule', JSON.stringify(monthlySchedule));
-        }
-    }, [monthlySchedule]);
-
-    const fetchMonthlyPrayers = async () => {
-        setIsUploading(true);
         try {
-            const date = new Date();
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-
-            let latitude = -34.6037;
-            let longitude = -58.3816;
-
-            if (navigator.geolocation) {
-                try {
-                    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
-                    );
-                    latitude = pos.coords.latitude;
-                    longitude = pos.coords.longitude;
-                } catch (e) { console.log('Using default loc for calendar'); }
-            }
-
-            // Method 3: Muslim World League
-            const response = await fetch(`https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&method=3`);
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            // Method 2: ISNA (usually good for generic), or Method 3 (Muslim World League) as seen in previous code.
+            // Let's stick to Method 2 or 3. Validated previous code used Method 3.
+            const response = await fetch(
+                `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=3`
+            );
             const data = await response.json();
 
             if (data.code === 200 && data.data) {
-                const newSchedule: DailyPrayer[] = data.data.map((d: any) => {
-                    const timings = d.timings;
-                    const dateStr = d.date.gregorian.date.split('-').reverse().join('-');
+                const formattedData: DailyPrayer[] = data.data.map((day: any) => ({
+                    date: day.date.gregorian.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
+                    fajr: day.timings.Fajr.split(' ')[0],
+                    dhuhr: day.timings.Dhuhr.split(' ')[0],
+                    asr: day.timings.Asr.split(' ')[0],
+                    maghrib: day.timings.Maghrib.split(' ')[0],
+                    isha: day.timings.Isha.split(' ')[0]
+                }));
 
-                    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-                    const dayIdx = new Date(d.date.readable).getDay();
+                setPrayerData(formattedData);
 
-                    return {
-                        date: dateStr,
-                        day: d.date.hijri.weekday.ar || dayNames[dayIdx],
-                        fajr: timings.Fajr.split(' ')[0],
-                        sunrise: timings.Sunrise.split(' ')[0],
-                        dhuhr: timings.Dhuhr.split(' ')[0],
-                        asr: timings.Asr.split(' ')[0],
-                        maghrib: timings.Maghrib.split(' ')[0],
-                        isha: timings.Isha.split(' ')[0],
-                    };
-                });
-
-                setMonthlySchedule(newSchedule);
-                localStorage.setItem('baraka_monthly_schedule', JSON.stringify(newSchedule));
-                setViewMode('list');
-                toast({ title: "تم جلب الجدول بنجاح", description: "تم تحميل مواعيد الصلاة لهذا الشهر من الإنترنت" });
+                // Sync with Cloud if user exists
+                if (userId) {
+                    await supabase.from('prayer_settings').upsert({
+                        user_id: userId,
+                        source: 'aladhan_auto',
+                        schedule: formattedData,
+                        updated_at: new Date().toISOString()
+                    });
+                }
+            } else {
+                throw new Error("Invalid API response");
             }
-        } catch (e) {
-            console.error(e);
-            toast({ title: "خطأ", description: "فشل الاتصال بالخادم", variant: "destructive" });
-        } finally {
-            setIsUploading(false);
+        } catch (error) {
+            console.error("Failed to fetch online prayer times", error);
         }
     };
 
+    const calculateNextPrayer = () => {
+        if (!prayerData.length) return;
 
-
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'pdf' | 'image') => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        setIsUploading(true);
-        const fileName = file.name;
-        event.target.value = '';
-        setTimeout(() => {
-            setIsUploading(false);
-            const mockData = generateMockMonthData();
-            setMonthlySchedule(mockData);
-            localStorage.setItem('baraka_monthly_schedule', JSON.stringify(mockData));
-            setViewMode('list');
-            toast({
-                title: "تم استيراد الجدول بنجاح",
-                description: `تم استخراج ${mockData.length} يوم (شهرين) من ملف ${fileName}`,
-            });
-        }, 2000);
-    };
-
-    const generateICS = () => {
-        if (monthlySchedule.length === 0) {
-            toast({ title: 'تنبيه', description: 'لا يوجد جدول لتصديره', variant: "destructive" });
-            return;
-        }
-
-        const CRLF = '\r\n';
         const now = new Date();
-        const dtStamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const todayStr = now.toISOString().split('T')[0];
+        const todayPrayers = prayerData.find(p => p.date === todayStr);
 
-        // Helper to format date for ICS
-        const formatDate = (dateStr: string, timeStr: string): { start: string, end: string } => {
-            const [hour, minute] = timeStr.split(':').map(Number);
-            // Create date in local time
-            const year = parseInt(dateStr.substring(0, 4));
-            const month = parseInt(dateStr.substring(5, 7)) - 1;
-            const day = parseInt(dateStr.substring(8, 10));
+        if (!todayPrayers) return;
 
-            const startDate = new Date(year, month, day, hour, minute);
-            const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 mins later
-
-            // Format as YYYYMMDDTHHMMSS
-            const format = (d: Date) => {
-                return d.getFullYear() +
-                    (d.getMonth() + 1).toString().padStart(2, '0') +
-                    d.getDate().toString().padStart(2, '0') + 'T' +
-                    d.getHours().toString().padStart(2, '0') +
-                    d.getMinutes().toString().padStart(2, '0') + '00';
-            };
-
-            return { start: format(startDate), end: format(endDate) };
-        };
-
-        const headers = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'PRODID:-//Barakah System//Prayer Times//EN',
-            'CALSCALE:GREGORIAN',
-            'METHOD:PUBLISH',
-            'X-WR-CALNAME:أوقات الصلاة',
-            'X-WR-TIMEZONE:Asia/Riyadh' // Defaulting to Riyadh as common baseline for Arabic apps, or can be omitted for floating time
+        const prayers = [
+            { name: 'الفجر', time: todayPrayers.fajr },
+            { name: 'الظهر', time: todayPrayers.dhuhr },
+            { name: 'العصر', time: todayPrayers.asr },
+            { name: 'المغرب', time: todayPrayers.maghrib },
+            { name: 'العشاء', time: todayPrayers.isha },
         ];
 
-        let events: string[] = [];
-        let eventCount = 0;
+        for (const prayer of prayers) {
+            const [hours, minutes] = prayer.time.split(':').map(Number);
+            const prayerTime = new Date(now);
+            prayerTime.setHours(hours, minutes, 0);
 
-        const mapping = {
-            Fajr: 'fajr',
-            Dhuhr: 'dhuhr',
-            Asr: 'asr',
-            Maghrib: 'maghrib',
-            Isha: 'isha'
-        };
+            if (prayerTime > now) {
+                setNextPrayer(prayer.name);
+                const diff = prayerTime.getTime() - now.getTime();
+                const diffHours = Math.floor(diff / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                setTimeToNext(`${diffHours} ساعة و ${diffMinutes} دقيقة`);
+                return;
+            }
+        }
 
-        monthlySchedule.forEach((day, index) => {
-            if (!day.date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+        // If all prayers passed, next is Fajr tomorrow
+        setNextPrayer('الفجر (غداً)');
+        setTimeToNext('--:--');
+    };
 
-            Object.keys(selectedPrayers).forEach(prayerKey => {
-                if (selectedPrayers[prayerKey as keyof typeof selectedPrayers]) {
-                    const timeStr = day[mapping[prayerKey as keyof typeof mapping] as keyof DailyPrayer];
-                    if (!timeStr) return;
+    const downloadICS = () => {
+        let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Barakah App//Prayer Times//AR\n";
 
-                    const dates = formatDate(day.date, timeStr);
-                    const arName = prayerKey === 'Fajr' ? 'الفجر' : prayerKey === 'Dhuhr' ? 'الظهر' : prayerKey === 'Asr' ? 'العصر' : prayerKey === 'Maghrib' ? 'المغرب' : 'العشاء';
-                    const uid = `${day.date}-${prayerKey}-${now.getTime()}-${index}@barakah.app`;
-
-                    const event = [
-                        'BEGIN:VEVENT',
-                        `UID:${uid}`,
-                        `DTSTAMP:${dtStamp}`,
-                        `DTSTART:${dates.start}`,
-                        `DTEND:${dates.end}`,
-                        `SUMMARY:صلاة ${arName}`,
-                        `DESCRIPTION:موعد صلاة ${arName}`,
-                        'BEGIN:VALARM',
-                        `TRIGGER:-PT${reminderMinutes}M`,
-                        'ACTION:DISPLAY',
-                        `DESCRIPTION:تذكير للصلاة`,
-                        'END:VALARM',
-                        'END:VEVENT'
-                    ].join(CRLF);
-
-                    events.push(event);
-                    eventCount++;
-                }
+        prayerData.forEach(day => {
+            const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+            prayers.forEach(p => {
+                const dateStr = day.date.replace(/-/g, '');
+                const timeStr = day[p].replace(':', '') + '00';
+                icsContent += `BEGIN:VEVENT\nSUMMARY:Salah ${p}\nDTSTART:${dateStr}T${timeStr}\nDTEND:${dateStr}T${timeStr}\nDESCRIPTION:Prayer time for ${p}\nEND:VEVENT\n`;
             });
         });
 
-        if (eventCount === 0) {
-            toast({ title: 'خطأ', description: 'لم يتم العثور على أحداث صالحة', variant: "destructive" });
-            return;
-        }
+        icsContent += "END:VCALENDAR";
 
-        const icsContent = [...headers, ...events, 'END:VCALENDAR'].join(CRLF);
-
-        // Create blob with strict MIME type
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-
-        // Manual Download Trigger
-        setExportUrl(url);
-        setExportCount(eventCount);
-        setShowDownloadDialog(true);
-        setIsExportDialogOpen(false);
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     };
 
+    const shareSchedule = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        const todayPrayers = prayerData.find(p => p.date === today);
+
+        let text = `مواقيت الصلاة لشهر ${currentDate.toLocaleString('ar-EG', { month: 'long' })} ${currentDate.getFullYear()}\n`;
+
+        if (todayPrayers) {
+            text += `\nمواقيت اليوم (${today}):\n`;
+            text += `الفجر: ${todayPrayers.fajr}\n`;
+            text += `الظهر: ${todayPrayers.dhuhr}\n`;
+            text += `العصر: ${todayPrayers.asr}\n`;
+            text += `المغرب: ${todayPrayers.maghrib}\n`;
+            text += `العشاء: ${todayPrayers.isha}\n`;
+        }
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'مواقيت الصلاة - بركة',
+                    text: text,
+                });
+            } catch (err) {
+                console.log("Share failed", err);
+            }
+        } else {
+            await navigator.clipboard.writeText(text);
+            toast({ title: 'تم النسخ', description: 'تم نسخ جدول الصلاة' });
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+                <p className="arabic-body text-gray-500">جاري تحديث مواقيت الصلاة...</p>
+            </div>
+        );
+    }
 
     return (
-        <Card className="max-w-4xl mx-auto shadow-md">
-            <CardHeader className="bg-gradient-to-l from-green-50 to-white border-b">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle className="flex items-center gap-2 text-xl arabic-title text-green-700">
-                            <Calendar className="w-6 h-6" />
-                            إدارة أوقات الصلاة
-                        </CardTitle>
-                        <CardDescription className="arabic-body mt-1">
-                            استيراد، عرض، وتصدير جداول الصلاة
-                        </CardDescription>
-                    </div>
-                    {monthlySchedule.length > 0 && (
-                        <div className="flex gap-2">
-                            <Button
-                                variant={viewMode === 'list' ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setViewMode('list')}
-                                className={viewMode === 'list' ? 'bg-green-600' : ''}
-                            >
-                                <Eye className="w-4 h-4 ml-2" />
-                                عرض الجدول
-                            </Button>
-
-                            {viewMode === 'list' && (
-                                <Button
-                                    variant={isEditing ? 'destructive' : 'secondary'}
-                                    size="sm"
-                                    onClick={() => {
-                                        if (isEditing) {
-                                            toast({ title: "تم حفظ التعديلات" });
-                                        }
-                                        setIsEditing(!isEditing);
-                                    }}
-                                >
-                                    {isEditing ? <Check className="w-4 h-4 ml-2" /> : <Edit2 className="w-4 h-4 ml-2" />}
-                                    {isEditing ? 'حفظ التعديلات' : 'تعديل الأوقات'}
-                                </Button>
-                            )}
-
-                            <Button
-                                variant={viewMode === 'upload' ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setViewMode('upload');
-                                    setIsEditing(false);
-                                }}
-                                className={viewMode === 'upload' ? 'bg-green-600' : ''}
-                            >
-                                <Upload className="w-4 h-4 ml-2" />
-                                استيراد جديد
-                            </Button>
-
-                            <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="gap-2 border-green-200 text-green-700 hover:bg-green-50">
-                                        <Download className="w-4 h-4" />
-                                        تصدير للتقويم
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle className="arabic-title text-right">خيارات تصدير التقويم</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-4 py-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-right block">من تاريخ</Label>
-                                                <Input type="date" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-right block">إلى تاريخ</Label>
-                                                <Input type="date" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} />
-                                            </div>
-                                        </div>
-
-                                        <Separator />
-
-                                        <div className="space-y-2">
-                                            <Label className="text-right block mb-2 font-bold">الصلوات</Label>
-                                            <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-lg">
-                                                {Object.keys(selectedPrayers).map((prayer) => (
-                                                    <div key={prayer} className="flex items-center space-x-2 space-x-reverse justify-end">
-                                                        <Label htmlFor={prayer} className="cursor-pointer text-sm">
-                                                            {prayer === 'Fajr' ? 'الفجر' : prayer === 'Dhuhr' ? 'الظهر' : prayer === 'Asr' ? 'العصر' : prayer === 'Maghrib' ? 'المغرب' : 'العشاء'}
-                                                        </Label>
-                                                        <Checkbox
-                                                            id={prayer}
-                                                            checked={selectedPrayers[prayer as keyof typeof selectedPrayers]}
-                                                            onCheckedChange={(checked) => setSelectedPrayers(prev => ({ ...prev, [prayer]: checked === true }))}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2 bg-blue-50 p-3 rounded-lg">
-                                            <Label className="text-right block text-blue-800 font-bold">التنبيه قبل الصلاة</Label>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">دقيقة</span>
-                                                <Input
-                                                    type="number"
-                                                    value={reminderMinutes}
-                                                    onChange={(e) => setReminderMinutes(Number(e.target.value))}
-                                                    className="text-center"
-                                                    min={0}
-                                                />
-                                                <span className="text-sm">تذكير قبل</span>
-                                            </div>
-                                            <p className="text-xs text-blue-600 mt-1">سيتم إضافة منبه لكل صلاة في ملف التقويم</p>
-                                        </div>
-
-                                        <Button onClick={generateICS} className="w-full mt-2 h-10">
-                                            <Download className="w-4 h-4 ml-2" />
-                                            تحميل ملف .ics
-                                        </Button>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-
-                            {/* Manual Download Confirmation Dialog */}
-                            <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle className="arabic-text text-green-700 flex items-center gap-2">
-                                            <CheckCircle className="w-5 h-5" />
-                                            تم تجهيز ملف التقويم
-                                        </DialogTitle>
-                                    </DialogHeader>
-                                    <div className="py-4 space-y-4">
-                                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                                            <p className="font-bold text-lg mb-2">{exportCount} موعد صلاة</p>
-                                            <p className="text-sm text-gray-600">جاهزة للتحميل والإضافة إلى تقويمك</p>
-                                        </div>
-
-                                        <a
-                                            href={exportUrl || '#'}
-                                            download={`prayers-${exportStartDate}.ics`}
-                                            className="flex items-center justify-center gap-2 w-full p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                                            onClick={() => {
-                                                setTimeout(() => setShowDownloadDialog(false), 2000);
-                                                toast({ title: "جاري التحميل..." });
-                                            }}
-                                        >
-                                            <Download className="w-5 h-5" />
-                                            اضغط هنا لتحميل الملف
-                                        </a>
-
-                                        <p className="text-xs text-center text-gray-500 mt-2">
-                                            بعد التحميل، افتح الملف لإضافة المواعيد إلى التقويم
-                                        </p>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                    )}
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="text-center">
+                <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-fade-in">
+                    <Moon className="w-10 h-10 text-white" />
                 </div>
-            </CardHeader>
-            <CardContent className="p-6">
+                <h1 className="text-3xl arabic-title text-primary mb-2">مواقيت الصلاة</h1>
+                <div className="flex items-center justify-center gap-2 text-muted-foreground arabic-body">
+                    <MapPin className="w-4 h-4" />
+                    <span>تحديث تلقائي (حسب الموقع)</span>
+                </div>
+            </div>
 
-                {viewMode === 'upload' ? (
-                    <div className="space-y-8 animate-fade-in">
-
-
-                        {/* Import Section */}
-                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="text-lg font-bold arabic-title text-gray-800">استيراد يدوي</h3>
-                                    <p className="text-sm text-gray-500 arabic-body">تحديث قاعدة البيانات من ملف خارجي (PDF/Image)</p>
-                                </div>
-                                <div className="bg-white p-2 rounded-full shadow-sm">
-                                    <Upload className="w-6 h-6 text-gray-500" />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Hidden Inputs */}
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    className="hidden"
-                                    ref={pdfInputRef}
-                                    onChange={(e) => handleFileUpload(e, 'pdf')}
-                                />
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    ref={imageInputRef}
-                                    onChange={(e) => handleFileUpload(e, 'image')}
-                                />
-
-                                <Button
-                                    variant="outline"
-                                    className="h-24 flex flex-col items-center justify-center gap-3 border-dashed border-2 hover:bg-gray-100 transition-all hover:border-green-300 hover:text-green-700"
-                                    onClick={() => pdfInputRef.current?.click()}
-                                    disabled={isUploading}
-                                >
-                                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin text-green-600" /> : <FileText className="w-8 h-8 text-gray-400" />}
-                                    <div className="text-center">
-                                        <span className="block font-semibold">رفع ملف PDF</span>
-                                        <span className="text-xs text-gray-400 font-normal">جداول الصلاة الشهرية</span>
-                                    </div>
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="h-24 flex flex-col items-center justify-center gap-3 border-dashed border-2 hover:bg-gray-100 transition-all hover:border-green-300 hover:text-green-700"
-                                    onClick={() => imageInputRef.current?.click()}
-                                    disabled={isUploading}
-                                >
-                                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin text-green-600" /> : <Upload className="w-8 h-8 text-gray-400" />}
-                                    <div className="text-center">
-                                        <span className="block font-semibold">رفع صورة</span>
-                                        <span className="text-xs text-gray-400 font-normal">صورة جدول أو تقويم</span>
-                                    </div>
-                                </Button>
-
-                                <Button
-                                    variant="outline"
-                                    className="h-24 flex flex-col items-center justify-center gap-3 border-dashed border-2 hover:bg-green-50 transition-all hover:border-green-500 hover:text-green-700 md:col-span-2"
-                                    onClick={fetchMonthlyPrayers}
-                                    disabled={isUploading}
-                                >
-                                    {isUploading ? <Loader2 className="w-6 h-6 animate-spin text-green-600" /> : <Calendar className="w-8 h-8 text-green-500" />}
-                                    <div className="text-center">
-                                        <span className="block font-semibold">جلب من الإنترنت</span>
-                                        <span className="text-xs text-gray-500 font-normal">تحديث تلقائي حسب موقعك الحالي</span>
-                                    </div>
-                                </Button>
-                            </div>
+            {/* Next Prayer Card */}
+            <Card className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white border-none shadow-lg overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2" />
+                <CardContent className="p-8 relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+                            <Clock className="w-4 h-4 text-white" />
+                            <span className="arabic-body text-sm font-medium">الصلاة القادمة</span>
                         </div>
+                        <span className="arabic-body text-2xl font-light tracking-wider">{timeToNext}</span>
                     </div>
-                ) : (
-                    <div className="animate-fade-in space-y-4">
-                        <div className="bg-white rounded-lg border overflow-hidden">
-                            <div className="overflow-x-auto max-h-[500px]">
-                                <table className="w-full text-sm text-right">
-                                    <thead className="bg-gray-50 border-b sticky top-0">
-                                        <tr>
-                                            <th className="p-3 font-bold text-gray-700">التاريخ</th>
-                                            <th className="p-3 font-bold text-gray-700">اليوم</th>
-                                            <th className="p-3 font-bold text-green-700">الفجر</th>
-                                            <th className="p-3 font-bold text-orange-600">الشروق</th>
-                                            <th className="p-3 font-bold text-gray-700">الظهر</th>
-                                            <th className="p-3 font-bold text-orange-600">العصر</th>
-                                            <th className="p-3 font-bold text-purple-700">المغرب</th>
-                                            <th className="p-3 font-bold text-blue-700">العشاء</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {monthlySchedule.map((day, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="p-3 font-medium whitespace-nowrap">{formatNumberToLocale(day.date)}</td>
-                                                <td className="p-3 whitespace-nowrap">{day.day}</td>
-                                                <td className="p-3 p-0.5">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.fajr}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].fajr = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.fajr)}
-                                                </td>
-                                                <td className="p-3 p-0.5 text-gray-500">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.sunrise}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].sunrise = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.sunrise)}
-                                                </td>
-                                                <td className="p-3 p-0.5">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.dhuhr}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].dhuhr = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.dhuhr)}
-                                                </td>
-                                                <td className="p-3 p-0.5">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.asr}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].asr = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.asr)}
-                                                </td>
-                                                <td className="p-3 p-0.5">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.maghrib}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].maghrib = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.maghrib)}
-                                                </td>
-                                                <td className="p-3 p-0.5">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            className="h-8 w-20 text-center"
-                                                            value={day.isha}
-                                                            onChange={(e) => {
-                                                                const newData = [...monthlySchedule];
-                                                                newData[idx].isha = e.target.value;
-                                                                setMonthlySchedule(newData);
-                                                            }}
-                                                        />
-                                                    ) : formatNumberToLocale(day.isha)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div className="flex justify-end">
-                            <Button variant="ghost" className="text-xs text-gray-500 hover:text-red-500" onClick={() => {
-                                if (window.confirm('هل أنت متأكد من مسح الجدول المحفوظ؟')) {
-                                    setMonthlySchedule([]);
-                                    localStorage.removeItem('baraka_monthly_schedule');
-                                    setViewMode('upload');
-                                }
-                            }}>
-                                <span className="ml-2"> مسح الجدول</span>
-                                <LogOut className="w-3 h-3" />
+                    <div className="text-5xl font-bold arabic-title mb-2">
+                        {nextPrayer || '...'}
+                    </div>
+                    <p className="text-emerald-100 arabic-body text-sm mt-2">
+                        {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                </CardContent>
+            </Card>
+
+            {/* Monthly Calendar View */}
+            <Card className="border-gray-100 shadow-sm">
+                <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <CardTitle className="arabic-title text-xl text-gray-800">جدول الشهر</CardTitle>
+
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={shareSchedule}
+                                className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
+                            >
+                                <Share2 className="w-4 h-4 ml-2" />
+                                مشاركة
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={downloadICS}
+                                className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
+                            >
+                                <FileDown className="w-4 h-4 ml-2" />
+                                تصدير
                             </Button>
                         </div>
                     </div>
-                )}
-            </CardContent>
-        </Card >
+
+                    {/* Month Selector */}
+                    <div className="flex items-center justify-center gap-6 mt-6 bg-white p-2 rounded-lg border border-gray-100 shadow-sm w-full md:w-fit mx-auto">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
+                            className="hover:bg-gray-100"
+                        >
+                            السابق
+                        </Button>
+                        <span className="font-bold text-gray-700 min-w-[140px] text-center">
+                            {currentDate.toLocaleString('ar-EG', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
+                            className="hover:bg-gray-100"
+                        >
+                            التالي
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-right">
+                            <thead className="bg-gray-50 text-gray-600">
+                                <tr>
+                                    <th className="p-4 font-semibold whitespace-nowrap">التاريخ</th>
+                                    <th className="p-4 font-semibold text-emerald-700 whitespace-nowrap">الفجر</th>
+                                    <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">الظهر</th>
+                                    <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">العصر</th>
+                                    <th className="p-4 font-semibold text-amber-600 whitespace-nowrap">المغرب</th>
+                                    <th className="p-4 font-semibold text-indigo-700 whitespace-nowrap">العشاء</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {prayerData.map((day, index) => {
+                                    const isToday = day.date === new Date().toISOString().split('T')[0];
+                                    return (
+                                        <tr key={index} className={`hover:bg-gray-50 transition-colors ${isToday ? 'bg-emerald-50/60' : ''}`}>
+                                            <td className="p-4 font-medium whitespace-nowrap dir-ltr text-right">
+                                                <span className="font-english">{day.date}</span>
+                                            </td>
+                                            <td className="p-4 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
+                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>
+                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.asr)}</td>
+                                            <td className="p-4 text-amber-600 font-bold">{formatNumberToLocale(day.maghrib)}</td>
+                                            <td className="p-4 text-indigo-700">{formatNumberToLocale(day.isha)}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 };
 
