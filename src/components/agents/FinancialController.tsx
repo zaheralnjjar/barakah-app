@@ -729,7 +729,7 @@ const FinancialController = () => {
 
                     {/* Date Column */}
                     <div className="text-center text-sm text-gray-600">
-                      {new Date(expense.timestamp).toLocaleDateString('ar')}
+                      {new Date(expense.timestamp).toLocaleDateString('ar-u-nu-latn')}
                     </div>
 
                     {/* Description Column */}

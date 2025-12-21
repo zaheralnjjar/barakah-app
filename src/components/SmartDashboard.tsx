@@ -242,33 +242,49 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             {/* Quick Actions */}
 
-            {/* Prayer Times Widget */}
+            {/* Prayer Times Widget - Compact */}
             <Card
                 className="bg-white border-primary/20 shadow-sm overflow-hidden cursor-pointer hover:border-primary/40 transition-all"
                 onClick={() => onNavigateToTab('prayer')}
             >
-                <div className="p-3 bg-primary/5 flex items-center justify-between border-b border-primary/10">
+                <div className="p-2.5 bg-primary/5 flex items-center justify-between border-b border-primary/10">
+                    {/* Right: Next prayer label + name */}
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-primary/20 rounded-full animate-pulse-slow">
-                            {nextPrayer?.icon && <nextPrayer.icon className="w-4 h-4 text-primary" />}
+                        <div className="p-1 bg-primary/20 rounded-full">
+                            {nextPrayer?.icon && <nextPrayer.icon className="w-3 h-3 text-primary" />}
                         </div>
                         <div>
-                            <span className="text-xs text-muted-foreground block">الصلاة القادمة</span>
+                            <span className="text-[10px] text-muted-foreground block">الصلاة القادمة</span>
                             <span className="text-sm font-bold text-primary arabic-title">{nextPrayer?.name}</span>
                         </div>
                     </div>
+                    {/* Left: Countdown + Hijri date */}
                     <div className="text-left">
-                        <span className="text-xl font-bold text-primary tabular-nums tracking-tight">
-                            -{nextPrayer?.remaining}
+                        <span className="text-xs font-bold text-primary block">
+                            {(() => {
+                                // Convert remaining time to Arabic words
+                                const remaining = nextPrayer?.remaining || '0:00';
+                                const [h, m] = remaining.split(':').map(Number);
+                                const hoursArabic: Record<number, string> = {
+                                    0: '', 1: 'ساعة', 2: 'ساعتين', 3: 'ثلاث', 4: 'أربع',
+                                    5: 'خمس', 6: 'ست', 7: 'سبع', 8: 'ثماني'
+                                };
+                                const hoursText = h > 0 ? (hoursArabic[h] || `${h}`) : '';
+                                if (h > 0) return `${hoursText} و ${m} د`;
+                                return `${m} دقيقة`;
+                            })()}
+                        </span>
+                        <span className="text-[9px] text-gray-500 block">
+                            {new Date().toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'long' })}
                         </span>
                     </div>
                 </div>
-                <div className="flex items-center justify-between p-2 lg:px-4 bg-white whitespace-nowrap overflow-x-auto no-scrollbar">
+                <div className="flex items-center justify-between p-1.5 bg-white whitespace-nowrap overflow-x-auto no-scrollbar">
                     {activePrayerTimes.map((prayer) => (
-                        <div key={prayer.name} className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-[60px] ${nextPrayer?.name === prayer.name ? 'bg-primary/5' : 'hover:bg-gray-50'}`}>
-                            <span className="text-[10px] text-gray-500 mb-1">{prayer.name}</span>
-                            <prayer.icon className={`w-4 h-4 mb-1 ${nextPrayer?.name === prayer.name ? 'text-primary' : 'text-gray-400'}`} />
-                            <span className="text-xs font-semibold tabular-nums">
+                        <div key={prayer.name} className={`flex flex-col items-center justify-center p-1.5 rounded-lg transition-colors min-w-[50px] ${nextPrayer?.name === prayer.name ? 'bg-primary/5' : 'hover:bg-gray-50'}`}>
+                            <span className="text-[9px] text-gray-500">{prayer.name}</span>
+                            <prayer.icon className={`w-3 h-3 my-0.5 ${nextPrayer?.name === prayer.name ? 'text-primary' : 'text-gray-400'}`} />
+                            <span className="text-[10px] font-semibold tabular-nums">
                                 {prayer.hour}:{prayer.minute.toString().padStart(2, '0')}
                             </span>
                         </div>

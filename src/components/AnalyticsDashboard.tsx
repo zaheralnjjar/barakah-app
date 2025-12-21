@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import { TrendingUp, CheckCircle2, DollarSign, MapPin, Calendar, Loader2 } from 'lucide-react';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+// Vibrant Islamic-inspired color palette
+const COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
 export const AnalyticsDashboard = () => {
     const [loading, setLoading] = useState(true);
