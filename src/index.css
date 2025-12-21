@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Amiri:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -108,18 +108,29 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Cairo', 'Amiri', sans-serif;
+    font-family: 'Tajawal', 'Amiri', sans-serif;
     direction: rtl;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
-  /* Arabic Typography */
+  /* Arabic Typography - Enhanced */
   .arabic-title {
-    font-family: 'Amiri', serif;
+    font-family: 'Tajawal', sans-serif;
     font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .arabic-body {
-    font-family: 'Cairo', sans-serif;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: 400;
+  }
+
+  /* Numbers - Monospace for financial clarity */
+  .number-font {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 500;
+    direction: ltr;
   }
 
   /* RTL Support */
@@ -331,29 +342,29 @@
   html {
     font-size: 14px;
   }
-  
+
   .arabic-title {
     font-size: 1.1rem;
   }
-  
+
   .arabic-body {
     font-size: 0.8rem;
   }
-  
+
   .text-xs {
     font-size: 0.65rem;
   }
-  
+
   .text-sm {
     font-size: 0.75rem;
   }
-  
+
   /* Smaller icons on very small screens */
   svg.w-6 {
     width: 1.25rem;
     height: 1.25rem;
   }
-  
+
   svg.w-5 {
     width: 1rem;
     height: 1rem;

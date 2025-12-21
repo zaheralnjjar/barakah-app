@@ -503,7 +503,10 @@ const FinancialController = () => {
                       <RefreshCw className="w-4 h-4 text-purple-500" />
                       <div>
                         <p className="font-medium text-sm">{sub.name}</p>
-                        <p className="text-xs text-gray-500">{sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}</p>
+                        <p className="text-xs text-gray-500">
+                          {sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}
+                          {sub.renewalDate && ` - يوم ${sub.renewalDate}`}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -554,14 +557,28 @@ const FinancialController = () => {
                   <option value="USD">USD</option>
                 </select>
               </div>
-              <select
-                value={newSubscription.cycle}
-                onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
-                className="w-full border rounded p-2"
-              >
-                <option value="monthly">شهري</option>
-                <option value="yearly">سنوي</option>
-              </select>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={newSubscription.cycle}
+                  onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
+                  className="flex-1 border rounded p-2"
+                >
+                  <option value="monthly">شهري</option>
+                  <option value="yearly">سنوي</option>
+                </select>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-gray-500">يوم</span>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="1"
+                    value={newSubscription.renewalDate}
+                    onChange={e => setNewSubscription({ ...newSubscription, renewalDate: e.target.value })}
+                    className="w-16 text-center"
+                  />
+                </div>
+              </div>
               <Button onClick={saveSubscription} className="w-full">حفظ الاشتراك</Button>
             </div>
           </DialogContent>
