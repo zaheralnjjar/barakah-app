@@ -19,6 +19,7 @@ import ShoppingList from '@/components/ShoppingList';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
+import PinLock, { usePinLock } from '@/components/PinLock';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -27,6 +28,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const { toast } = useToast();
+
+  // PIN Lock
+  const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
 
   // Swipe Navigation Logic
   const startX = useRef(0);
@@ -206,91 +210,99 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24">
-      {/* Content Area - No Padding Container for full width */}
-      <div className="w-full">
+    <>
+      {/* PIN Lock Screen */}
+      {pinEnabled && isLocked && <PinLock onUnlock={unlock} />}
 
-        {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
+      {/* PIN Setup Screen */}
+      {showSetup && <PinLock isSetupMode onUnlock={() => { }} onSetupComplete={onSetupComplete} />}
 
-          {/* Note: We removed TabsList from here. Controlled by BottomNavBar */}
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24">
+        {/* Content Area - No Padding Container for full width */}
+        <div className="w-full">
 
-          <div className="px-2 pt-2 md:container md:mx-auto md:px-4 md:pt-6">
-            <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
-              {dashboardOrder.map(section => (
-                <div key={section} className="w-full">
-                  {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
+          {/* Main Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
 
-                  {section === 'appointments' && (
-                    <div className="w-full">
-                      <AppointmentManager />
-                    </div>
-                  )}
+            {/* Note: We removed TabsList from here. Controlled by BottomNavBar */}
 
-                  {section === 'shopping' && (
-                    <div className="w-full">
-                      {/* Pass prop? ShoppingList doesn't seem to have one, but wrapper is fine */}
-                      <ShoppingList />
-                    </div>
-                  )}
+            <div className="px-2 pt-2 md:container md:mx-auto md:px-4 md:pt-6">
+              <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
+                {dashboardOrder.map(section => (
+                  <div key={section} className="w-full">
+                    {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
 
-                  {section === 'map' && (
-                    <div className="w-full h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
-                      <InteractiveMap />
-                    </div>
-                  )}
+                    {section === 'appointments' && (
+                      <div className="w-full">
+                        <AppointmentManager />
+                      </div>
+                    )}
+
+                    {section === 'shopping' && (
+                      <div className="w-full">
+                        {/* Pass prop? ShoppingList doesn't seem to have one, but wrapper is fine */}
+                        <ShoppingList />
+                      </div>
+                    )}
+
+                    {section === 'map' && (
+                      <div className="w-full h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                        <InteractiveMap />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="analytics" className="animate-fade-in data-[state=active]:block">
+                <AnalyticsDashboard />
+              </TabsContent>
+
+              <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
+                <FinancialController />
+              </TabsContent>
+
+              <TabsContent value="prayer" className="animate-fade-in data-[state=active]:block">
+                <PrayerManager />
+              </TabsContent>
+
+              <TabsContent value="productivity" className="animate-fade-in data-[state=active]:block">
+                <LogisticsManager />
+              </TabsContent>
+
+              <TabsContent value="settings" className="animate-fade-in data-[state=active]:block">
+                <SettingsPanel />
+              </TabsContent>
+
+              <TabsContent value="appointments" className="animate-fade-in data-[state=active]:block">
+                <AppointmentManager />
+              </TabsContent>
+
+              <TabsContent value="shopping" className="animate-fade-in data-[state=active]:block">
+                <ShoppingList />
+              </TabsContent>
+
+              <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
+                <div className="h-[80vh] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                  <InteractiveMap />
                 </div>
-              ))}
-            </TabsContent>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
 
-            <TabsContent value="analytics" className="animate-fade-in data-[state=active]:block">
-              <AnalyticsDashboard />
-            </TabsContent>
+        {/* Floating Action Button (Optional, can be added here) */}
 
-            <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
-              <FinancialController />
-            </TabsContent>
+        {/* Bottom Navigation */}
+        <BottomNavBar
+          activeTab={getActiveNavId()}
+          onNavigate={handleNavChange}
+        />
 
-            <TabsContent value="prayer" className="animate-fade-in data-[state=active]:block">
-              <PrayerManager />
-            </TabsContent>
+        {/* Voice Assistant Modal */}
 
-            <TabsContent value="productivity" className="animate-fade-in data-[state=active]:block">
-              <LogisticsManager />
-            </TabsContent>
-
-            <TabsContent value="settings" className="animate-fade-in data-[state=active]:block">
-              <SettingsPanel />
-            </TabsContent>
-
-            <TabsContent value="appointments" className="animate-fade-in data-[state=active]:block">
-              <AppointmentManager />
-            </TabsContent>
-
-            <TabsContent value="shopping" className="animate-fade-in data-[state=active]:block">
-              <ShoppingList />
-            </TabsContent>
-
-            <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
-              <div className="h-[80vh] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                <InteractiveMap />
-              </div>
-            </TabsContent>
-          </div>
-        </Tabs>
       </div>
-
-      {/* Floating Action Button (Optional, can be added here) */}
-
-      {/* Bottom Navigation */}
-      <BottomNavBar
-        activeTab={getActiveNavId()}
-        onNavigate={handleNavChange}
-      />
-
-      {/* Voice Assistant Modal */}
-
-    </div>
+    </>
   );
 };
 
