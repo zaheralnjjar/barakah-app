@@ -444,7 +444,28 @@ const LogisticsManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl arabic-title text-primary font-bold">الإنتاجية والمهام</h1>
-          <p className="arabic-body text-sm text-muted-foreground">مساحتك لإدارة الوقت والمشاريع</p>
+          <div className="flex items-center gap-2">
+            <p className="arabic-body text-sm text-muted-foreground">مساحتك لإدارة الوقت والمشاريع</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-primary hover:bg-primary/10"
+              onClick={async () => {
+                const activeTasks = tasks.filter(t => t.progress < 100).length;
+                const activeAppts = appointments.length;
+                const text = `
+ملخص المهام - بركة
+------------------
+المهام النشطة: ${activeTasks}
+المواعيد القادمة: ${activeAppts}
+                     `.trim();
+                if (navigator.share) await navigator.share({ title: 'ملخص المهام', text });
+                else { await navigator.clipboard.writeText(text); toast({ title: 'تم النسخ' }); }
+              }}
+            >
+              <Share2 className="w-3 h-3" />
+            </Button>
+          </div>
         </div>
 
         <Dialog open={isaddDialogOpen} onOpenChange={(open) => {

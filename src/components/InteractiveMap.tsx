@@ -2,18 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import {
     MapPin,
     Search,
     Locate,
-    Globe,
     Plus,
     Check,
     Trash2,
     Loader2,
     Share2,
-    Edit2
+    Edit2,
+    CheckSquare
 } from 'lucide-react';
 import {
     Dialog,
@@ -22,7 +23,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,27 +39,39 @@ L.Icon.Default.mergeOptions({
 interface LocationMarkerProps {
     position: { lat: number; lng: number } | null;
     setPosition: (pos: L.LatLng) => void;
-    setLocationName: (name: string) => void;
-    onSave: () => void;
+    onSave: (addressName: string) => void;
     onShare: (pos: L.LatLng) => void;
 }
 
-function LocationMarker({ position, setPosition, setLocationName, onSave, onShare }: LocationMarkerProps) {
+function LocationMarker({ position, setPosition, onSave, onShare }: LocationMarkerProps) {
+    const [addressName, setAddressName] = useState('');
+    const { toast } = useToast();
+
     const map = useMapEvents({
         click(e) {
             setPosition(e.latlng);
-            setLocationName(`${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`);
             map.flyTo(e.latlng, map.getZoom());
+
+            // Reverse geocode to get address
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ar`)
+                .then(res => res.json())
+                .then(data => {
+                    const addr = data.address || {};
+                    const name = addr.road || addr.suburb || addr.city || data.display_name?.split(',')[0] || 'موقع جديد';
+                    const number = addr.house_number || '';
+                    setAddressName(number ? `${name} ${number}` : name);
+                })
+                .catch(() => setAddressName('موقع جديد'));
         },
     });
 
     return position ? (
         <Marker position={position}>
             <Popup>
-                <div className="flex flex-col gap-2 p-1 min-w-[120px]">
-                    <p className="text-xs font-bold text-center mb-1">الموقع المحدد</p>
+                <div className="flex flex-col gap-2 p-1 min-w-[140px]">
+                    <p className="text-xs font-bold text-center mb-1">{addressName || 'الموقع المحدد'}</p>
                     <div className="flex gap-2 justify-center">
-                        <Button size="sm" onClick={onSave} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
+                        <Button size="sm" onClick={() => onSave(addressName)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
                             حفظ
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => onShare(position as any)} className="h-7 text-xs">
@@ -82,9 +95,11 @@ function ChangeView({ center, zoom }: any) {
 const InteractiveMap = () => {
     const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]);
     const [newItem, setNewItem] = useState({ name: '', location: '' });
-    const [formData, setFormData] = useState({ title: '', url: '' });
     const [searchQuery, setSearchQuery] = useState('');
     const [isLocating, setIsLocating] = useState(false);
+    const [savedLocations, setSavedLocations] = useState<any[]>([]);
+    const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
+    const [isSelectMode, setIsSelectMode] = useState(false);
 
     // Edit State
     const [editingResource, setEditingResource] = useState<any | null>(null);
@@ -92,27 +107,35 @@ const InteractiveMap = () => {
 
     const { toast } = useToast();
 
-    const handleSaveLocation = async () => {
-        if (!formData.title || !newItem.location) return;
+    // Load saved locations
+    useEffect(() => {
+        loadLocations();
+    }, []);
 
-        try {
-            const newRes = {
-                id: Date.now().toString(),
-                title: formData.title,
-                url: `geo:${newItem.location}`,
-                category: 'other'
-            };
+    const loadLocations = () => {
+        const data = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+        setSavedLocations(data);
+    };
 
-            const existing = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-            const updated = [...existing, newRes];
-            localStorage.setItem('baraka_resources', JSON.stringify(updated));
+    const saveLocation = (addressName: string) => {
+        if (!newItem.location) return;
 
-            toast({ title: "تم حفظ الموقع", description: "تمت الإضافة للمواقع المحفوظة" });
-            setFormData({ title: '', url: '' });
-            setNewItem({ name: '', location: '' });
-            setSearchQuery('');
+        const [lat, lng] = newItem.location.split(',').map(s => s.trim());
 
-        } catch (e) { console.error(e); }
+        const newRes = {
+            id: Date.now().toString(),
+            title: addressName || 'موقع جديد',
+            url: `geo:${lat},${lng}`,
+            category: 'other'
+        };
+
+        const updated = [...savedLocations, newRes];
+        localStorage.setItem('baraka_resources', JSON.stringify(updated));
+        setSavedLocations(updated);
+
+        toast({ title: "تم حفظ الموقع", description: addressName });
+        setNewItem({ name: '', location: '' });
+        setSearchQuery('');
     };
 
     const performSearch = async () => {
@@ -128,9 +151,7 @@ const InteractiveMap = () => {
                     name: searchQuery,
                     location: `${lat}, ${lon}`
                 });
-                // Pre-fill save form
-                setFormData({ ...formData, title: searchQuery });
-                toast({ title: "تم العثور على الموقع", description: data[0].display_name });
+                toast({ title: "تم العثور على الموقع", description: data[0].display_name?.split(',').slice(0, 2).join(',') });
             } else {
                 toast({ title: "لم يتم العثور على نتائج", variant: "destructive" });
             }
@@ -140,37 +161,58 @@ const InteractiveMap = () => {
         }
     };
 
-    const handleQuickSave = () => {
+    const locateMe = () => {
         if (!navigator.geolocation) {
             toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
             return;
         }
         setIsLocating(true);
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                setMapCenter([latitude, longitude]);
+                setNewItem({ name: 'موقعي الحالي', location: `${latitude}, ${longitude}` });
+                toast({ title: "تم تحديد موقعك الحالي" });
+                setIsLocating(false);
+            },
+            (err) => {
+                setIsLocating(false);
+                toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" });
+            },
+            { enableHighAccuracy: true }
+        );
+    };
+
+    const quickSaveMyLocation = async () => {
+        if (!navigator.geolocation) {
+            toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+            return;
+        }
+        setIsLocating(true);
+
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const { latitude, longitude } = pos.coords;
-            setMapCenter([latitude, longitude]);
-            setNewItem({ name: 'موقعي الحالي', location: `${latitude}, ${longitude}` });
 
-            // Reverse Geocode
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
                 const data = await res.json();
-                const addressName = data.display_name || `موقع ${new Date().toLocaleTimeString('ar-EG')}`;
+                const addr = data.address || {};
+                const road = addr.road || addr.suburb || addr.city || 'موقعي';
+                const number = addr.house_number || '';
+                const addressName = number ? `${road} ${number}` : road;
 
-                // Save directly
                 const newRes = {
                     id: Date.now().toString(),
-                    title: addressName.split(',')[0], // Shorten name
+                    title: addressName,
                     url: `geo:${latitude},${longitude}`,
                     category: 'other'
                 };
-                const existing = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-                localStorage.setItem('baraka_resources', JSON.stringify([...existing, newRes]));
+                const updated = [...savedLocations, newRes];
+                localStorage.setItem('baraka_resources', JSON.stringify(updated));
+                setSavedLocations(updated);
 
-                toast({ title: "تم الحفظ السريع!", description: addressName.split(',')[0] });
-                // Force update UI
-                setFormData({ ...formData });
-
+                toast({ title: "تم الحفظ السريع!", description: addressName });
             } catch (e) {
                 console.error(e);
             } finally {
@@ -184,52 +226,134 @@ const InteractiveMap = () => {
 
     const saveEditResource = () => {
         if (!editingResource || !editingResource.title.trim()) return;
-        const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-        const updated = current.map((r: any) => r.id === editingResource.id ? editingResource : r);
+        const updated = savedLocations.map((r: any) => r.id === editingResource.id ? editingResource : r);
         localStorage.setItem('baraka_resources', JSON.stringify(updated));
+        setSavedLocations(updated);
         toast({ title: "تم تحديث الاسم" });
         setIsEditOpen(false);
         setEditingResource(null);
-        setFormData({ ...formData }); // Trigger re-render
+    };
+
+    const deleteLocation = (id: string) => {
+        const updated = savedLocations.filter((i: any) => i.id !== id);
+        localStorage.setItem('baraka_resources', JSON.stringify(updated));
+        setSavedLocations(updated);
+        selectedLocations.delete(id);
+        setSelectedLocations(new Set(selectedLocations));
+        toast({ title: "تم الحذف" });
+    };
+
+    const toggleSelectLocation = (id: string) => {
+        const newSet = new Set(selectedLocations);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedLocations(newSet);
+    };
+
+    const shareSelectedLocations = async () => {
+        const locationsToShare = savedLocations.filter(loc => selectedLocations.has(loc.id));
+        if (locationsToShare.length === 0) {
+            toast({ title: "اختر مواقع للمشاركة", variant: "destructive" });
+            return;
+        }
+
+        const shareText = locationsToShare.map(loc => {
+            const coords = loc.url.replace('geo:', '');
+            const url = `https://www.google.com/maps/search/?api=1&query=${coords}`;
+            return `📍 ${loc.title}\n${url}`;
+        }).join('\n\n');
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'مواقعي المحفوظة', text: shareText });
+                toast({ title: "تمت المشاركة بنجاح" });
+            } catch (e) { }
+        } else {
+            await navigator.clipboard.writeText(shareText);
+            toast({ title: "تم نسخ المواقع للحافظة" });
+        }
+
+        setSelectedLocations(new Set());
+        setIsSelectMode(false);
+    };
+
+    const shareAllLocations = async () => {
+        if (savedLocations.length === 0) {
+            toast({ title: "لا توجد مواقع محفوظة", variant: "destructive" });
+            return;
+        }
+
+        const shareText = savedLocations.map(loc => {
+            const coords = loc.url.replace('geo:', '');
+            const url = `https://www.google.com/maps/search/?api=1&query=${coords}`;
+            return `📍 ${loc.title}\n${url}`;
+        }).join('\n\n');
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'مواقعي المحفوظة', text: shareText });
+            } catch (e) { }
+        } else {
+            await navigator.clipboard.writeText(shareText);
+            toast({ title: "تم نسخ جميع المواقع للحافظة" });
+        }
     };
 
     return (
         <Card className="overflow-hidden border shadow-md bg-white">
-            <CardHeader className="pb-3 bg-blue-50/50 border-b">
-                <CardTitle className="arabic-title text-base flex justify-between items-center">
+            <CardHeader className="py-2 px-3 bg-blue-50/50 border-b">
+                <CardTitle className="arabic-title text-sm flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-blue-600" />
-                        <span className="text-primary">الخريطة التفاعلية والمواقع</span>
+                        <MapPin className="w-4 h-4 text-blue-600" />
+                        <span className="text-primary">المواقع المحفوظة</span>
                     </div>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-2 bg-white text-blue-600 hover:bg-blue-50 border-blue-200"
-                        onClick={handleQuickSave}
-                        disabled={isLocating}
-                    >
-                        {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                        حفظ موقعي
-                    </Button>
+                    <div className="flex gap-1">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1 bg-white"
+                            onClick={quickSaveMyLocation}
+                            disabled={isLocating}
+                        >
+                            {isLocating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                            حفظ موقعي
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1 bg-white"
+                            onClick={shareAllLocations}
+                        >
+                            <Share2 className="w-3 h-3" />
+                            مشاركة الكل
+                        </Button>
+                    </div>
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-                <div className="h-[400px] relative z-0">
-                    <MapContainer center={mapCenter} zoom={13} zoomControl={false} style={{ height: '100%', width: '100%' }}>
+                {/* Map Container */}
+                <div className="h-[300px] relative z-0">
+                    <MapContainer
+                        center={mapCenter}
+                        zoom={13}
+                        zoomControl={false}
+                        style={{ height: '100%', width: '100%' }}
+                    >
                         <ChangeView center={mapCenter} zoom={15} />
                         <TileLayer
                             attribution='&copy; OpenStreetMap contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <ZoomControl position="bottomleft" />
                         <LocationMarker
                             position={newItem.location ? { lat: parseFloat(newItem.location.split(',')[0]), lng: parseFloat(newItem.location.split(',')[1]) } : null}
                             setPosition={(pos) => {
                                 setNewItem({ ...newItem, location: `${pos.lat}, ${pos.lng}` });
                                 setMapCenter([pos.lat, pos.lng]);
                             }}
-                            setLocationName={(name) => setNewItem({ ...newItem, location: name })}
-                            onSave={() => document.getElementById('map-save-input')?.focus()}
+                            onSave={saveLocation}
                             onShare={(pos) => {
                                 const url = `https://www.google.com/maps/search/?api=1&query=${pos.lat},${pos.lng}`;
                                 if (navigator.share) {
@@ -241,141 +365,148 @@ const InteractiveMap = () => {
                             }}
                         />
                     </MapContainer>
-
-                    {/* Locate Button (Moved to Bottom Left) */}
-                    <div className="absolute bottom-24 left-4 z-[1000]">
-                        <Button
-                            size="icon"
-                            className="h-10 w-10 bg-white text-blue-600 hover:bg-blue-50 shadow-lg border border-blue-100 rounded-md"
-                            onClick={() => {
-                                if (navigator.geolocation) {
-                                    toast({ title: "جاري تحديد موقعك..." });
-                                    navigator.geolocation.getCurrentPosition(
-                                        (pos) => {
-                                            const { latitude, longitude } = pos.coords;
-                                            setMapCenter([latitude, longitude]);
-                                            setNewItem({ ...newItem, location: `${latitude}, ${longitude}` });
-                                            toast({ title: "تم تحديد موقعك الحالي" });
-                                        },
-                                        (err) => toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" })
-                                    );
-                                }
-                            }}
-                        >
-                            <Locate className="w-6 h-6" />
-                        </Button>
-                    </div>
-
-                    {/* Search Overlay */}
-                    <div className="absolute top-4 left-4 right-4 z-[1000] flex gap-2">
-                        <Input
-                            placeholder="بحث عن مكان (الشارع، المنطقة)..."
-                            className="bg-white/95 backdrop-blur-md h-10 shadow-lg dir-rtl flex-1 rounded-full border-blue-100 px-4"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') performSearch();
-                            }}
-                        />
-                        <Button
-                            size="icon"
-                            className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shadow-lg rounded-full"
-                            onClick={performSearch}
-                        >
-                            <Search className="w-5 h-5" />
-                        </Button>
-                    </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 border-t flex gap-2 items-center">
-                    <div className="flex-1">
-                        <Input
-                            id="map-save-input"
-                            placeholder="اسم الموقع للحفظ..."
-                            className="bg-white h-10"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        />
-                    </div>
-                    <Button onClick={handleSaveLocation} className="bg-green-600 hover:bg-green-700 h-10 px-6">
-                        حفظ <Check className="w-4 h-4 mr-2" />
+                {/* Search Bar - Bottom of Map */}
+                <div className="p-2 bg-gray-50 border-t flex gap-2 items-center">
+                    <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-10 w-10 bg-white shrink-0"
+                        onClick={locateMe}
+                        disabled={isLocating}
+                    >
+                        {isLocating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Locate className="w-5 h-5 text-blue-600" />}
+                    </Button>
+                    <Input
+                        placeholder="بحث عن مكان..."
+                        className="bg-white h-10 flex-1"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') performSearch();
+                        }}
+                    />
+                    <Button
+                        size="icon"
+                        className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shrink-0"
+                        onClick={performSearch}
+                    >
+                        <Search className="w-5 h-5" />
                     </Button>
                 </div>
 
                 {/* Saved Locations List */}
-                <div className="max-h-60 overflow-y-auto border-t bg-white">
-                    <div className="p-3 text-xs font-semibold text-gray-500 bg-gray-50 border-b">
-                        المواقع المحفوظة ({JSON.parse(localStorage.getItem('baraka_resources') || '[]').length})
-                    </div>
-                    {JSON.parse(localStorage.getItem('baraka_resources') || '[]').map((res: any) => (
-                        <div key={res.id} className="flex items-center justify-between p-3 border-b hover:bg-blue-50 transition-colors">
-                            <button
-                                className="flex items-center gap-3 flex-1 text-right"
+                <div className="border-t bg-white">
+                    <div className="p-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b flex justify-between items-center">
+                        <span>المواقع المحفوظة ({savedLocations.length})</span>
+                        {savedLocations.length > 0 && (
+                            <Button
+                                size="sm"
+                                variant={isSelectMode ? "default" : "ghost"}
+                                className="h-6 text-xs gap-1"
                                 onClick={() => {
-                                    if (res.url.startsWith('geo:')) {
-                                        const [lat, lng] = res.url.replace('geo:', '').split(',').map(Number);
-                                        setMapCenter([lat, lng]);
-                                        setNewItem({ name: res.title, location: `${lat}, ${lng}` });
-                                        toast({ title: "تم الانتقال للموقع", description: res.title });
+                                    if (isSelectMode && selectedLocations.size > 0) {
+                                        shareSelectedLocations();
+                                    } else {
+                                        setIsSelectMode(!isSelectMode);
+                                        setSelectedLocations(new Set());
                                     }
                                 }}
                             >
-                                <div className="bg-blue-100 p-2 rounded-full">
-                                    <MapPin className="w-4 h-4 text-blue-600" />
-                                </div>
-                                <div>
-                                    <div className="font-medium text-sm text-gray-800">{res.title}</div>
-                                    <div className="text-[10px] text-gray-400 dir-ltr truncate max-w-[200px]">{res.url}</div>
-                                </div>
-                            </button>
-                            <div className="flex gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                                {isSelectMode && selectedLocations.size > 0 ? (
+                                    <>
+                                        <Share2 className="w-3 h-3" />
+                                        مشاركة ({selectedLocations.size})
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckSquare className="w-3 h-3" />
+                                        {isSelectMode ? 'إلغاء' : 'تحديد'}
+                                    </>
+                                )}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto">
+                        {savedLocations.map((res: any) => (
+                            <div
+                                key={res.id}
+                                className={`flex items-center gap-2 p-2 border-b hover:bg-blue-50 transition-colors ${selectedLocations.has(res.id) ? 'bg-blue-50' : ''
+                                    }`}
+                            >
+                                {isSelectMode && (
+                                    <Checkbox
+                                        checked={selectedLocations.has(res.id)}
+                                        onCheckedChange={() => toggleSelectLocation(res.id)}
+                                        className="shrink-0"
+                                    />
+                                )}
+                                <button
+                                    className="flex items-center gap-2 flex-1 text-right min-w-0"
                                     onClick={() => {
-                                        let url = res.url;
-                                        if (res.url.startsWith('geo:')) {
-                                            url = `https://www.google.com/maps/search/?api=1&query=${res.url.replace('geo:', '')}`;
+                                        if (isSelectMode) {
+                                            toggleSelectLocation(res.id);
+                                        } else if (res.url.startsWith('geo:')) {
+                                            const [lat, lng] = res.url.replace('geo:', '').split(',').map(Number);
+                                            setMapCenter([lat, lng]);
+                                            setNewItem({ name: res.title, location: `${lat}, ${lng}` });
+                                            toast({ title: "تم الانتقال للموقع", description: res.title });
                                         }
-                                        if (navigator.share) {
-                                            navigator.share({ title: res.title, url }).catch(() => { });
-                                        } else {
-                                            navigator.clipboard.writeText(url);
-                                            toast({ title: "تم نسخ الرابط" });
-                                        }
                                     }}
                                 >
-                                    <Share2 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-orange-400 hover:text-orange-600 hover:bg-orange-50"
-                                    onClick={() => {
-                                        setEditingResource(res);
-                                        setIsEditOpen(true);
-                                    }}
-                                >
-                                    <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                    onClick={() => {
-                                        const current = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-                                        const filtered = current.filter((i: any) => i.id !== res.id);
-                                        localStorage.setItem('baraka_resources', JSON.stringify(filtered));
-                                        toast({ title: "تم الحذف" });
-                                        setFormData({ ...formData });
-                                    }}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                                    <div className="bg-blue-100 p-1.5 rounded-full shrink-0">
+                                        <MapPin className="w-3 h-3 text-blue-600" />
+                                    </div>
+                                    <span className="font-medium text-sm text-gray-800 truncate">{res.title}</span>
+                                </button>
+                                {!isSelectMode && (
+                                    <div className="flex gap-0.5 shrink-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-blue-400 hover:text-blue-600"
+                                            onClick={() => {
+                                                const url = `https://www.google.com/maps/search/?api=1&query=${res.url.replace('geo:', '')}`;
+                                                if (navigator.share) {
+                                                    navigator.share({ title: res.title, url }).catch(() => { });
+                                                } else {
+                                                    navigator.clipboard.writeText(url);
+                                                    toast({ title: "تم نسخ الرابط" });
+                                                }
+                                            }}
+                                        >
+                                            <Share2 className="w-3 h-3" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-orange-400 hover:text-orange-600"
+                                            onClick={() => {
+                                                setEditingResource(res);
+                                                setIsEditOpen(true);
+                                            }}
+                                        >
+                                            <Edit2 className="w-3 h-3" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-red-400 hover:text-red-600"
+                                            onClick={() => deleteLocation(res.id)}
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                        {savedLocations.length === 0 && (
+                            <p className="text-center text-gray-400 py-6 text-sm">
+                                لا توجد مواقع محفوظة
+                            </p>
+                        )}
+                    </div>
                 </div>
             </CardContent>
 

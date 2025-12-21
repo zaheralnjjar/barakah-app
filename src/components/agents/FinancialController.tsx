@@ -262,6 +262,26 @@ const FinancialController = () => {
         <p className="arabic-body text-muted-foreground">
           إدارة الميزانية والحد اليومي وتتبع الديون
         </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 text-primary hover:bg-primary/10 gap-2"
+          onClick={async () => {
+            const text = `
+ملخص مالي - بركة
+----------------
+الرصيد: ${totalBalanceARS.toLocaleString()} ARS
+(≈ ${(totalBalanceARS / financeData.exchange_rate).toFixed(2)} USD)
+الديون: ${financeData.total_debt.toLocaleString()} ARS
+سعر الصرف: ${financeData.exchange_rate}
+                 `.trim();
+            if (navigator.share) await navigator.share({ title: 'ملخص مالي', text });
+            else { await navigator.clipboard.writeText(text); toast({ title: 'تم النسخ' }); }
+          }}
+        >
+          <Share2 className="w-4 h-4" />
+          مشاركة الملخص
+        </Button>
       </div>
 
       {/* Add Transaction */}
@@ -462,6 +482,27 @@ const FinancialController = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="arabic-title">المعاملات الأخيرة</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  const transactions = financeData.pending_expenses.slice(-10).reverse();
+                  let text = 'المعاملات الأخيرة - بركة\n' + '─'.repeat(20) + '\n';
+                  transactions.forEach((t: any) => {
+                    text += `${t.type === 'income' ? '➕' : '➖'} ${t.amount.toLocaleString()} ${t.currency} - ${t.description}\n`;
+                  });
+                  if (navigator.share) {
+                    await navigator.share({ title: 'المعاملات الأخيرة', text });
+                  } else {
+                    await navigator.clipboard.writeText(text);
+                    toast({ title: 'تم النسخ' });
+                  }
+                }}
+              >
+                <Share2 className="w-4 h-4" />
+                مشاركة
+              </Button>
             </div>
           </CardHeader>
           <CardContent>

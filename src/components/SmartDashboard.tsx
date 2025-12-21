@@ -161,7 +161,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     };
 
     const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
-    const gregorianDate = currentDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    const spanishDate = currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const exchangeRate = financeData?.exchange_rate || 1200;
 
@@ -176,8 +176,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     const quickActions = [
         { id: 'add-expense', label: 'إضافة مصروف', icon: DollarSign, color: 'bg-green-500', action: () => onNavigateToTab('finance') },
-        { id: 'add-appointment', label: 'إضافة موعد', icon: CalendarPlus, color: 'bg-blue-500', action: () => onNavigateToTab('productivity') },
-        { id: 'shopping', label: 'قائمة تسوق', icon: ShoppingCart, color: 'bg-orange-500', action: () => onNavigateToTab('productivity') },
+        { id: 'add-appointment', label: 'إضافة موعد', icon: CalendarPlus, color: 'bg-blue-500', action: () => onNavigateToTab('appointments') },
+        { id: 'shopping', label: 'قائمة تسوق', icon: ShoppingCart, color: 'bg-orange-500', action: () => onNavigateToTab('shopping') },
     ];
 
     return (
@@ -187,15 +187,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* Header */}
             <div className="bg-gradient-to-r from-primary/10 to-emerald-500/10 rounded-xl p-4 shadow-sm border border-emerald-100/50">
                 <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-primary/20 p-1.5 rounded-lg">
-                            <Sparkles className="w-5 h-5 text-primary" />
-                        </div>
-                        <span className="arabic-title text-xl font-bold text-primary">نظام بركة</span>
-                    </div>
-                    <div className="text-left flex flex-col items-end">
-                        <span className="text-sm font-semibold text-gray-700 font-sans">{gregorianDate}</span>
-                        <span className="text-xs text-primary font-medium arabic-body">{hijriDate}</span>
+                    <div className="text-right">
+                        <span className="text-sm font-semibold text-gray-700 font-sans capitalize">{spanishDate}</span>
+                        <span className="text-xs text-primary font-medium arabic-body block">{hijriDate}</span>
                     </div>
                 </div>
 
@@ -246,40 +240,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </div>
             </div>
 
-            {/* Quick Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-blue-50 border-blue-100">
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                        <Calendar className="w-6 h-6 text-blue-500 mb-2" />
-                        <span className="text-2xl font-bold text-blue-700">{stats.appointmentsCount}</span>
-                        <span className="text-xs text-blue-600">مهام نشطة</span>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-green-50 border-green-100">
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                        <MapPin className="w-6 h-6 text-green-500 mb-2" />
-                        <span className="text-2xl font-bold text-green-700">{stats.savedLocationsCount}</span>
-                        <span className="text-xs text-green-600">مواقع محفوظة</span>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-purple-50 border-purple-100">
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                        <Clock className="w-6 h-6 text-purple-500 mb-2" />
-                        <span className="text-lg font-bold text-purple-700 truncate w-full">{nextPrayer?.remaining || '--:--'}</span>
-                        <span className="text-xs text-purple-600">الصلاة القادمة</span>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-orange-50 border-orange-100">
-                    <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                        <Activity className="w-6 h-6 text-orange-500 mb-2" />
-                        <span className="text-lg font-bold text-orange-700 truncate w-full">{stats.prayerSource}</span>
-                        <span className="text-xs text-orange-600">مصدر الأوقات</span>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Quick Actions */}
 
             {/* Prayer Times Widget */}
             <Card

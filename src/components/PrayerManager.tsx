@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Moon, Clock, MapPin, Share2, FileDown } from 'lucide-react';
+import { Moon, Clock, MapPin, Share2, FileDown, Calendar, FileText, Download, Bell } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumberToLocale } from '@/lib/utils';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 interface DailyPrayer {
     date: string;
@@ -23,6 +28,22 @@ const PrayerManager = () => {
     const [timeToNext, setTimeToNext] = useState<string>('');
     const [currentDate, setCurrentDate] = useState(new Date());
 
+    // Export Modal State
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportPrayers, setExportPrayers] = useState({
+        fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true
+    });
+    const [exportFromDate, setExportFromDate] = useState(
+        new Date().toISOString().split('T')[0]
+    );
+    const [exportToDate, setExportToDate] = useState(() => {
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        return nextMonth.toISOString().split('T')[0];
+    });
+    const [reminderMinutes, setReminderMinutes] = useState(15);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+
     // Automated Source - Fixed to Online
     const prayerSource = 'aladhan';
 
@@ -33,12 +54,91 @@ const PrayerManager = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDate]);
 
-    // Update time to next prayer every minute
+    // Update time to next prayer every 30 seconds for more accuracy
     useEffect(() => {
-        const timer = setInterval(calculateNextPrayer, 60000);
+        const timer = setInterval(calculateNextPrayer, 30000);
         calculateNextPrayer();
         return () => clearInterval(timer);
     }, [prayerData]);
+
+    const scheduleNotifications = async (formattedData: DailyPrayer[]) => {
+        try {
+            // Check permission
+            const perm = await LocalNotifications.checkPermissions();
+            if (perm.display !== 'granted') {
+                const req = await LocalNotifications.requestPermissions();
+                if (req.display !== 'granted') return;
+            }
+
+            // Cancel existing
+            const pending = await LocalNotifications.getPending();
+            if (pending.notifications.length > 0) {
+                await LocalNotifications.cancel(pending);
+            }
+
+            const notifications: any[] = [];
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+
+            // Limit to today and tomorrow to avoid system limits
+            const relevantDays = formattedData.filter(d =>
+                d.date === todayStr ||
+                new Date(d.date) > now
+            ).slice(0, 2);
+
+            let idCounter = 1;
+
+            relevantDays.forEach(day => {
+                const prayers = [
+                    { name: 'الفجر', key: 'fajr' },
+                    { name: 'الظهر', key: 'dhuhr' },
+                    { name: 'العصر', key: 'asr' },
+                    { name: 'المغرب', key: 'maghrib' },
+                    { name: 'العشاء', key: 'isha' }
+                ];
+
+                prayers.forEach(p => {
+                    const timeStr = day[p.key];
+                    const [h, m] = timeStr.split(':').map(Number);
+                    const pDate = new Date(day.date);
+                    pDate.setHours(h, m, 0);
+
+                    // Alert 15 mins before (Notification before Adhan)
+                    const notifyTime = new Date(pDate.getTime() - 15 * 60000);
+
+                    if (notifyTime > now) {
+                        notifications.push({
+                            id: idCounter++,
+                            title: `اقترب موعد صلاة ${p.name}`,
+                            body: `بقي 15 دقيقة على موعد أذان ${p.name}`,
+                            schedule: { at: notifyTime },
+                            sound: 'adhan_notification.wav',
+                            smallIcon: 'ic_stat_moon'
+                        });
+                    }
+
+                    // Adhan Time
+                    if (pDate > now) {
+                        notifications.push({
+                            id: idCounter++,
+                            title: `حين الآن موعد صلاة ${p.name}`,
+                            body: `حان الآن موعد أذان ${p.name}`,
+                            schedule: { at: pDate },
+                            sound: 'adhan.wav',
+                            smallIcon: 'ic_stat_moon'
+                        });
+                    }
+                });
+            });
+
+            if (notifications.length > 0) {
+                await LocalNotifications.schedule({ notifications });
+            }
+
+        } catch (e) {
+            console.error("Notification Scheduling Error:", e);
+        }
+    };
 
     const loadPrayerData = async () => {
         setLoading(true);
@@ -95,6 +195,7 @@ const PrayerManager = () => {
                 }));
 
                 setPrayerData(formattedData);
+                scheduleNotifications(formattedData);
 
                 // Sync with Cloud if user exists
                 if (userId) {
@@ -150,28 +251,154 @@ const PrayerManager = () => {
         setTimeToNext('--:--');
     };
 
-    const downloadICS = () => {
+    const downloadICS = async () => {
         let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Barakah App//Prayer Times//AR\n";
 
-        prayerData.forEach(day => {
-            const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-            prayers.forEach(p => {
+        const dataToExport = getExportData();
+        const prayersToExport = Object.entries(exportPrayers)
+            .filter(([_, enabled]) => enabled)
+            .map(([key]) => key);
+
+        dataToExport.forEach(day => {
+            prayersToExport.forEach(p => {
                 const dateStr = day.date.replace(/-/g, '');
                 const timeStr = day[p].replace(':', '') + '00';
-                icsContent += `BEGIN:VEVENT\nSUMMARY:Salah ${p}\nDTSTART:${dateStr}T${timeStr}\nDTEND:${dateStr}T${timeStr}\nDESCRIPTION:Prayer time for ${p}\nEND:VEVENT\n`;
+                const prayerNames: Record<string, string> = {
+                    fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء'
+                };
+                const uid = `${dateStr}-${p}@barakah-app`;
+
+                icsContent += `BEGIN:VEVENT\n`;
+                icsContent += `UID:${uid}\n`;
+                icsContent += `SUMMARY:صلاة ${prayerNames[p]}\n`;
+                icsContent += `DTSTART:${dateStr}T${timeStr}\n`;
+                icsContent += `DTEND:${dateStr}T${timeStr}\n`;
+                icsContent += `DESCRIPTION:موعد صلاة ${prayerNames[p]}\n`;
+
+                if (reminderMinutes > 0) {
+                    icsContent += `BEGIN:VALARM\n`;
+                    icsContent += `TRIGGER:-PT${reminderMinutes}M\n`;
+                    icsContent += `ACTION:DISPLAY\n`;
+                    icsContent += `DESCRIPTION:صلاة ${prayerNames[p]} بعد ${reminderMinutes} دقيقة\n`;
+                    icsContent += `END:VALARM\n`;
+                }
+
+                icsContent += `END:VEVENT\n`;
             });
         });
 
         icsContent += "END:VCALENDAR";
 
         const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const fileName = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
+
+        // Try native share first (works on mobile)
+        if (navigator.share) {
+            try {
+                const file = new File([blob], fileName, { type: 'text/calendar' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'مواقيت الصلاة',
+                        text: 'جدول أوقات الصلاة'
+                    });
+                    toast({ title: 'تم التصدير بنجاح!', description: 'اختر التطبيق للمشاركة' });
+                    setShowExportModal(false);
+                    return;
+                }
+            } catch (e) {
+                console.log('Share failed, falling back to download');
+            }
+        }
+
+        // Fallback: direct download
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        setShowExportModal(false);
+        toast({ title: 'تم التصدير بنجاح!', description: 'تم تحميل ملف التقويم ICS' });
+    };
+
+    const downloadPDF = async () => {
+        const dataToExport = getExportData();
+        const prayersToExport = Object.entries(exportPrayers)
+            .filter(([_, enabled]) => enabled)
+            .map(([key]) => key);
+
+        const prayerNames: Record<string, string> = {
+            fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء'
+        };
+
+        // Create text content for sharing
+        let textContent = `📿 مواقيت الصلاة - نظام بركة\n`;
+        textContent += `من ${exportFromDate} إلى ${exportToDate}\n\n`;
+
+        dataToExport.forEach(day => {
+            textContent += `📅 ${day.date}\n`;
+            prayersToExport.forEach(p => {
+                textContent += `   ${prayerNames[p]}: ${day[p]}\n`;
+            });
+            textContent += `\n`;
+        });
+
+        textContent += `\n✨ نظام بركة لإدارة الحياة`;
+
+        // Try native share first
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'مواقيت الصلاة',
+                    text: textContent
+                });
+                toast({ title: 'تم التصدير!', description: 'اختر التطبيق للمشاركة' });
+                setShowExportModal(false);
+                return;
+            } catch (e) {
+                console.log('Share cancelled');
+            }
+        }
+
+        // Fallback: copy to clipboard
+        try {
+            await navigator.clipboard.writeText(textContent);
+            toast({ title: 'تم النسخ!', description: 'تم نسخ الجدول للحافظة' });
+        } catch (e) {
+            // Final fallback: open print dialog
+            const htmlContent = `
+                <html dir="rtl"><head><meta charset="UTF-8"><style>
+                    body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+                    h1 { color: #059669; text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                    th { background-color: #059669; color: white; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                </style></head><body>
+                <h1>مواقيت الصلاة - نظام بركة</h1>
+                <table><thead><tr><th>التاريخ</th>${prayersToExport.map(p => `<th>${prayerNames[p]}</th>`).join('')}</tr></thead>
+                <tbody>${dataToExport.map(day => `<tr><td>${day.date}</td>${prayersToExport.map(p => `<td>${day[p]}</td>`).join('')}</tr>`).join('')}</tbody></table>
+                </body></html>
+            `;
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                printWindow.print();
+            }
+            toast({ title: 'تم فتح الطباعة', description: 'احفظ كـ PDF من نافذة الطباعة' });
+        }
+
+        setShowExportModal(false);
+    };
+
+    const getExportData = () => {
+        return prayerData.filter(d =>
+            d.date >= exportFromDate && d.date <= exportToDate
+        );
     };
 
     const shareSchedule = async () => {
@@ -263,15 +490,125 @@ const PrayerManager = () => {
                                 <Share2 className="w-4 h-4 ml-2" />
                                 مشاركة
                             </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={downloadICS}
-                                className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
-                            >
-                                <FileDown className="w-4 h-4 ml-2" />
-                                تصدير
-                            </Button>
+
+                            {/* Export Modal */}
+                            <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
+                                    >
+                                        <FileDown className="w-4 h-4 ml-2" />
+                                        تصدير
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle className="arabic-title text-center text-lg border-b pb-3">
+                                            خيارات تصدير التقويم
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    <div className="space-y-5 py-4">
+                                        {/* Date Range */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label className="text-xs text-gray-500 mb-1 block">من تاريخ</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={exportFromDate}
+                                                    onChange={(e) => setExportFromDate(e.target.value)}
+                                                    className="text-center border-2 border-primary/30 focus:border-primary"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs text-gray-500 mb-1 block">إلى تاريخ</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={exportToDate}
+                                                    onChange={(e) => setExportToDate(e.target.value)}
+                                                    className="text-center border-2 border-primary/30 focus:border-primary"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Prayers Selection */}
+                                        <div>
+                                            <Label className="text-sm font-bold mb-3 block text-center">الصلوات</Label>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {[
+                                                    { id: 'fajr', label: 'الفجر' },
+                                                    { id: 'dhuhr', label: 'الظهر' },
+                                                    { id: 'asr', label: 'العصر' },
+                                                    { id: 'maghrib', label: 'المغرب' },
+                                                    { id: 'isha', label: 'العشاء' }
+                                                ].map(p => (
+                                                    <div
+                                                        key={p.id}
+                                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${exportPrayers[p.id as keyof typeof exportPrayers]
+                                                            ? 'border-primary bg-primary/5'
+                                                            : 'border-gray-200 bg-white'
+                                                            }`}
+                                                        onClick={() => setExportPrayers(prev => ({ ...prev, [p.id]: !prev[p.id as keyof typeof prev] }))}
+                                                    >
+                                                        <Checkbox
+                                                            id={`prayer-${p.id}`}
+                                                            checked={exportPrayers[p.id as keyof typeof exportPrayers]}
+                                                            onCheckedChange={(checked) =>
+                                                                setExportPrayers(prev => ({ ...prev, [p.id]: checked }))
+                                                            }
+                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                        />
+                                                        <Label htmlFor={`prayer-${p.id}`} className="text-sm font-medium cursor-pointer">{p.label}</Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Reminder Section */}
+                                        <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Bell className="w-4 h-4 text-primary" />
+                                                <Label className="text-sm font-bold text-primary">التنبيه قبل الصلاة</Label>
+                                            </div>
+                                            <div className="flex items-center justify-center gap-3">
+                                                <span className="text-sm text-gray-600">تذكير قبل</span>
+                                                <Input
+                                                    type="number"
+                                                    value={reminderMinutes}
+                                                    onChange={(e) => setReminderMinutes(parseInt(e.target.value) || 0)}
+                                                    className="w-20 text-center text-lg font-bold border-2"
+                                                    min={0}
+                                                    max={60}
+                                                />
+                                                <span className="text-sm text-gray-600">دقيقة</span>
+                                            </div>
+                                            <p className="text-xs text-center text-gray-500 mt-2">
+                                                سيتم إضافة منبه لكل صلاة في ملف التقويم
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <DialogFooter className="flex-col gap-2">
+                                        <Button
+                                            onClick={downloadICS}
+                                            className="w-full gap-2 h-12 text-base bg-primary hover:bg-primary/90"
+                                        >
+                                            <Download className="w-5 h-5" />
+                                            تحميل ملف .ics
+                                        </Button>
+                                        <Button
+                                            onClick={downloadPDF}
+                                            variant="outline"
+                                            className="w-full gap-2 h-12 text-base border-2"
+                                        >
+                                            <FileText className="w-5 h-5" />
+                                            تحميل ملف PDF
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
 

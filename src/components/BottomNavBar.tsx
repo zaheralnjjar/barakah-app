@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, MapPin, Home, Settings, Moon, PieChart } from 'lucide-react';
+import { Calculator, MapPin, Home, Settings, Moon } from 'lucide-react';
 
 interface BottomNavBarProps {
     activeTab: string;
@@ -8,12 +8,11 @@ interface BottomNavBarProps {
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) => {
     const navItems = [
-        { id: 'mohamed', label: 'المالية', icon: Calculator, color: 'text-green-500' },
-        { id: 'fatima', label: 'الإنتاجية', icon: MapPin, color: 'text-blue-500' },
-        { id: 'dashboard', label: 'الرئيسية', icon: Home, color: 'text-purple-500', isHome: true },
-        { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-500' },
-        { id: 'analytics', label: 'الإحصائيات', icon: PieChart, color: 'text-orange-500' },
-        { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-500' },
+        { id: 'mohamed', label: 'المالية', icon: Calculator },
+        { id: 'fatima', label: 'الإنتاجية', icon: MapPin },
+        { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
+        { id: 'prayer', label: 'الصلاة', icon: Moon },
+        { id: 'settings', label: 'الإعدادات', icon: Settings },
     ];
 
     return (
@@ -27,15 +26,18 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) =>
                         <button
                             key={item.id}
                             onClick={() => onNavigate(item.id)}
-                            className={`flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all ${isActive
-                                ? 'bg-primary/10 scale-105'
-                                : 'hover:bg-gray-100'
-                                }`}
+                            className={`flex flex-col items-center justify-center flex-1 h-14 transition-all duration-200 active:scale-95`}
                         >
-                            <div className={`p-1.5 rounded-full ${item.isHome ? 'bg-primary text-white' : ''}`}>
-                                <Icon className={`w-5 h-5 ${isActive ? item.color : 'text-gray-400'} ${item.isHome ? 'text-white' : ''}`} />
+                            <div className={`
+                                flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200
+                                ${isActive ? 'bg-primary/10' : 'hover:bg-gray-100'}
+                            `}>
+                                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-primary' : 'text-gray-400'}`} />
                             </div>
-                            <span className={`text-[10px] arabic-body mt-0.5 ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                            <span className={`
+                                text-[10px] mt-0.5 font-medium transition-colors
+                                ${isActive ? 'text-primary' : 'text-gray-400'}
+                            `}>
                                 {item.label}
                             </span>
                         </button>
