@@ -40,6 +40,17 @@ const FinancialController = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterDate, setFilterDate] = useState('');
 
+  // Subscription tracking
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
+  const [newSubscription, setNewSubscription] = useState({
+    name: '',
+    amount: '',
+    currency: 'ARS',
+    renewalDate: '',
+    cycle: 'monthly' // monthly or yearly
+  });
+
   // Hardcoded automated source
   const exchangeRateSource = 'Banco de la Nación Argentina';
 
@@ -88,6 +99,38 @@ const FinancialController = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Load subscriptions from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('baraka_subscriptions');
+    if (saved) setSubscriptions(JSON.parse(saved));
+  }, []);
+
+  const saveSubscription = () => {
+    if (!newSubscription.name || !newSubscription.amount) {
+      toast({ title: 'خطأ', description: 'يرجى إدخال الاسم والمبلغ', variant: 'destructive' });
+      return;
+    }
+    const sub = {
+      id: Date.now().toString(),
+      ...newSubscription,
+      amount: parseFloat(newSubscription.amount),
+      createdAt: new Date().toISOString()
+    };
+    const updated = [...subscriptions, sub];
+    setSubscriptions(updated);
+    localStorage.setItem('baraka_subscriptions', JSON.stringify(updated));
+    setNewSubscription({ name: '', amount: '', currency: 'ARS', renewalDate: '', cycle: 'monthly' });
+    setShowSubscriptionDialog(false);
+    toast({ title: 'تم الحفظ', description: `تم إضافة اشتراك ${sub.name}` });
+  };
+
+  const deleteSubscription = (id: string) => {
+    const updated = subscriptions.filter(s => s.id !== id);
+    setSubscriptions(updated);
+    localStorage.setItem('baraka_subscriptions', JSON.stringify(updated));
+    toast({ title: 'تم الحذف' });
   };
 
   const calculateDailyLimit = () => {
@@ -435,6 +478,94 @@ const FinancialController = () => {
             </p>
           </CardContent>
         </Card>
+
+        {/* Subscriptions Card */}
+        <Card className="col-span-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="arabic-title text-sm flex items-center justify-between">
+              <div className="flex items-center">
+                <RefreshCw className="w-4 h-4 ml-2" />
+                الاشتراكات الشهرية
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setShowSubscriptionDialog(true)}>
+                <PlusCircle className="w-4 h-4 ml-1" /> إضافة
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {subscriptions.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">لا توجد اشتراكات مسجلة</p>
+            ) : (
+              <div className="space-y-2">
+                {subscriptions.map(sub => (
+                  <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-purple-500" />
+                      <div>
+                        <p className="font-medium text-sm">{sub.name}</p>
+                        <p className="text-xs text-gray-500">{sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-purple-600">{sub.amount} {sub.currency}</span>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400" onClick={() => deleteSubscription(sub.id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
+                  <span className="font-bold text-purple-700">
+                    {subscriptions.filter(s => s.cycle === 'monthly').reduce((sum, s) => sum + s.amount, 0).toLocaleString()} ARS
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Add Subscription Dialog */}
+        <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-right">إضافة اشتراك جديد</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Input
+                placeholder="اسم الاشتراك (مثل: Netflix, Spotify)"
+                value={newSubscription.name}
+                onChange={e => setNewSubscription({ ...newSubscription, name: e.target.value })}
+                className="text-right"
+              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="المبلغ"
+                  value={newSubscription.amount}
+                  onChange={e => setNewSubscription({ ...newSubscription, amount: e.target.value })}
+                />
+                <select
+                  value={newSubscription.currency}
+                  onChange={e => setNewSubscription({ ...newSubscription, currency: e.target.value })}
+                  className="border rounded px-2"
+                >
+                  <option value="ARS">ARS</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <select
+                value={newSubscription.cycle}
+                onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
+                className="w-full border rounded p-2"
+              >
+                <option value="monthly">شهري</option>
+                <option value="yearly">سنوي</option>
+              </select>
+              <Button onClick={saveSubscription} className="w-full">حفظ الاشتراك</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Exchange Rate - Automated */}

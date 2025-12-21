@@ -38,12 +38,15 @@ const Index = () => {
   const currentX = useRef(0);
   const currentY = useRef(0);
   const isDragging = useRef(false);
+  const swipeStartTime = useRef(0);
   const SWIPE_THRESHOLD = 100;
+  const MIN_SWIPE_TIME = 150; // Minimum time (ms) to differentiate swipe from tap
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
       startX.current = e.touches[0].clientX;
       startY.current = e.touches[0].clientY;
+      swipeStartTime.current = Date.now();
       isDragging.current = true;
     };
 
@@ -56,11 +59,12 @@ const Index = () => {
     const handleTouchEnd = () => {
       if (!isDragging.current) return;
 
+      const swipeDuration = Date.now() - swipeStartTime.current;
       const diffX = currentX.current - startX.current;
       const diffY = currentY.current - startY.current;
 
-      // Only process horizontal swipes (when horizontal movement > vertical)
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
+      // Only process as swipe if: duration > MIN_SWIPE_TIME AND horizontal movement > threshold
+      if (swipeDuration > MIN_SWIPE_TIME && Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
         if (diffX > 0) {
           // Swipe left-to-right (RTL: going back = go to home)
           if (activeTab !== 'dashboard') {
