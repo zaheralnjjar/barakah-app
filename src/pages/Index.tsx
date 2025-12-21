@@ -28,42 +28,51 @@ const Index = () => {
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const { toast } = useToast();
 
-  // Pull to Home Logic
+  // Swipe Navigation Logic
+  const startX = useRef(0);
   const startY = useRef(0);
+  const currentX = useRef(0);
   const currentY = useRef(0);
   const isDragging = useRef(false);
-  const PULL_THRESHOLD = 150;
+  const SWIPE_THRESHOLD = 100;
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      // Only enable pull if at the top of the page
-      if (window.scrollY === 0) {
-        startY.current = e.touches[0].clientY;
-        isDragging.current = true;
-      }
+      startX.current = e.touches[0].clientX;
+      startY.current = e.touches[0].clientY;
+      isDragging.current = true;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return;
+      currentX.current = e.touches[0].clientX;
       currentY.current = e.touches[0].clientY;
-
-      // If pulling down significantly
-      if (currentY.current - startY.current > 50 && window.scrollY <= 0 && activeTab !== 'dashboard') {
-        // Visual feedback could be added here
-      }
     };
 
     const handleTouchEnd = () => {
       if (!isDragging.current) return;
 
-      const diff = currentY.current - startY.current;
-      if (diff > PULL_THRESHOLD && activeTab !== 'dashboard' && window.scrollY <= 0) {
-        setActiveTab('dashboard');
-        toast({ title: "العودة للرئيسية", duration: 1500 });
+      const diffX = currentX.current - startX.current;
+      const diffY = currentY.current - startY.current;
+
+      // Only process horizontal swipes (when horizontal movement > vertical)
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
+        if (diffX > 0) {
+          // Swipe left-to-right (RTL: going back = go to home)
+          if (activeTab !== 'dashboard') {
+            setActiveTab('dashboard');
+            toast({ title: "العودة للرئيسية", duration: 1500 });
+          }
+        } else {
+          // Swipe right-to-left (RTL: refresh current page)
+          window.location.reload();
+        }
       }
 
       isDragging.current = false;
+      startX.current = 0;
       startY.current = 0;
+      currentX.current = 0;
       currentY.current = 0;
     };
 
