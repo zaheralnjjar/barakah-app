@@ -479,20 +479,27 @@ const PrayerManager = () => {
             {/* Next Prayer Card */}
             <Card className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white border-none shadow-lg overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2" />
-                <CardContent className="p-8 relative z-10">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                            <Clock className="w-4 h-4 text-white" />
-                            <span className="arabic-body text-sm font-medium">الصلاة القادمة</span>
+                <CardContent className="p-6 relative z-10">
+                    <div className="flex items-start justify-between">
+                        {/* Right side: Next prayer label + countdown */}
+                        <div className="text-right">
+                            <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm mb-2 inline-flex">
+                                <Clock className="w-4 h-4 text-white" />
+                                <span className="arabic-body text-sm font-medium">الصلاة القادمة</span>
+                            </div>
+                            <div className="text-3xl font-bold arabic-title tracking-wider">{timeToNext}</div>
                         </div>
-                        <span className="arabic-body text-2xl font-light tracking-wider">{timeToNext}</span>
+
+                        {/* Left side: Prayer name + date */}
+                        <div className="text-left">
+                            <div className="text-4xl font-bold arabic-title mb-1">
+                                {nextPrayer || '...'}
+                            </div>
+                            <p className="text-emerald-100 arabic-body text-sm">
+                                {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </p>
+                        </div>
                     </div>
-                    <div className="text-5xl font-bold arabic-title mb-2">
-                        {nextPrayer || '...'}
-                    </div>
-                    <p className="text-emerald-100 arabic-body text-sm mt-2">
-                        {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
                 </CardContent>
             </Card>
 

@@ -201,8 +201,18 @@ const LogisticsManager = () => {
       const savedTasks = localStorage.getItem('baraka_tasks');
       if (savedTasks) setTasks(JSON.parse(savedTasks));
 
-      const savedAppointments = localStorage.getItem('baraka_appointments');
-      if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
+      // Load appointments from Supabase
+      const loadAppointments = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: true });
+        if (data) setAppointments(data);
+      };
+      loadAppointments();
 
       const savedResources = localStorage.getItem('baraka_resources');
       if (savedResources) setResources(JSON.parse(savedResources));
@@ -215,9 +225,7 @@ const LogisticsManager = () => {
     localStorage.setItem('baraka_tasks', JSON.stringify(tasks));
   }, [tasks]);
 
-  useEffect(() => {
-    localStorage.setItem('baraka_appointments', JSON.stringify(appointments));
-  }, [appointments]);
+  // Appointments now synced via Supabase - no localStorage needed
 
   useEffect(() => {
     localStorage.setItem('baraka_resources', JSON.stringify(resources));
@@ -284,7 +292,7 @@ const LogisticsManager = () => {
   };
 
   // --- Consolidated Save Handler ---
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title) return;
 
     if (activeTab === 'task' || activeTab === 'project') {
@@ -302,15 +310,27 @@ const LogisticsManager = () => {
       setTasks(prev => [...prev, newTask]);
       toast({ title: activeTab === 'task' ? "تم إضافة المهمة" : "تم إنشاء المشروع" });
     } else if (activeTab === 'appointment') {
-      const newAppt: Appointment = {
-        id: Date.now().toString(),
+      // Save to Supabase for proper sync
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'خطأ', description: 'يرجى تسجيل الدخول', variant: 'destructive' });
+        return;
+      }
+      const { data, error } = await supabase.from('appointments').insert({
+        user_id: user.id,
         title: formData.title,
         date: formData.date,
         time: formData.time,
         location: formData.location,
-        notes: formData.description
-      };
-      setAppointments(prev => [...prev, newAppt]);
+        notes: formData.description,
+        is_completed: false
+      }).select().single();
+
+      if (error) {
+        toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+        return;
+      }
+      if (data) setAppointments(prev => [...prev, data]);
       toast({ title: "تم حجز الموعد" });
     }
 
