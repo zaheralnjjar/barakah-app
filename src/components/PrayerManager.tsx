@@ -511,7 +511,7 @@ const PrayerManager = () => {
                                 {nextPrayer || '...'}
                             </div>
                             <p className="text-emerald-100 arabic-body text-sm">
-                                {new Date().toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                {new Date().toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </p>
                         </div>
                     </div>
@@ -712,7 +712,7 @@ const PrayerManager = () => {
                             السابق
                         </Button>
                         <span className="font-bold text-gray-700 min-w-[140px] text-center">
-                            {currentDate.toLocaleString('ar-EG', { month: 'long', year: 'numeric' })}
+                            {currentDate.toLocaleString('ar-u-nu-latn', { month: 'long', year: 'numeric' })}
                         </span>
                         <Button
                             variant="ghost"

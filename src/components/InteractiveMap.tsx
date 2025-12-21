@@ -355,10 +355,10 @@ const InteractiveMap = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-                {/* 60/40 Split Layout */}
-                <div className="flex flex-col lg:flex-row h-[70vh] min-h-[400px]">
+                {/* 60/40 Split Layout - Mobile: 60% map / 40% list */}
+                <div className="flex flex-col h-[75vh] min-h-[500px]">
                     {/* Map Section - 60% */}
-                    <div className="lg:w-[60%] w-full h-[50%] lg:h-full relative z-0">
+                    <div className="h-[60%] lg:h-[60%] w-full relative z-0">
                         <MapContainer
                             center={mapCenter}
                             zoom={13}
