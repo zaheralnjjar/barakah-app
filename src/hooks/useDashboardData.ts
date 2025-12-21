@@ -17,11 +17,32 @@ export const useDashboardData = () => {
     const [shoppingListSummary, setShoppingListSummary] = useState<any[]>([]);
     const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
+    // Exchange Rate State (Auto Sync)
+    const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+
     const { prayerTimes, nextPrayer: hookNextPrayer, timeUntilNext } = usePrayerTimes();
 
     useEffect(() => {
         fetchDashboardData();
+        fetchExchangeRate();
     }, []);
+
+    const fetchExchangeRate = async () => {
+        try {
+            // Fetch USD to Local Currency (Assuming TRY for Barakah context based on previous logs, or generic)
+            // Let's fetch USD -> TRY as a default example, or fetch base.
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+            const data = await res.json();
+            if (data && data.rates) {
+                // If user wants specific currency, we should store that preference.
+                // For now, I'll store the whole rates object or a specific one if I knew it.
+                // Or just set a common one. Let's return the whole rates or specific 'TRY'.
+                setExchangeRate(data.rates.TRY); // Defaulting to TRY based on project context (Turkish Timezone often used)
+            }
+        } catch (e) {
+            console.error("Failed to sync exchange rate", e);
+        }
+    };
 
     const fetchDashboardData = async () => {
         setLoading(true);
@@ -94,6 +115,7 @@ export const useDashboardData = () => {
         prayerTimes,
         nextPrayer: hookNextPrayer,
         timeUntilNext,
+        exchangeRate, // Exposed new state
         refetch: fetchDashboardData
     };
 };

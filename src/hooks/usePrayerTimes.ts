@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Preferences } from '@capacitor/preferences';
 
 interface PrayerTime {
     name: string;
@@ -194,8 +195,15 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
             setSource('api');
             updateNextPrayer(prayers);
 
+
             // Save to localStorage
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ times, source: 'api', coords }));
+
+            // Sync to Native Widget
+            Preferences.set({
+                key: 'widget_prayers',
+                value: JSON.stringify(prayers)
+            }).catch(e => console.error(e));
         } catch (err: any) {
             setError(err.message);
             // Fallback to default times
