@@ -161,9 +161,9 @@
 
 @layer components {
 
-  /* Agent Card Styles */
+  /* Agent Card Styles - Enhanced */
   .agent-card {
-    @apply bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all duration-300;
+    @apply bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all duration-300;
     box-shadow: var(--shadow-elegant);
   }
 
@@ -171,15 +171,35 @@
     transform: translateY(-2px);
   }
 
-  /* Islamic Button Variants */
+  /* Enhanced Card Styles */
+  .card-enhanced {
+    @apply rounded-xl shadow-sm border-0;
+    background: linear-gradient(to bottom, white, hsl(210 40% 99%));
+  }
+
+  /* Islamic Button Variants - Larger */
   .btn-islamic {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-6 py-3 font-semibold transition-all duration-300;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-8 py-4 font-semibold transition-all duration-300 text-base;
     background: var(--gradient-primary);
   }
 
   .btn-gold {
-    @apply text-gold-foreground hover:opacity-90 rounded-lg px-6 py-3 font-semibold transition-all duration-300;
+    @apply text-gold-foreground hover:opacity-90 rounded-xl px-8 py-4 font-semibold transition-all duration-300 text-base;
     background: var(--gradient-gold);
+  }
+
+  /* Improved spacing utilities */
+  .section-spacing {
+    @apply py-6 space-y-4;
+  }
+
+  .card-padding {
+    @apply p-5;
+  }
+
+  /* Better text contrast */
+  .text-muted-improved {
+    color: hsl(215 16% 40%);
   }
 }
 
