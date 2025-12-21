@@ -72,18 +72,22 @@ const SettingsPanel = () => {
         'quick_actions': 'الاختصارات السريعة'
     };
 
-    // Reminder Customizations State
+    // Reminder Customizations State - Enhanced
     const [reminders, setReminders] = useState(() => {
         try {
             const saved = localStorage.getItem('baraka_reminders_settings');
             return saved ? JSON.parse(saved) : {
                 prayer: true,
                 tasks: true,
+                appointments: true,
+                financial: true,
+                dailySummary: false,
                 sound: true,
-                vibration: true
+                vibration: true,
+                reminderMinutes: 15
             };
         } catch {
-            return { prayer: true, tasks: true, sound: true, vibration: true };
+            return { prayer: true, tasks: true, appointments: true, financial: true, dailySummary: false, sound: true, vibration: true, reminderMinutes: 15 };
         }
     });
 
@@ -92,6 +96,13 @@ const SettingsPanel = () => {
         setReminders(newSettings);
         localStorage.setItem('baraka_reminders_settings', JSON.stringify(newSettings));
         toast({ title: "تم حفظ الإعدادات" });
+    };
+
+    const setReminderMinutes = (minutes: number) => {
+        const newSettings = { ...reminders, reminderMinutes: minutes };
+        setReminders(newSettings);
+        localStorage.setItem('baraka_reminders_settings', JSON.stringify(newSettings));
+        toast({ title: "تم حفظ وقت التذكير" });
     };
 
 
@@ -166,7 +177,7 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
-            {/* Reminder Customizations - NEW */}
+            {/* Reminder Customizations - Enhanced */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg arabic-title">
@@ -175,21 +186,47 @@ const SettingsPanel = () => {
                     </CardTitle>
                     <CardDescription className="arabic-body text-xs">التحكم في الإشعارات والتنبيهات</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-2 border-b">
-                        <label className="font-medium">إشعارات الصلاة</label>
+                <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <label className="font-medium text-sm">🕌 إشعارات الصلاة</label>
                         <Checkbox checked={reminders.prayer} onCheckedChange={() => toggleReminder('prayer')} />
                     </div>
-                    <div className="flex items-center justify-between p-2 border-b">
-                        <label className="font-medium">تذكير المهام</label>
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <label className="font-medium text-sm">✅ تذكير المهام</label>
                         <Checkbox checked={reminders.tasks} onCheckedChange={() => toggleReminder('tasks')} />
                     </div>
-                    <div className="flex items-center justify-between p-2 border-b">
-                        <label className="font-medium">الأصوات</label>
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <label className="font-medium text-sm">📅 تذكير المواعيد</label>
+                        <Checkbox checked={reminders.appointments} onCheckedChange={() => toggleReminder('appointments')} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <label className="font-medium text-sm">💰 تنبيهات مالية</label>
+                        <Checkbox checked={reminders.financial} onCheckedChange={() => toggleReminder('financial')} />
+                    </div>
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <label className="font-medium text-sm">📊 ملخص يومي</label>
+                        <Checkbox checked={reminders.dailySummary} onCheckedChange={() => toggleReminder('dailySummary')} />
+                    </div>
+                    <div className="border-t pt-3">
+                        <p className="text-xs text-gray-500 mb-2">وقت التذكير قبل الموعد</p>
+                        <div className="flex gap-2">
+                            {[5, 10, 15, 30, 60].map(min => (
+                                <button
+                                    key={min}
+                                    onClick={() => setReminderMinutes(min)}
+                                    className={`px-3 py-1 rounded-full text-xs ${reminders.reminderMinutes === min ? 'bg-primary text-white' : 'bg-gray-100'}`}
+                                >
+                                    {min} دقيقة
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="border-t pt-3 flex items-center justify-between">
+                        <label className="font-medium text-sm">🔊 الأصوات</label>
                         <Checkbox checked={reminders.sound} onCheckedChange={() => toggleReminder('sound')} />
                     </div>
-                    <div className="flex items-center justify-between p-2">
-                        <label className="font-medium">الاهتزاز</label>
+                    <div className="flex items-center justify-between">
+                        <label className="font-medium text-sm">📳 الاهتزاز</label>
                         <Checkbox checked={reminders.vibration} onCheckedChange={() => toggleReminder('vibration')} />
                     </div>
                 </CardContent>

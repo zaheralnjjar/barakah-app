@@ -40,15 +40,17 @@ const FinancialController = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterDate, setFilterDate] = useState('');
 
-  // Subscription tracking
+  // Subscription tracking - Enhanced
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [newSubscription, setNewSubscription] = useState({
     name: '',
     amount: '',
     currency: 'ARS',
-    renewalDate: '',
-    cycle: 'monthly' // monthly or yearly
+    renewalDate: '', // Day of month (1-31)
+    renewalMonth: '', // Month (1-12) for yearly
+    cycle: 'monthly', // monthly or yearly
+    reminderDays: 3 // Days before to remind
   });
 
   // Hardcoded automated source
@@ -121,7 +123,7 @@ const FinancialController = () => {
     const updated = [...subscriptions, sub];
     setSubscriptions(updated);
     localStorage.setItem('baraka_subscriptions', JSON.stringify(updated));
-    setNewSubscription({ name: '', amount: '', currency: 'ARS', renewalDate: '', cycle: 'monthly' });
+    setNewSubscription({ name: '', amount: '', currency: 'ARS', renewalDate: '', renewalMonth: '', cycle: 'monthly', reminderDays: 3 });
     setShowSubscriptionDialog(false);
     toast({ title: 'تم الحفظ', description: `تم إضافة اشتراك ${sub.name}` });
   };
@@ -696,15 +698,14 @@ const FinancialController = () => {
               )}
             </div>
 
-            {/* Table Header */}
-            <div className="grid grid-cols-4 gap-2 p-2 bg-gray-100 rounded-t-lg text-xs font-bold text-gray-600 text-center">
-              <span>الأيقونة</span>
-              <span>المبلغ</span>
-              <span>التاريخ</span>
-              <span>بيان المصروف</span>
+            {/* Table Header - 3 columns, no icons */}
+            <div className="grid grid-cols-3 gap-3 p-3 bg-gray-100 rounded-t-lg text-sm font-bold text-gray-700">
+              <span className="text-right">المبلغ</span>
+              <span className="text-center">التاريخ</span>
+              <span className="text-right">الوصف</span>
             </div>
 
-            <div className="space-y-1 border rounded-b-lg">
+            <div className="space-y-0 border rounded-b-lg overflow-hidden">
               {financeData.pending_expenses.slice(-10).reverse()
                 .filter((expense: any) => {
                   if (filterCategory !== 'all' && expense.category !== filterCategory) return false;
@@ -715,38 +716,26 @@ const FinancialController = () => {
                   return true;
                 })
                 .map((expense: any, index: number) => (
-                  <div key={expense.id || index} className="grid grid-cols-4 gap-2 p-2 border-b last:border-b-0 items-center text-center">
-                    {/* Icon Column */}
-                    <div className="flex justify-center">
-                      {expense.type === 'expense' ? (
-                        <div className="p-1.5 bg-red-100 rounded-full">
-                          <MinusCircle className="w-4 h-4 text-red-600" />
-                        </div>
-                      ) : (
-                        <div className="p-1.5 bg-green-100 rounded-full">
-                          <PlusCircle className="w-4 h-4 text-green-600" />
-                        </div>
-                      )}
-                    </div>
-
+                  <div key={expense.id || index} className={`grid grid-cols-3 gap-3 p-3 border-b last:border-b-0 items-center ${expense.type === 'income' ? 'bg-green-50' : 'bg-red-50'}`}>
                     {/* Amount Column */}
-                    <div>
-                      <span className={`font-bold text-sm block ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-right">
+                      <span className={`font-bold text-base block ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                         {expense.type === 'income' ? '+' : '-'}{expense.amount.toLocaleString()} {expense.currency}
                       </span>
-                      <span className="text-[10px] text-gray-400 block">
+                      <span className="text-xs text-gray-400 block">
                         ${expense.currency === 'USD' ? expense.amount.toFixed(2) : (expense.amount / financeData.exchange_rate).toFixed(2)}
                       </span>
                     </div>
 
                     {/* Date Column */}
-                    <div className="text-xs text-gray-500">
+                    <div className="text-center text-sm text-gray-600">
                       {new Date(expense.timestamp).toLocaleDateString('ar')}
                     </div>
 
                     {/* Description Column */}
-                    <div className="text-xs text-right truncate px-1">
-                      {expense.description}
+                    <div className="text-right">
+                      <span className="text-sm font-medium block truncate">{expense.category}</span>
+                      {expense.description && <span className="text-xs text-gray-400 block truncate">{expense.description}</span>}
                     </div>
                   </div>
                 ))}

@@ -247,7 +247,22 @@ const PrayerManager = () => {
                 const diff = prayerTime.getTime() - now.getTime();
                 const diffHours = Math.floor(diff / (1000 * 60 * 60));
                 const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                setTimeToNext(`${diffHours} ساعة و ${diffMinutes} دقيقة`);
+
+                // Arabic words for hours
+                const hoursArabic: Record<number, string> = {
+                    0: '', 1: 'ساعة', 2: 'ساعتين', 3: 'ثلاث ساعات', 4: 'أربع ساعات',
+                    5: 'خمس ساعات', 6: 'ست ساعات', 7: 'سبع ساعات', 8: 'ثماني ساعات',
+                    9: 'تسع ساعات', 10: 'عشر ساعات', 11: 'إحدى عشرة ساعة', 12: 'اثنتا عشرة ساعة'
+                };
+
+                const hoursText = diffHours > 0 ? (hoursArabic[diffHours] || `${diffHours} ساعة`) : '';
+                const minutesText = `${diffMinutes} دقيقة`;
+
+                if (diffHours > 0) {
+                    setTimeToNext(`${hoursText} و ${minutesText}`);
+                } else {
+                    setTimeToNext(minutesText);
+                }
                 return;
             }
         }
