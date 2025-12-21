@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Share } from '@capacitor/share';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -157,26 +158,22 @@ const SettingsPanel = () => {
             textContent += `\n✨ نظام بركة لإدارة الحياة`;
         }
 
-        // Try native share first (shows app list like WhatsApp, Email, etc.)
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: reportType === 'finance' ? 'التقرير المالي' : 'تقرير المواعيد',
-                    text: textContent
-                });
-                toast({ title: "تم التصدير!", description: "اختر التطبيق للمشاركة" });
-                return;
-            } catch (e) {
-                console.log('Share cancelled');
-            }
-        }
-
-        // Fallback: copy to clipboard
+        // Use Capacitor Share API for mobile apps
         try {
-            await navigator.clipboard.writeText(textContent);
-            toast({ title: "تم النسخ!", description: "تم نسخ التقرير للحافظة" });
+            await Share.share({
+                title: reportType === 'finance' ? 'التقرير المالي' : 'تقرير المواعيد',
+                text: textContent,
+                dialogTitle: 'مشاركة التقرير'
+            });
+            toast({ title: "تم التصدير!", description: "اختر التطبيق للمشاركة" });
         } catch (e) {
-            toast({ title: "خطأ", description: "تعذر النسخ", variant: "destructive" });
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(textContent);
+                toast({ title: "تم النسخ!", description: "تم نسخ التقرير للحافظة" });
+            } catch (err) {
+                toast({ title: "خطأ", description: "تعذر المشاركة", variant: "destructive" });
+            }
         }
     };
 

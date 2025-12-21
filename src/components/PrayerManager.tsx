@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { formatNumberToLocale } from '@/lib/utils';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Share } from '@capacitor/share';
 
 interface DailyPrayer {
     date: string;
@@ -289,39 +290,29 @@ const PrayerManager = () => {
 
         icsContent += "END:VCALENDAR";
 
-        const blob = new Blob([icsContent], { type: 'text/calendar' });
-        const fileName = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
-
-        // Try native share first (works on mobile)
-        if (navigator.share) {
-            try {
-                const file = new File([blob], fileName, { type: 'text/calendar' });
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: 'مواقيت الصلاة',
-                        text: 'جدول أوقات الصلاة'
-                    });
-                    toast({ title: 'تم التصدير بنجاح!', description: 'اختر التطبيق للمشاركة' });
-                    setShowExportModal(false);
-                    return;
-                }
-            } catch (e) {
-                console.log('Share failed, falling back to download');
-            }
+        // Use Capacitor Share for mobile
+        try {
+            await Share.share({
+                title: 'مواقيت الصلاة',
+                text: icsContent,
+                dialogTitle: 'تصدير أوقات الصلاة'
+            });
+            toast({ title: 'تم التصدير بنجاح!', description: 'اختر التطبيق للمشاركة' });
+        } catch (e) {
+            // Fallback: direct download for web
+            const blob = new Blob([icsContent], { type: 'text/calendar' });
+            const fileName = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            toast({ title: 'تم التصدير!', description: 'تم تحميل ملف التقويم' });
         }
-
-        // Fallback: direct download
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
         setShowExportModal(false);
-        toast({ title: 'تم التصدير بنجاح!', description: 'تم تحميل ملف التقويم ICS' });
     };
 
     const downloadPDF = async () => {
@@ -348,50 +339,23 @@ const PrayerManager = () => {
 
         textContent += `\n✨ نظام بركة لإدارة الحياة`;
 
-        // Try native share first
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'مواقيت الصلاة',
-                    text: textContent
-                });
-                toast({ title: 'تم التصدير!', description: 'اختر التطبيق للمشاركة' });
-                setShowExportModal(false);
-                return;
-            } catch (e) {
-                console.log('Share cancelled');
-            }
-        }
-
-        // Fallback: copy to clipboard
+        // Use Capacitor Share for mobile
         try {
-            await navigator.clipboard.writeText(textContent);
-            toast({ title: 'تم النسخ!', description: 'تم نسخ الجدول للحافظة' });
+            await Share.share({
+                title: 'مواقيت الصلاة',
+                text: textContent,
+                dialogTitle: 'مشاركة أوقات الصلاة'
+            });
+            toast({ title: 'تم التصدير!', description: 'اختر التطبيق للمشاركة' });
         } catch (e) {
-            // Final fallback: open print dialog
-            const htmlContent = `
-                <html dir="rtl"><head><meta charset="UTF-8"><style>
-                    body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
-                    h1 { color: #059669; text-align: center; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-                    th { background-color: #059669; color: white; }
-                    tr:nth-child(even) { background-color: #f9f9f9; }
-                </style></head><body>
-                <h1>مواقيت الصلاة - نظام بركة</h1>
-                <table><thead><tr><th>التاريخ</th>${prayersToExport.map(p => `<th>${prayerNames[p]}</th>`).join('')}</tr></thead>
-                <tbody>${dataToExport.map(day => `<tr><td>${day.date}</td>${prayersToExport.map(p => `<td>${day[p]}</td>`).join('')}</tr>`).join('')}</tbody></table>
-                </body></html>
-            `;
-            const printWindow = window.open('', '_blank');
-            if (printWindow) {
-                printWindow.document.write(htmlContent);
-                printWindow.document.close();
-                printWindow.print();
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(textContent);
+                toast({ title: 'تم النسخ!', description: 'تم نسخ الجدول للحافظة' });
+            } catch (err) {
+                toast({ title: 'خطأ', description: 'تعذر المشاركة', variant: 'destructive' });
             }
-            toast({ title: 'تم فتح الطباعة', description: 'احفظ كـ PDF من نافذة الطباعة' });
         }
-
         setShowExportModal(false);
     };
 
