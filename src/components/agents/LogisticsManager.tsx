@@ -187,6 +187,37 @@ const LogisticsManager = () => {
   const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes
   const [pomodoroTaskId, setPomodoroTaskId] = useState<string | null>(null);
 
+  // Medication Tracker State
+  const [medications, setMedications] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('baraka_medications') || '[]'); } catch { return []; }
+  });
+  const [selectedMedDay, setSelectedMedDay] = useState<string | null>(null);
+  const [showMedDialog, setShowMedDialog] = useState(false);
+  const [newMedication, setNewMedication] = useState({ name: '', time: '08:00', reminder: true });
+  const DAYS_AR = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+  const saveMedication = () => {
+    if (!newMedication.name || !selectedMedDay) return;
+    const updated = [...medications, { id: Date.now().toString(), day: selectedMedDay, ...newMedication, taken: false }];
+    setMedications(updated);
+    localStorage.setItem('baraka_medications', JSON.stringify(updated));
+    setNewMedication({ name: '', time: '08:00', reminder: true });
+    toast({ title: 'تم إضافة الدواء' });
+  };
+
+  const toggleMedTaken = (id: string) => {
+    const updated = medications.map(m => m.id === id ? { ...m, taken: !m.taken } : m);
+    setMedications(updated);
+    localStorage.setItem('baraka_medications', JSON.stringify(updated));
+  };
+
+  const deleteMedication = (id: string) => {
+    const updated = medications.filter(m => m.id !== id);
+    setMedications(updated);
+    localStorage.setItem('baraka_medications', JSON.stringify(updated));
+    toast({ title: 'تم الحذف' });
+  };
+
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({ name: '', location: '', priority: 'medium' });
   const [mapCenter, setMapCenter] = useState<[number, number]>([-34.6037, -58.3816]); // Default: Buenos Aires
@@ -886,7 +917,107 @@ const LogisticsManager = () => {
           </div>
         </div>
       </div>
-    </div >
+      {/* Medication Tracker */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="arabic-title text-base flex items-center gap-2">
+            💊 متتبع الأدوية الأسبوعي
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-7 gap-1 mb-3">
+            {DAYS_AR.map(day => (
+              <button
+                key={day}
+                onClick={() => { setSelectedMedDay(day); setShowMedDialog(true); }}
+                className={`p-2 text-center rounded-lg border text-xs hover:bg-primary/10 transition-colors ${selectedMedDay === day ? 'bg-primary/20 border-primary' : 'bg-gray-50'}`}
+              >
+                <span className="block font-bold">{day}</span>
+                <span className="text-[10px] text-gray-500">{medications.filter(m => m.day === day).length} دواء</span>
+              </button>
+            ))}
+          </div>
+          {selectedMedDay && (
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-sm">أدوية {selectedMedDay}</span>
+                <Button size="sm" variant="outline" onClick={() => setShowMedDialog(true)}>
+                  <Plus className="w-3 h-3 ml-1" /> إضافة
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {medications.filter(m => m.day === selectedMedDay).map(med => (
+                  <div key={med.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={med.taken} onChange={() => toggleMedTaken(med.id)} className="accent-green-600" />
+                      <span className={med.taken ? 'line-through text-gray-400' : ''}>{med.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500">{med.time}</span>
+                      <Trash2 className="w-3 h-3 text-red-400 cursor-pointer" onClick={() => deleteMedication(med.id)} />
+                    </div>
+                  </div>
+                ))}
+                {medications.filter(m => m.day === selectedMedDay).length === 0 && (
+                  <p className="text-center text-gray-400 text-sm py-4">لا توجد أدوية لهذا اليوم</p>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Medication Dialog */}
+      <Dialog open={showMedDialog} onOpenChange={setShowMedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">إضافة دواء - {selectedMedDay}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="اسم الدواء"
+              value={newMedication.name}
+              onChange={e => setNewMedication({ ...newMedication, name: e.target.value })}
+              className="text-right"
+            />
+            <div className="flex gap-2 items-center">
+              <Input
+                type="time"
+                value={newMedication.time}
+                onChange={e => setNewMedication({ ...newMedication, time: e.target.value })}
+                className="flex-1"
+              />
+              <label className="flex items-center gap-1 text-sm">
+                <input
+                  type="checkbox"
+                  checked={newMedication.reminder}
+                  onChange={e => setNewMedication({ ...newMedication, reminder: e.target.checked })}
+                />
+                تذكير
+              </label>
+            </div>
+            <Button onClick={() => { saveMedication(); setShowMedDialog(false); }} className="w-full">حفظ</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Notes Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="arabic-title text-base flex items-center gap-2">
+            📝 ملاحظات سريعة
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            placeholder="اكتب ملاحظاتك هنا..."
+            className="min-h-[80px] text-right"
+            defaultValue={localStorage.getItem('baraka_quick_notes') || ''}
+            onChange={e => localStorage.setItem('baraka_quick_notes', e.target.value)}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
