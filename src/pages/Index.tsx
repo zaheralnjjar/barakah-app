@@ -92,11 +92,24 @@ const Index = () => {
   }, [activeTab]);
 
   useEffect(() => {
+    const validSections = ['stats', 'appointments', 'shopping', 'map'];
     const savedOrder = localStorage.getItem('baraka_dashboard_order');
     if (savedOrder) {
       try {
-        setDashboardOrder(JSON.parse(savedOrder));
-      } catch (e) { }
+        const parsed = JSON.parse(savedOrder);
+        // Validate: must be array with valid section IDs
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(s => validSections.includes(s))) {
+          setDashboardOrder(parsed);
+        } else {
+          // Invalid data - reset to defaults
+          localStorage.setItem('baraka_dashboard_order', JSON.stringify(validSections));
+          setDashboardOrder(validSections);
+        }
+      } catch (e) {
+        // Parse error - reset to defaults
+        localStorage.setItem('baraka_dashboard_order', JSON.stringify(validSections));
+        setDashboardOrder(validSections);
+      }
     }
   }, [activeTab]);
 

@@ -120,6 +120,7 @@ interface MainTask {
   id: string;
   title: string;
   description?: string;
+  startDate?: string; // YYYY-MM-DD (for projects)
   deadline: string; // YYYY-MM-DD
   subtasks: SubTask[];
   progress: number;
@@ -170,16 +171,21 @@ const LogisticsManager = () => {
   const [editingTask, setEditingTask] = useState<MainTask | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
-  // Form States (Unified)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    startDate: '', // For projects
     date: '',
     time: '',
     location: '',
     url: '',
     priority: 'medium' as 'low' | 'medium' | 'high'
   });
+
+  // Pomodoro Timer State
+  const [pomodoroActive, setPomodoroActive] = useState(false);
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes
+  const [pomodoroTaskId, setPomodoroTaskId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [newItem, setNewItem] = useState({ name: '', location: '', priority: 'medium' });
@@ -217,6 +223,39 @@ const LogisticsManager = () => {
     localStorage.setItem('baraka_resources', JSON.stringify(resources));
   }, [resources]);
 
+  // Pomodoro Timer Effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (pomodoroActive && pomodoroTime > 0) {
+      interval = setInterval(() => {
+        setPomodoroTime(prev => prev - 1);
+      }, 1000);
+    } else if (pomodoroTime === 0 && pomodoroActive) {
+      setPomodoroActive(false);
+      toast({ title: 'انتهى الوقت!', description: 'أحسنت! خذ استراحة 5 دقائق' });
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [pomodoroActive, pomodoroTime]);
+
+  const startPomodoro = (taskId: string) => {
+    setPomodoroTaskId(taskId);
+    setPomodoroTime(25 * 60);
+    setPomodoroActive(true);
+    toast({ title: 'بدأ مؤقت بومودورو', description: '25 دقيقة من التركيز!' });
+  };
+
+  const stopPomodoro = () => {
+    setPomodoroActive(false);
+    setPomodoroTaskId(null);
+    setPomodoroTime(25 * 60);
+  };
+
+  const formatPomodoroTime = () => {
+    const mins = Math.floor(pomodoroTime / 60);
+    const secs = pomodoroTime % 60;
+    return mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+  };
+
   // Sync newItem map selection to formData
   useEffect(() => {
     if (newItem.location) {
@@ -253,6 +292,7 @@ const LogisticsManager = () => {
         id: Date.now().toString(),
         title: formData.title,
         description: formData.description,
+        startDate: activeTab === 'project' ? (formData.startDate || new Date().toISOString().split('T')[0]) : undefined,
         deadline: formData.date || new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
         subtasks: [],
         progress: 0,
@@ -294,6 +334,7 @@ const LogisticsManager = () => {
     setFormData({
       title: '',
       description: '',
+      startDate: '',
       date: '',
       time: '',
       location: '',
@@ -313,6 +354,7 @@ const LogisticsManager = () => {
     setFormData({
       title: task.title,
       description: task.description || '',
+      startDate: task.startDate || '',
       date: task.deadline,
       time: '',
       location: '',
@@ -440,6 +482,21 @@ const LogisticsManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Floating Pomodoro Timer */}
+      {pomodoroActive && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 animate-pulse">
+          <Clock className="w-5 h-5" />
+          <span className="text-2xl font-bold tabular-nums">{formatPomodoroTime()}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-white hover:bg-white/20 h-7"
+            onClick={stopPomodoro}
+          >
+            إيقاف
+          </Button>
+        </div>
+      )}
       {/* Header with Unified Add Action */}
       <div className="flex items-center justify-between">
         <div>
@@ -468,34 +525,35 @@ const LogisticsManager = () => {
           </div>
         </div>
 
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2 bg-primary hover:bg-primary/90">
+              <Plus className="w-5 h-5" />
+              <span className="hidden md:inline">إضافة جديد</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-right">ماذا تريد أن تضيف؟</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => { setActiveTab('task'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
+              <span>مهمة جديدة</span>
+              <CheckSquare className="w-4 h-4 ml-2" />
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setActiveTab('project'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
+              <span>مشروع</span>
+              <Layers className="w-4 h-4 ml-2" />
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setActiveTab('appointment'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
+              <span>موعد / حدث</span>
+              <CalendarIcon className="w-4 h-4 ml-2" />
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Dialog open={isaddDialogOpen} onOpenChange={(open) => {
           setIsAddDialogOpen(open);
-          if (!open) setEditingTask(null); // Reset editing state on close
+          if (!open) setEditingTask(null);
         }}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="gap-2 bg-primary hover:bg-primary/90">
-                <Plus className="w-5 h-5" />
-                <span className="hidden md:inline">إضافة جديد</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-right">ماذا تريد أن تضيف؟</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setActiveTab('task'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-                <span>مهمة جديدة</span>
-                <CheckSquare className="w-4 h-4 ml-2" />
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setActiveTab('project'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-                <span>مشروع</span>
-                <Layers className="w-4 h-4 ml-2" />
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setActiveTab('appointment'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-                <span>موعد / حدث</span>
-                <CalendarIcon className="w-4 h-4 ml-2" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -530,14 +588,51 @@ const LogisticsManager = () => {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Input
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      />
+                  {activeTab === 'project' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-1">
+                        <label className="text-xs text-gray-500">تاريخ البداية</label>
+                        <Input
+                          type="date"
+                          value={formData.startDate}
+                          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <label className="text-xs text-gray-500">تاريخ النهاية</label>
+                        <Input
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        />
+                      </div>
                     </div>
+                  )}
+                  {activeTab === 'task' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Input
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        />
+                      </div>
+                      <Select
+                        value={formData.priority}
+                        onValueChange={(val: any) => setFormData({ ...formData, priority: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="الأولوية" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">منخفضة</SelectItem>
+                          <SelectItem value="medium">متوسطة</SelectItem>
+                          <SelectItem value="high">عالية</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {activeTab === 'project' && (
                     <Select
                       value={formData.priority}
                       onValueChange={(val: any) => setFormData({ ...formData, priority: val })}
@@ -551,7 +646,7 @@ const LogisticsManager = () => {
                         <SelectItem value="high">عالية</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  )}
                 </>
               )}
 
@@ -590,6 +685,34 @@ const LogisticsManager = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Achievement Stats */}
+      <div className="grid grid-cols-4 gap-2">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-green-600">مكتملة</p>
+            <p className="text-xl font-bold text-green-700">{tasks.filter(t => t.progress === 100).length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-yellow-600">جارية</p>
+            <p className="text-xl font-bold text-yellow-700">{tasks.filter(t => t.progress > 0 && t.progress < 100).length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-gray-600">معلقة</p>
+            <p className="text-xl font-bold text-gray-700">{tasks.filter(t => t.progress === 0).length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-3 text-center">
+            <p className="text-xs text-purple-600">مشاريع</p>
+            <p className="text-xl font-bold text-purple-700">{tasks.filter(t => t.type === 'project').length}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -675,8 +798,18 @@ const LogisticsManager = () => {
                     </div>
                   </div>
 
-                  {/* Actions (3 Buttons) */}
+                  {/* Actions (4 Buttons including Pomodoro) */}
                   <div className="flex items-center gap-1">
+                    {task.type === 'task' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 ${pomodoroTaskId === task.id ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-green-600'}`}
+                        onClick={() => pomodoroTaskId === task.id ? stopPomodoro() : startPomodoro(task.id)}
+                      >
+                        <Clock className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600" onClick={() => handleEditTask(task)}>
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -733,7 +866,7 @@ const LogisticsManager = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

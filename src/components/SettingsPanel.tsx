@@ -72,110 +72,29 @@ const SettingsPanel = () => {
         'quick_actions': 'الاختصارات السريعة'
     };
 
-    // Export Reports State
-    const [reportType, setReportType] = useState<'finance' | 'appointments'>('finance');
-    const [reportPeriod, setReportPeriod] = useState<'today' | 'week' | 'month' | 'custom'>('week');
-    const [reportFromDate, setReportFromDate] = useState(new Date().toISOString().split('T')[0]);
-    const [reportToDate, setReportToDate] = useState(() => {
-        const d = new Date();
-        d.setDate(d.getDate() + 7);
-        return d.toISOString().split('T')[0];
+    // Reminder Customizations State
+    const [reminders, setReminders] = useState(() => {
+        try {
+            const saved = localStorage.getItem('baraka_reminders_settings');
+            return saved ? JSON.parse(saved) : {
+                prayer: true,
+                tasks: true,
+                sound: true,
+                vibration: true
+            };
+        } catch {
+            return { prayer: true, tasks: true, sound: true, vibration: true };
+        }
     });
 
-    const generateReport = async () => {
-        const user = (await supabase.auth.getUser()).data.user;
-        if (!user) {
-            toast({ title: "يرجى تسجيل الدخول", variant: "destructive" });
-            return;
-        }
-
-        let fromDate: string, toDate: string;
-        const today = new Date();
-
-        if (reportPeriod === 'today') {
-            fromDate = toDate = today.toISOString().split('T')[0];
-        } else if (reportPeriod === 'week') {
-            const weekAgo = new Date(today);
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            fromDate = weekAgo.toISOString().split('T')[0];
-            toDate = today.toISOString().split('T')[0];
-        } else if (reportPeriod === 'month') {
-            const monthAgo = new Date(today);
-            monthAgo.setMonth(monthAgo.getMonth() - 1);
-            fromDate = monthAgo.toISOString().split('T')[0];
-            toDate = today.toISOString().split('T')[0];
-        } else {
-            fromDate = reportFromDate;
-            toDate = reportToDate;
-        }
-
-        let textContent = '';
-
-        if (reportType === 'finance') {
-            const { data } = await supabase
-                .from('finance_data_2025_12_18_18_42')
-                .select('pending_expenses')
-                .eq('user_id', user.id)
-                .single();
-
-            const transactions = (data?.pending_expenses || [])
-                .filter((t: any) => t.timestamp >= fromDate && t.timestamp <= toDate + 'T23:59:59');
-
-            const totalIncome = transactions.filter((t: any) => t.type === 'income').reduce((a: number, t: any) => a + t.amount, 0);
-            const totalExpense = transactions.filter((t: any) => t.type === 'expense').reduce((a: number, t: any) => a + t.amount, 0);
-
-            textContent = `💰 التقرير المالي\n`;
-            textContent += `من ${fromDate} إلى ${toDate}\n\n`;
-            textContent += `📈 الدخل: ${totalIncome.toLocaleString()}\n`;
-            textContent += `📉 المصروفات: ${totalExpense.toLocaleString()}\n`;
-            textContent += `💵 الصافي: ${(totalIncome - totalExpense).toLocaleString()}\n\n`;
-            textContent += `التفاصيل:\n`;
-            transactions.forEach((t: any) => {
-                textContent += `${t.type === 'income' ? '➕' : '➖'} ${t.description}: ${t.amount.toLocaleString()} ${t.currency}\n`;
-            });
-            textContent += `\n✨ نظام بركة لإدارة الحياة`;
-        } else {
-            const { data } = await supabase
-                .from('appointments')
-                .select('*')
-                .eq('user_id', user.id)
-                .gte('date', fromDate)
-                .lte('date', toDate)
-                .order('date', { ascending: true });
-
-            const appointments = data || [];
-
-            textContent = `📅 تقرير المواعيد\n`;
-            textContent += `من ${fromDate} إلى ${toDate}\n`;
-            textContent += `إجمالي المواعيد: ${appointments.length}\n\n`;
-            appointments.forEach((a: any) => {
-                textContent += `📌 ${a.title}\n`;
-                textContent += `   التاريخ: ${a.date} ${a.time || ''}\n`;
-                textContent += `   الحالة: ${a.is_completed ? '✅ مكتمل' : '⏳ معلق'}\n`;
-                if (a.notes) textContent += `   ملاحظات: ${a.notes}\n`;
-                textContent += `\n`;
-            });
-            textContent += `\n✨ نظام بركة لإدارة الحياة`;
-        }
-
-        // Use Capacitor Share API for mobile apps
-        try {
-            await Share.share({
-                title: reportType === 'finance' ? 'التقرير المالي' : 'تقرير المواعيد',
-                text: textContent,
-                dialogTitle: 'مشاركة التقرير'
-            });
-            toast({ title: "تم التصدير!", description: "اختر التطبيق للمشاركة" });
-        } catch (e) {
-            // Fallback: copy to clipboard
-            try {
-                await navigator.clipboard.writeText(textContent);
-                toast({ title: "تم النسخ!", description: "تم نسخ التقرير للحافظة" });
-            } catch (err) {
-                toast({ title: "خطأ", description: "تعذر المشاركة", variant: "destructive" });
-            }
-        }
+    const toggleReminder = (key: string) => {
+        const newSettings = { ...reminders, [key]: !reminders[key] };
+        setReminders(newSettings);
+        localStorage.setItem('baraka_reminders_settings', JSON.stringify(newSettings));
+        toast({ title: "تم حفظ الإعدادات" });
     };
+
+
 
     return (
         <div className="space-y-6 pb-20">
@@ -247,94 +166,32 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
-            {/* Export Reports */}
+            {/* Reminder Customizations - NEW */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <FileText className="w-5 h-5 text-teal-600" />
-                        تصدير التقارير
+                        <Calendar className="w-5 h-5 text-teal-600" />
+                        تخصيص التذكيرات
                     </CardTitle>
-                    <CardDescription className="arabic-body text-xs">إنشاء تقارير مالية أو مواعيد بصيغة PDF</CardDescription>
+                    <CardDescription className="arabic-body text-xs">التحكم في الإشعارات والتنبيهات</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {/* Report Type Selection */}
-                    <div>
-                        <Label className="text-sm font-medium mb-2 block">نوع التقرير</Label>
-                        <div className="flex gap-2">
-                            <Button
-                                variant={reportType === 'finance' ? 'default' : 'outline'}
-                                className="flex-1 gap-2"
-                                onClick={() => setReportType('finance')}
-                            >
-                                <DollarSign className="w-4 h-4" />
-                                مالي
-                            </Button>
-                            <Button
-                                variant={reportType === 'appointments' ? 'default' : 'outline'}
-                                className="flex-1 gap-2"
-                                onClick={() => setReportType('appointments')}
-                            >
-                                <Calendar className="w-4 h-4" />
-                                المواعيد
-                            </Button>
-                        </div>
+                    <div className="flex items-center justify-between p-2 border-b">
+                        <label className="font-medium">إشعارات الصلاة</label>
+                        <Checkbox checked={reminders.prayer} onCheckedChange={() => toggleReminder('prayer')} />
                     </div>
-
-                    {/* Period Selection */}
-                    <div>
-                        <Label className="text-sm font-medium mb-2 block">الفترة</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                            {[
-                                { id: 'today', label: 'اليوم' },
-                                { id: 'week', label: 'أسبوع' },
-                                { id: 'month', label: 'شهر' },
-                                { id: 'custom', label: 'مخصص' }
-                            ].map(p => (
-                                <Button
-                                    key={p.id}
-                                    variant={reportPeriod === p.id ? 'default' : 'outline'}
-                                    size="sm"
-                                    onClick={() => setReportPeriod(p.id as any)}
-                                    className="text-xs"
-                                >
-                                    {p.label}
-                                </Button>
-                            ))}
-                        </div>
+                    <div className="flex items-center justify-between p-2 border-b">
+                        <label className="font-medium">تذكير المهام</label>
+                        <Checkbox checked={reminders.tasks} onCheckedChange={() => toggleReminder('tasks')} />
                     </div>
-
-                    {/* Custom Date Range */}
-                    {reportPeriod === 'custom' && (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <Label className="text-xs text-gray-500 mb-1 block">من تاريخ</Label>
-                                <Input
-                                    type="date"
-                                    value={reportFromDate}
-                                    onChange={(e) => setReportFromDate(e.target.value)}
-                                    className="text-center"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-xs text-gray-500 mb-1 block">إلى تاريخ</Label>
-                                <Input
-                                    type="date"
-                                    value={reportToDate}
-                                    onChange={(e) => setReportToDate(e.target.value)}
-                                    className="text-center"
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Generate Button */}
-                    <Button
-                        onClick={generateReport}
-                        className="w-full gap-2 h-11 bg-teal-600 hover:bg-teal-700"
-                    >
-                        <FileText className="w-5 h-5" />
-                        إنشاء التقرير
-                    </Button>
+                    <div className="flex items-center justify-between p-2 border-b">
+                        <label className="font-medium">الأصوات</label>
+                        <Checkbox checked={reminders.sound} onCheckedChange={() => toggleReminder('sound')} />
+                    </div>
+                    <div className="flex items-center justify-between p-2">
+                        <label className="font-medium">الاهتزاز</label>
+                        <Checkbox checked={reminders.vibration} onCheckedChange={() => toggleReminder('vibration')} />
+                    </div>
                 </CardContent>
             </Card>
             {/* Quick Actions Customization */}
@@ -401,7 +258,7 @@ const SettingsPanel = () => {
                     )}
                     <div className="flex gap-2">
                         <Button
-                            onClick={syncNow}
+                            onClick={() => syncNow()}
                             disabled={isSyncing}
                             className="flex-1"
                             data-action="sync-now"
@@ -419,7 +276,7 @@ const SettingsPanel = () => {
                             )}
                         </Button>
                         <Button
-                            onClick={pullData}
+                            onClick={() => pullData()}
                             disabled={isSyncing}
                             variant="outline"
                             className="flex-1"

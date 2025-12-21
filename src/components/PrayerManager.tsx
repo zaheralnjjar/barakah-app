@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatNumberToLocale } from '@/lib/utils';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 interface DailyPrayer {
     date: string;
@@ -44,6 +45,10 @@ const PrayerManager = () => {
     });
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [showConfirmation, setShowConfirmation] = useState(false);
+
+    // Share Modal State
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [sharePeriod, setSharePeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
 
     // Automated Source - Fixed to Online
     const prayerSource = 'aladhan';
@@ -292,25 +297,48 @@ const PrayerManager = () => {
 
         // Use Capacitor Share for mobile
         try {
+            const fileName = 'prayer_times.ics';
+            await Filesystem.writeFile({
+                path: fileName,
+                data: icsContent,
+                directory: Directory.Cache,
+                encoding: Encoding.UTF8,
+            });
+
+            const uriResult = await Filesystem.getUri({
+                directory: Directory.Cache,
+                path: fileName,
+            });
+
             await Share.share({
                 title: 'مواقيت الصلاة',
-                text: icsContent,
+                url: uriResult.uri,
                 dialogTitle: 'تصدير أوقات الصلاة'
             });
-            toast({ title: 'تم التصدير بنجاح!', description: 'اختر التطبيق للمشاركة' });
+            toast({ title: 'تم التصدير بنجاح!', description: 'اختر التقويم للحفظ' });
         } catch (e) {
-            // Fallback: direct download for web
-            const blob = new Blob([icsContent], { type: 'text/calendar' });
-            const fileName = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            toast({ title: 'تم التصدير!', description: 'تم تحميل ملف التقويم' });
+            console.error('ICS Share Error:', e);
+            // First Fallback: Share as text
+            try {
+                await Share.share({
+                    title: 'مواقيت الصلاة',
+                    text: icsContent,
+                    dialogTitle: 'تصدير أوقات الصلاة'
+                });
+            } catch (err2) {
+                // Second Fallback: Web Download
+                const blob = new Blob([icsContent], { type: 'text/calendar' });
+                const fileName = `prayer-times-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}.ics`;
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                toast({ title: 'تم التصدير!', description: 'تم تحميل ملف التقويم' });
+            }
         }
         setShowExportModal(false);
     };
@@ -365,34 +393,64 @@ const PrayerManager = () => {
         );
     };
 
-    const shareSchedule = async () => {
-        const today = new Date().toISOString().split('T')[0];
-        const todayPrayers = prayerData.find(p => p.date === today);
+    const openShareDialog = () => {
+        setShowShareModal(true);
+    };
 
-        let text = `مواقيت الصلاة لشهر ${currentDate.toLocaleString('ar-EG', { month: 'long' })} ${currentDate.getFullYear()}\n`;
+    const executeShare = async () => {
+        const today = new Date();
+        let fromDate: string, toDate: string;
 
-        if (todayPrayers) {
-            text += `\nمواقيت اليوم (${today}):\n`;
-            text += `الفجر: ${todayPrayers.fajr}\n`;
-            text += `الظهر: ${todayPrayers.dhuhr}\n`;
-            text += `العصر: ${todayPrayers.asr}\n`;
-            text += `المغرب: ${todayPrayers.maghrib}\n`;
-            text += `العشاء: ${todayPrayers.isha}\n`;
-        }
-
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'مواقيت الصلاة - بركة',
-                    text: text,
-                });
-            } catch (err) {
-                console.log("Share failed", err);
-            }
+        if (sharePeriod === 'today') {
+            fromDate = toDate = today.toISOString().split('T')[0];
+        } else if (sharePeriod === 'week') {
+            fromDate = today.toISOString().split('T')[0];
+            const weekLater = new Date(today);
+            weekLater.setDate(weekLater.getDate() + 7);
+            toDate = weekLater.toISOString().split('T')[0];
+        } else if (sharePeriod === 'month') {
+            fromDate = today.toISOString().split('T')[0];
+            const monthLater = new Date(today);
+            monthLater.setMonth(monthLater.getMonth() + 1);
+            toDate = monthLater.toISOString().split('T')[0];
         } else {
-            await navigator.clipboard.writeText(text);
-            toast({ title: 'تم النسخ', description: 'تم نسخ جدول الصلاة' });
+            fromDate = exportFromDate;
+            toDate = exportToDate;
         }
+
+        const dataToShare = prayerData.filter(d => d.date >= fromDate && d.date <= toDate);
+
+        let text = `📿 مواقيت الصلاة - نظام بركة\n`;
+        text += `من ${fromDate} إلى ${toDate}\n\n`;
+
+        dataToShare.forEach(day => {
+            text += `📅 ${day.date}\n`;
+            text += `   الفجر: ${day.fajr}\n`;
+            text += `   الظهر: ${day.dhuhr}\n`;
+            text += `   العصر: ${day.asr}\n`;
+            text += `   المغرب: ${day.maghrib}\n`;
+            text += `   العشاء: ${day.isha}\n\n`;
+        });
+
+        text += `✨ نظام بركة لإدارة الحياة`;
+
+        try {
+            await Share.share({
+                title: 'مواقيت الصلاة - بركة',
+                text: text,
+                dialogTitle: 'مشاركة أوقات الصلاة'
+            });
+            toast({ title: 'تم!', description: 'اختر التطبيق للمشاركة' });
+        } catch (err) {
+            // Fallback
+            try {
+                await navigator.clipboard.writeText(text);
+                toast({ title: 'تم النسخ', description: 'تم نسخ جدول الصلاة للحافظة' });
+            } catch (e) {
+                toast({ title: 'خطأ', variant: 'destructive' });
+            }
+        }
+        setShowShareModal(false);
     };
 
     if (loading) {
@@ -445,15 +503,60 @@ const PrayerManager = () => {
                         <CardTitle className="arabic-title text-xl text-gray-800">جدول الشهر</CardTitle>
 
                         <div className="flex items-center gap-3 w-full md:w-auto">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={shareSchedule}
-                                className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
-                            >
-                                <Share2 className="w-4 h-4 ml-2" />
-                                مشاركة
-                            </Button>
+                            {/* Share Dialog */}
+                            <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex-1 md:flex-none border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
+                                    >
+                                        <Share2 className="w-4 h-4 ml-2" />
+                                        مشاركة
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-sm">
+                                    <DialogHeader>
+                                        <DialogTitle className="arabic-title text-center text-lg border-b pb-3">
+                                            اختر الفترة للمشاركة
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-3 py-4">
+                                        {[
+                                            { id: 'today', label: 'اليوم فقط' },
+                                            { id: 'week', label: 'الأسبوع القادم' },
+                                            { id: 'month', label: 'الشهر كاملاً' },
+                                            { id: 'custom', label: 'فترة مخصصة' }
+                                        ].map(opt => (
+                                            <div
+                                                key={opt.id}
+                                                onClick={() => setSharePeriod(opt.id as any)}
+                                                className={`p-3 rounded-lg border cursor-pointer transition-all ${sharePeriod === opt.id ? 'bg-emerald-50 border-emerald-300' : 'hover:bg-gray-50'}`}
+                                            >
+                                                <span className="font-medium">{opt.label}</span>
+                                            </div>
+                                        ))}
+                                        {sharePeriod === 'custom' && (
+                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                <div>
+                                                    <Label className="text-xs text-gray-500 mb-1 block">من تاريخ</Label>
+                                                    <Input type="date" value={exportFromDate} onChange={(e) => setExportFromDate(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs text-gray-500 mb-1 block">إلى تاريخ</Label>
+                                                    <Input type="date" value={exportToDate} onChange={(e) => setExportToDate(e.target.value)} />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <DialogFooter>
+                                        <Button onClick={executeShare} className="w-full bg-emerald-600 hover:bg-emerald-700">
+                                            <Share2 className="w-4 h-4 ml-2" />
+                                            مشاركة الآن
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
 
                             {/* Export Modal */}
                             <Dialog open={showExportModal} onOpenChange={setShowExportModal}>

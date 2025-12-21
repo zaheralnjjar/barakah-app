@@ -19,6 +19,8 @@ export const AnalyticsDashboard = () => {
     });
     const [financeByCategory, setFinanceByCategory] = useState<any[]>([]);
     const [weeklyTrend, setWeeklyTrend] = useState<any[]>([]);
+    const [productivityData, setProductivityData] = useState<any[]>([]);
+    const [appointmentsData, setAppointmentsData] = useState<any[]>([]);
 
     useEffect(() => {
         fetchData();
@@ -100,6 +102,28 @@ export const AnalyticsDashboard = () => {
             });
             setFinanceByCategory(categoryData);
             setWeeklyTrend(trendData);
+
+            // Get tasks from localStorage
+            const tasks = JSON.parse(localStorage.getItem('baraka_tasks') || '[]');
+            const completedTasks = tasks.filter((t: any) => t.progress === 100).length;
+            const inProgressTasks = tasks.filter((t: any) => t.progress > 0 && t.progress < 100).length;
+            const pendingTasks = tasks.filter((t: any) => t.progress === 0).length;
+
+            setProductivityData([
+                { name: 'مكتملة', value: completedTasks, color: '#10b981' },
+                { name: 'جارية', value: inProgressTasks, color: '#f59e0b' },
+                { name: 'معلقة', value: pendingTasks, color: '#6b7280' }
+            ]);
+
+            // Weekly appointments
+            const weekAppts = last7Days.map(day => {
+                const count = appts.filter((a: any) => a.date === day).length;
+                return {
+                    day: new Date(day).toLocaleDateString('ar-EG', { weekday: 'short' }),
+                    count: count
+                };
+            });
+            setAppointmentsData(weekAppts);
 
         } catch (e) {
             console.error('Analytics error:', e);
@@ -210,11 +234,60 @@ export const AnalyticsDashboard = () => {
                     </CardContent>
                 </Card>
             )}
+            {/* Productivity Chart */}
+            {productivityData.some(d => d.value > 0) && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">✅ حالة المهام</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={160}>
+                            <PieChart>
+                                <Pie
+                                    data={productivityData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
+                                    outerRadius={55}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                >
+                                    {productivityData.map((entry, index) => (
+                                        <Cell key={`task-cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Appointments Weekly Chart */}
+            {appointmentsData.some(d => d.count > 0) && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">📅 المواعيد - آخر 7 أيام</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={130}>
+                            <BarChart data={appointmentsData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                                <YAxis tick={{ fontSize: 10 }} />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="مواعيد" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Summary */}
             <Card>
                 <CardContent className="pt-4">
-                    <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
                         <div>
                             <p className="text-gray-500">المعاملات</p>
                             <p className="font-bold">{stats.transactionCount}</p>
@@ -224,8 +297,12 @@ export const AnalyticsDashboard = () => {
                             <p className="font-bold">{stats.locationCount}</p>
                         </div>
                         <div>
-                            <p className="text-gray-500">المواعيد المكتملة</p>
-                            <p className="font-bold text-green-600">{stats.completedAppointments}</p>
+                            <p className="text-gray-500">المهام</p>
+                            <p className="font-bold">{productivityData.reduce((s, d) => s + d.value, 0)}</p>
+                        </div>
+                        <div>
+                            <p className="text-gray-500">المواعيد</p>
+                            <p className="font-bold text-purple-600">{stats.appointmentCount}</p>
                         </div>
                     </div>
                 </CardContent>
