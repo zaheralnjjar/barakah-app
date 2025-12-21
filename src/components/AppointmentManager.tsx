@@ -33,10 +33,18 @@ interface Appointment {
     isCompleted: boolean;
     parentId?: string; // For subtasks
     createdAt: string;
+    recurrence?: 'none' | 'daily' | 'weekly' | 'monthly'; // Recurring reminder
 }
 
 import { supabase } from '@/integrations/supabase/client';
 // ... other imports
+
+const RECURRENCE_OPTIONS = [
+    { value: 'none', label: 'مرة واحدة' },
+    { value: 'daily', label: 'يومي' },
+    { value: 'weekly', label: 'أسبوعي' },
+    { value: 'monthly', label: 'شهري' },
+];
 
 const AppointmentManager: React.FC = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -44,6 +52,7 @@ const AppointmentManager: React.FC = () => {
     const [newDate, setNewDate] = useState('');
     const [newTime, setNewTime] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
+    const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
     const [showCompleted, setShowCompleted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 

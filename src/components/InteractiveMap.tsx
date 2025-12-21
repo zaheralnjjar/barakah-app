@@ -100,6 +100,17 @@ const InteractiveMap = () => {
     const [savedLocations, setSavedLocations] = useState<any[]>([]);
     const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
     const [isSelectMode, setIsSelectMode] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState('other');
+
+    // Location Categories with icons
+    const LOCATION_CATEGORIES = [
+        { id: 'home', label: 'منزل', icon: '🏠' },
+        { id: 'work', label: 'عمل', icon: '💼' },
+        { id: 'mosque', label: 'مسجد', icon: '🕌' },
+        { id: 'market', label: 'سوق', icon: '🛒' },
+        { id: 'restaurant', label: 'مطعم', icon: '🍽️' },
+        { id: 'other', label: 'آخر', icon: '📍' },
+    ];
 
     // Edit State
     const [editingResource, setEditingResource] = useState<any | null>(null);
@@ -117,6 +128,10 @@ const InteractiveMap = () => {
         setSavedLocations(data);
     };
 
+    const getCategoryIcon = (category: string) => {
+        return LOCATION_CATEGORIES.find(c => c.id === category)?.icon || '📍';
+    };
+
     const saveLocation = (addressName: string) => {
         if (!newItem.location) return;
 
@@ -126,16 +141,17 @@ const InteractiveMap = () => {
             id: Date.now().toString(),
             title: addressName || 'موقع جديد',
             url: `geo:${lat},${lng}`,
-            category: 'other'
+            category: selectedCategory
         };
 
         const updated = [...savedLocations, newRes];
         localStorage.setItem('baraka_resources', JSON.stringify(updated));
         setSavedLocations(updated);
 
-        toast({ title: "تم حفظ الموقع", description: addressName });
+        toast({ title: `تم حفظ ${getCategoryIcon(selectedCategory)} ${addressName}` });
         setNewItem({ name: '', location: '' });
         setSearchQuery('');
+        setSelectedCategory('other');
     };
 
     const performSearch = async () => {

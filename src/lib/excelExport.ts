@@ -1,0 +1,101 @@
+import * as XLSX from 'xlsx';
+import { supabase } from '@/integrations/supabase/client';
+import { Share } from '@capacitor/share';
+
+export const exportFinanceToExcel = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error('يرجى تسجيل الدخول');
+
+    const { data } = await supabase
+        .from('finance_data_2025_12_18_18_42')
+        .select('pending_expenses')
+        .eq('user_id', user.id)
+        .single();
+
+    const transactions = data?.pending_expenses || [];
+
+    // Prepare data for Excel
+    const excelData = transactions.map((t: any) => ({
+        'التاريخ': t.timestamp?.split('T')[0] || '',
+        'النوع': t.type === 'income' ? 'دخل' : 'مصروف',
+        'الوصف': t.description || '',
+        'المبلغ': t.amount || 0,
+        'العملة': t.currency || 'ARS',
+        'الفئة': t.category || '',
+    }));
+
+    // Create workbook
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'المعاملات المالية');
+
+    // Generate file
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+    // Create text summary for sharing
+    const totalIncome = transactions
+        .filter((t: any) => t.type === 'income')
+        .reduce((a: number, t: any) => a + (t.amount || 0), 0);
+    const totalExpense = transactions
+        .filter((t: any) => t.type === 'expense')
+        .reduce((a: number, t: any) => a + (t.amount || 0), 0);
+
+    const summary = `📊 التقرير المالي
+💰 إجمالي الدخل: ${totalIncome.toLocaleString()}
+💸 إجمالي المصروفات: ${totalExpense.toLocaleString()}
+💵 الصافي: ${(totalIncome - totalExpense).toLocaleString()}
+
+عدد المعاملات: ${transactions.length}
+✨ نظام بركة لإدارة الحياة`;
+
+    // Share
+    await Share.share({
+        title: 'التقرير المالي',
+        text: summary,
+        dialogTitle: 'مشاركة التقرير المالي'
+    });
+
+    return { success: true, data: wbout };
+};
+
+export const exportAppointmentsToExcel = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) throw new Error('يرجى تسجيل الدخول');
+
+    const { data } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
+
+    const appointments = data || [];
+
+    const excelData = appointments.map((a: any) => ({
+        'التاريخ': a.date || '',
+        'الوقت': a.time || '',
+        'العنوان': a.title || '',
+        'الملاحظات': a.notes || '',
+        'الحالة': a.is_completed ? 'مكتمل' : 'معلق',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'المواعيد');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+    const summary = `📅 تقرير المواعيد
+إجمالي المواعيد: ${appointments.length}
+المكتملة: ${appointments.filter((a: any) => a.is_completed).length}
+المعلقة: ${appointments.filter((a: any) => !a.is_completed).length}
+
+✨ نظام بركة لإدارة الحياة`;
+
+    await Share.share({
+        title: 'تقرير المواعيد',
+        text: summary,
+        dialogTitle: 'مشاركة تقرير المواعيد'
+    });
+
+    return { success: true, data: wbout };
+};
