@@ -355,47 +355,10 @@ const InteractiveMap = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-                {/* Latest 5 Locations Widget */}
-                {savedLocations.length > 0 && (
-                    <div className="p-3 bg-white border-b mb-1">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-gray-500" />
-                                <span className="text-sm font-bold text-gray-700">مواقع محفوظة</span>
-                            </div>
-                            <span className="text-xs text-blue-600 cursor-pointer hover:underline" onClick={() => {
-                                // Scroll to list part
-                                const listEl = document.getElementById('locations-list');
-                                if (listEl) listEl.scrollIntoView({ behavior: 'smooth' });
-                            }}>عرض الكل</span>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                            {savedLocations.slice(0, 5).map(loc => (
-                                <button
-                                    key={loc.id}
-                                    className="flex flex-col items-center justify-center p-3 border rounded-xl min-w-[100px] h-[80px] bg-gray-50 hover:bg-blue-50 transition-colors shrink-0"
-                                    onClick={() => {
-                                        if (loc.url.startsWith('geo:')) {
-                                            const [lat, lng] = loc.url.replace('geo:', '').split(',').map(Number);
-                                            setMapCenter([lat, lng]);
-                                            toast({ title: "تم الانتقال للموقع", description: loc.title });
-                                        }
-                                    }}
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mb-1 text-blue-600">
-                                        {getCategoryIcon(loc.category)}
-                                    </div>
-                                    <span className="text-xs font-medium text-gray-700 truncate w-full text-center">{loc.title}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* 60/40 Split Layout - Mobile: 60% map / 40% list */}
-                <div className="flex flex-col h-[75vh] min-h-[500px]">
-                    {/* Map Section - 60% */}
-                    <div className="h-[60%] lg:h-[60%] w-full relative z-0">
+                {/* 70/30 Split Layout - Desktop: Horizontal | Mobile: Vertical */}
+                <div className="flex flex-col lg:flex-row h-[85vh] min-h-[600px]">
+                    {/* Map Section - 70% on Desktop */}
+                    <div className="h-[55vh] lg:h-full lg:w-[70%] w-full relative z-0 order-1">
                         <MapContainer
                             center={mapCenter}
                             zoom={13}
@@ -476,8 +439,8 @@ const InteractiveMap = () => {
                         </div>
                     </div>
 
-                    {/* Locations List Section - 40% */}
-                    <div id="locations-list" className="lg:w-[40%] w-full h-[50%] lg:h-full border-t lg:border-t-0 lg:border-l bg-gray-50 flex flex-col">
+                    {/* Locations List Section - 30% on Desktop */}
+                    <div id="locations-list" className="lg:w-[30%] w-full h-[45vh] lg:h-full border-t lg:border-t-0 lg:border-r bg-gray-50/80 flex flex-col order-2 lg:order-first">
                         {/* List Header */}
                         <div className="p-3 bg-white border-b flex justify-between items-center">
                             <span className="font-bold text-sm">📍 المواقع ({savedLocations.length})</span>

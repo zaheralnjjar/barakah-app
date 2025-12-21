@@ -43,7 +43,16 @@ const SettingsPanel = () => {
     };
 
     // Dashboard Customization Logic
-    const DEFAULT_ORDER = ['expense', 'prayer', 'finance', 'appointments', 'shopping', 'quick_actions'];
+    const DEFAULT_ORDER = [
+        'header',
+        'prayer',
+        'finance_daily',
+        'finance_summary',
+        'appointments_widget',
+        'shopping_widget',
+        'quick_actions',
+        'full_map'
+    ];
     const [dashboardOrder, setDashboardOrder] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem('baraka_dashboard_order');
@@ -64,12 +73,14 @@ const SettingsPanel = () => {
     };
 
     const SECTION_LABELS: Record<string, string> = {
-        'expense': 'مصروف اليوم',
-        'prayer': 'أوقات الصلاة',
-        'finance': 'الملخص المالي',
-        'appointments': 'المواعيد والتذكيرات',
-        'shopping': 'قائمة التسوق',
-        'quick_actions': 'الاختصارات السريعة'
+        'header': '🏠 رأس الصفحة (التاريخ والوقت)',
+        'prayer': '🕌 أوقات الصلاة',
+        'finance_daily': '💸 مصروف اليوم',
+        'finance_summary': '💰 الملخص المالي',
+        'appointments_widget': '📅 المواعيد والتذكيرات',
+        'shopping_widget': '🛒 قائمة التسوق',
+        'quick_actions': '⚡ الاختصارات السريعة',
+        'full_map': '🗺️ الخريطة التفاعلية'
     };
 
     // Reminder Customizations State - Enhanced
