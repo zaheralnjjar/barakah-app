@@ -53,6 +53,67 @@ const FinancialController = () => {
     reminderDays: 3 // Days before to remind
   });
 
+  // Budget & Savings State
+  const [budgets, setBudgets] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('baraka_budgets') || '[]'); } catch { return []; }
+  });
+  const [savingsGoals, setSavingsGoals] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('baraka_savings') || '[]'); } catch { return []; }
+  });
+  const [newBudget, setNewBudget] = useState({ category: '', limit: '' });
+  const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '' });
+
+  // Currency Converter State
+  const [converter, setConverter] = useState({ amount: '', from: 'USD', to: 'ARS', result: 0 });
+
+  // Report State
+  const generateReport = () => {
+    const printContent = document.getElementById('finance-report');
+    const win = window.open('', '', 'width=900,height=650');
+    if (win && printContent) {
+      win.document.write('<html><head><title>تقرير مالي</title>');
+      win.document.write('<style>body{font-family:sans-serif;direction:rtl;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:right;}th{background:#f0f0f0;}</style>');
+      win.document.write('</head><body>');
+      win.document.write('<h1>تقرير مالي أسبوعي</h1>');
+      win.document.write(printContent.innerHTML);
+      win.document.write('</body></html>');
+      win.document.close();
+      win.print();
+    }
+  };
+
+  const saveBudget = () => {
+    if (!newBudget.category || !newBudget.limit) return;
+    const updated = [...budgets.filter(b => b.category !== newBudget.category), { ...newBudget, limit: parseFloat(newBudget.limit) }];
+    setBudgets(updated);
+    localStorage.setItem('baraka_budgets', JSON.stringify(updated));
+    setNewBudget({ category: '', limit: '' });
+    toast({ title: 'تم حفظ الميزانية' });
+  };
+
+  const saveGoal = () => {
+    if (!newGoal.name || !newGoal.target) return;
+    const updated = [...savingsGoals, { id: Date.now(), ...newGoal, target: parseFloat(newGoal.target), current: parseFloat(newGoal.current || '0') }];
+    setSavingsGoals(updated);
+    localStorage.setItem('baraka_savings', JSON.stringify(updated));
+    setNewGoal({ name: '', target: '', current: '' });
+    toast({ title: 'تم حفظ الهدف' });
+  };
+
+  const calculateConversion = () => {
+    const rate = financeData?.exchange_rate || 1150; // Fallback
+    const amount = parseFloat(converter.amount);
+    if (isNaN(amount)) return;
+
+    if (converter.from === 'USD' && converter.to === 'ARS') {
+      setConverter({ ...converter, result: amount * rate });
+    } else if (converter.from === 'ARS' && converter.to === 'USD') {
+      setConverter({ ...converter, result: amount / rate });
+    } else {
+      setConverter({ ...converter, result: amount });
+    }
+  };
+
   // Hardcoded automated source
   const exchangeRateSource = 'Banco de la Nación Argentina';
 
@@ -481,7 +542,165 @@ const FinancialController = () => {
           </CardContent>
         </Card>
 
-        {/* Subscriptions Card */}
+        {/* Financial Tools Section */}
+        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Currency Converter */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="arabic-title text-sm flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" /> حاسبة العملات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="المبلغ"
+                    value={converter.amount}
+                    onChange={e => setConverter({ ...converter, amount: e.target.value })}
+                    className="text-right"
+                  />
+                  <Button onClick={calculateConversion} size="icon"><Calculator className="w-4 h-4" /></Button>
+                </div>
+                <div className="flex gap-2 justify-between items-center text-sm">
+                  <select
+                    className="border rounded p-1"
+                    value={converter.from}
+                    onChange={e => setConverter({ ...converter, from: e.target.value })}
+                  >
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                  <span>إلى</span>
+                  <select
+                    className="border rounded p-1"
+                    value={converter.to}
+                    onChange={e => setConverter({ ...converter, to: e.target.value })}
+                  >
+                    <option value="ARS">ARS</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </div>
+                {converter.result > 0 && (
+                  <div className="bg-green-50 p-2 rounded text-center font-bold text-green-700">
+                    {converter.result.toLocaleString()} {converter.to}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Weekly Report */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="arabic-title text-sm flex items-center gap-2">
+                📄 تقارير
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col justify-center items-center h-[140px] gap-2">
+              <Button onClick={generateReport} className="w-full" variant="outline">
+                <Share2 className="w-4 h-4 ml-2" /> طباعة تقرير أسبوعي
+              </Button>
+              <p className="text-xs text-gray-400 text-center">يقوم بإنشاء تقرير مفصل للطباعة أو الحفظ كـ PDF</p>
+            </CardContent>
+          </Card>
+
+          {/* Savings Goals */}
+          <Card className="col-span-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="arabic-title text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> أهداف الادخار
+                </div>
+                <div className="flex gap-2">
+                  <Input placeholder="الهدف" className="h-8 w-24 text-xs" value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} />
+                  <Input placeholder="المبلغ" className="h-8 w-20 text-xs" value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} />
+                  <Button size="sm" className="h-8" onClick={saveGoal}><PlusCircle className="w-4 h-4" /></Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {savingsGoals.map(goal => (
+                  <div key={goal.id} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>{goal.name}</span>
+                      <span>{goal.current} / {goal.target}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => {
+                        const added = parseFloat(prompt('أضف مبلغ:') || '0');
+                        if (added) {
+                          const updated = savingsGoals.map(g => g.id === goal.id ? { ...g, current: g.current + added } : g);
+                          setSavingsGoals(updated);
+                          localStorage.setItem('baraka_savings', JSON.stringify(updated));
+                        }
+                      }}>+ إيداع</Button>
+                      <Button size="sm" variant="ghost" className="h-6 text-red-400" onClick={() => {
+                        const updated = savingsGoals.filter(g => g.id !== goal.id);
+                        setSavingsGoals(updated);
+                        localStorage.setItem('baraka_savings', JSON.stringify(updated));
+                      }}>حذف</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Budget */}
+          <Card className="col-span-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="arabic-title text-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" /> الميزانية الشهرية
+                </div>
+                <div className="flex gap-2">
+                  <Input placeholder="الفئة" className="h-8 w-24 text-xs" value={newBudget.category} onChange={e => setNewBudget({ ...newBudget, category: e.target.value })} />
+                  <Input placeholder="الحد" className="h-8 w-20 text-xs" value={newBudget.limit} onChange={e => setNewBudget({ ...newBudget, limit: e.target.value })} />
+                  <Button size="sm" className="h-8" onClick={saveBudget}><PlusCircle className="w-4 h-4" /></Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {budgets.map((budget, idx) => {
+                  // Calculate spent for this category (mock calculation for now or needs transaction filtering)
+                  // For real implementation we filter transactions for current month & category
+                  const spent = 0; // Placeholder, would need detailed transaction logic
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{budget.category}</span>
+                        <span>{spent} / {budget.limit}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        {/* Mock progress 0% since we don't have live spent data hooked up yet */}
+                        <div className="h-full bg-blue-500" style={{ width: '0%' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
+
+        {/* Hidden Report Container */}
+        <div id="finance-report" className="hidden">
+          <h2>الوضع المالي الحالي</h2>
+          <p>الرصيد: {financeData?.current_balance_ars} ARS</p>
+          <h3>المعاملات الأخيرة</h3>
+          {/* Add table here later if needed */}
+        </div>
         <Card className="col-span-full">
           <CardHeader className="pb-3">
             <CardTitle className="arabic-title text-sm flex items-center justify-between">

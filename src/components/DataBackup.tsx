@@ -42,6 +42,15 @@ const DataBackup: React.FC = () => {
                     finance: finance.data,
                     logistics: logistics.data,
                     appointments: appointments || [],
+                    localStorage: {
+                        baraka_medications_v2: localStorage.getItem('baraka_medications_v2'),
+                        baraka_habits: localStorage.getItem('baraka_habits'),
+                        baraka_subscriptions: localStorage.getItem('baraka_subscriptions'),
+                        baraka_budgets: localStorage.getItem('baraka_budgets'),
+                        baraka_savings: localStorage.getItem('baraka_savings'),
+                        baraka_quick_notes: localStorage.getItem('baraka_quick_notes'),
+                        baraka_reminders_settings: localStorage.getItem('baraka_reminders_settings'),
+                    }
                 }
             };
 
@@ -109,6 +118,13 @@ const DataBackup: React.FC = () => {
             }
             if (importedData.data.logistics) {
                 updates.push(supabase.from(TABLES.logistics).upsert({ ...importedData.data.logistics, user_id: user.id, updated_at: new Date().toISOString() }));
+            }
+
+            // Restore LocalStorage
+            if (importedData.data.localStorage) {
+                Object.entries(importedData.data.localStorage).forEach(([key, value]) => {
+                    if (value) localStorage.setItem(key, value as string);
+                });
             }
 
             await Promise.all(updates);
