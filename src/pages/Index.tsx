@@ -245,30 +245,7 @@ const Index = () => {
 
             <div className="px-2 pt-2 md:container md:mx-auto md:px-4 md:pt-6">
               <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
-                {dashboardOrder.map(section => (
-                  <div key={section} className="w-full">
-                    {section === 'stats' && <SmartDashboard onNavigateToTab={setActiveTab} />}
-
-                    {section === 'appointments' && (
-                      <div className="w-full">
-                        <AppointmentManager />
-                      </div>
-                    )}
-
-                    {section === 'shopping' && (
-                      <div className="w-full">
-                        {/* Pass prop? ShoppingList doesn't seem to have one, but wrapper is fine */}
-                        <ShoppingList />
-                      </div>
-                    )}
-
-                    {section === 'map' && (
-                      <div className="w-full h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
-                        <InteractiveMap />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                <SmartDashboard onNavigateToTab={setActiveTab} />
               </TabsContent>
 
               <TabsContent value="analytics" className="animate-fade-in data-[state=active]:block">

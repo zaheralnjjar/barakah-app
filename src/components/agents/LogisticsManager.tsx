@@ -162,6 +162,7 @@ const LogisticsManager = () => {
   const [tasks, setTasks] = useState<MainTask[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [resources, setResources] = useState<SavedResource[]>([]);
+  const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
   // Dialog & Editing State
   const [isaddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -195,6 +196,7 @@ const LogisticsManager = () => {
   });
   const [selectedMedDay, setSelectedMedDay] = useState<string | null>(null);
   const [showMedDialog, setShowMedDialog] = useState(false);
+  const [showStatsDialog, setShowStatsDialog] = useState(false); // New Stats Dialog
   const [newMedication, setNewMedication] = useState({
     name: '',
     time: '08:00',
@@ -212,6 +214,36 @@ const LogisticsManager = () => {
     try { return JSON.parse(localStorage.getItem('baraka_habits') || '[]'); } catch { return []; }
   });
   const [newHabitName, setNewHabitName] = useState('');
+
+  // Quick Notes History State
+  const [notesHistory, setNotesHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('baraka_notes_history') || '[]'); } catch { return []; }
+  });
+
+  const archiveCurrentNote = () => {
+    const el = document.getElementById('quickNotes') as HTMLTextAreaElement;
+    if (!el || !el.value.trim()) return;
+    const updated = [el.value, ...notesHistory];
+    setNotesHistory(updated);
+    localStorage.setItem('baraka_notes_history', JSON.stringify(updated));
+    el.value = '';
+    localStorage.removeItem('baraka_quick_notes');
+    toast({ title: 'تمت الأرشفة' });
+  };
+
+  const deleteHistoryItem = (index: number) => {
+    const updated = notesHistory.filter((_, i) => i !== index);
+    setNotesHistory(updated);
+    localStorage.setItem('baraka_notes_history', JSON.stringify(updated));
+  };
+
+  const restoreHistoryItem = (note: string) => {
+    const el = document.getElementById('quickNotes') as HTMLTextAreaElement;
+    if (el) {
+      el.value = note;
+      localStorage.setItem('baraka_quick_notes', note);
+    }
+  };
 
   const saveMedication = () => {
     if (!newMedication.name) return;
@@ -322,6 +354,9 @@ const LogisticsManager = () => {
 
       const savedResources = localStorage.getItem('baraka_resources');
       if (savedResources) setResources(JSON.parse(savedResources));
+
+      const savedLocs = localStorage.getItem('baraka_locations');
+      if (savedLocs) setSavedLocations(JSON.parse(savedLocs));
     } catch (e) {
       console.error("Error loading local data", e);
     }
@@ -790,12 +825,31 @@ const LogisticsManager = () => {
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                     />
                   </div>
-                  <Input
-                    placeholder="الموقع (اختياري)"
-                    className="text-right"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-500">الموقع</label>
+                    {savedLocations.length > 0 && (
+                      <Select
+                        onValueChange={(val) => {
+                          if (val) setFormData({ ...formData, location: val });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="اختر من المواقع المحفوظة (اختياري)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedLocations.map((loc: any) => (
+                            <SelectItem key={loc.id} value={loc.title}>{loc.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Input
+                      placeholder="أو اكتب الموقع يدوياً"
+                      className="text-right"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    />
+                  </div>
                   <Textarea
                     placeholder="ملاحظات"
                     className="text-right"
@@ -814,32 +868,116 @@ const LogisticsManager = () => {
       </div>
 
       {/* Achievement Stats */}
-      <div className="grid grid-cols-4 gap-2">
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+      {/* Achievement Stats - Interactive */}
+      <div
+        className="grid grid-cols-4 gap-2 cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => setShowStatsDialog(true)}
+      >
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-green-600">مكتملة</p>
+            <p className="text-xs text-green-600 font-bold">مكتملة</p>
             <p className="text-xl font-bold text-green-700">{tasks.filter(t => t.progress === 100).length}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-yellow-600">جارية</p>
+            <p className="text-xs text-yellow-600 font-bold">جارية</p>
             <p className="text-xl font-bold text-yellow-700">{tasks.filter(t => t.progress > 0 && t.progress < 100).length}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-gray-600">معلقة</p>
+            <p className="text-xs text-gray-600 font-bold">معلقة</p>
             <p className="text-xl font-bold text-gray-700">{tasks.filter(t => t.progress === 0).length}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm hover:shadow-md transition-all">
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-purple-600">مشاريع</p>
+            <p className="text-xs text-purple-600 font-bold">مشاريع</p>
             <p className="text-xl font-bold text-purple-700">{tasks.filter(t => t.type === 'project').length}</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Detailed Statistics Dialog */}
+      <Dialog open={showStatsDialog} onOpenChange={setShowStatsDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-right arabic-title flex items-center justify-between">
+              <span>📊 إحصائيات الأداء التفصيلية</span>
+              <span className="text-xs font-normal text-muted-foreground bg-gray-100 px-2 py-1 rounded">نظرة شاملة</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-6 py-4">
+            {/* Completion Rate */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>معدل الإنجاز العام</span>
+                <span className="font-bold">{tasks.length > 0 ? Math.round((tasks.filter(t => t.progress === 100).length / tasks.length) * 100) : 0}%</span>
+              </div>
+              <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-1000"
+                  style={{ width: `${tasks.length > 0 ? Math.round((tasks.filter(t => t.progress === 100).length / tasks.length) * 100) : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Priority Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border rounded-xl p-4 bg-white shadow-sm">
+                <h4 className="text-sm font-bold mb-3 border-b pb-2">توزيع الأولويات</h4>
+                <div className="space-y-3">
+                  {['high', 'medium', 'low'].map(p => {
+                    const count = tasks.filter(t => t.priority === p).length;
+                    const label = p === 'high' ? 'عالية' : p === 'medium' ? 'متوسطة' : 'منخفضة';
+                    const color = p === 'high' ? 'bg-red-500' : p === 'medium' ? 'bg-yellow-500' : 'bg-blue-500';
+                    return (
+                      <div key={p} className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${color}`} />
+                        <span className="text-xs flex-1">{label}</span>
+                        <span className="text-xs font-bold">{count}</span>
+                        <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${color}`} style={{ width: `${tasks.length > 0 ? (count / tasks.length) * 100 : 0}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Habits Summary */}
+              <div className="border rounded-xl p-4 bg-white shadow-sm">
+                <h4 className="text-sm font-bold mb-3 border-b pb-2">التزام العادات</h4>
+                <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                  {habits.length === 0 && <p className="text-xs text-gray-400 text-center py-4">لا توجد عادات مضافة</p>}
+                  {habits.map(h => (
+                    <div key={h.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                      <span className="text-xs">{h.name}</span>
+                      <span className="text-xs font-bold text-orange-600 flex items-center gap-1">
+                        🔥 {h.streak || 0} يوم
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-xl text-center">
+                <p className="text-2xl font-bold text-blue-700">{appointments.filter(a => new Date(a.date) >= new Date()).length}</p>
+                <p className="text-xs text-blue-600">موعد قادم</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-xl text-center">
+                <p className="text-2xl font-bold text-purple-700">{resources.length}</p>
+                <p className="text-xs text-purple-600">موارد محفوظة</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -1148,24 +1286,37 @@ const LogisticsManager = () => {
               <div className="space-y-2">
                 {medications.map(med => {
                   // Determine if taken TODAY (YYYY-MM-DD)
-                  const today = new Date().toISOString().split('T')[0];
-                  const isTaken = !!(med.takenHistory || {})[today];
+                  const todayDate = new Date();
+                  const todayStr = todayDate.toISOString().split('T')[0];
+                  // Get Arabic day name for today to check matches
+                  // internal DAYS_AR = ['السبت', 'الأحد'...]
+                  // js getDay(): Sun=0, Mon=1...Sat=6.
+                  // mapping: 0(Sun)->'الأحد', 1(Mon)->'الاثنين', ... 6(Sat)->'السبت'
+                  const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                  const todayDayName = dayMap[todayDate.getDay()];
+
+                  const isTodayDue = med.frequency === 'daily' ||
+                    (med.frequency === 'specific_days' && med.customDays?.includes(todayDayName));
+
+                  const isTaken = !!(med.takenHistory || {})[todayStr];
 
                   return (
-                    <div key={med.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <div key={med.id} className={`flex items-center justify-between p-2 bg-white rounded border ${isTodayDue ? 'border-l-4 border-l-primary' : 'opacity-70'}`}>
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={isTaken}
-                          onChange={() => toggleMedTaken(med.id, today)}
+                          onChange={() => toggleMedTaken(med.id, todayStr)}
                           className="accent-green-600 w-4 h-4"
+                          disabled={!isTodayDue}
                         />
                         <div>
-                          <span className={`block text-sm font-bold ${isTaken ? 'line-through text-gray-400' : ''}`}>{med.name}</span>
+                          <span className={`block text-sm font-bold ${isTaken ? 'line-through text-gray-400' : ''} ${!isTodayDue ? 'text-gray-500' : ''}`}>{med.name}</span>
                           <div className="flex gap-2 text-[10px] text-gray-500">
                             <span>⏰ {med.time}</span>
-                            <span>🔄 {med.frequency === 'daily' ? 'يومي' : med.frequency === 'weekly' ? 'أسبوعي' : 'شهري'}</span>
+                            <span>🔄 {med.frequency === 'daily' ? 'يومي' : med.frequency === 'weekly' ? 'أسبوعي' : med.frequency === 'monthly' ? 'شهري' : med.customDays?.join(', ')}</span>
                           </div>
+
                         </div>
                       </div>
                       <Trash2 className="w-4 h-4 text-red-400 cursor-pointer hover:text-red-600" onClick={() => deleteMedication(med.id)} />
@@ -1209,11 +1360,37 @@ const LogisticsManager = () => {
                     onChange={e => setNewMedication({ ...newMedication, frequency: e.target.value })}
                   >
                     <option value="daily">يومي</option>
+                    <option value="specific_days">أيام محددة</option>
                     <option value="weekly">أسبوعي</option>
                     <option value="monthly">شهري</option>
                   </select>
                 </div>
               </div>
+
+              {/* Specific Days Selector */}
+              {newMedication.frequency === 'specific_days' && (
+                <div className="grid gap-2">
+                  <label className="text-sm font-bold">حدد الأيام</label>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_AR.map(day => (
+                      <button
+                        key={day}
+                        className={`px-3 py-1 rounded-full text-xs border ${newMedication.customDays.includes(day) ? 'bg-primary text-white border-primary' : 'bg-gray-100 text-gray-600'}`}
+                        onClick={() => {
+                          const current = newMedication.customDays;
+                          if (current.includes(day)) {
+                            setNewMedication({ ...newMedication, customDays: current.filter(d => d !== day) });
+                          } else {
+                            setNewMedication({ ...newMedication, customDays: [...current, day] });
+                          }
+                        }}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <input
@@ -1282,6 +1459,14 @@ const LogisticsManager = () => {
                 >
                   <Share2 className="w-3 h-3 ml-1" /> مشاركة
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                  onClick={archiveCurrentNote}
+                >
+                  <Trash2 className="w-3 h-3 ml-1" /> مسح وأرشفة
+                </Button>
               </div>
             </CardTitle>
           </CardHeader>
@@ -1289,9 +1474,31 @@ const LogisticsManager = () => {
             <Textarea
               id="quickNotes"
               placeholder="اكتب ملاحظاتك هنا..."
-              className="min-h-[100px] text-right"
+              className="min-h-[100px] text-right mb-4"
               defaultValue={localStorage.getItem('baraka_quick_notes') || ''}
             />
+
+            {/* Notes History / Archive */}
+            {notesHistory.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <h4 className="text-xs font-bold text-gray-500 mb-2">الملاحظات المحذوفة / الأرشيف</h4>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {notesHistory.map((note, idx) => (
+                    <div key={idx} className="bg-gray-50 p-2 rounded border flex flex-col gap-2">
+                      <p className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-3">{note}</p>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => restoreHistoryItem(note)}>استعادة</Button>
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => {
+                          if (navigator.share) navigator.share({ text: note });
+                          else navigator.clipboard.writeText(note);
+                        }}>مشاركة</Button>
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px] text-red-500" onClick={() => deleteHistoryItem(idx)}>حذف نهائي</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

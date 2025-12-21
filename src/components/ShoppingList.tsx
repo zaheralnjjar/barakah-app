@@ -177,10 +177,26 @@ const ShoppingList = () => {
                             </p>
                         </div>
                     </div>
-                    <Button onClick={shareList} variant="outline" size="sm">
-                        <Share2 className="w-4 h-4 ml-2" />
-                        مشاركة
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => {
+                                const listText = items
+                                    .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}`)
+                                    .join('\n');
+                                const url = `https://wa.me/?text=${encodeURIComponent('📝 قائمة التسوق - بركة:\n\n' + listText)}`;
+                                window.open(url, '_blank');
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                            <span className="ml-2 text-lg">📱</span> واتساب
+                        </Button>
+                        <Button onClick={shareList} variant="outline" size="sm">
+                            <Share2 className="w-4 h-4 ml-2" />
+                            مشاركة
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
