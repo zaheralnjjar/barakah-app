@@ -122,6 +122,41 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         return data.tasks.length + data.appointments.length + data.habits.length + data.medications.length;
     };
 
+    const printViaIframe = (htmlContent: string) => {
+        const iframe = document.createElement('iframe');
+        Object.assign(iframe.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '1px',
+            height: '1px',
+            border: '0',
+            opacity: '0.01',
+            pointerEvents: 'none',
+            zIndex: '-1',
+            visibility: 'hidden'
+        });
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write(htmlContent);
+            doc.close();
+
+            // Allow content to load/render
+            setTimeout(() => {
+                iframe.contentWindow?.print();
+                // Cleanup after reasonable time
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 5000);
+            }, 500);
+        }
+    };
+
     const printDayReport = (dateStr: string) => {
         const data = getDayData(dateStr);
         const date = new Date(dateStr);
@@ -151,10 +186,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             </head>
             <body>
                 <div class="header">
-                    <button class="no-print" onclick="window.close()" style="float:left;background:#64748b;color:white;padding:5px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px">🔙 رجوع للتطبيق</button>
                     <h1>📅 مهام ${date.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
                 </div>
-                <button class="back-btn no-print" onclick="window.print()" style="background:#2563eb;margin-bottom:15px">🖨️ طباعة</button>
         `;
 
         if (printSelections.tasks && data.tasks.length > 0) {
@@ -248,11 +281,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
         html += `<p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-        }
+        printViaIframe(html);
         setShowPrintOptions(false);
     };
 
@@ -289,10 +318,6 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 <div class="header">
                     <h1>📅 تقرير ${dates.length} أيام</h1>
                     <p>${new Date(dates[0]).toLocaleDateString('ar')} - ${new Date(dates[dates.length - 1]).toLocaleDateString('ar')}</p>
-                </div>
-                <div class="no-print" style="text-align:center;margin-bottom:15px">
-                    <button onclick="window.print()" style="background:#2563eb;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-left:10px">🖨️ طباعة</button>
-                    <button onclick="window.close()" style="background:#64748b;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer">🔙 رجوع للتطبيق</button>
                 </div>
                 <table>
                     <thead>
@@ -386,6 +411,33 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
         html += `</tbody></table>`;
 
+        // Consolidated Prayer Schedule Table for ALL days
+        if (printSelections.prayerTimes) {
+            html += `<div style="page-break-inside:avoid;margin-top:20px;">`;
+            html += `<h3 style="text-align:center;color:#4f46e5;margin-bottom:10px">🕌 جدول أوقات الصلاة للفترة المحددة</h3>`;
+            html += `<div style="overflow-x:auto;">`;
+            html += `<table style="font-size:10px;text-align:center;">`;
+            html += `<thead style="background:#eef2ff;color:#3730a3;"><tr><th>التاريخ</th><th>اليوم</th><th>الفجر</th><th>الظهر</th><th>العصر</th><th>المغرب</th><th>العشاء</th></tr></thead>`;
+            html += `<tbody>`;
+
+            dates.forEach(dateStr => {
+                const d = new Date(dateStr);
+                const dayNum = d.getDate();
+                const times = prayerSchedule[dayNum] || defaultPrayers;
+                html += `<tr>`;
+                html += `<td>${d.toLocaleDateString('ar')}</td>`;
+                html += `<td>${d.toLocaleDateString('ar', { weekday: 'long' })}</td>`;
+                html += `<td>${times.fajr}</td>`;
+                html += `<td>${times.dhuhr}</td>`;
+                html += `<td>${times.asr}</td>`;
+                html += `<td>${times.maghrib}</td>`;
+                html += `<td>${times.isha}</td>`;
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table></div></div>`;
+        }
+
         // Shopping List section for multi-day
         if (printSelections.shoppingList) {
             html += `<div style="margin-top:15px;padding:10px;background:#f0fdfa;border-radius:12px;page-break-inside:avoid;border:1px solid #ccfbf1">`;
@@ -402,11 +454,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
         html += `<p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-        }
+        printViaIframe(html);
         setShowPrintOptions(false);
         setSelectedDates(new Set());
         setIsMultiSelectMode(false);
@@ -436,10 +484,6 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             </head>
             <body>
                 <h2 style="text-align:center;color:#16a34a;margin-bottom:10px">📅 جدول الأسبوع بالساعات</h2>
-                <div style="text-align:center;margin-bottom:10px">
-                    <button onclick="window.print()" style="background:#2563eb;color:white;padding:8px 16px;border:none;border-radius:6px;margin-left:8px">🖨️ طباعة</button>
-                    <button onclick="window.close()" style="background:#64748b;color:white;padding:8px 16px;border:none;border-radius:6px">🔙 رجوع للتطبيق</button>
-                </div>
                 <table>
                     <thead><tr><th>الساعة</th>`;
 
@@ -515,11 +559,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         html += `</tbody></table>`;
         html += `<p style="text-align:center;margin-top:20px;color:#9ca3af;font-size:10px">✨ نظام بركة</p></body></html>`;
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-        }
+        printViaIframe(html);
         setShowPrintOptions(false);
         setSelectedDates(new Set());
         setIsMultiSelectMode(false);

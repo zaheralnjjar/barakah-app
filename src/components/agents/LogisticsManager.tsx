@@ -88,6 +88,31 @@ const LogisticsManager = () => {
     priority: 'medium' as 'low' | 'medium' | 'high'
   });
 
+  // Location Autocomplete State
+  const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Debounce search for location
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (formData.location && formData.location.length > 2 && activeTab === 'appointment' && showSuggestions) {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.location)}&addressdetails=1&limit=5&accept-language=ar`
+          );
+          const data = await response.json();
+          setSearchSuggestions(data);
+        } catch (error) {
+          console.error('Error fetching suggestions:', error);
+        }
+      } else {
+        setSearchSuggestions([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formData.location, activeTab, showSuggestions]);
+
   const resetForm = () => {
     setFormData({
       title: '', description: '', startDate: '', date: '', time: '', location: '', priority: 'medium'
@@ -317,12 +342,43 @@ const LogisticsManager = () => {
                       onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                     />
                   </div>
-                  <Input
-                    placeholder="الموقع"
-                    className="text-right"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
+                  <div className="relative">
+                    <Input
+                      placeholder="الموقع"
+                      className="text-right"
+                      value={formData.location}
+                      onFocus={() => setShowSuggestions(true)}
+                      onChange={(e) => {
+                        setFormData({ ...formData, location: e.target.value });
+                        setShowSuggestions(true);
+                      }}
+                    />
+                    {showSuggestions && searchSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 bg-white border rounded-b-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                        {searchSuggestions.map((s, idx) => {
+                          const addr = s.address || {};
+                          const streetName = addr.road || addr.street || addr.pedestrian || s.display_name.split(',')[0];
+                          const houseNumber = addr.house_number || '';
+                          const formattedName = houseNumber ? `${streetName} ${houseNumber}` : streetName;
+
+                          return (
+                            <div
+                              key={idx}
+                              className="p-2 hover:bg-gray-100 cursor-pointer text-right text-sm border-b last:border-b-0"
+                              onMouseDown={(e) => {
+                                e.preventDefault(); // Prevent blur before click
+                                setFormData({ ...formData, location: formattedName });
+                                setShowSuggestions(false);
+                              }}
+                            >
+                              <div className="font-bold">{formattedName}</div>
+                              <div className="text-xs text-gray-500 truncate">{s.display_name}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                   <Textarea
                     placeholder="ملاحظات"
                     className="text-right"

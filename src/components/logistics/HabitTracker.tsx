@@ -126,12 +126,32 @@ export const HabitTracker = () => {
                                 <div key={habit.id} className="border rounded-lg overflow-hidden bg-white">
                                     <div className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
                                         <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => toggleHabit(habit.id)}
-                                                className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${isCompletedToday ? 'bg-orange-500 border-orange-600 text-white' : 'bg-gray-100 border-gray-300 text-transparent hover:border-orange-400'}`}
-                                            >
-                                                <Check className="w-4 h-4" />
-                                            </button>
+                                            <div className="relative w-8 h-8 flex items-center justify-center">
+                                                {/* Circular Progress */}
+                                                {(subtasks.length > 0 || timesTarget > 1) && (
+                                                    <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                                        <path
+                                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                            fill="none"
+                                                            stroke="#eee"
+                                                            strokeWidth="3"
+                                                        />
+                                                        <path
+                                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                            fill="none"
+                                                            stroke={isCompletedToday ? "#f97316" : "#3b82f6"}
+                                                            strokeWidth="3"
+                                                            strokeDasharray={`${(subtasks.length > 0 ? (subtasksCompleted / subtasks.length) * 100 : (timesToday / timesTarget) * 100)}, 100`}
+                                                        />
+                                                    </svg>
+                                                )}
+                                                <button
+                                                    onClick={() => toggleHabit(habit.id)}
+                                                    className={`w-5 h-5 rounded-full flex items-center justify-center z-10 transition-all ${isCompletedToday ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-300 hover:bg-gray-200'}`}
+                                                >
+                                                    <Check className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                             <div>
                                                 <span className={`font-bold block ${isCompletedToday ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{habit.name}</span>
                                                 <div className="flex gap-2 items-center">

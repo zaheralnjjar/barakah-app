@@ -20,6 +20,7 @@ import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -234,7 +235,14 @@ const Index = () => {
       {/* PIN Setup Screen */}
       {showSetup && <PinLock isSetupMode onUnlock={() => { }} onSetupComplete={onSetupComplete} />}
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24">
+
+
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative">
+        {/* Notification Bell - Always visible Top Right */}
+        <div className="absolute top-4 left-4 z-50">
+          <NotificationBell />
+        </div>
+
         {/* Content Area - No Padding Container for full width */}
         <div className="w-full">
 

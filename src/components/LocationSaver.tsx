@@ -37,7 +37,8 @@ interface SavedLocation {
     latitude: number;
     longitude: number;
     address?: string;
-    image?: string; // Base64 image
+    image?: string; // Legacy
+    images?: string[]; // New: Multiple images
     createdAt: string;
 }
 
@@ -59,7 +60,9 @@ const LocationSaver: React.FC = () => {
     // Form State for Add/Edit
     const [formName, setFormName] = useState('');
     const [formType, setFormType] = useState<SavedLocation['type']>('other');
-    const [formImage, setFormImage] = useState<string>('');
+    const [formImage, setFormImage] = useState<string>(''); // Legacy
+    const [formImages, setFormImages] = useState<string[]>([]); // New
+
     const [capturedPosition, setCapturedPosition] = useState<GeolocationPosition | null>(null);
     const [approxAddress, setApproxAddress] = useState<string>('');
 
@@ -75,7 +78,10 @@ const LocationSaver: React.FC = () => {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const base64 = event.target?.result as string;
-                setFormImage(base64);
+                // Add to list
+                setFormImages(prev => [...prev, base64]);
+                // Also set legacy for compatibility if needed
+                if (!formImage) setFormImage(base64);
             };
             reader.readAsDataURL(file);
         }
@@ -206,8 +212,9 @@ const LocationSaver: React.FC = () => {
             type: formType,
             latitude: capturedPosition.coords.latitude,
             longitude: capturedPosition.coords.longitude,
-            address: approxAddress, // Store the street address
-            image: formImage || undefined,
+            address: approxAddress,
+            image: formImages.length > 0 ? formImages[0] : (formImage || undefined),
+            images: formImages.length > 0 ? formImages : (formImage ? [formImage] : []),
             createdAt: new Date().toISOString(),
         };
 
@@ -218,6 +225,7 @@ const LocationSaver: React.FC = () => {
         setIsAddDialogOpen(false);
         setCapturedPosition(null);
         setFormImage('');
+        setFormImages([]);
         setApproxAddress('');
         toast({ title: '✅ تم حفظ الموقع بنجاح' });
     };
@@ -228,6 +236,7 @@ const LocationSaver: React.FC = () => {
         setFormName(loc.name);
         setFormType(loc.type);
         setFormImage(loc.image || '');
+        setFormImages(loc.images || (loc.image ? [loc.image] : []));
         setIsEditDialogOpen(true);
     };
 
@@ -236,7 +245,13 @@ const LocationSaver: React.FC = () => {
 
         const updated = locations.map(loc =>
             loc.id === editingLocation.id
-                ? { ...loc, name: formName.trim(), type: formType }
+                ? {
+                    ...loc,
+                    name: formName.trim(),
+                    type: formType,
+                    images: formImages,
+                    image: formImages.length > 0 ? formImages[0] : undefined
+                }
                 : loc
         );
 
@@ -245,6 +260,7 @@ const LocationSaver: React.FC = () => {
 
         setIsEditDialogOpen(false);
         setEditingLocation(null);
+        setFormImages([]);
         toast({ title: '✅ تم تعديل الموقع' });
     };
 
@@ -431,7 +447,7 @@ const LocationSaver: React.FC = () => {
 
                             {/* Image Upload */}
                             <div className="space-y-2">
-                                <label className="text-sm arabic-body">صورة الموقع (اختياري)</label>
+                                <label className="text-sm arabic-body">صور الموقع (اختياري)</label>
                                 <div className="flex gap-2">
                                     <input
                                         ref={fileInputRef}
@@ -465,18 +481,24 @@ const LocationSaver: React.FC = () => {
                                         <ImageIcon className="w-4 h-4 ml-1" /> معرض
                                     </Button>
                                 </div>
-                                {formImage && (
-                                    <div className="relative">
-                                        <img src={formImage} alt="صورة الموقع" className="w-full h-32 object-cover rounded-lg" />
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="sm"
-                                            className="absolute top-1 right-1"
-                                            onClick={() => setFormImage('')}
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </Button>
+
+                                {/* Images Grid */}
+                                {formImages.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                        {formImages.map((img, idx) => (
+                                            <div key={idx} className="relative group">
+                                                <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="absolute top-0 right-0 h-5 w-5 p-0 rounded-bl-lg opacity-90 hover:opacity-100"
+                                                    onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -518,6 +540,48 @@ const LocationSaver: React.FC = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* Image Upload for Edit */}
+                            <div className="space-y-2">
+                                <label className="text-sm arabic-body">صور الموقع</label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => cameraInputRef.current?.click()}
+                                    >
+                                        <Camera className="w-4 h-4 ml-1" /> إضافة
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImageIcon className="w-4 h-4 ml-1" /> معرض
+                                    </Button>
+                                </div>
+                                {formImages.length > 0 && (
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                        {formImages.map((img, idx) => (
+                                            <div key={idx} className="relative group">
+                                                <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border" />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="absolute top-0 right-0 h-5 w-5 p-0 rounded-bl-lg opacity-90 hover:opacity-100"
+                                                    onClick={() => setFormImages(prev => prev.filter((_, i) => i !== idx))}
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <Button onClick={saveEditLocation} className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white">حفظ التعديلات</Button>
                         </div>
                     </DialogContent>

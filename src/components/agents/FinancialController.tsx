@@ -316,6 +316,53 @@ const FinancialController = () => {
     }
   };
 
+  const deleteTransaction = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذه المعاملة؟')) return;
+
+    setUpdating(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const transactionToDelete = financeData.pending_expenses.find((t: any) => t.id === id);
+      if (!transactionToDelete) return;
+
+      const updatedExpenses = financeData.pending_expenses.filter((t: any) => t.id !== id);
+
+      let updatedBalanceARS = financeData.current_balance_ars;
+      let updatedBalanceUSD = financeData.current_balance_usd;
+
+      const amount = parseFloat(transactionToDelete.amount);
+      // Reverse the balance change
+      if (transactionToDelete.currency === 'ARS') {
+        updatedBalanceARS -= (transactionToDelete.type === 'expense' ? -amount : amount);
+      } else {
+        updatedBalanceUSD -= (transactionToDelete.type === 'expense' ? -amount : amount);
+      }
+
+      const { error } = await supabase
+        .from('finance_data_2025_12_18_18_42')
+        .update({
+          current_balance_ars: updatedBalanceARS,
+          current_balance_usd: updatedBalanceUSD,
+          pending_expenses: updatedExpenses,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({ title: "تم حذف المعاملة" });
+      loadFinanceData();
+
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Only updates rate value, source is fixed
   const updateExchangeRate = async (newRate: string) => {
     setUpdating(true);
@@ -404,16 +451,47 @@ const FinancialController = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Calculator className="w-10 h-10 text-white" />
-        </div>
-        <h1 className="text-3xl arabic-title text-primary mb-2">
-          المراقب المالي
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold text-primary arabic-title">
+          المالية
         </h1>
-        <p className="arabic-body text-muted-foreground">
-          إدارة الميزانية والحد اليومي وتتبع الديون
-        </p>
+      </div>
+
+      {/* Financial Overview - Moved to Top */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="arabic-title text-sm flex items-center">
+              <DollarSign className="w-4 h-4 ml-2" />
+              الرصيد الإجمالي
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-primary">
+              {totalBalanceARS.toLocaleString()} ARS
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ≈ {(totalBalanceARS / financeData.exchange_rate).toFixed(2)} USD
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="arabic-title text-sm flex items-center">
+              <TrendingUp className="w-4 h-4 ml-2" />
+              الحد اليومي
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">
+              {dailyLimit.toLocaleString()} ARS
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ≈ {(dailyLimit / financeData.exchange_rate).toFixed(2)} USD
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Add Transaction */}
@@ -510,276 +588,240 @@ const FinancialController = () => {
         </CardContent>
       </Card>
 
-      {/* Financial Overview - 2 columns per row */}
-      <div className="grid grid-cols-2 gap-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="arabic-title text-sm flex items-center">
+            <TrendingDown className="w-4 h-4 ml-2" />
+            إجمالي الديون
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-2xl font-bold text-red-600">
+            {financeData.total_debt.toLocaleString()} ARS
+          </p>
+          <p className="text-sm text-muted-foreground">
+            ≈ {(financeData.total_debt / financeData.exchange_rate).toFixed(2)} USD
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Financial Tools Section */}
+      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Weekly Report */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center">
-              <DollarSign className="w-4 h-4 ml-2" />
-              الرصيد الإجمالي
+          <CardHeader className="pb-2">
+            <CardTitle className="arabic-title text-sm flex items-center gap-2">
+              📄 تقارير
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">
-              {totalBalanceARS.toLocaleString()} ARS
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ≈ {(totalBalanceARS / financeData.exchange_rate).toFixed(2)} USD
-            </p>
+          <CardContent className="flex flex-col justify-center items-center h-[140px] gap-2">
+            <Button onClick={generateReport} className="w-full" variant="outline">
+              <Share2 className="w-4 h-4 ml-2" /> طباعة تقرير أسبوعي
+            </Button>
+            <p className="text-xs text-gray-400 text-center">يقوم بإنشاء تقرير مفصل للطباعة أو الحفظ كـ PDF</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center">
-              <TrendingUp className="w-4 h-4 ml-2" />
-              الحد اليومي
+        {/* Savings Goals */}
+        <Card className="col-span-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="arabic-title text-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" /> أهداف الادخار
+              </div>
+              <div className="flex gap-2">
+                <Input placeholder="الهدف" className="h-8 w-24 text-xs" value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} />
+                <Input placeholder="المبلغ" className="h-8 w-20 text-xs" value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} />
+                <Button size="sm" className="h-8" onClick={saveGoal}><PlusCircle className="w-4 h-4" /></Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">
-              {dailyLimit.toLocaleString()} ARS
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ≈ {(dailyLimit / financeData.exchange_rate).toFixed(2)} USD
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center">
-              <TrendingDown className="w-4 h-4 ml-2" />
-              إجمالي الديون
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-red-600">
-              {financeData.total_debt.toLocaleString()} ARS
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ≈ {(financeData.total_debt / financeData.exchange_rate).toFixed(2)} USD
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Financial Tools Section */}
-        <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          {/* Weekly Report */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="arabic-title text-sm flex items-center gap-2">
-                📄 تقارير
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col justify-center items-center h-[140px] gap-2">
-              <Button onClick={generateReport} className="w-full" variant="outline">
-                <Share2 className="w-4 h-4 ml-2" /> طباعة تقرير أسبوعي
-              </Button>
-              <p className="text-xs text-gray-400 text-center">يقوم بإنشاء تقرير مفصل للطباعة أو الحفظ كـ PDF</p>
-            </CardContent>
-          </Card>
-
-          {/* Savings Goals */}
-          <Card className="col-span-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="arabic-title text-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" /> أهداف الادخار
-                </div>
-                <div className="flex gap-2">
-                  <Input placeholder="الهدف" className="h-8 w-24 text-xs" value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} />
-                  <Input placeholder="المبلغ" className="h-8 w-20 text-xs" value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} />
-                  <Button size="sm" className="h-8" onClick={saveGoal}><PlusCircle className="w-4 h-4" /></Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {savingsGoals.map(goal => (
-                  <div key={goal.id} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>{goal.name}</span>
-                      <span>{goal.current} / {goal.target}</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-green-500"
-                        style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => {
-                        const added = parseFloat(prompt('أضف مبلغ:') || '0');
-                        if (added) {
-                          const updated = savingsGoals.map(g => g.id === goal.id ? { ...g, current: g.current + added } : g);
-                          setSavingsGoals(updated);
-                          localStorage.setItem('baraka_savings', JSON.stringify(updated));
-                        }
-                      }}>+ إيداع</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-red-400" onClick={() => {
-                        const updated = savingsGoals.filter(g => g.id !== goal.id);
+            <div className="space-y-3">
+              {savingsGoals.map(goal => (
+                <div key={goal.id} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>{goal.name}</span>
+                    <span>{goal.current} / {goal.target}</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500"
+                      style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1">
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => {
+                      const added = parseFloat(prompt('أضف مبلغ:') || '0');
+                      if (added) {
+                        const updated = savingsGoals.map(g => g.id === goal.id ? { ...g, current: g.current + added } : g);
                         setSavingsGoals(updated);
                         localStorage.setItem('baraka_savings', JSON.stringify(updated));
-                      }}>حذف</Button>
-                    </div>
+                      }
+                    }}>+ إيداع</Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-red-400" onClick={() => {
+                      const updated = savingsGoals.filter(g => g.id !== goal.id);
+                      setSavingsGoals(updated);
+                      localStorage.setItem('baraka_savings', JSON.stringify(updated));
+                    }}>حذف</Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Budget */}
-          <Card className="col-span-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="arabic-title text-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" /> الميزانية الشهرية
                 </div>
-                <div className="flex gap-2">
-                  <Input placeholder="الفئة" className="h-8 w-24 text-xs" value={newBudget.category} onChange={e => setNewBudget({ ...newBudget, category: e.target.value })} />
-                  <Input placeholder="الحد" className="h-8 w-20 text-xs" value={newBudget.limit} onChange={e => setNewBudget({ ...newBudget, limit: e.target.value })} />
-                  <Button size="sm" className="h-8" onClick={saveBudget}><PlusCircle className="w-4 h-4" /></Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {budgets.map((budget, idx) => {
-                  // Calculate spent for this category (mock calculation for now or needs transaction filtering)
-                  // For real implementation we filter transactions for current month & category
-                  const spent = 0; // Placeholder, would need detailed transaction logic
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>{budget.category}</span>
-                        <span>{spent} / {budget.limit}</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        {/* Mock progress 0% since we don't have live spent data hooked up yet */}
-                        <div className="h-full bg-blue-500" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
-
-        {/* Hidden Report Container */}
-        <div id="finance-report" className="hidden">
-          <h2>الوضع المالي الحالي</h2>
-          <p>الرصيد: {financeData?.current_balance_ars} ARS</p>
-          <h3>المعاملات الأخيرة</h3>
-          {/* Add table here later if needed */}
-        </div>
-        <Card className="col-span-full">
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center justify-between">
-              <div className="flex items-center">
-                <RefreshCw className="w-4 h-4 ml-2" />
-                الاشتراكات الشهرية
-              </div>
-              <Button size="sm" variant="outline" onClick={() => setShowSubscriptionDialog(true)}>
-                <PlusCircle className="w-4 h-4 ml-1" /> إضافة
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {subscriptions.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">لا توجد اشتراكات مسجلة</p>
-            ) : (
-              <div className="space-y-2">
-                {subscriptions.map(sub => (
-                  <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-purple-500" />
-                      <div>
-                        <p className="font-medium text-sm">{sub.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}
-                          {sub.renewalDate && ` - يوم ${sub.renewalDate}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-purple-600">{sub.amount} {sub.currency}</span>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400" onClick={() => deleteSubscription(sub.id)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
-                  <span className="font-bold text-purple-700">
-                    {subscriptions.filter(s => s.cycle === 'monthly').reduce((sum, s) => sum + s.amount, 0).toLocaleString()} ARS
-                  </span>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Add Subscription Dialog */}
-        <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-right">إضافة اشتراك جديد</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Input
-                placeholder="اسم الاشتراك (مثل: Netflix, Spotify)"
-                value={newSubscription.name}
-                onChange={e => setNewSubscription({ ...newSubscription, name: e.target.value })}
-                className="text-right"
-              />
+        {/* Monthly Budget */}
+        <Card className="col-span-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="arabic-title text-sm flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" /> الميزانية الشهرية
+              </div>
               <div className="flex gap-2">
+                <Input placeholder="الفئة" className="h-8 w-24 text-xs" value={newBudget.category} onChange={e => setNewBudget({ ...newBudget, category: e.target.value })} />
+                <Input placeholder="الحد" className="h-8 w-20 text-xs" value={newBudget.limit} onChange={e => setNewBudget({ ...newBudget, limit: e.target.value })} />
+                <Button size="sm" className="h-8" onClick={saveBudget}><PlusCircle className="w-4 h-4" /></Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {budgets.map((budget, idx) => {
+                // Calculate spent for this category (mock calculation for now or needs transaction filtering)
+                // For real implementation we filter transactions for current month & category
+                const spent = 0; // Placeholder, would need detailed transaction logic
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>{budget.category}</span>
+                      <span>{spent} / {budget.limit}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      {/* Mock progress 0% since we don't have live spent data hooked up yet */}
+                      <div className="h-full bg-blue-500" style={{ width: '0%' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+      </div>
+
+      {/* Hidden Report Container */}
+      <div id="finance-report" className="hidden">
+        <h2>الوضع المالي الحالي</h2>
+        <p>الرصيد: {financeData?.current_balance_ars} ARS</p>
+        <h3>المعاملات الأخيرة</h3>
+        {/* Add table here later if needed */}
+      </div>
+      <Card className="col-span-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="arabic-title text-sm flex items-center justify-between">
+            <div className="flex items-center">
+              <RefreshCw className="w-4 h-4 ml-2" />
+              الاشتراكات الشهرية
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowSubscriptionDialog(true)}>
+              <PlusCircle className="w-4 h-4 ml-1" /> إضافة
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {subscriptions.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">لا توجد اشتراكات مسجلة</p>
+          ) : (
+            <div className="space-y-2">
+              {subscriptions.map(sub => (
+                <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-purple-500" />
+                    <div>
+                      <p className="font-medium text-sm">{sub.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}
+                        {sub.renewalDate && ` - يوم ${sub.renewalDate}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-purple-600">{sub.amount} {sub.currency}</span>
+                    <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400" onClick={() => deleteSubscription(sub.id)}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 border-t">
+                <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
+                <span className="font-bold text-purple-700">
+                  {subscriptions.filter(s => s.cycle === 'monthly').reduce((sum, s) => sum + s.amount, 0).toLocaleString()} ARS
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Subscription Dialog */}
+      <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">إضافة اشتراك جديد</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="اسم الاشتراك (مثل: Netflix, Spotify)"
+              value={newSubscription.name}
+              onChange={e => setNewSubscription({ ...newSubscription, name: e.target.value })}
+              className="text-right"
+            />
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="المبلغ"
+                value={newSubscription.amount}
+                onChange={e => setNewSubscription({ ...newSubscription, amount: e.target.value })}
+              />
+              <select
+                value={newSubscription.currency}
+                onChange={e => setNewSubscription({ ...newSubscription, currency: e.target.value })}
+                className="border rounded px-2"
+              >
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+            <div className="flex gap-2 items-center">
+              <select
+                value={newSubscription.cycle}
+                onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
+                className="flex-1 border rounded p-2"
+              >
+                <option value="monthly">شهري</option>
+                <option value="yearly">سنوي</option>
+              </select>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-gray-500">يوم</span>
                 <Input
                   type="number"
-                  placeholder="المبلغ"
-                  value={newSubscription.amount}
-                  onChange={e => setNewSubscription({ ...newSubscription, amount: e.target.value })}
+                  min="1"
+                  max="31"
+                  placeholder="1"
+                  value={newSubscription.renewalDate}
+                  onChange={e => setNewSubscription({ ...newSubscription, renewalDate: e.target.value })}
+                  className="w-16 text-center"
                 />
-                <select
-                  value={newSubscription.currency}
-                  onChange={e => setNewSubscription({ ...newSubscription, currency: e.target.value })}
-                  className="border rounded px-2"
-                >
-                  <option value="ARS">ARS</option>
-                  <option value="USD">USD</option>
-                </select>
               </div>
-              <div className="flex gap-2 items-center">
-                <select
-                  value={newSubscription.cycle}
-                  onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
-                  className="flex-1 border rounded p-2"
-                >
-                  <option value="monthly">شهري</option>
-                  <option value="yearly">سنوي</option>
-                </select>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm text-gray-500">يوم</span>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="1"
-                    value={newSubscription.renewalDate}
-                    onChange={e => setNewSubscription({ ...newSubscription, renewalDate: e.target.value })}
-                    className="w-16 text-center"
-                  />
-                </div>
-              </div>
-              <Button onClick={saveSubscription} className="w-full">حفظ الاشتراك</Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <Button onClick={saveSubscription} className="w-full">حفظ الاشتراك</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Exchange Rate - Automated */}
       <Card>
@@ -825,280 +867,63 @@ const FinancialController = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Transactions - Reordered and Improved */}
-      {financeData.pending_expenses && financeData.pending_expenses.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="arabic-title">المعاملات الأخيرة</CardTitle>
-              <div className="flex gap-2 flex-wrap">
-                {/* Date Range Quick Select */}
-                <select
-                  className="h-8 px-2 border rounded text-xs"
-                  value={dateRangeFilter}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setDateRangeFilter(val);
-                    const today = new Date();
-                    if (val === 'today') {
-                      setFilterDate(today.toISOString().split('T')[0]);
-                      setFilterEndDate('');
-                    } else if (val === 'week') {
-                      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                      setFilterDate(weekAgo.toISOString().split('T')[0]);
-                      setFilterEndDate(today.toISOString().split('T')[0]);
-                    } else if (val === 'month') {
-                      const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-                      setFilterDate(monthAgo.toISOString().split('T')[0]);
-                      setFilterEndDate(today.toISOString().split('T')[0]);
-                    } else {
-                      setFilterDate('');
-                      setFilterEndDate('');
-                    }
-                  }}
-                >
-                  <option value="all">كل الفترات</option>
-                  <option value="today">اليوم</option>
-                  <option value="week">أسبوع</option>
-                  <option value="month">شهر</option>
-                  <option value="custom">مخصص</option>
-                </select>
-
-                {/* Excel Export */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  onClick={async () => {
-                    try {
-                      const { exportFinanceToExcel } = await import('@/lib/excelExport');
-                      await exportFinanceToExcel(financeData);
-                      toast({ title: '✅ تم تصدير Excel' });
-                    } catch (e) {
-                      console.error('Excel export error:', e);
-                      toast({ title: '❌ خطأ', description: 'فشل التصدير', variant: 'destructive' });
-                    }
-                  }}
-                >
-                  📊 Excel
-                </Button>
-
-                {/* Print Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  onClick={() => {
-                    const printWindow = window.open('', '_blank');
-                    if (!printWindow) return;
-
-                    const transactions = getFilteredTransactions().slice(-50);
-                    let html = `
-                      <html dir="rtl">
-                      <head><title>المعاملات المالية</title>
-                      <meta name="viewport" content="width=device-width, initial-scale=1">
-                      <style>
-                        body { font-family: Tajawal, Arial; padding: 20px; margin: 0; }
-                        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-                        .back-btn { background: #16a34a; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; }
-                        .back-btn:hover { background: #15803d; }
-                        table { width: 100%; border-collapse: collapse; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-                        th { background: #f5f5f5; }
-                        .income { color: green; }
-                        .expense { color: red; }
-                        @media print { .back-btn, .no-print { display: none !important; } }
-                      </style>
-                      </head>
-                      <body>
-                      <div class="header">
-                        <h1 style="margin:0">المعاملات المالية - نظام بركة</h1>
-                        <button class="back-btn no-print" onclick="window.close()">← رجوع</button>
+      {/* Recent Transactions - Restored */}
+      <Card className="col-span-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="arabic-title text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calculator className="w-4 h-4 ml-2" />
+              أحدث المعاملات
+            </div>
+            <div className="flex gap-2">
+              {/* Filters */}
+              <select className="text-xs border rounded p-1 h-8" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+                <option value="all">كل الفئات</option>
+                {expenseCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <Input type="date" className="h-8 w-32 text-xs" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {getFilteredTransactions().length === 0 ? (
+              <p className="text-center text-gray-400 py-4">لا توجد معاملات</p>
+            ) : (
+              getFilteredTransactions().map((t: any) => (
+                <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border hover:bg-white hover:shadow-sm transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${t.type === 'expense' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                      {t.type === 'expense' ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800">{t.description}</p>
+                      <div className="flex gap-2 text-xs text-gray-500">
+                        <span>{new Date(t.timestamp).toLocaleDateString('ar')}</span>
+                        <span>•</span>
+                        <span>{t.category}</span>
                       </div>
-                      <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar')}</p>
-                      <div class="no-print" style="margin-bottom:15px">
-                        <button class="back-btn" onclick="window.print()" style="background:#2563eb">🖨️ طباعة</button>
-                      </div>
-                      <table>
-                        <tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>الوصف</th><th>الفئة</th></tr>
-                    `;
-                    transactions.forEach((t: any) => {
-                      html += `<tr class="${t.type}">
-                        <td>${t.type === 'income' ? 'دخل' : 'مصروف'}</td>
-                        <td>${t.amount?.toLocaleString()} ${t.currency}</td>
-                        <td>${t.timestamp?.split('T')[0] || ''}</td>
-                        <td>${t.description || ''}</td>
-                        <td>${t.category || ''}</td>
-                      </tr>`;
-                    });
-                    html += '</table></body></html>';
-                    printWindow.document.write(html);
-                    printWindow.document.close();
-                  }}
-                >
-                  🖨️ طباعة
-                </Button>
-
-                {/* Share Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1"
-                  onClick={async () => {
-                    const transactions = getFilteredTransactions().slice(-10);
-                    let text = 'المعاملات الأخيرة - بركة\n' + '─'.repeat(20) + '\n';
-                    transactions.forEach((t: any) => {
-                      text += `${t.type === 'income' ? '➕' : '➖'} ${t.amount?.toLocaleString()} ${t.currency} - ${t.description}\n`;
-                    });
-                    if (navigator.share) {
-                      await navigator.share({ title: 'المعاملات الأخيرة', text });
-                    } else {
-                      await navigator.clipboard.writeText(text);
-                      toast({ title: 'تم النسخ' });
-                    }
-                  }}
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex gap-3 mb-4 flex-wrap">
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="الفئة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الفئات</SelectItem>
-                  {[...expenseCategories, ...incomeCategories].map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {dateRangeFilter === 'custom' && (
-                <>
-                  <Input
-                    type="date"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                    className="w-36"
-                    placeholder="من"
-                  />
-                  <Input
-                    type="date"
-                    value={filterEndDate}
-                    onChange={(e) => setFilterEndDate(e.target.value)}
-                    className="w-36"
-                    placeholder="إلى"
-                  />
-                </>
-              )}
-
-              {(filterCategory !== 'all' || filterDate || dateRangeFilter !== 'all') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setFilterCategory('all');
-                    setFilterDate('');
-                    setFilterEndDate('');
-                    setDateRangeFilter('all');
-                  }}
-                >
-                  <X className="w-4 h-4 ml-1" />
-                  مسح الفلاتر
-                </Button>
-              )}
-            </div>
-
-            {/* Table Header - 4 columns with actions */}
-            <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 rounded-t-lg text-sm font-bold text-gray-700">
-              <span className="text-right">المبلغ</span>
-              <span className="text-center">التاريخ</span>
-              <span className="text-right">الوصف</span>
-              <span className="text-center">إجراءات</span>
-            </div>
-
-            <div className="space-y-0 border rounded-b-lg overflow-hidden">
-              {financeData.pending_expenses.slice(-10).reverse()
-                .filter((expense: any) => {
-                  if (filterCategory !== 'all' && expense.category !== filterCategory) return false;
-                  if (filterDate) {
-                    const expenseDate = new Date(expense.timestamp).toISOString().split('T')[0];
-                    if (expenseDate !== filterDate) return false;
-                  }
-                  return true;
-                })
-                .map((expense: any, index: number) => (
-                  <div key={expense.id || index} className={`grid grid-cols-4 gap-2 p-3 border-b last:border-b-0 items-center ${expense.type === 'income' ? 'bg-green-50' : 'bg-red-50'}`}>
-                    {/* Amount Column */}
-                    <div className="text-right">
-                      <span className={`font-bold text-base block ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                        {expense.type === 'income' ? '+' : '-'}{expense.amount.toLocaleString()} {expense.currency}
-                      </span>
-                      <span className="text-xs text-gray-400 block">
-                        ${expense.currency === 'USD' ? expense.amount.toFixed(2) : (expense.amount / financeData.exchange_rate).toFixed(2)}
-                      </span>
                     </div>
-
-                    {/* Date Column */}
-                    <div className="text-center text-sm text-gray-600">
-                      {new Date(expense.timestamp).toLocaleDateString('ar-u-nu-latn')}
-                    </div>
-
-                    {/* Description Column */}
-                    <div className="text-right">
-                      <span className="text-sm font-medium block truncate">{expense.category}</span>
-                      {expense.description && <span className="text-xs text-gray-400 block truncate">{expense.description}</span>}
-                    </div>
-
-                    {/* Actions Column */}
-                    <div className="flex justify-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTransaction(expense);
-                          setNewTransaction({
-                            amount: expense.amount.toString(),
-                            currency: expense.currency,
-                            type: expense.type,
-                            description: expense.description || '',
-                            category: expense.category || 'أخرى'
-                          });
-                        }}
-                      >
-                        <Edit className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`font-bold dir-ltr ${t.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
+                      {t.type === 'expense' ? '-' : '+'}{parseFloat(t.amount).toLocaleString()} {t.currency}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => handleShare(t)}>
+                        <Share2 className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm('هل تريد حذف هذه المعاملة؟')) {
-                            const updatedExpenses = financeData.pending_expenses.filter((e: any) => e.id !== expense.id);
-                            const newData = { ...financeData, pending_expenses: updatedExpenses };
-                            setFinanceData(newData);
-                            localStorage.setItem('baraka_finance', JSON.stringify(newData));
-                            toast({ title: '✅ تم حذف المعاملة' });
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteTransaction(t.id)}>
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

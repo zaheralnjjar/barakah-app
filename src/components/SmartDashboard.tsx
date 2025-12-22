@@ -41,17 +41,13 @@ const MODULES = {
     FULL_MAP: 'full_map'                    // "Then the map"
 };
 
-const DEFAULT_LAYOUT = [
-    { id: MODULES.HEADER, visible: true },
-    { id: MODULES.PRAYER, visible: true },
-    { id: MODULES.FINANCE_SUMMARY, visible: true }, // "Financial side balance..."
-    { id: MODULES.APPOINTMENTS_WIDGET, visible: true }, // "Appointments and shopping" (Widgets)
-    { id: MODULES.SHOPPING_WIDGET, visible: true },
-    { id: MODULES.QUICK_ACTIONS, visible: true },   // "Then quick shortcuts"
-    { id: MODULES.FULL_SHOPPING, visible: false },  // User mentioned "Then shopping list" (Assuming full list)
-    { id: MODULES.FULL_APPOINTMENTS, visible: false }, // "Then appointments and reminders"
-    { id: MODULES.FULL_MAP, visible: true },         // "Then the map"
-    { id: MODULES.DAILY_CALENDAR, visible: false }   // Daily calendar widget - disabled by default
+const DEFAULT_ORDER = [
+    MODULES.HEADER,
+    MODULES.PRAYER,
+    MODULES.FINANCE_SUMMARY,
+    MODULES.APPOINTMENTS_WIDGET,
+    MODULES.QUICK_ACTIONS,
+    MODULES.FULL_MAP
 ];
 
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
@@ -65,7 +61,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { tasks } = useTasks();
     const { appointments } = useAppointments();
 
-    const [layout, setLayout] = useState(DEFAULT_LAYOUT);
+    const [dashboardOrder, setDashboardOrder] = useState<string[]>(DEFAULT_ORDER);
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
     const [printRange, setPrintRange] = useState('today');
@@ -73,12 +69,21 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
-        const saved = localStorage.getItem('baraka_home_layout');
-        if (saved) {
-            try {
-                setLayout(JSON.parse(saved));
-            } catch (e) { console.error("Layout parse error", e); }
-        }
+        const loadLayout = () => {
+            const saved = localStorage.getItem('baraka_dashboard_order');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setDashboardOrder(parsed);
+                    }
+                } catch (e) { console.error("Layout parse error", e); }
+            }
+        };
+
+        loadLayout();
+        window.addEventListener('dashboard_order_updated', loadLayout);
+        return () => window.removeEventListener('dashboard_order_updated', loadLayout);
     }, []);
 
     // Sync data to Android Widget
@@ -446,9 +451,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     return (
         <>
             <div className="p-4 space-y-1">
-                {layout.filter(l => l.visible).map(module => (
-                    <div key={module.id} className="animate-fade-in">
-                        {renderModule(module.id)}
+                {dashboardOrder.map(moduleId => (
+                    <div key={moduleId} className="animate-fade-in">
+                        {renderModule(moduleId)}
                     </div>
                 ))}
             </div>

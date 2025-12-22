@@ -18,7 +18,9 @@ import {
     PieChart,
     FileText,
     Calendar,
-    DollarSign
+    DollarSign,
+    PlusCircle,
+    MinusCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,10 +48,8 @@ const SettingsPanel = () => {
     const DEFAULT_ORDER = [
         'header',
         'prayer',
-        'finance_daily',
         'finance_summary',
         'appointments_widget',
-        'shopping_widget',
         'quick_actions',
         'full_map'
     ];
@@ -69,7 +69,8 @@ const SettingsPanel = () => {
         }
         setDashboardOrder(newOrder);
         localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-        toast({ title: "تم تحديث الترتيب", description: "سيتم تطبيق التغييرات في الرئيسية" });
+        window.dispatchEvent(new Event('dashboard_order_updated'));
+        toast({ title: "تم تحديث الترتيب" });
     };
 
     const SECTION_LABELS: Record<string, string> = {
@@ -77,17 +78,22 @@ const SettingsPanel = () => {
         'prayer': '🕌 أوقات الصلاة',
         'finance_daily': '💸 مصروف اليوم',
         'finance_summary': '💰 الملخص المالي',
-        'appointments_widget': '📅 المواعيد والتذكيرات',
-        'shopping_widget': '🛒 قائمة التسوق',
+        'appointments_widget': '📅 المواعيد والتذكيرات (ملخص)',
+        'shopping_widget': '🛒 قائمة التسوق (ملخص)',
         'quick_actions': '⚡ الاختصارات السريعة',
-        'full_map': '🗺️ الخريطة التفاعلية'
+        'full_map': '🗺️ الخريطة التفاعلية (كاملة)',
+        'saved_locations': '📍 المواقع المحفوظة',
+        'daily_calendar': '📅 التقويم اليومي',
+        'full_appointments': '📝 إدارة المواعيد (كاملة)',
+        'full_shopping': '🛍️ قائمة التسوق (كاملة)',
     };
 
     // Reminder Customizations State - Enhanced
-    const [reminders, setReminders] = useState(() => {
+    const [reminders, setReminders] = useState<any>(() => {
         try {
             const saved = localStorage.getItem('baraka_reminders_settings');
-            return saved ? JSON.parse(saved) : {
+            const parsed = saved ? JSON.parse(saved) : {};
+            return {
                 prayer: true,
                 tasks: true,
                 appointments: true,
@@ -95,10 +101,12 @@ const SettingsPanel = () => {
                 dailySummary: false,
                 sound: true,
                 vibration: true,
-                reminderMinutes: 15
+                reminderMinutes: 15,
+                soundType: 'default',
+                ...parsed
             };
         } catch {
-            return { prayer: true, tasks: true, appointments: true, financial: true, dailySummary: false, sound: true, vibration: true, reminderMinutes: 15 };
+            return { prayer: true, tasks: true, appointments: true, financial: true, dailySummary: false, sound: true, vibration: true, reminderMinutes: 15, soundType: 'default' };
         }
     });
 
@@ -157,34 +165,88 @@ const SettingsPanel = () => {
                         <Layout className="w-5 h-5 text-purple-600" />
                         تخصيص الواجهة الرئيسية
                     </CardTitle>
-                    <CardDescription className="arabic-body text-xs">رتب الأقسام حسب أولويتك</CardDescription>
+                    <CardDescription className="arabic-body text-xs">اسحب الأقسام لإعادة ترتيبها</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                     {dashboardOrder.map((section, index) => (
-                        <div key={section} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                            <span className="font-medium arabic-body">{SECTION_LABELS[section]}</span>
-                            <div className="flex gap-1">
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    disabled={index === 0}
-                                    onClick={() => moveSection(index, 'up')}
-                                >
-                                    <ArrowUp className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8"
-                                    disabled={index === dashboardOrder.length - 1}
-                                    onClick={() => moveSection(index, 'down')}
-                                >
-                                    <ArrowDown className="w-4 h-4" />
-                                </Button>
+                        <div
+                            key={section}
+                            draggable
+                            onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", index.toString());
+                                e.currentTarget.style.opacity = "0.5";
+                            }}
+                            onDragEnd={(e) => {
+                                e.currentTarget.style.opacity = "1";
+                            }}
+                            onDragOver={(e) => {
+                                e.preventDefault(); // Necessary to allow dropping
+                            }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                const draggedIdx = parseInt(e.dataTransfer.getData("text/plain"));
+                                if (draggedIdx !== index) {
+                                    const newLineup = [...dashboardOrder];
+                                    const [movedItem] = newLineup.splice(draggedIdx, 1);
+                                    newLineup.splice(index, 0, movedItem);
+                                    setDashboardOrder(newLineup);
+                                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(newLineup));
+                                    window.dispatchEvent(new Event('dashboard_order_updated'));
+                                    toast({ title: "تم الترتيب" });
+                                }
+                            }}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border cursor-move hover:bg-gray-100 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-400">☰</span>
+                                <span className="font-medium arabic-body">{SECTION_LABELS[section]}</span>
                             </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                    const newOrder = dashboardOrder.filter((_, i) => i !== index);
+                                    setDashboardOrder(newOrder);
+                                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
+                                    window.dispatchEvent(new Event('dashboard_order_updated'));
+                                }}
+                                className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                            >
+                                <MinusCircle className="w-4 h-4" />
+                            </Button>
                         </div>
                     ))}
+
+                    {/* Available Sections */}
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-sm font-bold mb-3 text-gray-600 flex items-center gap-2">
+                            <PlusCircle className="w-4 h-4" />
+                            أقسام متاحة للإضافة:
+                        </h4>
+                        <div className="grid gap-2">
+                            {Object.keys(SECTION_LABELS).filter(s => !dashboardOrder.includes(s)).map(section => (
+                                <div key={section} className="flex items-center justify-between p-3 bg-white border border-dashed rounded-lg hover:bg-gray-50">
+                                    <span className="text-sm text-gray-600">{SECTION_LABELS[section]}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            const newOrder = [...dashboardOrder, section];
+                                            setDashboardOrder(newOrder);
+                                            localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
+                                            window.dispatchEvent(new Event('dashboard_order_updated'));
+                                        }}
+                                        className="text-emerald-600 hover:bg-emerald-50 h-8 w-8 p-0"
+                                    >
+                                        <PlusCircle className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {Object.keys(SECTION_LABELS).filter(s => !dashboardOrder.includes(s)).length === 0 && (
+                                <p className="text-xs text-gray-400 text-center py-2">جميع الأقسام مضافة</p>
+                            )}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -232,11 +294,42 @@ const SettingsPanel = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="border-t pt-3 flex items-center justify-between">
-                        <label className="font-medium text-sm">🔊 الأصوات</label>
-                        <Checkbox checked={reminders.sound} onCheckedChange={() => toggleReminder('sound')} />
+                    <div className="border-t pt-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="font-medium text-sm">🔊 الأصوات</label>
+                            <Checkbox checked={reminders.sound} onCheckedChange={() => toggleReminder('sound')} />
+                        </div>
+                        {reminders.sound && (
+                            <div className="pr-4">
+                                <label className="text-xs text-gray-500 block mb-1">نغمة التنبيه</label>
+                                <select
+                                    className="w-full text-sm border rounded p-1"
+                                    value={reminders.soundType || 'default'}
+                                    onChange={(e) => {
+                                        const newSound = e.target.value;
+                                        const updated = { ...reminders, soundType: newSound };
+                                        setReminders(updated);
+                                        localStorage.setItem('baraka_reminders_settings', JSON.stringify(updated));
+
+                                        // Play demo sound
+                                        try {
+                                            const audio = new Audio(`/sounds/${newSound}.mp3`);
+                                            audio.play().catch(e => console.log('Audio error:', e));
+                                        } catch (e) {
+                                            console.error("Audio playback failed", e);
+                                        }
+                                    }}
+                                >
+                                    <option value="default">الافتراضي (بسيط)</option>
+                                    <option value="athan_short">أذان قصير</option>
+                                    <option value="beep">تنبيه رقمي</option>
+                                    <option value="bell">جرس</option>
+                                    <option value="gentle">هادئ</option>
+                                </select>
+                            </div>
+                        )}
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pt-2">
                         <label className="font-medium text-sm">📳 الاهتزاز</label>
                         <Checkbox checked={reminders.vibration} onCheckedChange={() => toggleReminder('vibration')} />
                     </div>
