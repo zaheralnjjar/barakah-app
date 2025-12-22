@@ -181,8 +181,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             <div className="grid grid-cols-3 gap-4 text-center">
                                 <div>
                                     <span className="text-xs text-gray-500 block mb-1">الرصيد</span>
-                                    <span className="text-lg font-bold text-emerald-600 tabular-nums">{(totalBalanceARS / 1000).toFixed(1)}k</span>
-                                    <span className="text-xs text-gray-400 block dir-ltr">${(totalBalanceUSD).toFixed(0)}</span>
+                                    <span className="text-lg font-bold text-emerald-600 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
+                                    <span className="text-xs text-gray-400 block dir-ltr">${totalBalanceUSD.toLocaleString()}</span>
                                 </div>
                                 <div className="border-x border-gray-100">
                                     <span className="text-xs text-gray-500 block mb-1">الحد اليومي</span>
