@@ -136,6 +136,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             zIndex: '-1',
             visibility: 'hidden'
         });
+
+        // Android WebView Fix: Add sandbox attribute to prevent main window navigation issues
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-modals');
+
         document.body.appendChild(iframe);
 
         const doc = iframe.contentWindow?.document;
@@ -252,7 +256,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 const schedule = localStorage.getItem('baraka_prayer_schedule');
                 if (schedule) {
                     const scheduleData = JSON.parse(schedule);
-                    const dayNum = new Date(dateStr).getDate();
+                    // Use string extraction to avoid timezone shifts
+                    const dayNum = parseInt(dateStr.split('-')[2], 10);
                     if (scheduleData[dayNum]) {
                         prayerData = { ...prayerData, ...scheduleData[dayNum] };
                     }
@@ -359,7 +364,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
             if (printSelections.prayerTimes) {
                 // Get times for this specific day
-                const dayNum = date.getDate();
+                const dayNum = parseInt(dateStr.split('-')[2], 10);
                 const times = prayerSchedule[dayNum] || defaultPrayers;
 
                 html += `<td style="font-size: ${dates.length > 5 ? '8px' : '10px'}">`;
@@ -422,7 +427,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
             dates.forEach(dateStr => {
                 const d = new Date(dateStr);
-                const dayNum = d.getDate();
+                const dayNum = parseInt(dateStr.split('-')[2], 10);
                 const times = prayerSchedule[dayNum] || defaultPrayers;
                 html += `<tr>`;
                 html += `<td>${d.toLocaleDateString('ar')}</td>`;
@@ -465,7 +470,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         const dates = Array.from(selectedDates).sort();
         if (dates.length === 0) return;
 
-        const hours = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+        const hours = ['04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
 
         let html = `
             <html dir="rtl">
@@ -523,8 +528,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
                 // Show prayer times at this hour
                 if (printSelections.prayerTimes) {
-                    const date = new Date(dateStr);
-                    const dayNum = date.getDate();
+                    const dayNum = parseInt(dateStr.split('-')[2], 10);
                     const times = prayerSchedule[dayNum] || defaultPrayers;
                     const currentHour = hour.split(':')[0]; // e.g., '12'
 

@@ -76,14 +76,21 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     const parsed = JSON.parse(saved);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         setDashboardOrder(parsed);
+                    } else {
+                        setDashboardOrder(DEFAULT_ORDER); // Fallback if array empty
                     }
-                } catch (e) { console.error("Layout parse error", e); }
+                } catch (e) {
+                    console.error("Layout parse error", e);
+                    setDashboardOrder(DEFAULT_ORDER); // Fallback on error
+                }
+            } else {
+                setDashboardOrder(DEFAULT_ORDER); // Fallback if no saved data
             }
         };
 
         loadLayout();
-        window.addEventListener('dashboard_order_updated', loadLayout);
-        return () => window.removeEventListener('dashboard_order_updated', loadLayout);
+        window.addEventListener('barakah_dashboard_order_updated', loadLayout);
+        return () => window.removeEventListener('barakah_dashboard_order_updated', loadLayout);
     }, []);
 
     // Sync data to Android Widget

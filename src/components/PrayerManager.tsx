@@ -203,6 +203,15 @@ const PrayerManager = () => {
                 setPrayerData(formattedData);
                 scheduleNotifications(formattedData);
 
+                // Save to localStorage for TaskSection printing usage
+                const scheduleMap: Record<number, any> = {};
+                formattedData.forEach(day => {
+                    // split YYYY-MM-DD and take DD
+                    const dayNum = parseInt(day.date.split('-')[2], 10);
+                    scheduleMap[dayNum] = day;
+                });
+                localStorage.setItem('baraka_prayer_schedule', JSON.stringify(scheduleMap));
+
                 // Sync with Cloud if user exists
                 if (userId) {
                     await supabase.from('prayer_settings').upsert({
