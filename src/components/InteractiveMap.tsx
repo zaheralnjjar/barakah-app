@@ -170,7 +170,7 @@ const InteractiveMap = () => {
 
         const timer = setTimeout(async () => {
             try {
-                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&accept-language=ar`;
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&accept-language=ar&addressdetails=1`;
                 if (userLocation) {
                     url += `&viewbox=${userLocation.lng - 0.5},${userLocation.lat - 0.5},${userLocation.lng + 0.5},${userLocation.lat + 0.5}&bounded=0`;
                 }
@@ -518,27 +518,35 @@ const InteractiveMap = () => {
                             {/* Live suggestions dropdown */}
                             {showSuggestions && searchSuggestions.length > 0 && (
                                 <div className="absolute top-14 left-0 right-0 bg-white border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                                    {searchSuggestions.map((s, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="p-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right"
-                                            onMouseDown={() => {
-                                                const lat = parseFloat(s.lat);
-                                                const lng = parseFloat(s.lon);
-                                                setMapCenter([lat, lng]);
-                                                setSearchQuery(s.display_name.split(',')[0]);
-                                                setNewItem({ name: s.display_name.split(',')[0], location: `${lat}, ${lng}` });
-                                                setShowSuggestions(false);
-                                                toast({ title: "📍 تم تحديد الموقع" });
-                                            }}
-                                        >
-                                            <p className="text-sm font-medium">{s.display_name.split(',')[0]}</p>
-                                            <p className="text-xs text-gray-500 truncate">{s.display_name.split(',').slice(1, 3).join(',')}</p>
-                                            {s.distance && (
-                                                <span className="text-xs text-blue-500">{s.distance.toFixed(1)} كم</span>
-                                            )}
-                                        </div>
-                                    ))}
+                                    {searchSuggestions.map((s, idx) => {
+                                        // Extract street name and number
+                                        const addr = s.address || {};
+                                        const streetName = addr.road || addr.street || addr.pedestrian || s.display_name.split(',')[0];
+                                        const houseNumber = addr.house_number || '';
+                                        const formattedName = houseNumber ? `${streetName} ${houseNumber}` : streetName;
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className="p-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right"
+                                                onMouseDown={() => {
+                                                    const lat = parseFloat(s.lat);
+                                                    const lng = parseFloat(s.lon);
+                                                    setMapCenter([lat, lng]);
+                                                    setSearchQuery(formattedName);
+                                                    setNewItem({ name: formattedName, location: `${lat}, ${lng}` });
+                                                    setShowSuggestions(false);
+                                                    toast({ title: "📍 تم تحديد الموقع", description: formattedName });
+                                                }}
+                                            >
+                                                <p className="text-sm font-medium">{formattedName}</p>
+                                                <p className="text-xs text-gray-500 truncate">{s.display_name.split(',').slice(1, 3).join(',')}</p>
+                                                {s.distance && (
+                                                    <span className="text-xs text-blue-500">{s.distance.toFixed(1)} كم</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
