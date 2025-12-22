@@ -48,6 +48,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+    const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
     // Print selection state
     const [showPrintOptions, setShowPrintOptions] = useState(false);
@@ -208,6 +210,106 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         setShowPrintOptions(false);
     };
 
+    // Print multiple days as table
+    const printMultipleDays = () => {
+        const dates = Array.from(selectedDates).sort();
+        if (dates.length === 0) return;
+
+        let html = `
+            <html dir="rtl">
+            <head>
+                <title>تقرير ${dates.length} أيام</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: Tajawal, Arial; padding: 20px; margin: 0; }
+                    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #16a34a; padding-bottom: 10px; }
+                    h1 { color: #16a34a; font-size: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th { background: #16a34a; color: white; padding: 10px; text-align: right; }
+                    td { padding: 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+                    .day-header { background: #f0fdf4; font-weight: bold; }
+                    .checkbox { display: inline-block; width: 14px; height: 14px; border: 2px solid #9ca3af; border-radius: 3px; margin-left: 8px; }
+                    .item { margin: 4px 0; display: flex; align-items: center; }
+                    .task { color: #3b82f6; } .apt { color: #f97316; } .habit { color: #f59e0b; } .med { color: #a855f7; }
+                    @media print { .no-print { display: none !important; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>📅 تقرير ${dates.length} أيام</h1>
+                    <p>${new Date(dates[0]).toLocaleDateString('ar')} - ${new Date(dates[dates.length - 1]).toLocaleDateString('ar')}</p>
+                </div>
+                <button class="no-print" onclick="window.print()" style="background:#2563eb;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-bottom:15px">🖨️ طباعة</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>اليوم</th>
+                            ${printSelections.tasks ? '<th>المهام</th>' : ''}
+                            ${printSelections.appointments ? '<th>المواعيد</th>' : ''}
+                            ${printSelections.habits ? '<th>العادات</th>' : ''}
+                            ${printSelections.medications ? '<th>الأدوية</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        dates.forEach(dateStr => {
+            const data = getDayData(dateStr);
+            const date = new Date(dateStr);
+
+            html += `<tr>`;
+            html += `<td class="day-header">${date.toLocaleDateString('ar', { weekday: 'short', month: 'short', day: 'numeric' })}</td>`;
+
+            if (printSelections.tasks) {
+                html += `<td>`;
+                data.tasks.forEach(t => {
+                    html += `<div class="item task"><span class="checkbox"></span>${t.title}</div>`;
+                    if (t.subtasks) t.subtasks.forEach(st => {
+                        html += `<div class="item" style="margin-right:20px"><span class="checkbox"></span><small>${st.title}</small></div>`;
+                    });
+                });
+                html += `</td>`;
+            }
+
+            if (printSelections.appointments) {
+                html += `<td>`;
+                data.appointments.forEach(a => {
+                    html += `<div class="item apt"><span class="checkbox"></span>${a.title} (${a.time})</div>`;
+                });
+                html += `</td>`;
+            }
+
+            if (printSelections.habits) {
+                html += `<td>`;
+                data.habits.forEach(h => {
+                    html += `<div class="item habit"><span class="checkbox"></span>${h.name}</div>`;
+                });
+                html += `</td>`;
+            }
+
+            if (printSelections.medications) {
+                html += `<td>`;
+                data.medications.forEach(m => {
+                    html += `<div class="item med"><span class="checkbox"></span>${m.name} (${m.time})</div>`;
+                });
+                html += `</td>`;
+            }
+
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table><p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+        setShowPrintOptions(false);
+        setSelectedDates(new Set());
+        setIsMultiSelectMode(false);
+    };
+
     return (
         <div className="space-y-6">
             {/* View Toggle */}
@@ -247,6 +349,33 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         </Button>
                     </div>
 
+                    {/* Multi-select toolbar */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 border-b">
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant={isMultiSelectMode ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                    setIsMultiSelectMode(!isMultiSelectMode);
+                                    if (isMultiSelectMode) setSelectedDates(new Set());
+                                }}
+                                className={isMultiSelectMode ? "bg-blue-600" : ""}
+                            >
+                                <CheckSquare className="w-4 h-4 ml-1" />
+                                {isMultiSelectMode ? 'إلغاء التحديد' : 'تحديد أيام'}
+                            </Button>
+                            {selectedDates.size > 0 && (
+                                <Badge className="bg-blue-100 text-blue-700">{selectedDates.size} يوم محدد</Badge>
+                            )}
+                        </div>
+                        {selectedDates.size > 0 && (
+                            <Button size="sm" onClick={() => setShowPrintOptions(true)} className="bg-green-600 hover:bg-green-700">
+                                <Printer className="w-4 h-4 ml-1" />
+                                طباعة ({selectedDates.size})
+                            </Button>
+                        )}
+                    </div>
+
                     {/* Days Header */}
                     <div className="grid grid-cols-7 bg-gray-100">
                         {DAYS_AR.map(day => (
@@ -266,14 +395,37 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                             const dateStr = getDateStr(day);
                             const isToday = dateStr === new Date().toISOString().split('T')[0];
                             const count = getDayCount(day);
+                            const isSelected = selectedDates.has(dateStr);
+
+                            const handleDayClick = () => {
+                                if (isMultiSelectMode) {
+                                    const newSet = new Set(selectedDates);
+                                    if (newSet.has(dateStr)) {
+                                        newSet.delete(dateStr);
+                                    } else {
+                                        newSet.add(dateStr);
+                                    }
+                                    setSelectedDates(newSet);
+                                } else {
+                                    setSelectedDate(dateStr);
+                                }
+                            };
 
                             return (
                                 <div
                                     key={idx}
-                                    onClick={() => setSelectedDate(dateStr)}
-                                    className={`h-16 border-b border-r p-1 cursor-pointer transition-all hover:bg-emerald-50 ${isToday ? 'bg-emerald-100 ring-2 ring-emerald-500 ring-inset' : 'bg-white'}`}
+                                    onClick={handleDayClick}
+                                    className={`h-16 border-b border-r p-1 cursor-pointer transition-all hover:bg-emerald-50 relative
+                                        ${isToday ? 'bg-emerald-100 ring-2 ring-emerald-500 ring-inset' : 'bg-white'}
+                                        ${isSelected ? 'bg-blue-100 ring-2 ring-blue-500 ring-inset' : ''}
+                                    `}
                                 >
-                                    <div className={`text-sm font-bold ${isToday ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                    {isMultiSelectMode && (
+                                        <div className={`absolute top-1 left-1 w-4 h-4 rounded border-2 ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                                            {isSelected && <CheckSquare className="w-3 h-3 text-white" />}
+                                        </div>
+                                    )}
+                                    <div className={`text-sm font-bold ${isToday ? 'text-emerald-700' : isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
                                         {day}
                                     </div>
                                     {count > 0 && (
@@ -616,9 +768,18 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         <Button variant="outline" onClick={() => setShowPrintOptions(false)}>
                             إلغاء
                         </Button>
-                        <Button onClick={() => selectedDate && printDayReport(selectedDate)} className="bg-blue-600 hover:bg-blue-700">
+                        <Button
+                            onClick={() => {
+                                if (selectedDates.size > 0) {
+                                    printMultipleDays();
+                                } else if (selectedDate) {
+                                    printDayReport(selectedDate);
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
                             <Printer className="w-4 h-4 ml-2" />
-                            طباعة
+                            طباعة {selectedDates.size > 0 ? `(${selectedDates.size} أيام)` : ''}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
