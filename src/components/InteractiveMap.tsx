@@ -14,7 +14,8 @@ import {
     Loader2,
     Share2,
     Edit2,
-    CheckSquare
+    CheckSquare,
+    Navigation
 } from 'lucide-react';
 import {
     Dialog,
@@ -47,11 +48,22 @@ interface LocationMarkerProps {
 function LocationMarker({ position, setPosition, onSave, onShare }: LocationMarkerProps) {
     const [addressName, setAddressName] = useState('');
     const { toast } = useToast();
+    const map = useMap();
 
-    const map = useMapEvents({
+    const handleNavigate = () => {
+        if (position) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${position.lat},${position.lng}`;
+            window.open(url, '_blank');
+        }
+    };
+
+    useMapEvents({
         click(e) {
             setPosition(e.latlng);
-            map.flyTo(e.latlng, map.getZoom());
+            // Center map on clicked position with offset for popup
+            setTimeout(() => {
+                map.setView([e.latlng.lat + 0.002, e.latlng.lng], map.getZoom());
+            }, 100);
 
             // Reverse geocode to get address
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ar`)
@@ -69,14 +81,17 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
     return position ? (
         <Marker position={position}>
             <Popup>
-                <div className="flex flex-col gap-2 p-1 min-w-[140px]">
-                    <p className="text-xs font-bold text-center mb-1">{addressName || 'الموقع المحدد'}</p>
-                    <div className="flex gap-2 justify-center">
-                        <Button size="sm" onClick={() => onSave(addressName)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700">
+                <div className="flex flex-col gap-2 p-1 min-w-[180px]">
+                    <p className="text-sm font-bold text-center mb-1">{addressName || 'الموقع المحدد'}</p>
+                    <div className="flex gap-1 justify-center flex-wrap">
+                        <Button size="sm" onClick={() => onSave(addressName)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 flex-1">
                             حفظ
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => onShare(position as any)} className="h-7 text-xs">
+                        <Button size="sm" variant="outline" onClick={() => onShare(position as any)} className="h-7 text-xs flex-1">
                             مشاركة
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={handleNavigate} className="h-7 text-xs flex-1 bg-green-500 hover:bg-green-600 text-white">
+                            ملاحة
                         </Button>
                     </div>
                 </div>
