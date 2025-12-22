@@ -57,6 +57,8 @@ const AppointmentManager: React.FC = () => {
     const [newDate, setNewDate] = useState('');
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
+    const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
     const [showCompleted, setShowCompleted] = useState(false);
@@ -67,6 +69,38 @@ const AppointmentManager: React.FC = () => {
     const [editingApt, setEditingApt] = useState<Appointment | null>(null);
 
     const { toast } = useToast();
+
+    // Address autocomplete search
+    const searchAddress = async (query: string) => {
+        if (query.length < 3) {
+            setLocationSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+        try {
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ar`
+            );
+            const data = await res.json();
+            setLocationSuggestions(data);
+            setShowSuggestions(data.length > 0);
+        } catch (e) {
+            console.log('Address search failed:', e);
+        }
+    };
+
+    const handleLocationChange = (value: string) => {
+        setNewLocation(value);
+        // Debounce search
+        const timeout = setTimeout(() => searchAddress(value), 500);
+        return () => clearTimeout(timeout);
+    };
+
+    const selectSuggestion = (suggestion: any) => {
+        setNewLocation(suggestion.display_name);
+        setShowSuggestions(false);
+        setLocationSuggestions([]);
+    };
 
     // Load appointments from Supabase
     useEffect(() => {
@@ -357,14 +391,30 @@ END:VCALENDAR`;
                             onChange={e => setNewTime(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <Input
-                            value={newLocation}
-                            onChange={e => setNewLocation(e.target.value)}
-                            placeholder="العنوان (اختياري - سيحفظ في المواقع)"
-                            className="flex-1 arabic-body"
-                        />
+                    <div className="relative">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-gray-400" />
+                            <Input
+                                value={newLocation}
+                                onChange={e => handleLocationChange(e.target.value)}
+                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                placeholder="العنوان (اختياري - سيحفظ في المواقع)"
+                                className="flex-1 arabic-body"
+                            />
+                        </div>
+                        {showSuggestions && locationSuggestions.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                {locationSuggestions.map((s, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="p-2 hover:bg-blue-50 cursor-pointer text-sm text-right border-b last:border-0"
+                                        onClick={() => selectSuggestion(s)}
+                                    >
+                                        📍 {s.display_name}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
                         <select

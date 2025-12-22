@@ -206,6 +206,7 @@ const LocationSaver: React.FC = () => {
             type: formType,
             latitude: capturedPosition.coords.latitude,
             longitude: capturedPosition.coords.longitude,
+            address: approxAddress, // Store the street address
             image: formImage || undefined,
             createdAt: new Date().toISOString(),
         };
@@ -217,6 +218,7 @@ const LocationSaver: React.FC = () => {
         setIsAddDialogOpen(false);
         setCapturedPosition(null);
         setFormImage('');
+        setApproxAddress('');
         toast({ title: '✅ تم حفظ الموقع بنجاح' });
     };
 
@@ -328,13 +330,18 @@ const LocationSaver: React.FC = () => {
                                 className="group flex flex-col p-3 bg-gray-50/50 hover:bg-white border border-transparent hover:border-gray-200 rounded-xl transition-all shadow-sm hover:shadow"
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Badge variant="secondary" className={`${getTypeColor(loc.type)} w-6 h-6 p-0 flex items-center justify-center rounded-full`}>
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <Badge variant="secondary" className={`${getTypeColor(loc.type)} w-6 h-6 p-0 flex items-center justify-center rounded-full flex-shrink-0`}>
                                             <MapPin className="w-3 h-3" />
                                         </Badge>
-                                        <span className="arabic-body font-bold text-gray-800">{loc.name}</span>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="arabic-body font-bold text-gray-800 block truncate">{loc.name}</span>
+                                            {loc.address && (
+                                                <span className="text-xs text-gray-500 block truncate">{loc.address}</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <Badge variant="outline" className="text-xs font-normal text-gray-500">
+                                    <Badge variant="outline" className="text-xs font-normal text-gray-500 flex-shrink-0">
                                         {getTypeLabel(loc.type)}
                                     </Badge>
                                 </div>
