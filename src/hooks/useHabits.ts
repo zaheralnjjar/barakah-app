@@ -6,6 +6,8 @@ export interface Habit {
     name: string;
     streak: number;
     history: Record<string, boolean>;
+    frequency: 'daily' | 'weekly' | 'specific_days';
+    customDays: string[]; // e.g. ['السبت', 'الأحد', ...]
 }
 
 export const useHabits = () => {
@@ -18,16 +20,23 @@ export const useHabits = () => {
         localStorage.setItem('baraka_habits', JSON.stringify(habits));
     }, [habits]);
 
-    const addHabit = (name: string) => {
+    const addHabit = (name: string, frequency: 'daily' | 'weekly' | 'specific_days' = 'daily', customDays: string[] = []) => {
         if (!name.trim()) return;
         const newHabit: Habit = {
             id: Date.now().toString(),
             name,
             streak: 0,
-            history: {}
+            history: {},
+            frequency,
+            customDays
         };
         setHabits(prev => [...prev, newHabit]);
         toast({ title: 'تم إضافة العادة' });
+    };
+
+    const updateHabit = (id: string, updates: Partial<Pick<Habit, 'name' | 'frequency' | 'customDays'>>) => {
+        setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
+        toast({ title: 'تم تحديث العادة' });
     };
 
     const toggleHabit = (id: string) => {
@@ -116,7 +125,9 @@ export const useHabits = () => {
     return {
         habits,
         addHabit,
+        updateHabit,
         toggleHabit,
         deleteHabit
     };
 };
+

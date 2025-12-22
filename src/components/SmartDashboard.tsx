@@ -3,10 +3,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import QuickActions from '@/components/QuickActions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from "@/components/ui/use-toast";
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useHabits } from '@/hooks/useHabits';
+import { useMedications } from '@/hooks/useMedications';
+import { useTasks } from '@/hooks/useTasks';
+import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star, Clock } from 'lucide-react';
+import { LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star, Clock, Printer } from 'lucide-react';
 
 // Imported Full Components
 import AppointmentManager from '@/components/AppointmentManager';
@@ -51,8 +57,17 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         savedLocations, stats, nextPrayer, prayerTimes, refetch, timeUntilNext
     } = useDashboardData();
 
+    const { habits } = useHabits();
+    const { medications } = useMedications();
+    const { tasks } = useTasks();
+    const { appointments } = useAppointments();
+
     const [layout, setLayout] = useState(DEFAULT_LAYOUT);
     const [currentDate] = useState(new Date());
+    const [showPrintDialog, setShowPrintDialog] = useState(false);
+    const [printRange, setPrintRange] = useState('today');
+    const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
         const saved = localStorage.getItem('baraka_home_layout');
@@ -62,6 +77,91 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             } catch (e) { console.error("Layout parse error", e); }
         }
     }, []);
+
+    // Comprehensive Print Function
+    const handlePrint = () => {
+        let startDate = new Date();
+        let endDate = new Date();
+
+        if (printRange === 'today') {
+            // Already set
+        } else if (printRange === 'week') {
+            endDate.setDate(endDate.getDate() + 7);
+        } else if (printRange === 'month') {
+            endDate.setMonth(endDate.getMonth() + 1);
+        } else if (printRange === 'custom') {
+            startDate = new Date(printStartDate);
+            endDate = new Date(printEndDate);
+        }
+
+        const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+        let html = `
+            <html dir="rtl">
+            <head><title>جدول المهام - بركة</title>
+            <style>
+                body { font-family: Tajawal, Arial; padding: 20px; }
+                h1 { color: #16a34a; }
+                h2 { color: #333; border-bottom: 2px solid #16a34a; padding-bottom: 5px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+                th { background: #16a34a; color: white; }
+                tr:nth-child(even) { background: #f9f9f9; }
+                .section { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+            </style>
+            </head>
+            <body>
+            <h1>📅 جدول المهام والمواعيد</h1>
+            <p>الفترة: ${startDate.toLocaleDateString('ar')} - ${endDate.toLocaleDateString('ar')}</p>
+        `;
+
+        // Tasks
+        html += `<div class="section"><h2>📋 المهام</h2><table><tr><th>المهمة</th><th>الحالة</th></tr>`;
+        tasks.forEach(t => {
+            html += `<tr><td>${t.title}</td><td>${t.progress === 100 ? '✅ مكتمل' : '⏳ معلق'}</td></tr>`;
+        });
+        html += `</table></div>`;
+
+        // Appointments
+        html += `<div class="section"><h2>📆 المواعيد</h2><table><tr><th>العنوان</th><th>التاريخ</th><th>الوقت</th></tr>`;
+        appointments.forEach(a => {
+            html += `<tr><td>${a.title}</td><td>${a.date}</td><td>${a.time || '--'}</td></tr>`;
+        });
+        html += `</table></div>`;
+
+        // Habits
+        html += `<div class="section"><h2>🔥 العادات</h2><table><tr><th>العادة</th><th>السلسلة</th></tr>`;
+        habits.forEach(h => {
+            html += `<tr><td>${h.name}</td><td>🔥 ${h.streak || 0} يوم</td></tr>`;
+        });
+        html += `</table></div>`;
+
+        // Medications
+        html += `<div class="section"><h2>💊 الأدوية</h2><table><tr><th>الدواء</th><th>الوقت</th><th>التكرار</th></tr>`;
+        medications.forEach(m => {
+            html += `<tr><td>${m.name}</td><td>${m.time}</td><td>${m.frequency === 'daily' ? 'يومي' : m.frequency}</td></tr>`;
+        });
+        html += `</table></div>`;
+
+        // Financial Summary
+        if (financeData) {
+            const totalARS = financeData.current_balance_ars + (financeData.current_balance_usd * financeData.exchange_rate);
+            html += `<div class="section"><h2>💰 الملخص المالي</h2>
+                <p>الرصيد: ${totalARS.toLocaleString()} ARS</p>
+                <p>الديون: ${financeData.total_debt?.toLocaleString() || 0} ARS</p>
+            </div>`;
+        }
+
+        html += `<p style="text-align:center;color:#888;margin-top:30px;">نظام بركة لإدارة الحياة</p></body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        setShowPrintDialog(false);
+    };
 
     // --- Helper Logic for Widgets ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
@@ -113,10 +213,16 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 <MapPin className="w-5 h-5 text-gray-400" />
                                 <span className="arabic-body text-sm font-medium">بوينس آيرس</span>
                             </div>
-                            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 px-3 text-sm gap-1.5 rounded-full">
-                                <LogOut className="w-4 h-4" />
-                                <span className="mb-0.5">تسجيل خروج</span>
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => setShowPrintDialog(true)} className="text-primary hover:text-primary/80 hover:bg-primary/10 h-8 px-3 text-sm gap-1.5 rounded-full">
+                                    <Printer className="w-4 h-4" />
+                                    <span className="mb-0.5">طباعة</span>
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 px-3 text-sm gap-1.5 rounded-full">
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="mb-0.5">خروج</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -301,13 +407,77 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     if (loading) return <div className="p-8 text-center">جاري التحميل...</div>;
 
     return (
-        <div className="p-4 space-y-1">
-            {layout.filter(l => l.visible).map(module => (
-                <div key={module.id} className="animate-fade-in">
-                    {renderModule(module.id)}
-                </div>
-            ))}
-        </div>
+        <>
+            <div className="p-4 space-y-1">
+                {layout.filter(l => l.visible).map(module => (
+                    <div key={module.id} className="animate-fade-in">
+                        {renderModule(module.id)}
+                    </div>
+                ))}
+            </div>
+
+            {/* Print Dialog */}
+            <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <Printer className="w-5 h-5 text-primary" />
+                            طباعة الجدول
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                variant={printRange === 'today' ? 'default' : 'outline'}
+                                onClick={() => setPrintRange('today')}
+                                className="h-10"
+                            >اليوم</Button>
+                            <Button
+                                variant={printRange === 'week' ? 'default' : 'outline'}
+                                onClick={() => setPrintRange('week')}
+                                className="h-10"
+                            >الأسبوع</Button>
+                            <Button
+                                variant={printRange === 'month' ? 'default' : 'outline'}
+                                onClick={() => setPrintRange('month')}
+                                className="h-10"
+                            >الشهر</Button>
+                            <Button
+                                variant={printRange === 'custom' ? 'default' : 'outline'}
+                                onClick={() => setPrintRange('custom')}
+                                className="h-10"
+                            >مخصص</Button>
+                        </div>
+
+                        {printRange === 'custom' && (
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500">من</label>
+                                    <Input
+                                        type="date"
+                                        value={printStartDate}
+                                        onChange={e => setPrintStartDate(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500">إلى</label>
+                                    <Input
+                                        type="date"
+                                        value={printEndDate}
+                                        onChange={e => setPrintEndDate(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <Button onClick={handlePrint} className="w-full h-12 text-lg">
+                            <Printer className="w-5 h-5 ml-2" />
+                            طباعة الآن
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };
 
