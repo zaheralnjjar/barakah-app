@@ -132,7 +132,68 @@ const InteractiveMap = () => {
     const [editingResource, setEditingResource] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    // Address suggestions
+    const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+
     const { toast } = useToast();
+
+    // Get user location for sorting
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => { }
+            );
+        }
+    }, []);
+
+    // Calculate distance for sorting
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    // Live search with debounce
+    useEffect(() => {
+        if (searchQuery.length < 2) {
+            setSearchSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&accept-language=ar`;
+                if (userLocation) {
+                    url += `&viewbox=${userLocation.lng - 0.5},${userLocation.lat - 0.5},${userLocation.lng + 0.5},${userLocation.lat + 0.5}&bounded=0`;
+                }
+                const res = await fetch(url);
+                let data = await res.json();
+
+                // Sort by distance
+                if (userLocation && data.length > 0) {
+                    data = data.map((item: any) => ({
+                        ...item,
+                        distance: getDistance(userLocation.lat, userLocation.lng, parseFloat(item.lat), parseFloat(item.lon))
+                    })).sort((a: any, b: any) => a.distance - b.distance).slice(0, 5);
+                }
+
+                setSearchSuggestions(data);
+                setShowSuggestions(data.length > 0);
+            } catch (e) {
+                console.log('Search error:', e);
+            }
+        }, 200);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery, userLocation]);
 
     // Load saved locations
     useEffect(() => {
@@ -440,6 +501,8 @@ const InteractiveMap = () => {
                                 className="bg-white shadow-md h-10 flex-1"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                onFocus={() => searchSuggestions.length > 0 && setShowSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') performSearch();
                                 }}
@@ -451,6 +514,33 @@ const InteractiveMap = () => {
                             >
                                 <Search className="w-5 h-5" />
                             </Button>
+
+                            {/* Live suggestions dropdown */}
+                            {showSuggestions && searchSuggestions.length > 0 && (
+                                <div className="absolute top-14 left-0 right-0 bg-white border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                                    {searchSuggestions.map((s, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="p-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right"
+                                            onMouseDown={() => {
+                                                const lat = parseFloat(s.lat);
+                                                const lng = parseFloat(s.lon);
+                                                setMapCenter([lat, lng]);
+                                                setSearchQuery(s.display_name.split(',')[0]);
+                                                setNewItem({ name: s.display_name.split(',')[0], location: `${lat}, ${lng}` });
+                                                setShowSuggestions(false);
+                                                toast({ title: "📍 تم تحديد الموقع" });
+                                            }}
+                                        >
+                                            <p className="text-sm font-medium">{s.display_name.split(',')[0]}</p>
+                                            <p className="text-xs text-gray-500 truncate">{s.display_name.split(',').slice(1, 3).join(',')}</p>
+                                            {s.distance && (
+                                                <span className="text-xs text-blue-500">{s.distance.toFixed(1)} كم</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
