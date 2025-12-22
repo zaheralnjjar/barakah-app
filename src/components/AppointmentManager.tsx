@@ -69,19 +69,54 @@ const AppointmentManager: React.FC = () => {
     const [editingApt, setEditingApt] = useState<Appointment | null>(null);
 
     const { toast } = useToast();
+    const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+
+    // Get user location once
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => console.log('Location not available')
+            );
+        }
+    }, []);
+
+    // Calculate distance between two points
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
 
     // Address autocomplete search
     const searchAddress = async (query: string) => {
-        if (query.length < 3) {
+        if (query.length < 2) {
             setLocationSuggestions([]);
             setShowSuggestions(false);
             return;
         }
         try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ar`
-            );
-            const data = await res.json();
+            // Add user location for better results
+            let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&accept-language=ar`;
+            if (userLocation) {
+                url += `&viewbox=${userLocation.lng - 0.5},${userLocation.lat - 0.5},${userLocation.lng + 0.5},${userLocation.lat + 0.5}&bounded=0`;
+            }
+
+            const res = await fetch(url);
+            let data = await res.json();
+
+            // Sort by distance if user location available
+            if (userLocation && data.length > 0) {
+                data = data.map((item: any) => ({
+                    ...item,
+                    distance: getDistance(userLocation.lat, userLocation.lng, parseFloat(item.lat), parseFloat(item.lon))
+                })).sort((a: any, b: any) => a.distance - b.distance).slice(0, 5);
+            }
+
             setLocationSuggestions(data);
             setShowSuggestions(data.length > 0);
         } catch (e) {
@@ -92,7 +127,7 @@ const AppointmentManager: React.FC = () => {
     const handleLocationChange = (value: string) => {
         setNewLocation(value);
         // Debounce search
-        const timeout = setTimeout(() => searchAddress(value), 500);
+        const timeout = setTimeout(() => searchAddress(value), 300);
         return () => clearTimeout(timeout);
     };
 
