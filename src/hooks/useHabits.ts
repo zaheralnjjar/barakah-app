@@ -144,7 +144,7 @@ export const useHabits = () => {
         setHabits(prev => prev.map(h => {
             if (h.id === habitId) {
                 const newSubtask: HabitSubtask = {
-                    id: Date.now().toString(),
+                    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     title,
                     completed: false
                 };
