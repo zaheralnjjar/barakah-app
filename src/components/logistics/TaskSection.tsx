@@ -295,6 +295,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     <thead>
                         <tr>
                             <th>اليوم</th>
+                            ${printSelections.prayerTimes ? '<th>أوقات الصلاة</th>' : ''}
                             ${printSelections.tasks ? '<th>المهام</th>' : ''}
                             ${printSelections.appointments ? '<th>المواعيد</th>' : ''}
                             ${printSelections.habits ? '<th>العادات</th>' : ''}
@@ -304,19 +305,50 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     <tbody>
         `;
 
+        // Prepare prayer schedule map
+        let prayerSchedule: any = {};
+        try {
+            const schedule = localStorage.getItem('baraka_prayer_schedule');
+            if (schedule) prayerSchedule = JSON.parse(schedule);
+        } catch (e) { }
+
+        // Fallback prayer times
+        let defaultPrayers = { fajr: '--:--', dhuhr: '--:--', asr: '--:--', maghrib: '--:--', isha: '--:--' };
+        try {
+            const saved = localStorage.getItem('baraka_prayer_times');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.times) defaultPrayers = { ...defaultPrayers, ...parsed.times };
+            }
+        } catch (e) { }
+
         dates.forEach(dateStr => {
             const data = getDayData(dateStr);
             const date = new Date(dateStr);
 
             html += `<tr>`;
-            html += `<td class="day-header">${date.toLocaleDateString('ar', { weekday: 'short', month: 'short', day: 'numeric' })}</td>`;
+            html += `<td class="day-header" style="white-space:nowrap">${date.toLocaleDateString('ar', { weekday: 'short', month: 'numeric', day: 'numeric' })}</td>`;
+
+            if (printSelections.prayerTimes) {
+                // Get times for this specific day
+                const dayNum = date.getDate();
+                const times = prayerSchedule[dayNum] || defaultPrayers;
+
+                html += `<td style="font-size: ${dates.length > 5 ? '8px' : '10px'}">`;
+                html += `<div style="display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:1px 0"><span>الفجر:</span> <b>${times.fajr}</b></div>`;
+                html += `<div style="display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:1px 0"><span>الظهر:</span> <b>${times.dhuhr}</b></div>`;
+                html += `<div style="display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:1px 0"><span>العصر:</span> <b>${times.asr}</b></div>`;
+                html += `<div style="display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:1px 0"><span>المغرب:</span> <b>${times.maghrib}</b></div>`;
+                html += `<div style="display:flex;justify-content:space-between;padding:1px 0"><span>العشاء:</span> <b>${times.isha}</b></div>`;
+                html += `</td>`;
+            }
 
             if (printSelections.tasks) {
                 html += `<td>`;
                 data.tasks.forEach(t => {
                     html += `<div class="item task"><span class="checkbox"></span>${t.title}</div>`;
                     if (t.subtasks) t.subtasks.forEach(st => {
-                        html += `<div class="item" style="margin-right:20px"><span class="checkbox"></span><small>${st.title}</small></div>`;
+                        html += `<div class="item" style="margin-right:15px"><span class="checkbox"></span><small>${st.title}</small></div>`;
                     });
                 });
                 html += `</td>`;
@@ -350,35 +382,6 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         });
 
         html += `</tbody></table>`;
-
-        // Prayer Times section for multi-day
-        if (printSelections.prayerTimes) {
-            // Get prayer times
-            let prayerData = { fajr: '--:--', dhuhr: '--:--', asr: '--:--', maghrib: '--:--', isha: '--:--' };
-            try {
-                const saved = localStorage.getItem('baraka_prayer_times');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed.times) prayerData = { ...prayerData, ...parsed.times };
-                }
-                const schedule = localStorage.getItem('baraka_prayer_schedule');
-                if (schedule && dates.length > 0) {
-                    const scheduleData = JSON.parse(schedule);
-                    const firstDayNum = new Date(dates[0] as string).getDate();
-                    if (scheduleData[firstDayNum]) prayerData = { ...prayerData, ...scheduleData[firstDayNum] };
-                }
-            } catch (e) { }
-
-            html += `<div style="margin-top:20px;padding:10px;background:#eef2ff;border-radius:12px;page-break-inside:avoid;border:1px solid #c7d2fe">`;
-            html += `<h3 style="margin:0 0 10px 0;color:#4f46e5;font-size:14px">🕌 أوقات الصلاة (حسب توقيت ${new Date(dates[0] as string).toLocaleDateString('ar')})</h3>`;
-            html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">`;
-            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>الفجر</strong><br><span style="color:#4f46e5">${prayerData.fajr}</span></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>الظهر</strong><br><span style="color:#4f46e5">${prayerData.dhuhr}</span></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>العصر</strong><br><span style="color:#4f46e5">${prayerData.asr}</span></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>المغرب</strong><br><span style="color:#4f46e5">${prayerData.maghrib}</span></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>العشاء</strong><br><span style="color:#4f46e5">${prayerData.isha}</span></div>`;
-            html += `</div></div>`;
-        }
 
         // Shopping List section for multi-day
         if (printSelections.shoppingList) {
@@ -434,6 +437,23 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 <table>
                     <thead><tr><th>الساعة</th>`;
 
+        // Prepare prayer schedule map
+        let prayerSchedule: any = {};
+        try {
+            const schedule = localStorage.getItem('baraka_prayer_schedule');
+            if (schedule) prayerSchedule = JSON.parse(schedule);
+        } catch (e) { }
+
+        // Fallback prayer times
+        let defaultPrayers = { fajr: '--:--', dhuhr: '--:--', asr: '--:--', maghrib: '--:--', isha: '--:--' };
+        try {
+            const saved = localStorage.getItem('baraka_prayer_times');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.times) defaultPrayers = { ...defaultPrayers, ...parsed.times };
+            }
+        } catch (e) { }
+
         dates.forEach(d => {
             const date = new Date(d);
             html += `<th>${date.toLocaleDateString('ar', { weekday: 'short', day: 'numeric' })}</th>`;
@@ -450,6 +470,21 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 data.appointments.filter(a => a.time.startsWith(hour.split(':')[0])).forEach(a => {
                     html += `<div class="item apt">📅 ${a.title}</div>`;
                 });
+
+                // Show prayer times at this hour
+                if (printSelections.prayerTimes) {
+                    const date = new Date(dateStr);
+                    const dayNum = date.getDate();
+                    const times = prayerSchedule[dayNum] || defaultPrayers;
+                    const currentHour = hour.split(':')[0]; // e.g., '12'
+
+                    Object.entries(times).forEach(([name, time]) => {
+                        if (typeof time === 'string' && time.startsWith(currentHour)) {
+                            const arNames: any = { fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء' };
+                            html += `<div class="item task" style="background:#dcfce7;color:#166534;font-weight:bold">🕌 ${arNames[name] || name} (${time})</div>`;
+                        }
+                    });
+                }
 
                 // Show habits if morning hours
                 if (hour === '07:00' || hour === '08:00') {
