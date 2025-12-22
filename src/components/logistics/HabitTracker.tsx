@@ -4,17 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Check, Trash2, BarChart2, TrendingUp, Calendar, Target, Edit, Settings } from 'lucide-react';
+import { Plus, Check, Trash2, BarChart2, TrendingUp, Calendar, Target, Edit, Settings, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 
 export const HabitTracker = () => {
-    const { habits, addHabit, toggleHabit, deleteHabit, updateHabit } = useHabits();
+    const { habits, addHabit, toggleHabit, deleteHabit, updateHabit, addHabitSubtask, toggleHabitSubtask, deleteHabitSubtask } = useHabits();
     const [newHabitName, setNewHabitName] = useState('');
     const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'specific_days'>('daily');
     const [newTimesPerDay, setNewTimesPerDay] = useState(1);
     const [showStats, setShowStats] = useState(false);
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingHabit, setEditingHabit] = useState<any>(null);
+    const [expandedHabitId, setExpandedHabitId] = useState<string | null>(null);
+    const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
     const handleAdd = () => {
         addHabit(newHabitName, newHabitFrequency, [], newTimesPerDay);
@@ -32,6 +34,13 @@ export const HabitTracker = () => {
                 timesPerDay: editingHabit.timesPerDay
             });
             setEditingHabit(null);
+        }
+    };
+
+    const handleAddSubtask = (habitId: string) => {
+        if (newSubtaskTitle.trim()) {
+            addHabitSubtask(habitId, newSubtaskTitle);
+            setNewSubtaskTitle('');
         }
     };
 
@@ -95,34 +104,92 @@ export const HabitTracker = () => {
                             const isCompletedToday = !!(habit.history || {})[today];
                             const timesTarget = habit.timesPerDay || 1;
                             const timesToday = (habit.timesCompleted || {})[today] || 0;
+                            const subtasks = habit.subtasks || [];
+                            const subtasksCompleted = subtasks.filter(s => s.completed).length;
+                            const isExpanded = expandedHabitId === habit.id;
+
                             return (
-                                <div key={habit.id} className="flex items-center justify-between p-2 bg-white rounded border hover:bg-gray-50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => toggleHabit(habit.id)}
-                                            className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${isCompletedToday ? 'bg-orange-500 border-orange-600 text-white' : 'bg-gray-100 border-gray-300 text-transparent hover:border-orange-400'}`}
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </button>
-                                        <div>
-                                            <span className={`font-bold block ${isCompletedToday ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{habit.name}</span>
-                                            <div className="flex gap-2 items-center">
-                                                <span className="text-[10px] text-orange-600 font-bold">🔥 {habit.streak || 0} يوم</span>
-                                                <span className="text-[10px] text-gray-400">| {getFrequencyLabel(habit.frequency)}</span>
-                                                {timesTarget > 1 && (
-                                                    <span className="text-[10px] text-blue-500">{timesToday}/{timesTarget}</span>
-                                                )}
+                                <div key={habit.id} className="border rounded-lg overflow-hidden bg-white">
+                                    <div className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => toggleHabit(habit.id)}
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all ${isCompletedToday ? 'bg-orange-500 border-orange-600 text-white' : 'bg-gray-100 border-gray-300 text-transparent hover:border-orange-400'}`}
+                                            >
+                                                <Check className="w-4 h-4" />
+                                            </button>
+                                            <div>
+                                                <span className={`font-bold block ${isCompletedToday ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{habit.name}</span>
+                                                <div className="flex gap-2 items-center">
+                                                    <span className="text-[10px] text-orange-600 font-bold">🔥 {habit.streak || 0} يوم</span>
+                                                    <span className="text-[10px] text-gray-400">| {getFrequencyLabel(habit.frequency)}</span>
+                                                    {timesTarget > 1 && (
+                                                        <span className="text-[10px] text-blue-500">{timesToday}/{timesTarget}</span>
+                                                    )}
+                                                    {subtasks.length > 0 && (
+                                                        <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 rounded">
+                                                            <Layers className="w-3 h-3 inline ml-1" />
+                                                            {subtasksCompleted}/{subtasks.length}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
+                                        <div className="flex gap-1">
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExpandedHabitId(isExpanded ? null : habit.id)}>
+                                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400 hover:text-blue-600" onClick={() => setEditingHabit({ ...habit })}>
+                                                <Edit className="w-3 h-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500" onClick={() => deleteHabit(habit.id)}>
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-1">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400 hover:text-blue-600" onClick={() => setEditingHabit({ ...habit })}>
-                                            <Edit className="w-3 h-3" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500" onClick={() => deleteHabit(habit.id)}>
-                                            <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                    </div>
+
+                                    {/* Subtasks Section */}
+                                    {isExpanded && (
+                                        <div className="bg-gray-50 p-3 border-t">
+                                            <p className="text-xs font-bold text-gray-500 mb-2">المهام الفرعية</p>
+                                            <div className="space-y-2 mb-3">
+                                                {subtasks.map(sub => (
+                                                    <div key={sub.id} className="flex items-center gap-2 group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={sub.completed}
+                                                            onChange={() => toggleHabitSubtask(habit.id, sub.id)}
+                                                            className="accent-purple-600"
+                                                        />
+                                                        <span className={`text-sm flex-1 ${sub.completed ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
+                                                        <Trash2
+                                                            className="w-3 h-3 text-red-300 opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                            onClick={() => deleteHabitSubtask(habit.id, sub.id)}
+                                                        />
+                                                    </div>
+                                                ))}
+                                                {subtasks.length === 0 && (
+                                                    <p className="text-xs text-gray-400 text-center">لا توجد مهام فرعية</p>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="مهمة فرعية جديدة..."
+                                                    className="h-8 text-xs bg-white"
+                                                    value={newSubtaskTitle}
+                                                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            handleAddSubtask(habit.id);
+                                                        }
+                                                    }}
+                                                />
+                                                <Button size="sm" className="h-8" onClick={() => handleAddSubtask(habit.id)}>
+                                                    <Plus className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

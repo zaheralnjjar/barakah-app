@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
+export interface HabitSubtask {
+    id: string;
+    title: string;
+    completed: boolean;
+}
+
 export interface Habit {
     id: string;
     name: string;
@@ -10,6 +16,7 @@ export interface Habit {
     customDays: string[]; // e.g. ['السبت', 'الأحد', ...]
     timesPerDay?: number; // for daily habits that need multiple completions
     timesCompleted?: Record<string, number>; // times completed per day
+    subtasks?: HabitSubtask[]; // subtasks for complex habits
 }
 
 export const useHabits = () => {
@@ -131,12 +138,52 @@ export const useHabits = () => {
         setHabits(prev => prev.filter(h => h.id !== id));
     };
 
+    // Subtask functions
+    const addHabitSubtask = (habitId: string, title: string) => {
+        if (!title.trim()) return;
+        setHabits(prev => prev.map(h => {
+            if (h.id === habitId) {
+                const newSubtask: HabitSubtask = {
+                    id: Date.now().toString(),
+                    title,
+                    completed: false
+                };
+                return { ...h, subtasks: [...(h.subtasks || []), newSubtask] };
+            }
+            return h;
+        }));
+    };
+
+    const toggleHabitSubtask = (habitId: string, subtaskId: string) => {
+        setHabits(prev => prev.map(h => {
+            if (h.id === habitId) {
+                const subtasks = (h.subtasks || []).map(s =>
+                    s.id === subtaskId ? { ...s, completed: !s.completed } : s
+                );
+                return { ...h, subtasks };
+            }
+            return h;
+        }));
+    };
+
+    const deleteHabitSubtask = (habitId: string, subtaskId: string) => {
+        setHabits(prev => prev.map(h => {
+            if (h.id === habitId) {
+                return { ...h, subtasks: (h.subtasks || []).filter(s => s.id !== subtaskId) };
+            }
+            return h;
+        }));
+    };
+
     return {
         habits,
         addHabit,
         updateHabit,
         toggleHabit,
-        deleteHabit
+        deleteHabit,
+        addHabitSubtask,
+        toggleHabitSubtask,
+        deleteHabitSubtask
     };
 };
 
