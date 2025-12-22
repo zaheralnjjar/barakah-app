@@ -204,11 +204,10 @@ const PrayerManager = () => {
                 scheduleNotifications(formattedData);
 
                 // Save to localStorage for TaskSection printing usage
-                const scheduleMap: Record<number, any> = {};
+                // Use full date (YYYY-MM-DD) as key to avoid month confusion
+                const scheduleMap: Record<string, any> = {};
                 formattedData.forEach(day => {
-                    // split YYYY-MM-DD and take DD
-                    const dayNum = parseInt(day.date.split('-')[2], 10);
-                    scheduleMap[dayNum] = day;
+                    scheduleMap[day.date] = day;
                 });
                 localStorage.setItem('baraka_prayer_schedule', JSON.stringify(scheduleMap));
 

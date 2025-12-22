@@ -32,7 +32,6 @@ const MODULES = {
     FINANCE_DAILY: 'finance_daily',
     FINANCE_SUMMARY: 'finance_summary',
     APPOINTMENTS_WIDGET: 'appointments_widget',
-    SHOPPING_WIDGET: 'shopping_widget',
     QUICK_ACTIONS: 'quick_actions',
     SAVED_LOCATIONS: 'saved_locations',
     DAILY_CALENDAR: 'daily_calendar',       // Daily calendar widget
@@ -412,9 +411,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
                 );
 
-            case MODULES.SHOPPING_WIDGET:
-                // Shopping widget is now combined with appointments
-                return null;
 
             case MODULES.QUICK_ACTIONS:
                 return (

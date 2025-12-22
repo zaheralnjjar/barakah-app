@@ -256,10 +256,9 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 const schedule = localStorage.getItem('baraka_prayer_schedule');
                 if (schedule) {
                     const scheduleData = JSON.parse(schedule);
-                    // Use string extraction to avoid timezone shifts
-                    const dayNum = parseInt(dateStr.split('-')[2], 10);
-                    if (scheduleData[dayNum]) {
-                        prayerData = { ...prayerData, ...scheduleData[dayNum] };
+                    // Use full date string as key
+                    if (scheduleData[dateStr]) {
+                        prayerData = { ...prayerData, ...scheduleData[dateStr] };
                     }
                 }
             } catch (e) { }
@@ -363,9 +362,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             html += `<td class="day-header" style="white-space:nowrap">${date.toLocaleDateString('ar', { weekday: 'short', month: 'numeric', day: 'numeric' })}</td>`;
 
             if (printSelections.prayerTimes) {
-                // Get times for this specific day
-                const dayNum = parseInt(dateStr.split('-')[2], 10);
-                const times = prayerSchedule[dayNum] || defaultPrayers;
+                // Get times for this specific day using full date as key
+                const times = prayerSchedule[dateStr] || defaultPrayers;
 
                 html += `<td style="font-size: ${dates.length > 5 ? '8px' : '10px'}">`;
                 html += `<div style="display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:1px 0"><span>الفجر:</span> <b>${times.fajr}</b></div>`;
@@ -427,8 +425,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
             dates.forEach(dateStr => {
                 const d = new Date(dateStr);
-                const dayNum = parseInt(dateStr.split('-')[2], 10);
-                const times = prayerSchedule[dayNum] || defaultPrayers;
+                // Use full date as key
+                const times = prayerSchedule[dateStr] || defaultPrayers;
                 html += `<tr>`;
                 html += `<td>${d.toLocaleDateString('ar')}</td>`;
                 html += `<td>${d.toLocaleDateString('ar', { weekday: 'long' })}</td>`;
@@ -528,8 +526,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
                 // Show prayer times at this hour
                 if (printSelections.prayerTimes) {
-                    const dayNum = parseInt(dateStr.split('-')[2], 10);
-                    const times = prayerSchedule[dayNum] || defaultPrayers;
+                    // Use full date as key
+                    const times = prayerSchedule[dateStr] || defaultPrayers;
                     const currentHour = hour.split(':')[0]; // e.g., '12'
 
                     Object.entries(times).forEach(([name, time]) => {

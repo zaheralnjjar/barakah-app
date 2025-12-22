@@ -340,6 +340,39 @@
   }
 }
 
+/* Larger icons for Web/Desktop only */
+@media (min-width: 769px) {
+
+  /* Increase icon sizes on desktop/web */
+  svg.w-4 {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+
+  svg.w-5 {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+
+  svg.w-6 {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  /* Larger buttons for icons */
+  button.h-8.w-8 {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  /* Larger add/remove section buttons */
+  .text-red-500 svg,
+  .text-emerald-600 svg {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+}
+
 @media (max-width: 480px) {
   .arabic-title {
     font-size: 1.25rem;
