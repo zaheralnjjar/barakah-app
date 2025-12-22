@@ -69,7 +69,7 @@ const SettingsPanel = () => {
         }
         setDashboardOrder(newOrder);
         localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-        window.dispatchEvent(new Event('dashboard_order_updated'));
+        window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
         toast({ title: "تم تحديث الترتيب" });
     };
 
@@ -79,7 +79,6 @@ const SettingsPanel = () => {
         'finance_daily': '💸 مصروف اليوم',
         'finance_summary': '💰 الملخص المالي',
         'appointments_widget': '📅 المواعيد والتذكيرات (ملخص)',
-        'shopping_widget': '🛒 قائمة التسوق (ملخص)',
         'quick_actions': '⚡ الاختصارات السريعة',
         'full_map': '🗺️ الخريطة التفاعلية (كاملة)',
         'saved_locations': '📍 المواقع المحفوظة',
@@ -191,7 +190,7 @@ const SettingsPanel = () => {
                                     newLineup.splice(index, 0, movedItem);
                                     setDashboardOrder(newLineup);
                                     localStorage.setItem('baraka_dashboard_order', JSON.stringify(newLineup));
-                                    window.dispatchEvent(new Event('dashboard_order_updated'));
+                                    window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
                                     toast({ title: "تم الترتيب" });
                                 }
                             }}
@@ -208,7 +207,7 @@ const SettingsPanel = () => {
                                     const newOrder = dashboardOrder.filter((_, i) => i !== index);
                                     setDashboardOrder(newOrder);
                                     localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-                                    window.dispatchEvent(new Event('dashboard_order_updated'));
+                                    window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
                                 }}
                                 className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
                             >
@@ -234,7 +233,7 @@ const SettingsPanel = () => {
                                             const newOrder = [...dashboardOrder, section];
                                             setDashboardOrder(newOrder);
                                             localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-                                            window.dispatchEvent(new Event('dashboard_order_updated'));
+                                            window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
                                         }}
                                         className="text-emerald-600 hover:bg-emerald-50 h-8 w-8 p-0"
                                     >

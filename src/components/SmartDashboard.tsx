@@ -53,7 +53,7 @@ const DEFAULT_ORDER = [
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const {
         financeData, loading, recentAppointments, shoppingListSummary,
-        savedLocations, stats, nextPrayer, prayerTimes, refetch, timeUntilNext
+        savedLocations, stats, nextPrayer, prayerTimes = [], refetch, timeUntilNext
     } = useDashboardData();
 
     const { habits } = useHabits();
