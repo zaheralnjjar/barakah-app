@@ -45,13 +45,13 @@ const DEFAULT_LAYOUT = [
     { id: MODULES.HEADER, visible: true },
     { id: MODULES.PRAYER, visible: true },
     { id: MODULES.FINANCE_SUMMARY, visible: true }, // "Financial side balance..."
-    { id: MODULES.DAILY_CALENDAR, visible: true },  // Daily calendar widget
     { id: MODULES.APPOINTMENTS_WIDGET, visible: true }, // "Appointments and shopping" (Widgets)
     { id: MODULES.SHOPPING_WIDGET, visible: true },
     { id: MODULES.QUICK_ACTIONS, visible: true },   // "Then quick shortcuts"
     { id: MODULES.FULL_SHOPPING, visible: false },  // User mentioned "Then shopping list" (Assuming full list)
     { id: MODULES.FULL_APPOINTMENTS, visible: false }, // "Then appointments and reminders"
-    { id: MODULES.FULL_MAP, visible: true }         // "Then the map"
+    { id: MODULES.FULL_MAP, visible: true },         // "Then the map"
+    { id: MODULES.DAILY_CALENDAR, visible: false }   // Daily calendar widget - disabled by default
 ];
 
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
@@ -331,53 +331,58 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             case MODULES.APPOINTMENTS_WIDGET:
                 return (
-                    <Card className="shadow-sm border-orange-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all mb-4 h-48" onClick={() => onNavigateToTab('appointments')}>
-                        <div className="absolute top-0 right-0 w-1.5 h-full bg-orange-400"></div>
-                        <CardContent className="p-4 h-full flex flex-col">
-                            <div className="flex items-center gap-2 mb-3">
-                                <CalendarPlus className="w-5 h-5 text-orange-500" />
-                                <span className="text-sm font-bold text-gray-700">المواعيد القادمة</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                {recentAppointments.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {recentAppointments.slice(0, 3).map((apt: any, i) => (
-                                            <div key={i} className="text-base border-b border-gray-100 pb-2 last:border-0">
-                                                <p className="font-semibold text-gray-800 line-clamp-1">{apt.title}</p>
-                                                <p className="text-xs text-gray-500 mt-0.5">{apt.time} - {apt.date}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : <p className="text-sm text-gray-400 text-center py-6">لا يوجد مواعيد قريبة</p>}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {/* Shopping List - Right Side */}
+                        <Card className="shadow-sm border-blue-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-48 order-1 md:order-2" onClick={() => onNavigateToTab('shopping')}>
+                            <div className="absolute top-0 right-0 w-1.5 h-full bg-blue-400"></div>
+                            <CardContent className="p-4 h-full flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <ShoppingCart className="w-5 h-5 text-blue-500" />
+                                    <span className="text-sm font-bold text-gray-700">قائمة التسوق</span>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                    {shoppingListSummary.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {shoppingListSummary.slice(0, 4).map((i: any, idx: number) => (
+                                                <div key={idx} className="flex items-center gap-3 text-sm border-b border-gray-50 pb-2 last:border-0">
+                                                    <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" />
+                                                    <span className="text-gray-700 truncate font-medium">{i.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : <p className="text-sm text-gray-400 text-center py-6">القائمة فارغة</p>}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Appointments - Left Side */}
+                        <Card className="shadow-sm border-orange-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-48 order-2 md:order-1" onClick={() => onNavigateToTab('appointments')}>
+                            <div className="absolute top-0 right-0 w-1.5 h-full bg-orange-400"></div>
+                            <CardContent className="p-4 h-full flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <CalendarPlus className="w-5 h-5 text-orange-500" />
+                                    <span className="text-sm font-bold text-gray-700">المواعيد القادمة</span>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                    {recentAppointments.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {recentAppointments.slice(0, 3).map((apt: any, i) => (
+                                                <div key={i} className="text-base border-b border-gray-100 pb-2 last:border-0">
+                                                    <p className="font-semibold text-gray-800 line-clamp-1">{apt.title}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">{apt.time} - {apt.date}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : <p className="text-sm text-gray-400 text-center py-6">لا يوجد مواعيد قريبة</p>}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 );
 
             case MODULES.SHOPPING_WIDGET:
-                return (
-                    <Card className="shadow-sm border-blue-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all mb-4 h-48" onClick={() => onNavigateToTab('shopping')}>
-                        <div className="absolute top-0 right-0 w-1.5 h-full bg-blue-400"></div>
-                        <CardContent className="p-4 h-full flex flex-col">
-                            <div className="flex items-center gap-2 mb-3">
-                                <ShoppingCart className="w-5 h-5 text-blue-500" />
-                                <span className="text-sm font-bold text-gray-700">قائمة التسوق</span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                {shoppingListSummary.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {shoppingListSummary.slice(0, 4).map((i: any, idx: number) => (
-                                            <div key={idx} className="flex items-center gap-3 text-sm border-b border-gray-50 pb-2 last:border-0">
-                                                <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" />
-                                                <span className="text-gray-700 truncate font-medium">{i.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : <p className="text-sm text-gray-400 text-center py-6">القائمة فارغة</p>}
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
+                // Shopping widget is now combined with appointments
+                return null;
 
             case MODULES.QUICK_ACTIONS:
                 return (
