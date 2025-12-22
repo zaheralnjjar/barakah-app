@@ -455,7 +455,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                 <CalendarIcon className="w-5 h-5 text-emerald-500" />
                                 {selectedDate && new Date(selectedDate).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </span>
-                            <Button variant="outline" size="sm" onClick={() => selectedDate && printDayReport(selectedDate)}>
+                            <Button variant="outline" size="sm" onClick={() => setShowPrintOptions(true)}>
                                 <Printer className="w-4 h-4 ml-1" /> طباعة
                             </Button>
                         </DialogTitle>
@@ -546,6 +546,81 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                             </div>
                         );
                     })()}
+                </DialogContent>
+            </Dialog>
+
+            {/* Print Options Dialog */}
+            <Dialog open={showPrintOptions} onOpenChange={setShowPrintOptions}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right arabic-title">خيارات الطباعة</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <p className="text-sm text-gray-600 text-right">حدد ما تريد طباعته:</p>
+
+                        <div className="space-y-3">
+                            <label className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.tasks}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, tasks: e.target.checked })}
+                                    className="w-5 h-5 accent-blue-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                                    المهام
+                                </span>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.appointments}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, appointments: e.target.checked })}
+                                    className="w-5 h-5 accent-orange-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <CalendarIcon className="w-4 h-4 text-orange-600" />
+                                    المواعيد
+                                </span>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.habits}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, habits: e.target.checked })}
+                                    className="w-5 h-5 accent-amber-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <Flame className="w-4 h-4 text-amber-600" />
+                                    العادات
+                                </span>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.medications}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, medications: e.target.checked })}
+                                    className="w-5 h-5 accent-purple-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <Pill className="w-4 h-4 text-purple-600" />
+                                    الأدوية
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setShowPrintOptions(false)}>
+                            إلغاء
+                        </Button>
+                        <Button onClick={() => selectedDate && printDayReport(selectedDate)} className="bg-blue-600 hover:bg-blue-700">
+                            <Printer className="w-4 h-4 ml-2" />
+                            طباعة
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

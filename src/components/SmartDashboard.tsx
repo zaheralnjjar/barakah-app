@@ -428,7 +428,41 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 return <div className="mb-4 bg-white rounded-xl shadow-sm border overflow-hidden"><ShoppingList /></div>;
 
             case MODULES.FULL_MAP:
-                return <div className="mb-4 h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200"><InteractiveMap /></div>;
+                return (
+                    <div className="mb-4 flex gap-4 flex-col md:flex-row">
+                        {/* Saved Locations - 30% on left */}
+                        <div className="w-full md:w-[30%] h-[300px] md:h-[400px] bg-white rounded-xl shadow-sm border overflow-hidden">
+                            <div className="p-3 border-b bg-gray-50">
+                                <h3 className="font-bold text-sm flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-blue-500" />
+                                    المواقع المحفوظة
+                                </h3>
+                            </div>
+                            <div className="p-2 h-[calc(100%-48px)] overflow-y-auto">
+                                {savedLocations.length === 0 ? (
+                                    <p className="text-center text-gray-400 text-sm py-8">لا توجد مواقع</p>
+                                ) : (
+                                    savedLocations.slice(0, 10).map((loc: any, i: number) => (
+                                        <div
+                                            key={i}
+                                            className="p-2 mb-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors"
+                                            onClick={() => onNavigateToTab('map')}
+                                        >
+                                            <p className="text-sm font-semibold truncate">{loc.name || 'موقع'}</p>
+                                            {loc.address && (
+                                                <p className="text-xs text-gray-500 truncate">{loc.address}</p>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                        {/* Map - 70% on right */}
+                        <div className="w-full md:w-[70%] h-[300px] md:h-[400px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                            <InteractiveMap />
+                        </div>
+                    </div>
+                );
 
             case MODULES.DAILY_CALENDAR:
                 return <div className="mb-4"><DailyCalendar compact /></div>;
