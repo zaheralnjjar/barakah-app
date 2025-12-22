@@ -151,8 +151,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             </head>
             <body>
                 <div class="header">
+                    <button class="no-print" onclick="window.close()" style="float:left;background:#64748b;color:white;padding:5px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px">🔙 رجوع للتطبيق</button>
                     <h1>📅 مهام ${date.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
-                    <button class="back-btn no-print" onclick="window.close()">← رجوع</button>
                 </div>
                 <button class="back-btn no-print" onclick="window.print()" style="background:#2563eb;margin-bottom:15px">🖨️ طباعة</button>
         `;
@@ -290,7 +290,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     <h1>📅 تقرير ${dates.length} أيام</h1>
                     <p>${new Date(dates[0]).toLocaleDateString('ar')} - ${new Date(dates[dates.length - 1]).toLocaleDateString('ar')}</p>
                 </div>
-                <button class="no-print" onclick="window.print()" style="background:#2563eb;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-bottom:15px">🖨️ طباعة</button>
+                <div class="no-print" style="text-align:center;margin-bottom:15px">
+                    <button onclick="window.print()" style="background:#2563eb;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;margin-left:10px">🖨️ طباعة</button>
+                    <button onclick="window.close()" style="background:#64748b;color:white;padding:10px 20px;border:none;border-radius:8px;cursor:pointer">🔙 رجوع للتطبيق</button>
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -433,7 +436,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             </head>
             <body>
                 <h2 style="text-align:center;color:#16a34a;margin-bottom:10px">📅 جدول الأسبوع بالساعات</h2>
-                <button onclick="window.print()" style="background:#2563eb;color:white;padding:8px 16px;border:none;border-radius:6px;margin-bottom:10px">🖨️ طباعة</button>
+                <div style="text-align:center;margin-bottom:10px">
+                    <button onclick="window.print()" style="background:#2563eb;color:white;padding:8px 16px;border:none;border-radius:6px;margin-left:8px">🖨️ طباعة</button>
+                    <button onclick="window.close()" style="background:#64748b;color:white;padding:8px 16px;border:none;border-radius:6px">🔙 رجوع للتطبيق</button>
+                </div>
                 <table>
                     <thead><tr><th>الساعة</th>`;
 

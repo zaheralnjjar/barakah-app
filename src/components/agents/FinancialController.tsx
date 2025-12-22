@@ -97,13 +97,29 @@ const FinancialController = () => {
     const win = window.open('', '', 'width=900,height=650');
     if (win && printContent) {
       win.document.write('<html><head><title>تقرير مالي</title>');
-      win.document.write('<style>body{font-family:sans-serif;direction:rtl;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;text-align:right;}th{background:#f0f0f0;}</style>');
+      win.document.write('<style>');
+      win.document.write('body{font-family:sans-serif;direction:rtl;padding:20px;}');
+      win.document.write('table{width:100%;border-collapse:collapse;margin-top:20px;}');
+      win.document.write('th,td{border:1px solid #ddd;padding:8px;text-align:right;}');
+      win.document.write('th{background:#f0f0f0;}');
+      win.document.write('.no-print{display:none !important;}');
+      win.document.write('@media print { .no-print { display: none !important; } }');
+      win.document.write('.back-btn { background: #64748b; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }');
+      win.document.write('.print-btn { background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; margin-left: 10px; font-size: 14px; }');
+      win.document.write('</style>');
       win.document.write('</head><body>');
+
+      // Controls
+      win.document.write('<div class="no-print" style="text-align:center;">');
+      win.document.write('<button onclick="window.print()" class="print-btn">🖨️ طباعة</button>');
+      win.document.write('<button onclick="window.close()" class="back-btn">🔙 رجوع للتطبيق</button>');
+      win.document.write('</div>');
+
       win.document.write('<h1>تقرير مالي أسبوعي</h1>');
       win.document.write(printContent.innerHTML);
       win.document.write('</body></html>');
       win.document.close();
-      win.print();
+      // win.print(); // Let user click the button
     }
   };
 
