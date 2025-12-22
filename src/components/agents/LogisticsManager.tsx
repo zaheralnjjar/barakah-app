@@ -51,6 +51,7 @@ import { HabitTracker } from '@/components/logistics/HabitTracker';
 import { MedicationManager } from '@/components/logistics/MedicationManager';
 import { QuickNotes } from '@/components/logistics/QuickNotes';
 import { DailyChecklist } from '@/components/logistics/DailyChecklist';
+import AppointmentManager from '@/components/AppointmentManager';
 
 const LogisticsManager = () => {
   // State Hooks
@@ -389,6 +390,9 @@ const LogisticsManager = () => {
             <HabitTracker />
             <MedicationManager />
           </div>
+
+          {/* Appointments Section */}
+          <AppointmentManager />
         </div>
       </div>
     </div>

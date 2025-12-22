@@ -92,7 +92,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             habits: habits.filter(h =>
                 h.frequency === 'daily' ||
                 (h.frequency === 'weekly' && new Date(dateStr).getDay() === 0) ||
-                (h.frequency === 'monthly' && new Date(dateStr).getDate() === 1)
+                (h.frequency === 'monthly' && new Date(dateStr).getDate() === 1) ||
+                (h.frequency === 'specific_days' && h.customDays?.includes(dayName))
             ),
             medications: medications.filter(m =>
                 m.frequency === 'daily' ||
