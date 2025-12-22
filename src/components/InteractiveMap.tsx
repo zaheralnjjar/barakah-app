@@ -452,24 +452,6 @@ const InteractiveMap = () => {
                             </div>
                         </div>
 
-                        {/* Category Filter */}
-                        <div className="p-2 bg-white border-b flex gap-1 overflow-x-auto">
-                            <Button
-                                size="sm"
-                                variant={selectedCategory === 'all' ? 'default' : 'ghost'}
-                                className="h-6 text-xs shrink-0"
-                                onClick={() => setSelectedCategory('all')}
-                            >الكل</Button>
-                            {LOCATION_CATEGORIES.map(cat => (
-                                <Button
-                                    key={cat.id}
-                                    size="sm"
-                                    variant={selectedCategory === cat.id ? 'default' : 'ghost'}
-                                    className="h-6 text-xs shrink-0"
-                                    onClick={() => setSelectedCategory(cat.id)}
-                                >{cat.icon}</Button>
-                            ))}
-                        </div>
 
                         {/* Locations List */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-2">
