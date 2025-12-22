@@ -30,21 +30,55 @@ const shareExcelFile = async (fileName: string, base64Data: string, title: strin
     }
 };
 
-export const exportFinanceToExcel = async () => {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) throw new Error('يرجى تسجيل الدخول');
+export const exportFinanceToExcel = async (localData?: any) => {
+    let transactions: any[] = [];
 
-    const { data } = await supabase
-        .from('finance_data_2025_12_18_18_42')
-        .select('pending_expenses')
-        .eq('user_id', user.id)
-        .single();
+    try {
+        // Try Supabase first
+        const user = (await supabase.auth.getUser()).data.user;
+        if (user) {
+            const { data } = await supabase
+                .from('finance_data_2025_12_18_18_42')
+                .select('pending_expenses')
+                .eq('user_id', user.id)
+                .single();
+            transactions = data?.pending_expenses || [];
+        }
+    } catch (e) {
+        console.warn('Supabase fetch failed, using local data');
+    }
 
-    const transactions = data?.pending_expenses || [];
+    // Fallback to local data if provided or empty
+    if (transactions.length === 0 && localData?.pending_expenses) {
+        transactions = localData.pending_expenses;
+    }
+
+    // Fallback to localStorage
+    if (transactions.length === 0) {
+        try {
+            const saved = localStorage.getItem('baraka_finance');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                transactions = parsed.pending_expenses || [];
+            }
+        } catch (e) {
+            console.error('LocalStorage parse error:', e);
+        }
+    }
+
+    if (transactions.length === 0) {
+        // Share as text if no data
+        await Share.share({
+            title: 'التقرير المالي',
+            text: '📊 لا توجد معاملات للتصدير\n\n✨ نظام بركة لإدارة الحياة',
+            dialogTitle: 'مشاركة التقرير المالي'
+        });
+        return { success: true, data: null };
+    }
 
     // Prepare data for Excel
     const excelData = transactions.map((t: any) => ({
-        'التاريخ': t.timestamp?.split('T')[0] || '',
+        'التاريخ': t.timestamp?.split('T')[0] || t.date || '',
         'النوع': t.type === 'income' ? 'دخل' : 'مصروف',
         'الوصف': t.description || '',
         'المبلغ': t.amount || 0,

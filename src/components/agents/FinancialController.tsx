@@ -856,10 +856,11 @@ const FinancialController = () => {
                   onClick={async () => {
                     try {
                       const { exportFinanceToExcel } = await import('@/lib/excelExport');
-                      await exportFinanceToExcel();
+                      await exportFinanceToExcel(financeData);
                       toast({ title: '✅ تم تصدير Excel' });
                     } catch (e) {
-                      toast({ title: '❌ خطأ', description: 'فشل التصدير' });
+                      console.error('Excel export error:', e);
+                      toast({ title: '❌ خطأ', description: 'فشل التصدير', variant: 'destructive' });
                     }
                   }}
                 >
