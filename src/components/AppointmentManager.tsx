@@ -241,14 +241,14 @@ const AppointmentManager: React.FC = () => {
             // If location is provided, save it to saved_locations as well
             if (newLocation.trim()) {
                 try {
-                    // Get existing locations
-                    const { data: settingsData, error: settingsError } = await supabase
-                        .from(USER_SETTINGS_TABLE)
-                        .select('saved_locations')
+                    // Get existing locations from logistics table (same as LocationSaver)
+                    const { data: logisticsData, error: logisticsError } = await supabase
+                        .from('logistics_data_2025_12_18_18_42')
+                        .select('locations')
                         .eq('user_id', user.id)
                         .single();
 
-                    const existingLocations = settingsData?.saved_locations || [];
+                    const existingLocations = (logisticsData?.locations as any[]) || [];
 
                     // Add new location with appointment name
                     const newSavedLocation = {
@@ -269,19 +269,23 @@ const AppointmentManager: React.FC = () => {
                     if (!locationExists) {
                         const updatedLocations = [newSavedLocation, ...existingLocations];
 
-                        if (settingsError || !settingsData) {
-                            // Create new settings record
+                        if (logisticsError || !logisticsData) {
+                            // Create new logistics record
                             await supabase
-                                .from(USER_SETTINGS_TABLE)
+                                .from('logistics_data_2025_12_18_18_42')
                                 .upsert({
                                     user_id: user.id,
-                                    saved_locations: updatedLocations
+                                    locations: updatedLocations,
+                                    updated_at: new Date().toISOString()
                                 }, { onConflict: 'user_id' });
                         } else {
                             // Update existing record
                             await supabase
-                                .from(USER_SETTINGS_TABLE)
-                                .update({ saved_locations: updatedLocations })
+                                .from('logistics_data_2025_12_18_18_42')
+                                .update({
+                                    locations: updatedLocations,
+                                    updated_at: new Date().toISOString()
+                                })
                                 .eq('user_id', user.id);
                         }
 
