@@ -53,6 +53,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
     // Print selection state
     const [showPrintOptions, setShowPrintOptions] = useState(false);
+    const [printLayout, setPrintLayout] = useState<'normal' | 'hourly'>('normal');
     const [printSelections, setPrintSelections] = useState({
         tasks: true,
         appointments: true,
@@ -101,7 +102,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         const dayName = DAYS_AR[new Date(dateStr).getDay()];
         return {
             tasks: tasks.filter(t => t.deadline === dateStr),
-            appointments: appointments.filter(a => a.date === dateStr),
+            appointments: appointments.filter(a => a.date === dateStr).sort((a, b) => a.time.localeCompare(b.time)),
             habits: habits.filter(h =>
                 h.frequency === 'daily' ||
                 (h.frequency === 'weekly' && new Date(dateStr).getDay() === 0) ||
@@ -322,7 +323,114 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             html += `</tr>`;
         });
 
-        html += `</tbody></table><p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
+        html += `</tbody></table>`;
+
+        // Prayer Times section for multi-day
+        if (printSelections.prayerTimes) {
+            html += `<div style="margin-top:20px;padding:15px;background:#eef2ff;border-radius:12px">`;
+            html += `<h3 style="margin:0 0 10px 0;color:#4f46e5">🕌 أوقات الصلاة</h3>`;
+            html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الفجر</strong><br><small>____:____</small></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الظهر</strong><br><small>____:____</small></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العصر</strong><br><small>____:____</small></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>المغرب</strong><br><small>____:____</small></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العشاء</strong><br><small>____:____</small></div>`;
+            html += `</div></div>`;
+        }
+
+        // Shopping List section for multi-day
+        if (printSelections.shoppingList) {
+            html += `<div style="margin-top:20px;padding:15px;background:#f0fdfa;border-radius:12px">`;
+            html += `<h3 style="margin:0 0 10px 0;color:#0d9488">🛒 قائمة التسوق</h3>`;
+            html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">`;
+            for (let i = 0; i < 12; i++) {
+                html += `<div style="display:flex;align-items:center;gap:8px;padding:6px">`;
+                html += `<span style="width:16px;height:16px;border:2px solid #9ca3af;border-radius:3px;display:inline-block"></span>`;
+                html += `<span style="flex:1;border-bottom:1px dashed #ccc">&nbsp;</span>`;
+                html += `</div>`;
+            }
+            html += `</div></div>`;
+        }
+
+        html += `<p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+        setShowPrintOptions(false);
+        setSelectedDates(new Set());
+        setIsMultiSelectMode(false);
+    };
+
+    // Print hourly grid (days as columns, hours as rows)
+    const printHourlyGrid = () => {
+        const dates = Array.from(selectedDates).sort();
+        if (dates.length === 0) return;
+
+        const hours = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+
+        let html = `
+            <html dir="rtl">
+            <head>
+                <title>جدول الساعات - ${dates.length} أيام</title>
+                <style>
+                    body { font-family: Tajawal, Arial; padding: 10px; margin: 0; font-size: 11px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th { background: #16a34a; color: white; padding: 6px 4px; text-align: center; font-size: 10px; }
+                    td { padding: 4px; border: 1px solid #e5e7eb; vertical-align: top; min-height: 30px; font-size: 10px; }
+                    .hour { background: #f3f4f6; font-weight: bold; width: 50px; text-align: center; }
+                    .item { padding: 2px 4px; margin: 1px 0; border-radius: 4px; font-size: 9px; }
+                    .task { background: #dbeafe; } .apt { background: #ffedd5; } .habit { background: #fef3c7; } .med { background: #f3e8ff; }
+                    @media print { button { display: none; } }
+                </style>
+            </head>
+            <body>
+                <h2 style="text-align:center;color:#16a34a;margin-bottom:10px">📅 جدول الأسبوع بالساعات</h2>
+                <button onclick="window.print()" style="background:#2563eb;color:white;padding:8px 16px;border:none;border-radius:6px;margin-bottom:10px">🖨️ طباعة</button>
+                <table>
+                    <thead><tr><th>الساعة</th>`;
+
+        dates.forEach(d => {
+            const date = new Date(d);
+            html += `<th>${date.toLocaleDateString('ar', { weekday: 'short', day: 'numeric' })}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+
+        hours.forEach(hour => {
+            html += `<tr><td class="hour">${hour}</td>`;
+            dates.forEach(dateStr => {
+                const data = getDayData(dateStr);
+                html += `<td>`;
+
+                // Find appointments at this hour
+                data.appointments.filter(a => a.time.startsWith(hour.split(':')[0])).forEach(a => {
+                    html += `<div class="item apt">📅 ${a.title}</div>`;
+                });
+
+                // Show habits if morning hours
+                if (hour === '07:00' || hour === '08:00') {
+                    data.habits.slice(0, 2).forEach(h => {
+                        html += `<div class="item habit">🔥 ${h.name}</div>`;
+                    });
+                }
+
+                // Show medications based on time
+                data.medications.filter(m => {
+                    const medHour = m.time.split(':')[0];
+                    return medHour === hour.split(':')[0];
+                }).forEach(m => {
+                    html += `<div class="item med">💊 ${m.name}</div>`;
+                });
+
+                html += `</td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table>`;
+        html += `<p style="text-align:center;margin-top:20px;color:#9ca3af;font-size:10px">✨ نظام بركة</p></body></html>`;
 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
@@ -732,6 +840,27 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         <DialogTitle className="text-right arabic-title">خيارات الطباعة</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                        {/* Layout Selection for multi-day */}
+                        {selectedDates.size > 1 && (
+                            <div>
+                                <p className="text-sm font-bold text-gray-700 mb-2">📐 شكل التقرير:</p>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setPrintLayout('normal')}
+                                        className={`flex-1 p-3 rounded-lg border-2 text-sm transition-all ${printLayout === 'normal' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
+                                    >
+                                        📋 جدول عادي
+                                    </button>
+                                    <button
+                                        onClick={() => setPrintLayout('hourly')}
+                                        className={`flex-1 p-3 rounded-lg border-2 text-sm transition-all ${printLayout === 'hourly' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}
+                                    >
+                                        🕐 جدول بالساعات
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <p className="text-sm text-gray-600 text-right">حدد ما تريد طباعته:</p>
 
                         <div className="space-y-3">
@@ -821,7 +950,11 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         <Button
                             onClick={() => {
                                 if (selectedDates.size > 0) {
-                                    printMultipleDays();
+                                    if (printLayout === 'hourly') {
+                                        printHourlyGrid();
+                                    } else {
+                                        printMultipleDays();
+                                    }
                                 } else if (selectedDate) {
                                     printDayReport(selectedDate);
                                 }
@@ -834,6 +967,6 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
