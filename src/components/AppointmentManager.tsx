@@ -13,7 +13,8 @@ import {
     Check,
     ChevronDown,
     ChevronUp,
-    Edit2
+    Edit2,
+    MapPin
 } from 'lucide-react';
 
 import {
@@ -34,10 +35,14 @@ interface Appointment {
     parentId?: string; // For subtasks
     createdAt: string;
     recurrence?: 'none' | 'daily' | 'weekly' | 'monthly'; // Recurring reminder
+    location?: string; // Location address
+    latitude?: number;
+    longitude?: number;
 }
 
 import { supabase } from '@/integrations/supabase/client';
-// ... other imports
+
+const USER_SETTINGS_TABLE = 'user_settings';
 
 const RECURRENCE_OPTIONS = [
     { value: 'none', label: 'مرة واحدة' },
@@ -51,6 +56,7 @@ const AppointmentManager: React.FC = () => {
     const [newTitle, setNewTitle] = useState('');
     const [newDate, setNewDate] = useState('');
     const [newTime, setNewTime] = useState('');
+    const [newLocation, setNewLocation] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
     const [showCompleted, setShowCompleted] = useState(false);
@@ -154,6 +160,7 @@ const AppointmentManager: React.FC = () => {
                 time: newTime,
                 reminder_minutes: reminderMinutes,
                 is_completed: false,
+                location: newLocation.trim() || null,
             };
 
             const { error } = await supabase
@@ -162,12 +169,52 @@ const AppointmentManager: React.FC = () => {
 
             if (error) throw error;
 
+            // If location is provided, save it to saved_locations as well
+            if (newLocation.trim()) {
+                try {
+                    // Get existing locations
+                    const { data: settingsData } = await supabase
+                        .from(USER_SETTINGS_TABLE)
+                        .select('saved_locations')
+                        .eq('user_id', user.id)
+                        .single();
+
+                    const existingLocations = settingsData?.saved_locations || [];
+
+                    // Add new location with appointment name
+                    const newSavedLocation = {
+                        id: Date.now().toString(),
+                        name: `📅 ${newTitle.trim()}`, // Mark as appointment location
+                        type: 'other',
+                        address: newLocation.trim(),
+                        latitude: 0,
+                        longitude: 0,
+                        createdAt: new Date().toISOString(),
+                    };
+
+                    // Check if location already exists
+                    const locationExists = existingLocations.some((loc: any) =>
+                        loc.address === newLocation.trim() || loc.name === newSavedLocation.name
+                    );
+
+                    if (!locationExists) {
+                        await supabase
+                            .from(USER_SETTINGS_TABLE)
+                            .update({ saved_locations: [newSavedLocation, ...existingLocations] })
+                            .eq('user_id', user.id);
+                    }
+                } catch (locError) {
+                    console.log('Could not save location:', locError);
+                }
+            }
+
             toast({ title: '✅ تم إضافة الموعد' });
 
             // Clear inputs
             setNewTitle('');
             setNewDate('');
             setNewTime('');
+            setNewLocation('');
 
             // Reload data
             fetchAppointments();
@@ -308,6 +355,15 @@ END:VCALENDAR`;
                             type="time"
                             value={newTime}
                             onChange={e => setNewTime(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <Input
+                            value={newLocation}
+                            onChange={e => setNewLocation(e.target.value)}
+                            placeholder="العنوان (اختياري - سيحفظ في المواقع)"
+                            className="flex-1 arabic-body"
                         />
                     </div>
                     <div className="flex items-center gap-2">

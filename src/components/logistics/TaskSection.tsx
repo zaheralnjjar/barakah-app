@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2 } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
@@ -48,6 +48,15 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+    // Print selection state
+    const [showPrintOptions, setShowPrintOptions] = useState(false);
+    const [printSelections, setPrintSelections] = useState({
+        tasks: true,
+        appointments: true,
+        habits: true,
+        medications: true
+    });
     const { habits } = useHabits();
     const { medications } = useMedications();
 
@@ -124,7 +133,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     h1 { color: #16a34a; margin: 0; font-size: 20px; }
                     .section { margin: 20px 0; padding: 15px; border-radius: 10px; }
                     .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-                    .item { padding: 8px 12px; margin: 5px 0; background: #f9fafb; border-radius: 8px; border-right: 3px solid; }
+                    .item { padding: 8px 12px; margin: 5px 0; background: #f9fafb; border-radius: 8px; border-right: 3px solid; display: flex; align-items: flex-start; gap: 10px; }
+                    .checkbox { width: 18px; height: 18px; border: 2px solid #9ca3af; border-radius: 4px; flex-shrink: 0; margin-top: 2px; }
+                    .subtask { padding: 5px 10px; margin: 3px 0 3px 20px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+                    .subtask .checkbox { width: 14px; height: 14px; }
                     .tasks { background: #f0f9ff; } .tasks .item { border-color: #3b82f6; }
                     .appointments { background: #fff7ed; } .appointments .item { border-color: #f97316; }
                     .habits { background: #fef3c7; } .habits .item { border-color: #f59e0b; }
@@ -140,34 +152,48 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                 <button class="back-btn no-print" onclick="window.print()" style="background:#2563eb;margin-bottom:15px">🖨️ طباعة</button>
         `;
 
-        if (data.tasks.length > 0) {
+        if (printSelections.tasks && data.tasks.length > 0) {
             html += `<div class="section tasks"><div class="section-title">📋 المهام (${data.tasks.length})</div>`;
             data.tasks.forEach(t => {
-                html += `<div class="item"><strong>${t.title}</strong><br><small>${t.description || ''} - ${t.priority === 'high' ? 'أولوية عالية' : 'عادية'}</small></div>`;
+                html += `<div class="item"><div class="checkbox"></div><div><strong>${t.title}</strong><br><small>${t.description || ''} - ${t.priority === 'high' ? 'أولوية عالية' : 'عادية'}</small>`;
+                // Add subtasks with checkboxes
+                if (t.subtasks && t.subtasks.length > 0) {
+                    t.subtasks.forEach(st => {
+                        html += `<div class="subtask"><div class="checkbox"></div><span>${st.title}</span></div>`;
+                    });
+                }
+                html += `</div></div>`;
             });
             html += '</div>';
         }
 
-        if (data.appointments.length > 0) {
+        if (printSelections.appointments && data.appointments.length > 0) {
             html += `<div class="section appointments"><div class="section-title">📅 المواعيد (${data.appointments.length})</div>`;
             data.appointments.forEach(a => {
-                html += `<div class="item"><strong>${a.title}</strong><br><small>${a.time} ${a.location ? '- ' + a.location : ''}</small></div>`;
+                html += `<div class="item"><div class="checkbox"></div><div><strong>${a.title}</strong><br><small>${a.time} ${(a as any).location ? '📍 ' + (a as any).location : ''}</small></div></div>`;
             });
             html += '</div>';
         }
 
-        if (data.habits.length > 0) {
+        if (printSelections.habits && data.habits.length > 0) {
             html += `<div class="section habits"><div class="section-title">🔥 العادات (${data.habits.length})</div>`;
             data.habits.forEach(h => {
-                html += `<div class="item">${h.name}</div>`;
+                html += `<div class="item"><div class="checkbox"></div><div>${h.name}`;
+                // Add habit subtasks
+                if (h.subtasks && h.subtasks.length > 0) {
+                    h.subtasks.forEach(st => {
+                        html += `<div class="subtask"><div class="checkbox"></div><span>${st.title}</span></div>`;
+                    });
+                }
+                html += `</div></div>`;
             });
             html += '</div>';
         }
 
-        if (data.medications.length > 0) {
+        if (printSelections.medications && data.medications.length > 0) {
             html += `<div class="section medications"><div class="section-title">💊 الأدوية (${data.medications.length})</div>`;
             data.medications.forEach(m => {
-                html += `<div class="item"><strong>${m.name}</strong><br><small>${m.time}</small></div>`;
+                html += `<div class="item"><div class="checkbox"></div><div><strong>${m.name}</strong><br><small>${m.time}</small></div></div>`;
             });
             html += '</div>';
         }
@@ -179,6 +205,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             printWindow.document.write(html);
             printWindow.document.close();
         }
+        setShowPrintOptions(false);
     };
 
     return (
