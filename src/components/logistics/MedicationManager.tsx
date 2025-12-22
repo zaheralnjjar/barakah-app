@@ -150,12 +150,24 @@ export const MedicationManager = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
-                                    <label>وقت الجرعة</label>
-                                    <Input
-                                        type="time"
-                                        value={newMedication.time}
-                                        onChange={e => setNewMedication({ ...newMedication, time: e.target.value })}
-                                    />
+                                    <label>عدد المرات يومياً</label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        value={Object.keys(newMedication.customTimes || {}).length || 1}
+                                        onChange={e => {
+                                            const count = Number(e.target.value);
+                                            const times: { [key: string]: string } = {};
+                                            for (let i = 0; i < count; i++) {
+                                                times[`dose_${i}`] = newMedication.customTimes?.[`dose_${i}`] || '';
+                                            }
+                                            setNewMedication({ ...newMedication, customTimes: times });
+                                        }}
+                                    >
+                                        <option value="1">مرة واحدة</option>
+                                        <option value="2">مرتين</option>
+                                        <option value="3">3 مرات</option>
+                                        <option value="4">4 مرات</option>
+                                    </select>
                                 </div>
                                 <div className="grid gap-2">
                                     <label>التكرار</label>
@@ -171,6 +183,38 @@ export const MedicationManager = () => {
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Time inputs for each dose */}
+                            {Object.keys(newMedication.customTimes || {}).length > 0 ? (
+                                <div className="grid gap-2">
+                                    <label className="text-sm font-bold">أوقات الجرعات</label>
+                                    <div className="space-y-2">
+                                        {Object.keys(newMedication.customTimes || {}).map((key, i) => (
+                                            <div key={key} className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-500 w-16">الجرعة {i + 1}:</span>
+                                                <Input
+                                                    type="time"
+                                                    value={newMedication.customTimes?.[key] || ''}
+                                                    onChange={e => setNewMedication({
+                                                        ...newMedication,
+                                                        customTimes: { ...newMedication.customTimes, [key]: e.target.value }
+                                                    })}
+                                                    className="flex-1"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid gap-2">
+                                    <label>وقت الجرعة</label>
+                                    <Input
+                                        type="time"
+                                        value={newMedication.time}
+                                        onChange={e => setNewMedication({ ...newMedication, time: e.target.value })}
+                                    />
+                                </div>
+                            )}
 
                             {newMedication.frequency === 'specific_days' && (
                                 <div className="grid gap-2">

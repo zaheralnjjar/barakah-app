@@ -12,6 +12,7 @@ export const HabitTracker = () => {
     const [newHabitName, setNewHabitName] = useState('');
     const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'specific_days'>('daily');
     const [newTimesPerDay, setNewTimesPerDay] = useState(1);
+    const [newHabitTimes, setNewHabitTimes] = useState<string[]>(['']);
     const [newCustomDays, setNewCustomDays] = useState<string[]>([]);
     const [showStats, setShowStats] = useState(false);
     const [showAddDialog, setShowAddDialog] = useState(false);
@@ -20,6 +21,7 @@ export const HabitTracker = () => {
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
     const DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const PRAYER_TIMES = ['بعد الفجر', 'بعد الظهر', 'بعد العصر', 'بعد المغرب', 'بعد العشاء'];
 
     const toggleDay = (day: string, setState: React.Dispatch<React.SetStateAction<string[]>>, currentDays: string[]) => {
         if (currentDays.includes(day)) {
@@ -256,6 +258,44 @@ export const HabitTracker = () => {
                                 </Select>
                             </div>
                         )}
+                        {newHabitFrequency === 'daily' && newTimesPerDay > 1 && (
+                            <div>
+                                <label className="text-sm font-bold mb-2 block">أوقات التنفيذ</label>
+                                <div className="space-y-2">
+                                    {Array.from({ length: newTimesPerDay }).map((_, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 w-16">المرة {i + 1}:</span>
+                                            <input
+                                                type="time"
+                                                value={newHabitTimes[i] || ''}
+                                                onChange={(e) => {
+                                                    const updated = [...newHabitTimes];
+                                                    updated[i] = e.target.value;
+                                                    setNewHabitTimes(updated);
+                                                }}
+                                                className="flex-1 h-8 px-2 border rounded text-sm"
+                                            />
+                                            <select
+                                                value={newHabitTimes[i]?.startsWith('بعد') ? newHabitTimes[i] : ''}
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        const updated = [...newHabitTimes];
+                                                        updated[i] = e.target.value;
+                                                        setNewHabitTimes(updated);
+                                                    }
+                                                }}
+                                                className="h-8 px-2 border rounded text-xs bg-amber-50"
+                                            >
+                                                <option value="">أو بعد صلاة</option>
+                                                {PRAYER_TIMES.map(p => (
+                                                    <option key={p} value={p}>{p}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {newHabitFrequency === 'specific_days' && (
                             <div>
                                 <label className="text-sm font-bold mb-2 block">اختر الأيام</label>
@@ -266,8 +306,8 @@ export const HabitTracker = () => {
                                             type="button"
                                             onClick={() => toggleDay(day, setNewCustomDays, newCustomDays)}
                                             className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${newCustomDays.includes(day)
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
                                             {day}
