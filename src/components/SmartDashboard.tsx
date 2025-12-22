@@ -19,6 +19,7 @@ import AppointmentManager from '@/components/AppointmentManager';
 import ShoppingList from '@/components/ShoppingList';
 import InteractiveMap from '@/components/InteractiveMap';
 import PrayerManager from '@/components/PrayerManager';
+import DailyCalendar from '@/components/DailyCalendar';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
@@ -34,6 +35,7 @@ const MODULES = {
     SHOPPING_WIDGET: 'shopping_widget',
     QUICK_ACTIONS: 'quick_actions',
     SAVED_LOCATIONS: 'saved_locations',
+    DAILY_CALENDAR: 'daily_calendar',       // Daily calendar widget
     FULL_APPOINTMENTS: 'full_appointments', // "Then appointments and reminders"
     FULL_SHOPPING: 'full_shopping',         // "Then shopping list"
     FULL_MAP: 'full_map'                    // "Then the map"
@@ -43,6 +45,7 @@ const DEFAULT_LAYOUT = [
     { id: MODULES.HEADER, visible: true },
     { id: MODULES.PRAYER, visible: true },
     { id: MODULES.FINANCE_SUMMARY, visible: true }, // "Financial side balance..."
+    { id: MODULES.DAILY_CALENDAR, visible: true },  // Daily calendar widget
     { id: MODULES.APPOINTMENTS_WIDGET, visible: true }, // "Appointments and shopping" (Widgets)
     { id: MODULES.SHOPPING_WIDGET, visible: true },
     { id: MODULES.QUICK_ACTIONS, visible: true },   // "Then quick shortcuts"
@@ -399,6 +402,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             case MODULES.FULL_MAP:
                 return <div className="mb-4 h-[300px] rounded-xl overflow-hidden shadow-sm border border-gray-200"><InteractiveMap /></div>;
+
+            case MODULES.DAILY_CALENDAR:
+                return <div className="mb-4"><DailyCalendar compact /></div>;
 
             default: return null;
         }
