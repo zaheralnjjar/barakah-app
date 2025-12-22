@@ -8,7 +8,6 @@ import { useMedications, Medication } from '@/hooks/useMedications';
 
 export const MedicationManager = () => {
     const { medications, addMedication, toggleMedTaken, deleteMedication } = useMedications();
-    const [selectedMedDay, setSelectedMedDay] = useState<string | null>(null);
     const [showMedDialog, setShowMedDialog] = useState(false);
 
     // Form State
@@ -17,6 +16,7 @@ export const MedicationManager = () => {
         time: '08:00',
         frequency: 'daily',
         customDays: [],
+        customTimes: {},
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
         isPermanent: true,
@@ -29,7 +29,7 @@ export const MedicationManager = () => {
         if (!newMedication.name) return;
         addMedication(newMedication);
         setNewMedication({
-            name: '', time: '08:00', frequency: 'daily', customDays: [],
+            name: '', time: '08:00', frequency: 'daily', customDays: [], customTimes: {},
             startDate: new Date().toISOString().split('T')[0], endDate: '', isPermanent: true, reminder: true
         });
         setShowMedDialog(false);
@@ -38,30 +38,17 @@ export const MedicationManager = () => {
     return (
         <Card>
             <CardHeader className="pb-2">
-                <CardTitle className="arabic-title text-base flex items-center gap-2">
-                    💊 متتبع الأدوية
+                <CardTitle className="arabic-title text-base flex items-center justify-between">
+                    <span>💊 متتبع الأدوية</span>
+                    <Button size="sm" variant="outline" onClick={() => setShowMedDialog(true)}>
+                        <Plus className="w-3 h-3 ml-1" /> إضافة دواء
+                    </Button>
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                {/* Weekly Selector */}
-                <div className="grid grid-cols-7 gap-1 mb-3">
-                    {DAYS_AR.map((day) => (
-                        <button
-                            key={day}
-                            onClick={() => { setSelectedMedDay(day); setShowMedDialog(true); }}
-                            className={`p-2 text-center rounded-lg border text-xs hover:bg-primary/10 transition-colors ${selectedMedDay === day ? 'bg-primary/20 border-primary' : 'bg-gray-50'}`}
-                        >
-                            <span className="block font-bold">{day}</span>
-                        </button>
-                    ))}
-                </div>
-
                 <div className="border rounded-lg p-3 bg-gray-50">
                     <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-sm">أدويتك المسجلة</span>
-                        <Button size="sm" variant="outline" onClick={() => setShowMedDialog(true)}>
-                            <Plus className="w-3 h-3 ml-1" /> إضافة دواء
-                        </Button>
                     </div>
                     <div className="space-y-2">
                         {medications.map(med => {

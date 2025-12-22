@@ -4,7 +4,8 @@ import { useToast } from '@/hooks/use-toast';
 export interface Medication {
     id: string;
     name: string;
-    time: string;
+    time: string; // Default time
+    customTimes?: Record<string, string>; // { 'السبت': '08:00', 'الأحد': '09:00', ... }
     frequency: 'daily' | 'weekly' | 'monthly' | 'specific_days';
     customDays: string[];
     startDate: string;

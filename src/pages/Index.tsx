@@ -277,9 +277,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
-                <div className="h-[80vh] w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-                  <InteractiveMap />
-                </div>
+                <InteractiveMap />
               </TabsContent>
             </div>
           </Tabs>
