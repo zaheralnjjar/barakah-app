@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
+import { useHabits } from '@/hooks/useHabits';
+import { useMedications } from '@/hooks/useMedications';
 
 interface TaskSectionProps {
     tasks: MainTask[];
@@ -17,7 +20,7 @@ interface TaskSectionProps {
     onDeleteTask: (id: string) => void;
     onShareTask: (task: MainTask) => void;
 
-    onDeleteAppointment: (id: string) => void; // Edit appointment not fully implemented in parent yet?
+    onDeleteAppointment: (id: string) => void;
 
     // Subtask Actions
     onAddSubtask: (taskId: string, title: string) => void;
@@ -43,7 +46,139 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
     pomodoro
 }) => {
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-    const DAYS_AR = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const { habits } = useHabits();
+    const { medications } = useMedications();
+
+    const DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+    // Get calendar days for current month
+    const getMonthDays = () => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay();
+
+        const days: (number | null)[] = [];
+
+        // Add empty cells for days before the first of the month
+        for (let i = 0; i < startDayOfWeek; i++) {
+            days.push(null);
+        }
+
+        // Add days of the month
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push(i);
+        }
+
+        return days;
+    };
+
+    const getDateStr = (day: number) => {
+        const year = currentMonth.getFullYear();
+        const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}-${String(day).padStart(2, '0')}`;
+    };
+
+    const getDayData = (dateStr: string) => {
+        const dayName = DAYS_AR[new Date(dateStr).getDay()];
+        return {
+            tasks: tasks.filter(t => t.deadline === dateStr),
+            appointments: appointments.filter(a => a.date === dateStr),
+            habits: habits.filter(h =>
+                h.frequency === 'daily' ||
+                (h.frequency === 'weekly' && new Date(dateStr).getDay() === 0) ||
+                (h.frequency === 'monthly' && new Date(dateStr).getDate() === 1)
+            ),
+            medications: medications.filter(m =>
+                m.frequency === 'daily' ||
+                (m.frequency === 'specific_days' && m.customDays?.includes(dayName))
+            )
+        };
+    };
+
+    const getDayCount = (day: number) => {
+        const dateStr = getDateStr(day);
+        const data = getDayData(dateStr);
+        return data.tasks.length + data.appointments.length + data.habits.length + data.medications.length;
+    };
+
+    const printDayReport = (dateStr: string) => {
+        const data = getDayData(dateStr);
+        const date = new Date(dateStr);
+
+        let html = `
+            <html dir="rtl">
+            <head>
+                <title>مهام يوم ${date.toLocaleDateString('ar')}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: Tajawal, Arial; padding: 20px; margin: 0; }
+                    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #16a34a; padding-bottom: 10px; }
+                    .back-btn { background: #16a34a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+                    h1 { color: #16a34a; margin: 0; font-size: 20px; }
+                    .section { margin: 20px 0; padding: 15px; border-radius: 10px; }
+                    .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+                    .item { padding: 8px 12px; margin: 5px 0; background: #f9fafb; border-radius: 8px; border-right: 3px solid; }
+                    .tasks { background: #f0f9ff; } .tasks .item { border-color: #3b82f6; }
+                    .appointments { background: #fff7ed; } .appointments .item { border-color: #f97316; }
+                    .habits { background: #fef3c7; } .habits .item { border-color: #f59e0b; }
+                    .medications { background: #fdf4ff; } .medications .item { border-color: #a855f7; }
+                    @media print { .no-print { display: none !important; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>📅 مهام ${date.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
+                    <button class="back-btn no-print" onclick="window.close()">← رجوع</button>
+                </div>
+                <button class="back-btn no-print" onclick="window.print()" style="background:#2563eb;margin-bottom:15px">🖨️ طباعة</button>
+        `;
+
+        if (data.tasks.length > 0) {
+            html += `<div class="section tasks"><div class="section-title">📋 المهام (${data.tasks.length})</div>`;
+            data.tasks.forEach(t => {
+                html += `<div class="item"><strong>${t.title}</strong><br><small>${t.description || ''} - ${t.priority === 'high' ? 'أولوية عالية' : 'عادية'}</small></div>`;
+            });
+            html += '</div>';
+        }
+
+        if (data.appointments.length > 0) {
+            html += `<div class="section appointments"><div class="section-title">📅 المواعيد (${data.appointments.length})</div>`;
+            data.appointments.forEach(a => {
+                html += `<div class="item"><strong>${a.title}</strong><br><small>${a.time} ${a.location ? '- ' + a.location : ''}</small></div>`;
+            });
+            html += '</div>';
+        }
+
+        if (data.habits.length > 0) {
+            html += `<div class="section habits"><div class="section-title">🔥 العادات (${data.habits.length})</div>`;
+            data.habits.forEach(h => {
+                html += `<div class="item">${h.name}</div>`;
+            });
+            html += '</div>';
+        }
+
+        if (data.medications.length > 0) {
+            html += `<div class="section medications"><div class="section-title">💊 الأدوية (${data.medications.length})</div>`;
+            data.medications.forEach(m => {
+                html += `<div class="item"><strong>${m.name}</strong><br><small>${m.time}</small></div>`;
+            });
+            html += '</div>';
+        }
+
+        html += `<p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -65,57 +200,63 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                         }`}
                 >
-                    📅 التقويم الأسبوعي
+                    📅 التقويم الشهري
                 </button>
             </div>
 
             {activeTab === 'calendar' ? (
-                <div
-                    className="bg-white rounded-xl border p-4 shadow-sm overflow-x-auto"
-                    style={{ touchAction: 'pan-x' }}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchMove={(e) => e.stopPropagation()}
-                >
-                    <div className="flex gap-4 min-w-[800px]">
-                        {DAYS_AR.map((day, idx) => {
-                            const today = new Date();
-                            const diff = (today.getDay() + 1) % 7;
-                            const sat = new Date(today);
-                            sat.setDate(today.getDate() - diff);
-                            const thisDate = new Date(sat);
-                            thisDate.setDate(sat.getDate() + idx);
-                            const dateStr = thisDate.toISOString().split('T')[0];
+                <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                    {/* Month Navigation */}
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white">
+                        <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}>
+                            <ChevronRight className="w-5 h-5" />
+                        </Button>
+                        <h2 className="font-bold text-lg">
+                            {MONTHS_AR[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                        </h2>
+                        <Button variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}>
+                            <ChevronLeft className="w-5 h-5" />
+                        </Button>
+                    </div>
 
-                            const dayTasks = tasks.filter(t => t.deadline === dateStr);
-                            const dayAppts = appointments.filter(a => a.date === dateStr);
+                    {/* Days Header */}
+                    <div className="grid grid-cols-7 bg-gray-100">
+                        {DAYS_AR.map(day => (
+                            <div key={day} className="text-center py-2 text-xs font-bold text-gray-600">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7">
+                        {getMonthDays().map((day, idx) => {
+                            if (day === null) {
+                                return <div key={idx} className="h-16 bg-gray-50 border-b border-r"></div>;
+                            }
+
+                            const dateStr = getDateStr(day);
+                            const isToday = dateStr === new Date().toISOString().split('T')[0];
+                            const count = getDayCount(day);
 
                             return (
                                 <div
                                     key={idx}
-                                    className={`flex-1 min-w-[120px] bg-gray-50 rounded-lg p-2 ${dateStr === new Date().toISOString().split('T')[0] ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={() => setSelectedDate(dateStr)}
+                                    className={`h-16 border-b border-r p-1 cursor-pointer transition-all hover:bg-emerald-50 ${isToday ? 'bg-emerald-100 ring-2 ring-emerald-500 ring-inset' : 'bg-white'}`}
                                 >
-                                    <div className="text-center mb-2 pb-2 border-b">
-                                        <span className="block font-bold text-sm text-gray-800">{day}</span>
-                                        <span className="text-[10px] text-gray-400">{dateStr}</span>
+                                    <div className={`text-sm font-bold ${isToday ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                        {day}
                                     </div>
-                                    <div className="space-y-2">
-                                        {dayAppts.map(a => (
-                                            <div key={a.id} className="bg-orange-100 p-1.5 rounded text-[10px] border-r-2 border-orange-500">
-                                                <div className="font-bold truncate">{a.title}</div>
-                                                <div className="text-[10px] text-gray-600">{a.time}</div>
-                                            </div>
-                                        ))}
-                                        {dayTasks.map(t => (
-                                            <div key={t.id} className="bg-white p-1.5 rounded text-[10px] border shadow-sm">
-                                                <div className="font-bold truncate">{t.title}</div>
-                                                <div className={`text-[10px] ${t.priority === 'high' ? 'text-red-500' : 'text-gray-500'}`}>{t.priority === 'high' ? 'عالية' : 'عادية'}</div>
-                                            </div>
-                                        ))}
-                                        {dayAppts.length === 0 && dayTasks.length === 0 && <div className="text-center text-[10px] text-gray-300 py-4">- فارغ -</div>}
-                                    </div>
+                                    {count > 0 && (
+                                        <div className="flex flex-wrap gap-0.5 mt-1">
+                                            <span className="bg-emerald-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
+                                                {count}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                            )
+                            );
                         })}
                     </div>
                 </div>
@@ -276,6 +417,109 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     </div>
                 </>
             )}
+
+            {/* Day Details Dialog */}
+            <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
+                <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                                <CalendarIcon className="w-5 h-5 text-emerald-500" />
+                                {selectedDate && new Date(selectedDate).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                            </span>
+                            <Button variant="outline" size="sm" onClick={() => selectedDate && printDayReport(selectedDate)}>
+                                <Printer className="w-4 h-4 ml-1" /> طباعة
+                            </Button>
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {selectedDate && (() => {
+                        const data = getDayData(selectedDate);
+                        const totalItems = data.tasks.length + data.appointments.length + data.habits.length + data.medications.length;
+
+                        return (
+                            <div className="space-y-4">
+                                {totalItems === 0 ? (
+                                    <div className="text-center py-8 text-gray-400">
+                                        <CalendarIcon className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                        <p>لا توجد مهام لهذا اليوم</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Tasks */}
+                                        {data.tasks.length > 0 && (
+                                            <div className="bg-blue-50 p-3 rounded-lg">
+                                                <h4 className="font-bold text-blue-700 mb-2 flex items-center gap-2">
+                                                    📋 المهام ({data.tasks.length})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {data.tasks.map(t => (
+                                                        <div key={t.id} className="bg-white p-2 rounded border-r-2 border-blue-500">
+                                                            <span className="font-bold">{t.title}</span>
+                                                            {t.description && <p className="text-xs text-gray-500">{t.description}</p>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Appointments */}
+                                        {data.appointments.length > 0 && (
+                                            <div className="bg-orange-50 p-3 rounded-lg">
+                                                <h4 className="font-bold text-orange-700 mb-2 flex items-center gap-2">
+                                                    📅 المواعيد ({data.appointments.length})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {data.appointments.map(a => (
+                                                        <div key={a.id} className="bg-white p-2 rounded border-r-2 border-orange-500">
+                                                            <span className="font-bold">{a.title}</span>
+                                                            <p className="text-xs text-gray-500">{a.time} {a.location && `- ${a.location}`}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Habits */}
+                                        {data.habits.length > 0 && (
+                                            <div className="bg-amber-50 p-3 rounded-lg">
+                                                <h4 className="font-bold text-amber-700 mb-2 flex items-center gap-2">
+                                                    🔥 العادات ({data.habits.length})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {data.habits.map(h => (
+                                                        <div key={h.id} className="bg-white p-2 rounded border-r-2 border-amber-500">
+                                                            <span className="font-bold">{h.name}</span>
+                                                            <p className="text-xs text-gray-500">🔥 {h.streak} يوم متواصل</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Medications */}
+                                        {data.medications.length > 0 && (
+                                            <div className="bg-purple-50 p-3 rounded-lg">
+                                                <h4 className="font-bold text-purple-700 mb-2 flex items-center gap-2">
+                                                    💊 الأدوية ({data.medications.length})
+                                                </h4>
+                                                <div className="space-y-2">
+                                                    {data.medications.map(m => (
+                                                        <div key={m.id} className="bg-white p-2 rounded border-r-2 border-purple-500">
+                                                            <span className="font-bold">{m.name}</span>
+                                                            <p className="text-xs text-gray-500">{m.time}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
