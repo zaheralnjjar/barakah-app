@@ -3,17 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Check, Trash2, BarChart2, TrendingUp, Calendar, Target } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Check, Trash2, BarChart2, TrendingUp, Calendar, Target, Edit, Settings } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 
 export const HabitTracker = () => {
-    const { habits, addHabit, toggleHabit, deleteHabit } = useHabits();
+    const { habits, addHabit, toggleHabit, deleteHabit, updateHabit } = useHabits();
     const [newHabitName, setNewHabitName] = useState('');
+    const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'specific_days'>('daily');
+    const [newTimesPerDay, setNewTimesPerDay] = useState(1);
     const [showStats, setShowStats] = useState(false);
+    const [showAddDialog, setShowAddDialog] = useState(false);
+    const [editingHabit, setEditingHabit] = useState<any>(null);
 
     const handleAdd = () => {
-        addHabit(newHabitName);
+        addHabit(newHabitName, newHabitFrequency, [], newTimesPerDay);
         setNewHabitName('');
+        setNewHabitFrequency('daily');
+        setNewTimesPerDay(1);
+        setShowAddDialog(false);
+    };
+
+    const handleSaveEdit = () => {
+        if (editingHabit) {
+            updateHabit(editingHabit.id, {
+                name: editingHabit.name,
+                frequency: editingHabit.frequency,
+                timesPerDay: editingHabit.timesPerDay
+            });
+            setEditingHabit(null);
+        }
     };
 
     // Calculate Stats
@@ -43,6 +62,16 @@ export const HabitTracker = () => {
         total: totalHabits
     }));
 
+    const getFrequencyLabel = (freq: string) => {
+        switch (freq) {
+            case 'daily': return 'يومياً';
+            case 'weekly': return 'أسبوعياً';
+            case 'monthly': return 'شهرياً';
+            case 'specific_days': return 'أيام محددة';
+            default: return freq;
+        }
+    };
+
     return (
         <>
             <Card>
@@ -55,23 +84,17 @@ export const HabitTracker = () => {
                             🔥 متتبع العادات
                             <BarChart2 className="w-4 h-4 text-gray-400" />
                         </span>
-                        <div className="flex gap-1">
-                            <Input
-                                placeholder="عادة جديدة..."
-                                value={newHabitName}
-                                onChange={e => setNewHabitName(e.target.value)}
-                                className="h-8 w-32 text-xs"
-                                onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                                onClick={e => e.stopPropagation()}
-                            />
-                            <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); handleAdd(); }}><Plus className="w-3 h-3" /></Button>
-                        </div>
+                        <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); setShowAddDialog(true); }}>
+                            <Plus className="w-3 h-3 ml-1" /> إضافة
+                        </Button>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2">
                         {habits.map(habit => {
                             const isCompletedToday = !!(habit.history || {})[today];
+                            const timesTarget = habit.timesPerDay || 1;
+                            const timesToday = (habit.timesCompleted || {})[today] || 0;
                             return (
                                 <div key={habit.id} className="flex items-center justify-between p-2 bg-white rounded border hover:bg-gray-50 transition-colors">
                                     <div className="flex items-center gap-3">
@@ -83,12 +106,23 @@ export const HabitTracker = () => {
                                         </button>
                                         <div>
                                             <span className={`font-bold block ${isCompletedToday ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{habit.name}</span>
-                                            <span className="text-[10px] text-orange-600 font-bold">🔥 {habit.streak || 0} يوم متواصل</span>
+                                            <div className="flex gap-2 items-center">
+                                                <span className="text-[10px] text-orange-600 font-bold">🔥 {habit.streak || 0} يوم</span>
+                                                <span className="text-[10px] text-gray-400">| {getFrequencyLabel(habit.frequency)}</span>
+                                                {timesTarget > 1 && (
+                                                    <span className="text-[10px] text-blue-500">{timesToday}/{timesTarget}</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500" onClick={() => deleteHabit(habit.id)}>
-                                        <Trash2 className="w-3 h-3" />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-400 hover:text-blue-600" onClick={() => setEditingHabit({ ...habit })}>
+                                            <Edit className="w-3 h-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500" onClick={() => deleteHabit(habit.id)}>
+                                            <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -96,6 +130,113 @@ export const HabitTracker = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Add Habit Dialog */}
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">إضافة عادة جديدة</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm font-bold mb-1 block">اسم العادة</label>
+                            <Input
+                                placeholder="مثال: قراءة القرآن"
+                                value={newHabitName}
+                                onChange={e => setNewHabitName(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold mb-1 block">التكرار</label>
+                            <Select value={newHabitFrequency} onValueChange={(v: any) => setNewHabitFrequency(v)}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="daily">يومياً</SelectItem>
+                                    <SelectItem value="weekly">أسبوعياً</SelectItem>
+                                    <SelectItem value="monthly">شهرياً</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {newHabitFrequency === 'daily' && (
+                            <div>
+                                <label className="text-sm font-bold mb-1 block">عدد المرات يومياً</label>
+                                <Select value={newTimesPerDay.toString()} onValueChange={(v) => setNewTimesPerDay(Number(v))}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">مرة واحدة</SelectItem>
+                                        <SelectItem value="2">مرتين</SelectItem>
+                                        <SelectItem value="3">3 مرات</SelectItem>
+                                        <SelectItem value="4">4 مرات</SelectItem>
+                                        <SelectItem value="5">5 مرات</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        <Button className="w-full" onClick={handleAdd} disabled={!newHabitName.trim()}>
+                            <Plus className="w-4 h-4 ml-1" /> إضافة العادة
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Habit Dialog */}
+            <Dialog open={!!editingHabit} onOpenChange={() => setEditingHabit(null)}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <Settings className="w-5 h-5" /> تعديل العادة
+                        </DialogTitle>
+                    </DialogHeader>
+                    {editingHabit && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-bold mb-1 block">اسم العادة</label>
+                                <Input
+                                    value={editingHabit.name}
+                                    onChange={e => setEditingHabit({ ...editingHabit, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold mb-1 block">التكرار</label>
+                                <Select value={editingHabit.frequency} onValueChange={(v) => setEditingHabit({ ...editingHabit, frequency: v })}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="daily">يومياً</SelectItem>
+                                        <SelectItem value="weekly">أسبوعياً</SelectItem>
+                                        <SelectItem value="monthly">شهرياً</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {editingHabit.frequency === 'daily' && (
+                                <div>
+                                    <label className="text-sm font-bold mb-1 block">عدد المرات يومياً</label>
+                                    <Select value={(editingHabit.timesPerDay || 1).toString()} onValueChange={(v) => setEditingHabit({ ...editingHabit, timesPerDay: Number(v) })}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="1">مرة واحدة</SelectItem>
+                                            <SelectItem value="2">مرتين</SelectItem>
+                                            <SelectItem value="3">3 مرات</SelectItem>
+                                            <SelectItem value="4">4 مرات</SelectItem>
+                                            <SelectItem value="5">5 مرات</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            <Button className="w-full" onClick={handleSaveEdit}>
+                                حفظ التغييرات
+                            </Button>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
 
             {/* Stats Modal */}
             <Dialog open={showStats} onOpenChange={setShowStats}>

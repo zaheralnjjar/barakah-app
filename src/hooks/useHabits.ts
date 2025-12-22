@@ -5,9 +5,11 @@ export interface Habit {
     id: string;
     name: string;
     streak: number;
-    history: Record<string, boolean>;
-    frequency: 'daily' | 'weekly' | 'specific_days';
+    history: Record<string, boolean | number>; // number for times completed
+    frequency: 'daily' | 'weekly' | 'monthly' | 'specific_days';
     customDays: string[]; // e.g. ['السبت', 'الأحد', ...]
+    timesPerDay?: number; // for daily habits that need multiple completions
+    timesCompleted?: Record<string, number>; // times completed per day
 }
 
 export const useHabits = () => {
@@ -20,7 +22,12 @@ export const useHabits = () => {
         localStorage.setItem('baraka_habits', JSON.stringify(habits));
     }, [habits]);
 
-    const addHabit = (name: string, frequency: 'daily' | 'weekly' | 'specific_days' = 'daily', customDays: string[] = []) => {
+    const addHabit = (
+        name: string,
+        frequency: 'daily' | 'weekly' | 'monthly' | 'specific_days' = 'daily',
+        customDays: string[] = [],
+        timesPerDay: number = 1
+    ) => {
         if (!name.trim()) return;
         const newHabit: Habit = {
             id: Date.now().toString(),
@@ -28,13 +35,15 @@ export const useHabits = () => {
             streak: 0,
             history: {},
             frequency,
-            customDays
+            customDays,
+            timesPerDay: frequency === 'daily' ? timesPerDay : 1,
+            timesCompleted: {}
         };
         setHabits(prev => [...prev, newHabit]);
         toast({ title: 'تم إضافة العادة' });
     };
 
-    const updateHabit = (id: string, updates: Partial<Pick<Habit, 'name' | 'frequency' | 'customDays'>>) => {
+    const updateHabit = (id: string, updates: Partial<Pick<Habit, 'name' | 'frequency' | 'customDays' | 'timesPerDay'>>) => {
         setHabits(prev => prev.map(h => h.id === id ? { ...h, ...updates } : h));
         toast({ title: 'تم تحديث العادة' });
     };
