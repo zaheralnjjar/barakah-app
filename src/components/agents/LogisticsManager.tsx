@@ -50,6 +50,7 @@ import { TaskStats } from '@/components/logistics/TaskStats';
 import { HabitTracker } from '@/components/logistics/HabitTracker';
 import { MedicationManager } from '@/components/logistics/MedicationManager';
 import { QuickNotes } from '@/components/logistics/QuickNotes';
+import { DailyChecklist } from '@/components/logistics/DailyChecklist';
 
 const LogisticsManager = () => {
   // State Hooks
@@ -380,6 +381,9 @@ const LogisticsManager = () => {
               format: pomodoro.formatTime
             }}
           />
+
+          {/* Daily Checklist */}
+          <DailyChecklist />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <HabitTracker />
