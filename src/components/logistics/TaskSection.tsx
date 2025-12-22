@@ -70,7 +70,12 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             </div>
 
             {activeTab === 'calendar' ? (
-                <div className="bg-white rounded-xl border p-4 shadow-sm overflow-x-auto">
+                <div
+                    className="bg-white rounded-xl border p-4 shadow-sm overflow-x-auto"
+                    style={{ touchAction: 'pan-x' }}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                >
                     <div className="flex gap-4 min-w-[800px]">
                         {DAYS_AR.map((day, idx) => {
                             const today = new Date();
@@ -85,7 +90,11 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                             const dayAppts = appointments.filter(a => a.date === dateStr);
 
                             return (
-                                <div key={idx} className={`flex-1 min-w-[120px] bg-gray-50 rounded-lg p-2 ${dateStr === new Date().toISOString().split('T')[0] ? 'ring-2 ring-primary ring-offset-1' : ''}`}>
+                                <div
+                                    key={idx}
+                                    className={`flex-1 min-w-[120px] bg-gray-50 rounded-lg p-2 ${dateStr === new Date().toISOString().split('T')[0] ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     <div className="text-center mb-2 pb-2 border-b">
                                         <span className="block font-bold text-sm text-gray-800">{day}</span>
                                         <span className="text-[10px] text-gray-400">{dateStr}</span>
@@ -179,8 +188,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                             <h4 className={`font-bold text-lg group-hover:text-indigo-600 transition-colors ${task.progress === 100 ? 'line-through text-gray-400' : 'text-gray-900'}`}>{task.title}</h4>
                                             {task.type === 'project' && <Badge variant="outline" className="text-[10px] border-indigo-200 text-indigo-700 bg-indigo-50">مشروع</Badge>}
                                             <Badge className={`text-[10px] px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-700 border-red-200 border' :
-                                                    task.priority === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200 border' :
-                                                        'bg-blue-100 text-blue-700 border-blue-200 border'
+                                                task.priority === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200 border' :
+                                                    'bg-blue-100 text-blue-700 border-blue-200 border'
                                                 }`}>
                                                 {task.priority === 'high' ? 'مستعجل' : task.priority === 'medium' ? 'متوسط' : 'عادي'}
                                             </Badge>

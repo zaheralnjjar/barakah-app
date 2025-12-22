@@ -880,18 +880,29 @@ const FinancialController = () => {
                     let html = `
                       <html dir="rtl">
                       <head><title>المعاملات المالية</title>
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
                       <style>
-                        body { font-family: Tajawal, Arial; padding: 20px; }
+                        body { font-family: Tajawal, Arial; padding: 20px; margin: 0; }
+                        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+                        .back-btn { background: #16a34a; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+                        .back-btn:hover { background: #15803d; }
                         table { width: 100%; border-collapse: collapse; }
                         th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
                         th { background: #f5f5f5; }
                         .income { color: green; }
                         .expense { color: red; }
+                        @media print { .back-btn, .no-print { display: none !important; } }
                       </style>
                       </head>
                       <body>
-                      <h1>المعاملات المالية - نظام بركة</h1>
+                      <div class="header">
+                        <h1 style="margin:0">المعاملات المالية - نظام بركة</h1>
+                        <button class="back-btn no-print" onclick="window.close()">← رجوع</button>
+                      </div>
                       <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar')}</p>
+                      <div class="no-print" style="margin-bottom:15px">
+                        <button class="back-btn" onclick="window.print()" style="background:#2563eb">🖨️ طباعة</button>
+                      </div>
                       <table>
                         <tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>الوصف</th><th>الفئة</th></tr>
                     `;
@@ -907,7 +918,6 @@ const FinancialController = () => {
                     html += '</table></body></html>';
                     printWindow.document.write(html);
                     printWindow.document.close();
-                    printWindow.print();
                   }}
                 >
                   🖨️ طباعة
@@ -988,11 +998,12 @@ const FinancialController = () => {
               )}
             </div>
 
-            {/* Table Header - 3 columns, no icons */}
-            <div className="grid grid-cols-3 gap-3 p-3 bg-gray-100 rounded-t-lg text-sm font-bold text-gray-700">
+            {/* Table Header - 4 columns with actions */}
+            <div className="grid grid-cols-4 gap-2 p-3 bg-gray-100 rounded-t-lg text-sm font-bold text-gray-700">
               <span className="text-right">المبلغ</span>
               <span className="text-center">التاريخ</span>
               <span className="text-right">الوصف</span>
+              <span className="text-center">إجراءات</span>
             </div>
 
             <div className="space-y-0 border rounded-b-lg overflow-hidden">
@@ -1006,7 +1017,7 @@ const FinancialController = () => {
                   return true;
                 })
                 .map((expense: any, index: number) => (
-                  <div key={expense.id || index} className={`grid grid-cols-3 gap-3 p-3 border-b last:border-b-0 items-center ${expense.type === 'income' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div key={expense.id || index} className={`grid grid-cols-4 gap-2 p-3 border-b last:border-b-0 items-center ${expense.type === 'income' ? 'bg-green-50' : 'bg-red-50'}`}>
                     {/* Amount Column */}
                     <div className="text-right">
                       <span className={`font-bold text-base block ${expense.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
@@ -1026,6 +1037,45 @@ const FinancialController = () => {
                     <div className="text-right">
                       <span className="text-sm font-medium block truncate">{expense.category}</span>
                       {expense.description && <span className="text-xs text-gray-400 block truncate">{expense.description}</span>}
+                    </div>
+
+                    {/* Actions Column */}
+                    <div className="flex justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTransaction(expense);
+                          setNewTransaction({
+                            amount: expense.amount.toString(),
+                            currency: expense.currency,
+                            type: expense.type,
+                            description: expense.description || '',
+                            category: expense.category || 'أخرى'
+                          });
+                        }}
+                      >
+                        <Edit className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('هل تريد حذف هذه المعاملة؟')) {
+                            const updatedExpenses = financeData.pending_expenses.filter((e: any) => e.id !== expense.id);
+                            const newData = { ...financeData, pending_expenses: updatedExpenses };
+                            setFinanceData(newData);
+                            localStorage.setItem('baraka_finance', JSON.stringify(newData));
+                            toast({ title: '✅ تم حذف المعاملة' });
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
                     </div>
                   </div>
                 ))}
