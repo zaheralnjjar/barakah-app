@@ -89,7 +89,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
     }
 
     return (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-3">
             {activeActions.map((action) => (
                 <Card
                     key={action.id}

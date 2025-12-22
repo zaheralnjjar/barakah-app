@@ -12,17 +12,29 @@ export const HabitTracker = () => {
     const [newHabitName, setNewHabitName] = useState('');
     const [newHabitFrequency, setNewHabitFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'specific_days'>('daily');
     const [newTimesPerDay, setNewTimesPerDay] = useState(1);
+    const [newCustomDays, setNewCustomDays] = useState<string[]>([]);
     const [showStats, setShowStats] = useState(false);
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingHabit, setEditingHabit] = useState<any>(null);
     const [expandedHabitId, setExpandedHabitId] = useState<string | null>(null);
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
+    const DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+    const toggleDay = (day: string, setState: React.Dispatch<React.SetStateAction<string[]>>, currentDays: string[]) => {
+        if (currentDays.includes(day)) {
+            setState(currentDays.filter(d => d !== day));
+        } else {
+            setState([...currentDays, day]);
+        }
+    };
+
     const handleAdd = () => {
-        addHabit(newHabitName, newHabitFrequency, [], newTimesPerDay);
+        addHabit(newHabitName, newHabitFrequency, newCustomDays, newTimesPerDay);
         setNewHabitName('');
         setNewHabitFrequency('daily');
         setNewTimesPerDay(1);
+        setNewCustomDays([]);
         setShowAddDialog(false);
     };
 
@@ -223,6 +235,7 @@ export const HabitTracker = () => {
                                     <SelectItem value="daily">يومياً</SelectItem>
                                     <SelectItem value="weekly">أسبوعياً</SelectItem>
                                     <SelectItem value="monthly">شهرياً</SelectItem>
+                                    <SelectItem value="specific_days">أيام محددة</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -243,7 +256,27 @@ export const HabitTracker = () => {
                                 </Select>
                             </div>
                         )}
-                        <Button className="w-full" onClick={handleAdd} disabled={!newHabitName.trim()}>
+                        {newHabitFrequency === 'specific_days' && (
+                            <div>
+                                <label className="text-sm font-bold mb-2 block">اختر الأيام</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {DAYS_AR.map(day => (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => toggleDay(day, setNewCustomDays, newCustomDays)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${newCustomDays.includes(day)
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            {day}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        <Button className="w-full" onClick={handleAdd} disabled={!newHabitName.trim() || (newHabitFrequency === 'specific_days' && newCustomDays.length === 0)}>
                             <Plus className="w-4 h-4 ml-1" /> إضافة العادة
                         </Button>
                     </div>
