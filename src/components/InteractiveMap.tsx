@@ -362,7 +362,7 @@ const InteractiveMap = () => {
                         <MapContainer
                             center={mapCenter}
                             zoom={13}
-                            zoomControl={true}
+                            zoomControl={false}
                             style={{ height: '100%', width: '100%' }}
                         >
                             <ChangeView center={mapCenter} zoom={15} />

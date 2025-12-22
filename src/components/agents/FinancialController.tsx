@@ -63,7 +63,32 @@ const FinancialController = () => {
   const [newBudget, setNewBudget] = useState({ category: '', limit: '' });
   const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '' });
 
-  // Currency Converter State
+  // Date Range Filter State
+  const [dateRangeFilter, setDateRangeFilter] = useState('all');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  // Get Filtered Transactions Helper
+  const getFilteredTransactions = () => {
+    let transactions = financeData.pending_expenses || [];
+    if (filterCategory !== 'all') {
+      transactions = transactions.filter((t: any) => t.category === filterCategory);
+    }
+    if (filterDate) {
+      if (filterEndDate) {
+        // Date range
+        transactions = transactions.filter((t: any) => {
+          const tDate = t.timestamp?.split('T')[0] || '';
+          return tDate >= filterDate && tDate <= filterEndDate;
+        });
+      } else {
+        // Single date
+        transactions = transactions.filter((t: any) => t.timestamp?.startsWith(filterDate));
+      }
+    }
+    return transactions.slice(-50).reverse();
+  };
+
+  // Currency Converter State (kept for internal use)
   const [converter, setConverter] = useState({ amount: '', from: 'USD', to: 'ARS', result: 0 });
 
   // Report State
@@ -545,52 +570,6 @@ const FinancialController = () => {
         {/* Financial Tools Section */}
         <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Currency Converter */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="arabic-title text-sm flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" /> حاسبة العملات
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="المبلغ"
-                    value={converter.amount}
-                    onChange={e => setConverter({ ...converter, amount: e.target.value })}
-                    className="text-right"
-                  />
-                  <Button onClick={calculateConversion} size="icon"><Calculator className="w-4 h-4" /></Button>
-                </div>
-                <div className="flex gap-2 justify-between items-center text-sm">
-                  <select
-                    className="border rounded p-1"
-                    value={converter.from}
-                    onChange={e => setConverter({ ...converter, from: e.target.value })}
-                  >
-                    <option value="USD">USD</option>
-                    <option value="ARS">ARS</option>
-                  </select>
-                  <span>إلى</span>
-                  <select
-                    className="border rounded p-1"
-                    value={converter.to}
-                    onChange={e => setConverter({ ...converter, to: e.target.value })}
-                  >
-                    <option value="ARS">ARS</option>
-                    <option value="USD">USD</option>
-                  </select>
-                </div>
-                {converter.result > 0 && (
-                  <div className="bg-green-50 p-2 rounded text-center font-bold text-green-700">
-                    {converter.result.toLocaleString()} {converter.to}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Weekly Report */}
           <Card>
             <CardHeader className="pb-2">
@@ -854,29 +833,127 @@ const FinancialController = () => {
       {financeData.pending_expenses && financeData.pending_expenses.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="arabic-title">المعاملات الأخيرة</CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={async () => {
-                  const transactions = financeData.pending_expenses.slice(-10).reverse();
-                  let text = 'المعاملات الأخيرة - بركة\n' + '─'.repeat(20) + '\n';
-                  transactions.forEach((t: any) => {
-                    text += `${t.type === 'income' ? '➕' : '➖'} ${t.amount.toLocaleString()} ${t.currency} - ${t.description}\n`;
-                  });
-                  if (navigator.share) {
-                    await navigator.share({ title: 'المعاملات الأخيرة', text });
-                  } else {
-                    await navigator.clipboard.writeText(text);
-                    toast({ title: 'تم النسخ' });
-                  }
-                }}
-              >
-                <Share2 className="w-4 h-4" />
-                مشاركة
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                {/* Date Range Quick Select */}
+                <select
+                  className="h-8 px-2 border rounded text-xs"
+                  value={dateRangeFilter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDateRangeFilter(val);
+                    const today = new Date();
+                    if (val === 'today') {
+                      setFilterDate(today.toISOString().split('T')[0]);
+                      setFilterEndDate('');
+                    } else if (val === 'week') {
+                      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                      setFilterDate(weekAgo.toISOString().split('T')[0]);
+                      setFilterEndDate(today.toISOString().split('T')[0]);
+                    } else if (val === 'month') {
+                      const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+                      setFilterDate(monthAgo.toISOString().split('T')[0]);
+                      setFilterEndDate(today.toISOString().split('T')[0]);
+                    } else {
+                      setFilterDate('');
+                      setFilterEndDate('');
+                    }
+                  }}
+                >
+                  <option value="all">كل الفترات</option>
+                  <option value="today">اليوم</option>
+                  <option value="week">أسبوع</option>
+                  <option value="month">شهر</option>
+                  <option value="custom">مخصص</option>
+                </select>
+
+                {/* Excel Export */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={async () => {
+                    try {
+                      const { exportFinanceToExcel } = await import('@/lib/excelExport');
+                      await exportFinanceToExcel();
+                      toast({ title: '✅ تم تصدير Excel' });
+                    } catch (e) {
+                      toast({ title: '❌ خطأ', description: 'فشل التصدير' });
+                    }
+                  }}
+                >
+                  📊 Excel
+                </Button>
+
+                {/* Print Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) return;
+
+                    const transactions = getFilteredTransactions().slice(-50);
+                    let html = `
+                      <html dir="rtl">
+                      <head><title>المعاملات المالية</title>
+                      <style>
+                        body { font-family: Tajawal, Arial; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+                        th { background: #f5f5f5; }
+                        .income { color: green; }
+                        .expense { color: red; }
+                      </style>
+                      </head>
+                      <body>
+                      <h1>المعاملات المالية - نظام بركة</h1>
+                      <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar')}</p>
+                      <table>
+                        <tr><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>الوصف</th><th>الفئة</th></tr>
+                    `;
+                    transactions.forEach((t: any) => {
+                      html += `<tr class="${t.type}">
+                        <td>${t.type === 'income' ? 'دخل' : 'مصروف'}</td>
+                        <td>${t.amount?.toLocaleString()} ${t.currency}</td>
+                        <td>${t.timestamp?.split('T')[0] || ''}</td>
+                        <td>${t.description || ''}</td>
+                        <td>${t.category || ''}</td>
+                      </tr>`;
+                    });
+                    html += '</table></body></html>';
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    printWindow.print();
+                  }}
+                >
+                  🖨️ طباعة
+                </Button>
+
+                {/* Share Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={async () => {
+                    const transactions = getFilteredTransactions().slice(-10);
+                    let text = 'المعاملات الأخيرة - بركة\n' + '─'.repeat(20) + '\n';
+                    transactions.forEach((t: any) => {
+                      text += `${t.type === 'income' ? '➕' : '➖'} ${t.amount?.toLocaleString()} ${t.currency} - ${t.description}\n`;
+                    });
+                    if (navigator.share) {
+                      await navigator.share({ title: 'المعاملات الأخيرة', text });
+                    } else {
+                      await navigator.clipboard.writeText(text);
+                      toast({ title: 'تم النسخ' });
+                    }
+                  }}
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -894,21 +971,34 @@ const FinancialController = () => {
                 </SelectContent>
               </Select>
 
-              <Input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="w-44"
-                placeholder="التاريخ"
-              />
+              {dateRangeFilter === 'custom' && (
+                <>
+                  <Input
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="w-36"
+                    placeholder="من"
+                  />
+                  <Input
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                    className="w-36"
+                    placeholder="إلى"
+                  />
+                </>
+              )}
 
-              {(filterCategory !== 'all' || filterDate) && (
+              {(filterCategory !== 'all' || filterDate || dateRangeFilter !== 'all') && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
                     setFilterCategory('all');
                     setFilterDate('');
+                    setFilterEndDate('');
+                    setDateRangeFilter('all');
                   }}
                 >
                   <X className="w-4 h-4 ml-1" />
