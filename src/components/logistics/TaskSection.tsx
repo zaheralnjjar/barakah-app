@@ -202,6 +202,28 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
             html += '</div>';
         }
 
+        // Prayer Times section
+        if (printSelections.prayerTimes) {
+            html += `<div class="section" style="background:#eef2ff"><div class="section-title">🕌 أوقات الصلاة</div>`;
+            html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center">`;
+            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>الفجر</strong></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>الظهر</strong></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>العصر</strong></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>المغرب</strong></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>العشاء</strong></div>`;
+            html += `</div></div>`;
+        }
+
+        // Shopping List section
+        if (printSelections.shoppingList) {
+            html += `<div class="section" style="background:#f0fdfa"><div class="section-title">🛒 قائمة التسوق</div>`;
+            html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">`;
+            for (let i = 0; i < 10; i++) {
+                html += `<div class="item"><div class="checkbox"></div><div style="flex:1;border-bottom:1px dashed #ccc">&nbsp;</div></div>`;
+            }
+            html += `</div></div>`;
+        }
+
         html += `<p style="text-align:center;margin-top:30px;color:#9ca3af">✨ نظام بركة لإدارة الحياة</p></body></html>`;
 
         const printWindow = window.open('', '_blank');
