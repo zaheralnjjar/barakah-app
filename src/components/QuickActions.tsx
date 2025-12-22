@@ -89,11 +89,11 @@ const QuickActions: React.FC<QuickActionsProps> = ({
     }
 
     return (
-        <div className="flex flex-wrap gap-2 sm:gap-3">
+        <div className="flex gap-2 sm:gap-3 justify-between">
             {activeActions.map((action) => (
                 <Card
                     key={action.id}
-                    className="flex-1 min-w-[70px] max-w-[120px] cursor-pointer hover:shadow-md transition-all duration-200 active:scale-95"
+                    className="flex-1 cursor-pointer hover:shadow-md transition-all duration-200 active:scale-95"
                     onClick={action.onClick}
                 >
                     <div className="p-3 sm:p-4 flex flex-col items-center gap-1 sm:gap-2">

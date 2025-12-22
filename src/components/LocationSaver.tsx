@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,9 @@ import {
     Edit2,
     Trash2,
     Plus,
-    Loader2
+    Loader2,
+    Camera,
+    Image as ImageIcon
 } from 'lucide-react';
 import {
     Dialog,
@@ -35,6 +37,7 @@ interface SavedLocation {
     latitude: number;
     longitude: number;
     address?: string;
+    image?: string; // Base64 image
     createdAt: string;
 }
 
@@ -56,10 +59,27 @@ const LocationSaver: React.FC = () => {
     // Form State for Add/Edit
     const [formName, setFormName] = useState('');
     const [formType, setFormType] = useState<SavedLocation['type']>('other');
+    const [formImage, setFormImage] = useState<string>('');
     const [capturedPosition, setCapturedPosition] = useState<GeolocationPosition | null>(null);
     const [approxAddress, setApproxAddress] = useState<string>('');
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+
     const { toast } = useToast();
+
+    // Handle image selection
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target?.result as string;
+                setFormImage(base64);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     // Load saved locations from Supabase
     useEffect(() => {
@@ -186,6 +206,7 @@ const LocationSaver: React.FC = () => {
             type: formType,
             latitude: capturedPosition.coords.latitude,
             longitude: capturedPosition.coords.longitude,
+            image: formImage || undefined,
             createdAt: new Date().toISOString(),
         };
 
@@ -195,6 +216,7 @@ const LocationSaver: React.FC = () => {
 
         setIsAddDialogOpen(false);
         setCapturedPosition(null);
+        setFormImage('');
         toast({ title: '✅ تم حفظ الموقع بنجاح' });
     };
 
@@ -203,6 +225,7 @@ const LocationSaver: React.FC = () => {
         setEditingLocation(loc);
         setFormName(loc.name);
         setFormType(loc.type);
+        setFormImage(loc.image || '');
         setIsEditDialogOpen(true);
     };
 
@@ -398,6 +421,59 @@ const LocationSaver: React.FC = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {/* Image Upload */}
+                            <div className="space-y-2">
+                                <label className="text-sm arabic-body">صورة الموقع (اختياري)</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleImageSelect}
+                                    />
+                                    <input
+                                        ref={cameraInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        className="hidden"
+                                        onChange={handleImageSelect}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => cameraInputRef.current?.click()}
+                                    >
+                                        <Camera className="w-4 h-4 ml-1" /> التقاط
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <ImageIcon className="w-4 h-4 ml-1" /> معرض
+                                    </Button>
+                                </div>
+                                {formImage && (
+                                    <div className="relative">
+                                        <img src={formImage} alt="صورة الموقع" className="w-full h-32 object-cover rounded-lg" />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            className="absolute top-1 right-1"
+                                            onClick={() => setFormImage('')}
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
                             <Button onClick={confirmSaveLocation} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold">
                                 موافقة وحفظ
                             </Button>
