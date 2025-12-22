@@ -53,14 +53,12 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
         (m.frequency === 'specific_days' && m.customDays?.includes(todayDayName))
     );
 
-    // Get prayer times for today
-    const todayPrayers = prayerTimes ? [
-        { name: 'الفجر', time: prayerTimes.fajr, icon: '🌙' },
-        { name: 'الظهر', time: prayerTimes.dhuhr, icon: '☀️' },
-        { name: 'العصر', time: prayerTimes.asr, icon: '🌤️' },
-        { name: 'المغرب', time: prayerTimes.maghrib, icon: '🌅' },
-        { name: 'العشاء', time: prayerTimes.isha, icon: '🌙' }
-    ] : [];
+    // Get prayer times for today - prayerTimes is already an array
+    const todayPrayers = prayerTimes?.map(p => ({
+        name: p.nameAr || p.name,
+        time: p.time,
+        icon: p.name === 'Fajr' ? '🌙' : p.name === 'Sunrise' ? '🌅' : p.name === 'Dhuhr' ? '☀️' : p.name === 'Asr' ? '🌤️' : p.name === 'Maghrib' ? '🌅' : '🌙'
+    })).filter(p => p.name !== 'Sunrise') || [];
 
     const navigateDate = (days: number) => {
         const newDate = new Date(selectedDate);
@@ -160,7 +158,10 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
     if (compact) {
         // Compact widget version for main screen
         return (
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card
+                className="hover:shadow-md transition-shadow"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center justify-between">
                         <span className="flex items-center gap-2">

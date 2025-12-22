@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#FFFFFF"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:text="إعدادات الويدجت"
+        android:textSize="24sp"
+        android:textColor="#16A34A"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <TextView
+        android:text="اختر العناصر المراد عرضها:"
+        android:textSize="16sp"
+        android:textColor="#333333"
+        android:layout_marginBottom="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <CheckBox
+        android:id="@+id/chkShowPrayer"
+        android:text="🕌 أوقات الصلاة"
+        android:textSize="18sp"
+        android:checked="true"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <CheckBox
+        android:id="@+id/chkShowTasks"
+        android:text="📋 المهام والإنتاجية"
+        android:textSize="18sp"
+        android:checked="true"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <CheckBox
+        android:id="@+id/chkShowFinance"
+        android:text="💰 الرصيد المالي"
+        android:textSize="18sp"
+        android:checked="true"
+        android:padding="12dp"
+        android:layout_marginBottom="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <CheckBox
+        android:id="@+id/chkShowShopping"
+        android:text="🛒 قائمة التسوق"
+        android:textSize="18sp"
+        android:checked="true"
+        android:padding="12dp"
+        android:layout_marginBottom="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnSaveConfig"
+        android:text="حفظ الإعدادات"
+        android:textSize="18sp"
+        android:textColor="#FFFFFF"
+        android:background="#16A34A"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>

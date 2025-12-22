@@ -81,6 +81,28 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     }, []);
 
+    // Sync data to Android Widget
+    useEffect(() => {
+        const syncToWidget = async () => {
+            try {
+                const { syncWidgetData } = await import('@/utils/widgetSync');
+                await syncWidgetData({
+                    tasks: tasks,
+                    appointments: appointments,
+                    habits: habits,
+                    medications: medications,
+                    prayers: prayerTimes,
+                    finance: {
+                        balance: financeData?.total_balance?.toString() || '0',
+                        debt: financeData?.total_debt?.toString() || '0'
+                    },
+                    shopping: shoppingListSummary
+                });
+            } catch (e) { console.error("Widget sync error", e); }
+        };
+        if (!loading) syncToWidget();
+    }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, loading]);
+
     // Comprehensive Print Function
     const handlePrint = () => {
         let startDate = new Date();
