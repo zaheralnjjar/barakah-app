@@ -242,7 +242,7 @@ const AppointmentManager: React.FC = () => {
             if (newLocation.trim()) {
                 try {
                     // Get existing locations
-                    const { data: settingsData } = await supabase
+                    const { data: settingsData, error: settingsError } = await supabase
                         .from(USER_SETTINGS_TABLE)
                         .select('saved_locations')
                         .eq('user_id', user.id)
@@ -267,10 +267,25 @@ const AppointmentManager: React.FC = () => {
                     );
 
                     if (!locationExists) {
-                        await supabase
-                            .from(USER_SETTINGS_TABLE)
-                            .update({ saved_locations: [newSavedLocation, ...existingLocations] })
-                            .eq('user_id', user.id);
+                        const updatedLocations = [newSavedLocation, ...existingLocations];
+
+                        if (settingsError || !settingsData) {
+                            // Create new settings record
+                            await supabase
+                                .from(USER_SETTINGS_TABLE)
+                                .upsert({
+                                    user_id: user.id,
+                                    saved_locations: updatedLocations
+                                }, { onConflict: 'user_id' });
+                        } else {
+                            // Update existing record
+                            await supabase
+                                .from(USER_SETTINGS_TABLE)
+                                .update({ saved_locations: updatedLocations })
+                                .eq('user_id', user.id);
+                        }
+
+                        toast({ title: '📍 تم حفظ الموقع أيضاً', description: newLocation.trim().substring(0, 50) });
                     }
                 } catch (locError) {
                     console.log('Could not save location:', locError);

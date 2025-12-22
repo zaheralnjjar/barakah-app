@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
@@ -57,7 +57,9 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         tasks: true,
         appointments: true,
         habits: true,
-        medications: true
+        medications: true,
+        prayerTimes: true,
+        shoppingList: false
     });
     const { habits } = useHabits();
     const { medications } = useMedications();
@@ -760,6 +762,32 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                 <span className="flex items-center gap-2">
                                     <Pill className="w-4 h-4 text-purple-600" />
                                     الأدوية
+                                </span>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg cursor-pointer hover:bg-indigo-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.prayerTimes}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, prayerTimes: e.target.checked })}
+                                    className="w-5 h-5 accent-indigo-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <Moon className="w-4 h-4 text-indigo-600" />
+                                    أوقات الصلاة
+                                </span>
+                            </label>
+
+                            <label className="flex items-center gap-3 p-3 bg-teal-50 rounded-lg cursor-pointer hover:bg-teal-100">
+                                <input
+                                    type="checkbox"
+                                    checked={printSelections.shoppingList}
+                                    onChange={(e) => setPrintSelections({ ...printSelections, shoppingList: e.target.checked })}
+                                    className="w-5 h-5 accent-teal-600"
+                                />
+                                <span className="flex items-center gap-2">
+                                    <ShoppingCart className="w-4 h-4 text-teal-600" />
+                                    قائمة التسوق
                                 </span>
                             </label>
                         </div>
