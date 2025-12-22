@@ -50,6 +50,16 @@ const PermissionRequester = () => {
           }
         }
       } catch (e) { console.error("Notification error", e); }
+
+      // 5. Capacitor Local Notifications (Android 13+)
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        const status = await LocalNotifications.checkPermissions();
+        if (status.display !== 'granted') {
+          await LocalNotifications.requestPermissions();
+        }
+        console.log("LocalNotifications permission:", status.display);
+      } catch (e) { console.error("LocalNotifications error", e); }
     };
 
     // Delay slightly to not block initial render
