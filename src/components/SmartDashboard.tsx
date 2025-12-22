@@ -68,6 +68,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
 
+    // Valid module IDs for validation
+    const VALID_MODULE_IDS = Object.values(MODULES);
+
     useEffect(() => {
         const loadLayout = () => {
             const saved = localStorage.getItem('baraka_dashboard_order');
@@ -75,7 +78,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 try {
                     const parsed = JSON.parse(saved);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        setDashboardOrder(parsed);
+                        // Filter out any invalid/deprecated module IDs
+                        const validOrder = parsed.filter((id: string) => VALID_MODULE_IDS.includes(id));
+                        if (validOrder.length > 0) {
+                            setDashboardOrder(validOrder);
+                        } else {
+                            setDashboardOrder(DEFAULT_ORDER); // All modules were invalid
+                        }
                     } else {
                         setDashboardOrder(DEFAULT_ORDER); // Fallback if array empty
                     }

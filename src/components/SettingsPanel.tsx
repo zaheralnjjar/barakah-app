@@ -53,10 +53,20 @@ const SettingsPanel = () => {
         'quick_actions',
         'full_map'
     ];
+    const VALID_SECTIONS = ['header', 'prayer', 'finance_daily', 'finance_summary', 'appointments_widget', 'quick_actions', 'full_map', 'saved_locations', 'daily_calendar', 'full_appointments', 'full_shopping'];
+
     const [dashboardOrder, setDashboardOrder] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem('baraka_dashboard_order');
-            return saved ? JSON.parse(saved) : DEFAULT_ORDER;
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Filter out deprecated/invalid modules
+                const validOrder = parsed.filter((id: string) => VALID_SECTIONS.includes(id));
+                if (validOrder.length > 0) {
+                    return validOrder;
+                }
+            }
+            return DEFAULT_ORDER;
         } catch { return DEFAULT_ORDER; }
     });
 
@@ -167,7 +177,7 @@ const SettingsPanel = () => {
                     <CardDescription className="arabic-body text-xs">اسحب الأقسام لإعادة ترتيبها</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                    {dashboardOrder.map((section, index) => (
+                    {dashboardOrder.filter(s => SECTION_LABELS[s]).map((section, index) => (
                         <div
                             key={section}
                             draggable
@@ -204,12 +214,18 @@ const SettingsPanel = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
+                                    // Prevent deleting the last section
+                                    if (dashboardOrder.length <= 1) {
+                                        toast({ title: "تنبيه", description: "يجب إبقاء قسم واحد على الأقل", variant: "destructive" });
+                                        return;
+                                    }
                                     const newOrder = dashboardOrder.filter((_, i) => i !== index);
                                     setDashboardOrder(newOrder);
                                     localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
                                     window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
                                 }}
                                 className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
+                                disabled={dashboardOrder.length <= 1}
                             >
                                 <MinusCircle className="w-4 h-4" />
                             </Button>
