@@ -177,31 +177,36 @@ const SettingsPanel = () => {
                     <CardDescription className="arabic-body text-xs">اسحب الأقسام لإعادة ترتيبها</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                    {dashboardOrder.filter(s => SECTION_LABELS[s]).map((section, index) => (
+                    {dashboardOrder.filter(s => SECTION_LABELS[s]).map((section) => (
                         <div
                             key={section}
                             draggable
                             onDragStart={(e) => {
-                                e.dataTransfer.setData("text/plain", index.toString());
+                                e.dataTransfer.setData("text/plain", section);
                                 e.currentTarget.style.opacity = "0.5";
                             }}
                             onDragEnd={(e) => {
                                 e.currentTarget.style.opacity = "1";
                             }}
                             onDragOver={(e) => {
-                                e.preventDefault(); // Necessary to allow dropping
+                                e.preventDefault();
                             }}
                             onDrop={(e) => {
                                 e.preventDefault();
-                                const draggedIdx = parseInt(e.dataTransfer.getData("text/plain"));
-                                if (draggedIdx !== index) {
+                                const draggedSection = e.dataTransfer.getData("text/plain");
+                                const targetSection = section;
+                                if (draggedSection !== targetSection) {
                                     const newLineup = [...dashboardOrder];
-                                    const [movedItem] = newLineup.splice(draggedIdx, 1);
-                                    newLineup.splice(index, 0, movedItem);
-                                    setDashboardOrder(newLineup);
-                                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(newLineup));
-                                    window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
-                                    toast({ title: "تم الترتيب" });
+                                    const draggedIdx = newLineup.indexOf(draggedSection);
+                                    const targetIdx = newLineup.indexOf(targetSection);
+                                    if (draggedIdx !== -1 && targetIdx !== -1) {
+                                        newLineup.splice(draggedIdx, 1);
+                                        newLineup.splice(targetIdx, 0, draggedSection);
+                                        setDashboardOrder(newLineup);
+                                        localStorage.setItem('baraka_dashboard_order', JSON.stringify(newLineup));
+                                        window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
+                                        toast({ title: "تم الترتيب" });
+                                    }
                                 }
                             }}
                             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border cursor-move hover:bg-gray-100 transition-colors"
@@ -219,7 +224,8 @@ const SettingsPanel = () => {
                                         toast({ title: "تنبيه", description: "يجب إبقاء قسم واحد على الأقل", variant: "destructive" });
                                         return;
                                     }
-                                    const newOrder = dashboardOrder.filter((_, i) => i !== index);
+                                    // Use section ID to delete, not index
+                                    const newOrder = dashboardOrder.filter(s => s !== section);
                                     setDashboardOrder(newOrder);
                                     localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
                                     window.dispatchEvent(new Event('barakah_dashboard_order_updated'));

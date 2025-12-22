@@ -82,18 +82,29 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         const validOrder = parsed.filter((id: string) => VALID_MODULE_IDS.includes(id));
                         if (validOrder.length > 0) {
                             setDashboardOrder(validOrder);
+                            // Auto-cleanup: Save the cleaned version if it changed
+                            if (validOrder.length !== parsed.length) {
+                                localStorage.setItem('baraka_dashboard_order', JSON.stringify(validOrder));
+                                console.log('Dashboard: Cleaned up invalid module IDs from localStorage');
+                            }
                         } else {
-                            setDashboardOrder(DEFAULT_ORDER); // All modules were invalid
+                            // All modules were invalid, reset to defaults
+                            setDashboardOrder(DEFAULT_ORDER);
+                            localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
+                            console.log('Dashboard: Reset to default order due to invalid data');
                         }
                     } else {
-                        setDashboardOrder(DEFAULT_ORDER); // Fallback if array empty
+                        // Empty array, reset to defaults
+                        setDashboardOrder(DEFAULT_ORDER);
+                        localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
                     }
                 } catch (e) {
                     console.error("Layout parse error", e);
-                    setDashboardOrder(DEFAULT_ORDER); // Fallback on error
+                    setDashboardOrder(DEFAULT_ORDER);
+                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
                 }
             } else {
-                setDashboardOrder(DEFAULT_ORDER); // Fallback if no saved data
+                setDashboardOrder(DEFAULT_ORDER);
             }
         };
 
