@@ -205,13 +205,34 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
         // Prayer Times section
         if (printSelections.prayerTimes) {
+            // Get prayer times from localStorage
+            let prayerData = { fajr: '--:--', dhuhr: '--:--', asr: '--:--', maghrib: '--:--', isha: '--:--' };
+            try {
+                const saved = localStorage.getItem('baraka_prayer_times');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.times) {
+                        prayerData = { ...prayerData, ...parsed.times };
+                    }
+                }
+                // Also check monthly schedule
+                const schedule = localStorage.getItem('baraka_prayer_schedule');
+                if (schedule) {
+                    const scheduleData = JSON.parse(schedule);
+                    const dayNum = new Date(dateStr).getDate();
+                    if (scheduleData[dayNum]) {
+                        prayerData = { ...prayerData, ...scheduleData[dayNum] };
+                    }
+                }
+            } catch (e) { }
+
             html += `<div class="section" style="background:#eef2ff"><div class="section-title">🕌 أوقات الصلاة</div>`;
             html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center">`;
-            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>الفجر</strong></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>الظهر</strong></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>العصر</strong></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>المغرب</strong></div>`;
-            html += `<div style="padding:8px;background:white;border-radius:8px"><strong>العشاء</strong></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الفجر</strong><br><span style="color:#4f46e5;font-size:14px">${prayerData.fajr}</span></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الظهر</strong><br><span style="color:#4f46e5;font-size:14px">${prayerData.dhuhr}</span></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العصر</strong><br><span style="color:#4f46e5;font-size:14px">${prayerData.asr}</span></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>المغرب</strong><br><span style="color:#4f46e5;font-size:14px">${prayerData.maghrib}</span></div>`;
+            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العشاء</strong><br><span style="color:#4f46e5;font-size:14px">${prayerData.isha}</span></div>`;
             html += `</div></div>`;
         }
 
@@ -240,23 +261,28 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         const dates = Array.from(selectedDates).sort();
         if (dates.length === 0) return;
 
+        // Adjust font size based on number of days
+        const fontSize = dates.length <= 3 ? '12px' : dates.length <= 5 ? '11px' : '9px';
+        const cellPadding = dates.length <= 3 ? '10px' : '6px';
+
         let html = `
             <html dir="rtl">
             <head>
                 <title>تقرير ${dates.length} أيام</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <style>
-                    body { font-family: Tajawal, Arial; padding: 20px; margin: 0; }
-                    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #16a34a; padding-bottom: 10px; }
-                    h1 { color: #16a34a; font-size: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th { background: #16a34a; color: white; padding: 10px; text-align: right; }
-                    td { padding: 8px; border: 1px solid #e5e7eb; vertical-align: top; }
+                    @page { size: A4 landscape; margin: 10mm; }
+                    body { font-family: Tajawal, Arial; padding: 10px; margin: 0; font-size: ${fontSize}; }
+                    .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #16a34a; padding-bottom: 5px; }
+                    h1 { color: #16a34a; font-size: 16px; margin: 5px 0; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th { background: #16a34a; color: white; padding: ${cellPadding}; text-align: right; font-size: ${fontSize}; }
+                    td { padding: ${cellPadding}; border: 1px solid #e5e7eb; vertical-align: top; }
                     .day-header { background: #f0fdf4; font-weight: bold; }
-                    .checkbox { display: inline-block; width: 14px; height: 14px; border: 2px solid #9ca3af; border-radius: 3px; margin-left: 8px; }
-                    .item { margin: 4px 0; display: flex; align-items: center; }
+                    .checkbox { display: inline-block; width: 12px; height: 12px; border: 1.5px solid #9ca3af; border-radius: 2px; margin-left: 4px; }
+                    .item { margin: 2px 0; display: flex; align-items: center; font-size: ${fontSize}; }
                     .task { color: #3b82f6; } .apt { color: #f97316; } .habit { color: #f59e0b; } .med { color: #a855f7; }
-                    @media print { .no-print { display: none !important; } }
+                    @media print { .no-print { display: none !important; } body { -webkit-print-color-adjust: exact; } }
                 </style>
             </head>
             <body>
@@ -327,21 +353,37 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
         // Prayer Times section for multi-day
         if (printSelections.prayerTimes) {
-            html += `<div style="margin-top:20px;padding:15px;background:#eef2ff;border-radius:12px">`;
-            html += `<h3 style="margin:0 0 10px 0;color:#4f46e5">🕌 أوقات الصلاة</h3>`;
+            // Get prayer times
+            let prayerData = { fajr: '--:--', dhuhr: '--:--', asr: '--:--', maghrib: '--:--', isha: '--:--' };
+            try {
+                const saved = localStorage.getItem('baraka_prayer_times');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.times) prayerData = { ...prayerData, ...parsed.times };
+                }
+                const schedule = localStorage.getItem('baraka_prayer_schedule');
+                if (schedule && dates.length > 0) {
+                    const scheduleData = JSON.parse(schedule);
+                    const firstDayNum = new Date(dates[0] as string).getDate();
+                    if (scheduleData[firstDayNum]) prayerData = { ...prayerData, ...scheduleData[firstDayNum] };
+                }
+            } catch (e) { }
+
+            html += `<div style="margin-top:20px;padding:10px;background:#eef2ff;border-radius:12px;page-break-inside:avoid;border:1px solid #c7d2fe">`;
+            html += `<h3 style="margin:0 0 10px 0;color:#4f46e5;font-size:14px">🕌 أوقات الصلاة (حسب توقيت ${new Date(dates[0] as string).toLocaleDateString('ar')})</h3>`;
             html += `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">`;
-            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الفجر</strong><br><small>____:____</small></div>`;
-            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>الظهر</strong><br><small>____:____</small></div>`;
-            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العصر</strong><br><small>____:____</small></div>`;
-            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>المغرب</strong><br><small>____:____</small></div>`;
-            html += `<div style="padding:10px;background:white;border-radius:8px"><strong>العشاء</strong><br><small>____:____</small></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>الفجر</strong><br><span style="color:#4f46e5">${prayerData.fajr}</span></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>الظهر</strong><br><span style="color:#4f46e5">${prayerData.dhuhr}</span></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>العصر</strong><br><span style="color:#4f46e5">${prayerData.asr}</span></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>المغرب</strong><br><span style="color:#4f46e5">${prayerData.maghrib}</span></div>`;
+            html += `<div style="padding:8px;background:white;border-radius:6px;border:1px solid #e0e7ff"><strong>العشاء</strong><br><span style="color:#4f46e5">${prayerData.isha}</span></div>`;
             html += `</div></div>`;
         }
 
         // Shopping List section for multi-day
         if (printSelections.shoppingList) {
-            html += `<div style="margin-top:20px;padding:15px;background:#f0fdfa;border-radius:12px">`;
-            html += `<h3 style="margin:0 0 10px 0;color:#0d9488">🛒 قائمة التسوق</h3>`;
+            html += `<div style="margin-top:15px;padding:10px;background:#f0fdfa;border-radius:12px;page-break-inside:avoid;border:1px solid #ccfbf1">`;
+            html += `<h3 style="margin:0 0 10px 0;color:#0d9488;font-size:14px">🛒 قائمة التسوق</h3>`;
             html += `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">`;
             for (let i = 0; i < 12; i++) {
                 html += `<div style="display:flex;align-items:center;gap:8px;padding:6px">`;
