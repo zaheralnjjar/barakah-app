@@ -40,7 +40,12 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printRange, setPrintRange] = useState('today');
     const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
-    const [printOptions, setPrintOptions] = useState({ tasks: true, appointments: true, medications: true, habits: true });
+    const [printOptions, setPrintOptions] = useState({
+        tasks: true, appointments: true, medications: true, habits: true,
+        financial: false, shopping: false, prayers: false
+    });
+    const [printCalendarType, setPrintCalendarType] = useState<'weekly' | 'monthly'>('weekly');
+    const [printCalendarStyle, setPrintCalendarStyle] = useState<'normal' | 'hourly'>('normal');
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [showFinancialReport, setShowFinancialReport] = useState(false);
     const [showEventMenu, setShowEventMenu] = useState(false);
@@ -594,16 +599,58 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </CardContent>
             </Card>
 
-            {/* ===== PRINT DIALOG ===== */}
+            {/* ===== UNIFIED PRINT DIALOG ===== */}
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-                <DialogContent className="sm:max-w-[450px]">
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
                             <Printer className="w-5 h-5 text-primary" />
-                            طباعة الجدول
+                            طباعة التقويم الموحد
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
+                        {/* Calendar Type Selection */}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-2">نوع التقويم:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    variant={printCalendarType === 'weekly' ? 'default' : 'outline'}
+                                    onClick={() => setPrintCalendarType('weekly')}
+                                    className="h-10"
+                                >
+                                    📅 أسبوعي
+                                </Button>
+                                <Button
+                                    variant={printCalendarType === 'monthly' ? 'default' : 'outline'}
+                                    onClick={() => setPrintCalendarType('monthly')}
+                                    className="h-10"
+                                >
+                                    📆 شهري
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Calendar Style Selection */}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-2">نمط التقويم:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    variant={printCalendarStyle === 'normal' ? 'default' : 'outline'}
+                                    onClick={() => setPrintCalendarStyle('normal')}
+                                    className="h-10"
+                                >
+                                    📋 تقويم عادي
+                                </Button>
+                                <Button
+                                    variant={printCalendarStyle === 'hourly' ? 'default' : 'outline'}
+                                    onClick={() => setPrintCalendarStyle('hourly')}
+                                    className="h-10"
+                                >
+                                    ⏰ تقويم بالساعات
+                                </Button>
+                            </div>
+                        </div>
+
                         {/* Range Selection */}
                         <div>
                             <p className="text-sm text-gray-600 mb-2">اختر الفترة:</p>
@@ -629,9 +676,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             </div>
                         )}
 
-                        {/* Items Selection */}
+                        {/* Content Selection */}
                         <div>
-                            <p className="text-sm text-gray-600 mb-2">اختر العناصر:</p>
+                            <p className="text-sm text-gray-600 mb-2">المحتوى المراد تضمينه:</p>
                             <div className="grid grid-cols-2 gap-2">
                                 <label className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
                                     <input type="checkbox" checked={printOptions.tasks} onChange={e => setPrintOptions(p => ({ ...p, tasks: e.target.checked }))} className="rounded" />
@@ -653,10 +700,25 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     <Flame className="w-4 h-4 text-yellow-500" />
                                     <span className="text-sm">العادات</span>
                                 </label>
+                                <label className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg cursor-pointer hover:bg-emerald-100">
+                                    <input type="checkbox" checked={printOptions.financial} onChange={e => setPrintOptions(p => ({ ...p, financial: e.target.checked }))} className="rounded" />
+                                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                                    <span className="text-sm">الموجز المالي</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100">
+                                    <input type="checkbox" checked={printOptions.shopping} onChange={e => setPrintOptions(p => ({ ...p, shopping: e.target.checked }))} className="rounded" />
+                                    <ShoppingCart className="w-4 h-4 text-purple-600" />
+                                    <span className="text-sm">قائمة التسوق</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 col-span-2">
+                                    <input type="checkbox" checked={printOptions.prayers} onChange={e => setPrintOptions(p => ({ ...p, prayers: e.target.checked }))} className="rounded" />
+                                    <Moon className="w-4 h-4 text-blue-600" />
+                                    <span className="text-sm">أوقات الصلاة</span>
+                                </label>
                             </div>
                         </div>
 
-                        <Button onClick={() => { onNavigateToTab('calendar'); setShowPrintDialog(false); }} className="w-full h-12 text-lg">
+                        <Button onClick={() => { onNavigateToTab('calendar'); setShowPrintDialog(false); }} className="w-full h-12 text-lg bg-emerald-600 hover:bg-emerald-700">
                             <Printer className="w-5 h-5 ml-2" />
                             طباعة الآن
                         </Button>

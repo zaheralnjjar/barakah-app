@@ -485,8 +485,8 @@ const InteractiveMap = () => {
                             })}
                         </MapContainer>
 
-                        {/* Search overlay on map */}
-                        <div className="absolute top-2 left-2 right-2 z-[1000] flex gap-2">
+                        {/* Search overlay on map - CENTERED */}
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] flex gap-2 w-[90%] max-w-md">
                             <Button
                                 size="icon"
                                 variant="secondary"
