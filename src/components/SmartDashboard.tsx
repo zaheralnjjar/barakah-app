@@ -303,41 +303,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         الخرائط
                     </h3>
 
-                    {/* Search & Actions */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <div className="flex-1 min-w-[200px] relative">
-                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input placeholder="بحث عن موقع..." className="pr-10 h-9 text-sm" onClick={() => onNavigateToTab('map')} readOnly />
-                        </div>
-                        <Button size="sm" variant="outline" className="h-9 gap-1" onClick={() => onNavigateToTab('map')}>
-                            <Navigation className="w-4 h-4" /> تحديد الموقع
-                        </Button>
-                    </div>
-
-                    {/* Saved Locations */}
-                    {savedLocations.length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
-                            {savedLocations.slice(0, 5).map((loc: any, i: number) => (
-                                <div key={i} className="min-w-[100px] p-2 bg-gray-50 rounded-lg text-center cursor-pointer hover:bg-gray-100" onClick={() => onNavigateToTab('map')}>
-                                    <MapPin className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                                    <span className="text-xs font-medium truncate block">{loc.name || 'موقع'}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Quick Actions */}
-                    <div className="flex gap-2 mb-3">
-                        <Button size="sm" variant="outline" className="flex-1 h-9 gap-1 text-xs" onClick={() => onNavigateToTab('map')}>
-                            <Save className="w-3 h-3" /> حفظ سريع
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1 h-9 gap-1 text-xs" onClick={() => onNavigateToTab('map')}>
-                            <Share2 className="w-3 h-3" /> تحديد للمشاركة
-                        </Button>
-                    </div>
-
-                    {/* Map Preview */}
+                    {/* Map */}
                     <div className="h-[300px] md:h-[400px] rounded-xl overflow-hidden border border-gray-200">
+
                         <InteractiveMap />
                     </div>
                 </CardContent>
