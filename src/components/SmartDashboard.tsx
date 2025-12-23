@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import QuickActions from '@/components/QuickActions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,47 +11,19 @@ import { useMedications } from '@/hooks/useMedications';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star, Clock, Printer } from 'lucide-react';
-
-// Imported Full Components
-import AppointmentManager from '@/components/AppointmentManager';
-import ShoppingList from '@/components/ShoppingList';
+import {
+    LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star,
+    Clock, Printer, Plus, FileText, CheckSquare, Pill, Flame, Bell, Search,
+    Navigation, Save, Share2, ChevronLeft, ChevronRight
+} from 'lucide-react';
 import InteractiveMap from '@/components/InteractiveMap';
-import PrayerManager from '@/components/PrayerManager';
-import DailyCalendar from '@/components/DailyCalendar';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
 }
 
-// Module Definitions
-const MODULES = {
-    HEADER: 'header',
-    PRAYER: 'prayer',
-    FINANCE_DAILY: 'finance_daily',
-    FINANCE_SUMMARY: 'finance_summary',
-    APPOINTMENTS_WIDGET: 'appointments_widget',
-    QUICK_ACTIONS: 'quick_actions',
-    SAVED_LOCATIONS: 'saved_locations',
-    DAILY_CALENDAR: 'daily_calendar',       // Daily calendar widget
-    FULL_APPOINTMENTS: 'full_appointments', // "Then appointments and reminders"
-    FULL_SHOPPING: 'full_shopping',         // "Then shopping list"
-    FULL_MAP: 'full_map'                    // "Then the map"
-};
-
-// Fixed dashboard order as requested by user (not customizable)
-const FIXED_DASHBOARD_ORDER = [
-    MODULES.HEADER,           // 1. رأس الصفحة (التاريخ والوقت)
-    MODULES.PRAYER,           // 2. أوقات الصلاة
-    MODULES.FINANCE_SUMMARY,  // 3. الملخص المالي
-    MODULES.FULL_MAP,         // 4. الخريطة التفاعلية كاملة
-    MODULES.APPOINTMENTS_WIDGET, // 5. المواعيد والتذكير
-    MODULES.DAILY_CALENDAR,   // 6. التقويم اليومي
-    MODULES.FULL_SHOPPING,    // 7. قائمة التسوق
-    MODULES.QUICK_ACTIONS     // 8. الاختصارات السريعة
-];
-
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
+    const { toast } = useToast();
     const {
         financeData, loading, recentAppointments, shoppingListSummary,
         savedLocations, stats, nextPrayer, prayerTimes = [], refetch, timeUntilNext
@@ -63,13 +34,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { tasks } = useTasks();
     const { appointments } = useAppointments();
 
-    // Use fixed order - no customization
-    const dashboardOrder = FIXED_DASHBOARD_ORDER;
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
-    const [printRange, setPrintRange] = useState('today');
-    const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [weekStartDate, setWeekStartDate] = useState(() => {
+        const today = new Date();
+        const day = today.getDay();
+        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(today.setDate(diff));
+    });
 
     // Sync data to Android Widget
     useEffect(() => {
@@ -77,15 +49,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             try {
                 const { syncWidgetData } = await import('@/utils/widgetSync');
                 await syncWidgetData({
-                    tasks: tasks,
-                    appointments: appointments,
-                    habits: habits,
-                    medications: medications,
-                    prayers: prayerTimes,
-                    finance: {
-                        balance: financeData?.total_balance?.toString() || '0',
-                        debt: financeData?.total_debt?.toString() || '0'
-                    },
+                    tasks, appointments, habits, medications, prayers: prayerTimes,
+                    finance: { balance: financeData?.total_balance?.toString() || '0', debt: financeData?.total_debt?.toString() || '0' },
                     shopping: shoppingListSummary
                 });
             } catch (e) { console.error("Widget sync error", e); }
@@ -93,354 +58,292 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         if (!loading) syncToWidget();
     }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, loading]);
 
-    // Comprehensive Print Function
-    const handlePrint = () => {
-        let startDate = new Date();
-        let endDate = new Date();
-
-        if (printRange === 'today') {
-            // Already set
-        } else if (printRange === 'week') {
-            endDate.setDate(endDate.getDate() + 7);
-        } else if (printRange === 'month') {
-            endDate.setMonth(endDate.getMonth() + 1);
-        } else if (printRange === 'custom') {
-            startDate = new Date(printStartDate);
-            endDate = new Date(printEndDate);
-        }
-
-        const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-
-        let html = `
-            <html dir="rtl">
-            <head><title>جدول المهام - بركة</title>
-            <style>
-                body { font-family: Tajawal, Arial; padding: 20px; }
-                h1 { color: #16a34a; }
-                h2 { color: #333; border-bottom: 2px solid #16a34a; padding-bottom: 5px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
-                th { background: #16a34a; color: white; }
-                tr:nth-child(even) { background: #f9f9f9; }
-                .section { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; }
-            </style>
-            </head>
-            <body>
-            <h1>📅 جدول المهام والمواعيد</h1>
-            <p>الفترة: ${startDate.toLocaleDateString('ar')} - ${endDate.toLocaleDateString('ar')}</p>
-        `;
-
-        // Tasks
-        html += `<div class="section"><h2>📋 المهام</h2><table><tr><th>المهمة</th><th>الحالة</th></tr>`;
-        tasks.forEach(t => {
-            html += `<tr><td>${t.title}</td><td>${t.progress === 100 ? '✅ مكتمل' : '⏳ معلق'}</td></tr>`;
-        });
-        html += `</table></div>`;
-
-        // Appointments
-        html += `<div class="section"><h2>📆 المواعيد</h2><table><tr><th>العنوان</th><th>التاريخ</th><th>الوقت</th></tr>`;
-        appointments.forEach(a => {
-            html += `<tr><td>${a.title}</td><td>${a.date}</td><td>${a.time || '--'}</td></tr>`;
-        });
-        html += `</table></div>`;
-
-        // Habits
-        html += `<div class="section"><h2>🔥 العادات</h2><table><tr><th>العادة</th><th>السلسلة</th></tr>`;
-        habits.forEach(h => {
-            html += `<tr><td>${h.name}</td><td>🔥 ${h.streak || 0} يوم</td></tr>`;
-        });
-        html += `</table></div>`;
-
-        // Medications
-        html += `<div class="section"><h2>💊 الأدوية</h2><table><tr><th>الدواء</th><th>الوقت</th><th>التكرار</th></tr>`;
-        medications.forEach(m => {
-            html += `<tr><td>${m.name}</td><td>${m.time}</td><td>${m.frequency === 'daily' ? 'يومي' : m.frequency}</td></tr>`;
-        });
-        html += `</table></div>`;
-
-        // Financial Summary
-        if (financeData) {
-            const totalARS = financeData.current_balance_ars + (financeData.current_balance_usd * financeData.exchange_rate);
-            html += `<div class="section"><h2>💰 الملخص المالي</h2>
-                <p>الرصيد: ${totalARS.toLocaleString()} ARS</p>
-                <p>الديون: ${financeData.total_debt?.toLocaleString() || 0} ARS</p>
-            </div>`;
-        }
-
-        html += `<p style="text-align:center;color:#888;margin-top:30px;">نظام بركة لإدارة الحياة</p></body></html>`;
-
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
-            printWindow.print();
-        }
-        setShowPrintDialog(false);
-    };
-
-    // --- Helper Logic for Widgets ---
+    // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
+
     const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
-    const spanishDate = currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const gregorianDate = currentDate.toLocaleDateString('ar', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const dayName = currentDate.toLocaleDateString('ar', { weekday: 'long' });
+
     const exchangeRate = financeData?.exchange_rate || 1200;
     const totalBalanceARS = financeData ? (financeData.current_balance_ars + (financeData.current_balance_usd * exchangeRate)) : 0;
-    const totalBalanceUSD = totalBalanceARS / exchangeRate;
     const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const remainingDays = daysInMonth - currentDate.getDate();
     const availableBalance = totalBalanceARS - (financeData?.emergency_buffer || 0) - (financeData?.total_debt || 0);
     const dailyLimitARS = Math.max(0, availableBalance / (remainingDays + 3));
-    const dailyLimitUSD = dailyLimitARS / exchangeRate;
 
-    const getPrayerIcon = (name: string) => {
-        switch (name) {
-            case 'fajr': return Moon;
-            case 'dhuhr': return Sun;
-            case 'asr': return Sun;
-            case 'maghrib': return Sunset;
-            case 'isha': return Star;
-            default: return Moon;
+    const todayExpense = financeData?.pending_expenses ? (() => {
+        const today = new Date().toISOString().split('T')[0];
+        return financeData.pending_expenses
+            .filter((t: any) => t.type === 'expense' && t.timestamp.startsWith(today))
+            .reduce((acc: number, curr: any) => acc + (curr.currency === 'USD' ? curr.amount * exchangeRate : curr.amount), 0);
+    })() : 0;
+
+    // Today's data
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayTasks = tasks.filter(t => t.deadline === todayStr);
+    const todayAppointments = appointments.filter(a => a.date === todayStr);
+    const todayMedications = medications;
+    const todayHabits = habits;
+
+    // Week days for weekly calendar
+    const getWeekDays = () => {
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(weekStartDate);
+            day.setDate(weekStartDate.getDate() + i);
+            days.push(day);
         }
+        return days;
     };
-
-    const activePrayerTimes = prayerTimes.map(p => ({
-        name: p.nameAr,
-        hour: parseInt(p.time.split(':')[0]),
-        minute: parseInt(p.time.split(':')[1]),
-        icon: getPrayerIcon(p.name),
-        originalName: p.name
-    }));
-
-
-    // --- Renderers ---
-    const renderModule = (id: string) => {
-        switch (id) {
-            case MODULES.HEADER:
-                return (
-                    <div className="bg-gradient-to-r from-primary/10 to-emerald-500/10 rounded-xl p-4 shadow-sm border border-emerald-100/50 mb-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="text-right">
-                                <span className="text-base font-semibold text-gray-700 font-sans capitalize">{spanishDate}</span>
-                                <span className="text-sm text-primary font-medium arabic-body block">{hijriDate}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-200/50">
-                            <div className="flex items-center gap-1.5 text-gray-600">
-                                <MapPin className="w-5 h-5 text-gray-400" />
-                                <span className="arabic-body text-sm font-medium">بوينس آيرس</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => setShowPrintDialog(true)} className="text-primary hover:text-primary/80 hover:bg-primary/10 h-8 px-3 text-sm gap-1.5 rounded-full">
-                                    <Printer className="w-4 h-4" />
-                                    <span className="mb-0.5">طباعة</span>
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 px-3 text-sm gap-1.5 rounded-full">
-                                    <LogOut className="w-4 h-4" />
-                                    <span className="mb-0.5">خروج</span>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                );
-
-            case MODULES.PRAYER:
-                return (
-                    <Card className="bg-white border-primary/20 shadow-sm overflow-hidden cursor-pointer hover:border-primary/40 transition-all mb-4" onClick={() => onNavigateToTab('prayer')}>
-                        <div className="p-3 bg-primary/5 flex items-center justify-between border-b border-primary/10">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-primary/20 rounded-full">
-                                    {nextPrayer && <Clock className="w-4 h-4 text-primary" />}
-                                </div>
-                                <div>
-                                    <span className="text-xs text-muted-foreground block">الصلاة القادمة</span>
-                                    <span className="text-base font-bold text-primary arabic-title">{nextPrayer?.nameAr || '--'}</span>
-                                </div>
-                            </div>
-                            <div className="text-left">
-                                <span className="text-sm font-bold text-primary block">{timeUntilNext || '--'}</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between p-2 bg-white whitespace-nowrap overflow-x-auto no-scrollbar">
-                            {activePrayerTimes.map((prayer) => (
-                                <div key={prayer.name} className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-[60px] ${nextPrayer?.name === prayer.originalName ? 'bg-primary/5' : 'hover:bg-gray-50'}`}>
-                                    <span className="text-xs text-gray-500">{prayer.name}</span>
-                                    <prayer.icon className={`w-4 h-4 my-1 ${nextPrayer?.name === prayer.originalName ? 'text-primary' : 'text-gray-400'}`} />
-                                    <span className="text-xs font-semibold tabular-nums">{prayer.hour}:{prayer.minute.toString().padStart(2, '0')}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-                );
-
-            case MODULES.FINANCE_DAILY:
-                return (
-                    <div className="bg-gradient-to-l from-red-50 to-white rounded-xl p-4 shadow-sm border border-red-100 cursor-pointer hover:shadow-md transition-all mb-4" onClick={() => onNavigateToTab('finance')}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-red-100 p-2.5 rounded-full"><DollarSign className="w-6 h-6 text-red-600" /></div>
-                                <div>
-                                    <span className="text-sm text-gray-500 font-medium">مصروف اليوم</span>
-                                    <h3 className="text-xl font-bold text-red-600 tabular-nums">
-                                        {financeData?.pending_expenses ? (() => {
-                                            const today = new Date().toISOString().split('T')[0];
-                                            return financeData.pending_expenses
-                                                .filter((t: any) => t.type === 'expense' && t.timestamp.startsWith(today))
-                                                .reduce((acc: number, curr: any) => acc + (curr.currency === 'USD' ? curr.amount * exchangeRate : curr.amount), 0)
-                                                .toLocaleString();
-                                        })() : 0} <span className="text-sm text-red-400">ARS</span>
-                                    </h3>
-                                </div>
-                            </div>
-                            <div className="bg-white px-3 py-1.5 rounded-md text-xs text-gray-500 border shadow-sm">اضغط للتفاصيل</div>
-                        </div>
-                    </div>
-                );
-
-            case MODULES.FINANCE_SUMMARY:
-                return (
-                    <Card className="shadow-sm border-emerald-100 bg-gradient-to-br from-white to-emerald-50/30 cursor-pointer hover:shadow-md transition-all mb-4" onClick={() => onNavigateToTab('finance')}>
-                        <CardContent className="p-4">
-                            <div className="grid grid-cols-3 gap-4 text-center">
-                                <div>
-                                    <span className="text-xs text-gray-500 block mb-1">الرصيد</span>
-                                    <span className="text-lg font-bold text-emerald-600 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
-                                    <span className="text-xs text-gray-400 block dir-ltr">${totalBalanceUSD.toLocaleString()}</span>
-                                </div>
-                                <div className="border-x border-gray-100">
-                                    <span className="text-xs text-gray-500 block mb-1">الحد اليومي</span>
-                                    <span className="text-lg font-bold text-primary tabular-nums">{(dailyLimitARS).toLocaleString()}</span>
-                                    <span className="text-xs text-gray-400 block dir-ltr">${(dailyLimitUSD).toFixed(0)}</span>
-                                </div>
-                                <div>
-                                    <span className="text-xs text-gray-500 block mb-1">أيام متبقية</span>
-                                    <span className="text-xl font-bold text-blue-600 tabular-nums mt-1">{remainingDays}</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                );
-
-            case MODULES.APPOINTMENTS_WIDGET:
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        {/* Shopping List - Right Side */}
-                        <Card className="shadow-sm border-blue-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-48 order-1 md:order-2" onClick={() => onNavigateToTab('shopping')}>
-                            <div className="absolute top-0 right-0 w-1.5 h-full bg-blue-400"></div>
-                            <CardContent className="p-4 h-full flex flex-col">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <ShoppingCart className="w-5 h-5 text-blue-500" />
-                                    <span className="text-sm font-bold text-gray-700">قائمة التسوق</span>
-                                </div>
-                                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                    {shoppingListSummary.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {shoppingListSummary.slice(0, 4).map((i: any, idx: number) => (
-                                                <div key={idx} className="flex items-center gap-3 text-sm border-b border-gray-50 pb-2 last:border-0">
-                                                    <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0" />
-                                                    <span className="text-gray-700 truncate font-medium">{i.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : <p className="text-sm text-gray-400 text-center py-6">القائمة فارغة</p>}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Appointments - Left Side */}
-                        <Card className="shadow-sm border-orange-100 relative overflow-hidden cursor-pointer hover:shadow-md transition-all h-48 order-2 md:order-1" onClick={() => onNavigateToTab('appointments')}>
-                            <div className="absolute top-0 right-0 w-1.5 h-full bg-orange-400"></div>
-                            <CardContent className="p-4 h-full flex flex-col">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <CalendarPlus className="w-5 h-5 text-orange-500" />
-                                    <span className="text-sm font-bold text-gray-700">المواعيد القادمة</span>
-                                </div>
-                                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                    {recentAppointments.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentAppointments.slice(0, 3).map((apt: any, i) => (
-                                                <div key={i} className="text-base border-b border-gray-100 pb-2 last:border-0">
-                                                    <p className="font-semibold text-gray-800 line-clamp-1">{apt.title}</p>
-                                                    <p className="text-xs text-gray-500 mt-0.5">{apt.time} - {apt.date}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : <p className="text-sm text-gray-400 text-center py-6">لا يوجد مواعيد قريبة</p>}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                );
-
-
-            case MODULES.QUICK_ACTIONS:
-                return (
-                    <div className="mb-4">
-                        <QuickActions
-                            onAddExpense={() => onNavigateToTab('finance')}
-                            onAddIncome={() => onNavigateToTab('finance')}
-                            onAddAppointment={() => onNavigateToTab('appointments')}
-                            onOpenShoppingList={() => onNavigateToTab('shopping')}
-                            onAddTask={() => onNavigateToTab('productivity')}
-                            onSaveLocation={() => onNavigateToTab('map')}
-                        />
-                    </div>
-                );
-
-            case MODULES.SAVED_LOCATIONS:
-                return savedLocations.length > 0 ? (
-                    <Card className="shadow-sm mb-4">
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-gray-500" />
-                                    <span className="text-sm font-bold text-gray-700">مواقع محفوظة</span>
-                                </div>
-                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onNavigateToTab('map')}>عرض الكل</Button>
-                            </div>
-                            <div className="flex gap-3 common-scroll overflow-x-auto pb-2">
-                                {savedLocations.map((loc: any, i: number) => (
-                                    <div key={i} className="min-w-[110px] p-3 bg-gray-50 rounded-xl text-center border cursor-pointer hover:bg-gray-100" onClick={() => onNavigateToTab('map')}>
-                                        <MapPin className="w-5 h-5 text-blue-500 mx-auto mb-2" />
-                                        <p className="text-sm font-semibold truncate">{loc.name || loc.title || 'موقع'}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ) : null;
-
-            case MODULES.FULL_APPOINTMENTS:
-                return <div className="mb-4 bg-white rounded-xl shadow-sm border overflow-hidden"><AppointmentManager /></div>;
-
-            case MODULES.FULL_SHOPPING:
-                return <div className="mb-4 bg-white rounded-xl shadow-sm border overflow-hidden"><ShoppingList /></div>;
-
-            case MODULES.FULL_MAP:
-                return (
-                    <div className="mb-4 h-[450px] rounded-xl overflow-hidden shadow-sm border border-gray-200">
-                        <InteractiveMap />
-                    </div>
-                );
-
-            case MODULES.DAILY_CALENDAR:
-                return <div className="mb-4"><DailyCalendar compact /></div>;
-
-            default: return null;
-        }
-    };
+    const weekDays = getWeekDays();
+    const DAYS_AR = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
 
     if (loading) return <div className="p-8 text-center">جاري التحميل...</div>;
 
     return (
-        <>
-            <div className="p-4 space-y-1">
-                {dashboardOrder.map(moduleId => (
-                    <div key={moduleId} className="animate-fade-in">
-                        {renderModule(moduleId)}
+        <div className="space-y-4 p-2 md:p-4 max-w-6xl mx-auto">
+
+            {/* ===== 1. HEADER ===== */}
+            <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    {/* Date Info */}
+                    <div className="flex items-center gap-4">
+                        <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center">
+                            <span className="text-2xl font-bold block">{currentDate.getDate()}</span>
+                            <span className="text-xs">{dayName}</span>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-gray-800">{gregorianDate}</p>
+                            <p className="text-sm text-emerald-600">{hijriDate}</p>
+                        </div>
                     </div>
+
+                    {/* Logo & Actions */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold text-emerald-600 hidden sm:block">البركة</span>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => setShowPrintDialog(true)} className="h-9 px-3 rounded-full hover:bg-emerald-50">
+                                <Printer className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-9 px-3 rounded-full text-red-500 hover:bg-red-50" onClick={handleLogout}>
+                                <LogOut className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ===== 2. FINANCIAL SUMMARY ===== */}
+            <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all" onClick={() => onNavigateToTab('finance')}>
+                <CardContent className="p-4">
+                    <div className="grid grid-cols-4 md:grid-cols-7 gap-2 text-center">
+                        {/* Balance */}
+                        <div className="col-span-1 p-2 bg-emerald-50 rounded-xl">
+                            <span className="text-[10px] text-gray-500 block">الرصيد</span>
+                            <span className="text-sm md:text-lg font-bold text-emerald-600 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
+                        </div>
+                        {/* Daily Limit */}
+                        <div className="col-span-1 p-2 bg-blue-50 rounded-xl">
+                            <span className="text-[10px] text-gray-500 block">الحد اليومي</span>
+                            <span className="text-sm md:text-lg font-bold text-blue-600 tabular-nums">{dailyLimitARS.toLocaleString()}</span>
+                        </div>
+                        {/* Today Expense */}
+                        <div className="col-span-1 p-2 bg-red-50 rounded-xl">
+                            <span className="text-[10px] text-gray-500 block">مصروف اليوم</span>
+                            <span className="text-sm md:text-lg font-bold text-red-600 tabular-nums">{todayExpense.toLocaleString()}</span>
+                        </div>
+                        {/* Remaining Days */}
+                        <div className="col-span-1 p-2 bg-purple-50 rounded-xl">
+                            <span className="text-[10px] text-gray-500 block">الأيام المتبقية</span>
+                            <span className="text-sm md:text-lg font-bold text-purple-600">{remainingDays}</span>
+                        </div>
+                        {/* Action Buttons - Hidden on mobile, shown on larger screens */}
+                        <div className="hidden md:flex col-span-3 items-center justify-end gap-2">
+                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); onNavigateToTab('finance'); }}>
+                                <Plus className="w-4 h-4" /> إضافة مصروف
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); onNavigateToTab('finance'); }}>
+                                <FileText className="w-4 h-4" /> تقرير مالي
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ===== 3. QUICK ACTIONS ===== */}
+            <div className="grid grid-cols-6 gap-2">
+                {[
+                    { icon: CalendarPlus, label: 'موعد', color: 'bg-orange-100 text-orange-600', action: () => onNavigateToTab('appointments') },
+                    { icon: CheckSquare, label: 'مهمة', color: 'bg-blue-100 text-blue-600', action: () => onNavigateToTab('productivity') },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => onNavigateToTab('map') },
+                    { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => onNavigateToTab('shopping') },
+                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onNavigateToTab('productivity') },
+                    { icon: Printer, label: 'تقرير', color: 'bg-gray-100 text-gray-600', action: () => setShowPrintDialog(true) },
+                ].map((item, idx) => (
+                    <button
+                        key={idx}
+                        onClick={item.action}
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl ${item.color} hover:scale-105 transition-transform`}
+                    >
+                        <item.icon className="w-5 h-5 mb-1" />
+                        <span className="text-[10px] font-medium">{item.label}</span>
+                    </button>
                 ))}
             </div>
 
-            {/* Print Dialog */}
+            {/* ===== 4. DAILY REPORT ===== */}
+            <Card className="border-blue-100 shadow-sm">
+                <CardContent className="p-4">
+                    <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-blue-500" />
+                        التقرير اليومي
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-xs text-gray-500 border-b">
+                                    <th className="text-right py-2 px-2">النوع</th>
+                                    <th className="text-right py-2 px-2">العنوان</th>
+                                    <th className="text-right py-2 px-2">التوقيت</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {/* Medications */}
+                                {todayMedications.slice(0, 2).map((med, i) => (
+                                    <tr key={`med-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-2"><Badge variant="outline" className="bg-red-50 text-red-600 text-[10px]"><Pill className="w-3 h-3 ml-1" />أدوية</Badge></td>
+                                        <td className="py-2 px-2 font-medium">{med.name}</td>
+                                        <td className="py-2 px-2 text-gray-500">{med.time}</td>
+                                    </tr>
+                                ))}
+                                {/* Appointments */}
+                                {todayAppointments.slice(0, 2).map((apt, i) => (
+                                    <tr key={`apt-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-2"><Badge variant="outline" className="bg-orange-50 text-orange-600 text-[10px]"><CalendarPlus className="w-3 h-3 ml-1" />موعد</Badge></td>
+                                        <td className="py-2 px-2 font-medium">{apt.title}</td>
+                                        <td className="py-2 px-2 text-gray-500">{apt.time || '--'}</td>
+                                    </tr>
+                                ))}
+                                {/* Tasks */}
+                                {todayTasks.slice(0, 2).map((task, i) => (
+                                    <tr key={`task-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-2"><Badge variant="outline" className="bg-blue-50 text-blue-600 text-[10px]"><CheckSquare className="w-3 h-3 ml-1" />مهمة</Badge></td>
+                                        <td className="py-2 px-2 font-medium">{task.title}</td>
+                                        <td className="py-2 px-2 text-gray-500">--</td>
+                                    </tr>
+                                ))}
+                                {/* Habits */}
+                                {todayHabits.slice(0, 2).map((habit, i) => (
+                                    <tr key={`habit-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-2"><Badge variant="outline" className="bg-yellow-50 text-yellow-600 text-[10px]"><Flame className="w-3 h-3 ml-1" />عادة</Badge></td>
+                                        <td className="py-2 px-2 font-medium">{habit.name}</td>
+                                        <td className="py-2 px-2 text-gray-500">🔥 {habit.streak || 0}</td>
+                                    </tr>
+                                ))}
+                                {(todayMedications.length + todayAppointments.length + todayTasks.length + todayHabits.length) === 0 && (
+                                    <tr><td colSpan={3} className="text-center py-4 text-gray-400">لا توجد عناصر لليوم</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ===== 5. WEEKLY CALENDAR ===== */}
+            <Card className="border-purple-100 shadow-sm">
+                <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                            <CalendarPlus className="w-5 h-5 text-purple-500" />
+                            التقويم الأسبوعي
+                        </h3>
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() - 7)))}>
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() + 7)))}>
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                        {weekDays.map((day, idx) => {
+                            const dateStr = day.toISOString().split('T')[0];
+                            const isToday = dateStr === todayStr;
+                            const dayAppts = appointments.filter(a => a.date === dateStr);
+                            const dayMeds = medications.length; // Simplified - show count
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`p-2 rounded-lg cursor-pointer transition-all ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                    onClick={() => onNavigateToTab('calendar')}
+                                >
+                                    <span className="text-[10px] text-gray-500 block">{DAYS_AR[idx]}</span>
+                                    <span className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
+                                    {dayAppts.length > 0 && <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-1" />}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {/* Mini Legend */}
+                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        <div className="flex items-center gap-1"><Pill className="w-3 h-3 text-red-400" /> الأدوية</div>
+                        <div className="flex items-center gap-1"><CalendarPlus className="w-3 h-3 text-orange-400" /> المواعيد</div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ===== 6. MAPS SECTION ===== */}
+            <Card className="border-green-100 shadow-sm">
+                <CardContent className="p-4">
+                    <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-green-500" />
+                        الخرائط
+                    </h3>
+
+                    {/* Search & Actions */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <div className="flex-1 min-w-[200px] relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input placeholder="بحث عن موقع..." className="pr-10 h-9 text-sm" onClick={() => onNavigateToTab('map')} readOnly />
+                        </div>
+                        <Button size="sm" variant="outline" className="h-9 gap-1" onClick={() => onNavigateToTab('map')}>
+                            <Navigation className="w-4 h-4" /> تحديد الموقع
+                        </Button>
+                    </div>
+
+                    {/* Saved Locations */}
+                    {savedLocations.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
+                            {savedLocations.slice(0, 5).map((loc: any, i: number) => (
+                                <div key={i} className="min-w-[100px] p-2 bg-gray-50 rounded-lg text-center cursor-pointer hover:bg-gray-100" onClick={() => onNavigateToTab('map')}>
+                                    <MapPin className="w-4 h-4 text-green-500 mx-auto mb-1" />
+                                    <span className="text-xs font-medium truncate block">{loc.name || 'موقع'}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Quick Actions */}
+                    <div className="flex gap-2 mb-3">
+                        <Button size="sm" variant="outline" className="flex-1 h-9 gap-1 text-xs" onClick={() => onNavigateToTab('map')}>
+                            <Save className="w-3 h-3" /> حفظ سريع
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1 h-9 gap-1 text-xs" onClick={() => onNavigateToTab('map')}>
+                            <Share2 className="w-3 h-3" /> تحديد للمشاركة
+                        </Button>
+                    </div>
+
+                    {/* Map Preview */}
+                    <div className="h-[300px] md:h-[400px] rounded-xl overflow-hidden border border-gray-200">
+                        <InteractiveMap />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ===== PRINT DIALOG ===== */}
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
@@ -451,57 +354,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-2">
-                            <Button
-                                variant={printRange === 'today' ? 'default' : 'outline'}
-                                onClick={() => setPrintRange('today')}
-                                className="h-10"
-                            >اليوم</Button>
-                            <Button
-                                variant={printRange === 'week' ? 'default' : 'outline'}
-                                onClick={() => setPrintRange('week')}
-                                className="h-10"
-                            >الأسبوع</Button>
-                            <Button
-                                variant={printRange === 'month' ? 'default' : 'outline'}
-                                onClick={() => setPrintRange('month')}
-                                className="h-10"
-                            >الشهر</Button>
-                            <Button
-                                variant={printRange === 'custom' ? 'default' : 'outline'}
-                                onClick={() => setPrintRange('custom')}
-                                className="h-10"
-                            >مخصص</Button>
+                            <Button variant="outline" onClick={() => { }} className="h-10">اليوم</Button>
+                            <Button variant="outline" onClick={() => { }} className="h-10">الأسبوع</Button>
+                            <Button variant="outline" onClick={() => { }} className="h-10">الشهر</Button>
+                            <Button variant="outline" onClick={() => { }} className="h-10">مخصص</Button>
                         </div>
-
-                        {printRange === 'custom' && (
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-xs text-gray-500">من</label>
-                                    <Input
-                                        type="date"
-                                        value={printStartDate}
-                                        onChange={e => setPrintStartDate(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500">إلى</label>
-                                    <Input
-                                        type="date"
-                                        value={printEndDate}
-                                        onChange={e => setPrintEndDate(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <Button onClick={handlePrint} className="w-full h-12 text-lg">
+                        <Button onClick={() => setShowPrintDialog(false)} className="w-full h-12 text-lg">
                             <Printer className="w-5 h-5 ml-2" />
                             طباعة الآن
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
-        </>
+        </div>
     );
 };
 
