@@ -240,7 +240,73 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </CardContent>
             </Card>
 
-            {/* ===== 5. MAPS SECTION ===== */}
+            {/* ===== 5. WEEKLY CALENDAR ===== */}
+            <Card className="border-purple-100 shadow-sm">
+                <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                            <CalendarPlus className="w-5 h-5 text-purple-500" />
+                            التقويم الأسبوعي
+                        </h3>
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() - 7)))}>
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() + 7)))}>
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                        {weekDays.map((day, idx) => {
+                            const dateStr = day.toISOString().split('T')[0];
+                            const isToday = dateStr === todayStr;
+                            const dayAppts = appointments.filter(a => a.date === dateStr);
+                            const dayMeds = medications; // All meds for now (daily)
+                            const allItems = [
+                                ...dayMeds.map(m => ({ type: 'med', name: m.name, time: m.time })),
+                                ...dayAppts.map(a => ({ type: 'apt', name: a.title, time: a.time || '--' }))
+                            ].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`rounded-lg transition-all ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                >
+                                    {/* Day Header */}
+                                    <div className={`text-center py-1.5 border-b ${isToday ? 'border-purple-200' : 'border-gray-200'}`}>
+                                        <span className="text-[10px] text-gray-500 block">{DAYS_AR[idx]}</span>
+                                        <span className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
+                                    </div>
+                                    {/* Items inside day - max 3 rows, scrollable */}
+                                    <div className="h-[72px] overflow-y-auto p-1 space-y-0.5">
+                                        {allItems.slice(0, 10).map((item, i) => (
+                                            <div
+                                                key={i}
+                                                className={`text-[8px] px-1 py-0.5 rounded truncate ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                                    }`}
+                                                title={`${item.name} - ${item.time}`}
+                                            >
+                                                {item.type === 'med' ? '💊' : '📅'} {item.time}
+                                            </div>
+                                        ))}
+                                        {allItems.length === 0 && (
+                                            <div className="text-[8px] text-gray-400 text-center py-2">-</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full"></span> الأدوية</div>
+                        <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full"></span> المواعيد</div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ===== 6. MAPS SECTION ===== */}
             <Card className="border-green-100 shadow-sm">
                 <CardContent className="p-4">
                     <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
