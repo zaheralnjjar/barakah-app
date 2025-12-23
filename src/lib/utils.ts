@@ -14,8 +14,10 @@ export function normalizeNumbers(input: string): string {
   return input.replace(/[٠-٩]/g, match => arabicToEnglishMap[match]);
 }
 
-export function formatNumberToLocale(num: number | string, locale: 'en' | 'ar' = 'ar'): string {
+export function formatNumberToLocale(num: number | string, locale: 'en' | 'ar' = 'en'): string {
   if (num === null || num === undefined) return '';
+  // Default: return Western numerals (0-9)
+  // Only convert to Arabic numerals if explicitly requested
   return num.toString().replace(/\d/g, d => {
     if (locale === 'ar') {
       const englishToArabicMap: { [key: string]: string } = {

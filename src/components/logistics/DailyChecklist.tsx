@@ -11,6 +11,7 @@ import { useMedications } from '@/hooks/useMedications';
 import { useAppointments } from '@/hooks/useAppointments';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChecklistItem {
     id: string;
@@ -107,11 +108,20 @@ export const DailyChecklist = () => {
         setChecklistItems(items);
     }, [habits, medications, appointments, dateStr, todayDayName]);
 
-    const handleToggle = (item: ChecklistItem) => {
+    const handleToggle = async (item: ChecklistItem) => {
         if (item.type === 'habit') {
             toggleHabit(item.sourceId);
+            toast({ title: item.completed ? 'تم إلغاء الإكمال' : 'تم إنجاز العادة ✓' });
         } else if (item.type === 'medication') {
             toggleMedTaken(item.sourceId, dateStr);
+            toast({ title: item.completed ? 'تم إلغاء التناول' : 'تم تناول الدواء ✓' });
+        } else if (item.type === 'appointment') {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            await supabase.from('appointments').update({ is_completed: !item.completed }).eq('id', item.sourceId);
+            toast({ title: item.completed ? 'تم إلغاء الإتمام' : 'تم إنجاز الموعد ✓' });
+            // Trigger re-fetch
+            window.dispatchEvent(new Event('appointments-updated'));
         }
     };
 
