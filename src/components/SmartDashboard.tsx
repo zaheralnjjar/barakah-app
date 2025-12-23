@@ -276,20 +276,25 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                         <span className="text-[10px] text-gray-500 block">{DAYS_AR[idx]}</span>
                                         <span className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
                                     </div>
-                                    {/* Items inside day - max 3 rows, scrollable */}
-                                    <div className="h-[72px] overflow-y-auto p-1 space-y-0.5">
+                                    {/* Items inside day - scrollable */}
+                                    <div className="h-[80px] overflow-y-auto p-1 space-y-0.5">
                                         {allItems.slice(0, 10).map((item, i) => (
                                             <div
                                                 key={i}
-                                                className={`text-[8px] px-1 py-0.5 rounded truncate ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                                onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
+                                                className={`text-[9px] px-1 py-1 rounded cursor-pointer hover:opacity-80 ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
                                                     }`}
                                                 title={`${item.name} - ${item.time}`}
                                             >
-                                                {item.type === 'med' ? '💊' : '📅'} {item.time}
+                                                <div className="flex items-center gap-1">
+                                                    <span>{item.type === 'med' ? '💊' : '📅'}</span>
+                                                    <span className="font-medium truncate flex-1">{item.name}</span>
+                                                </div>
+                                                <div className="text-[8px] opacity-70">{item.time}</div>
                                             </div>
                                         ))}
                                         {allItems.length === 0 && (
-                                            <div className="text-[8px] text-gray-400 text-center py-2">-</div>
+                                            <div className="text-[9px] text-gray-400 text-center py-4">لا توجد عناصر</div>
                                         )}
                                     </div>
                                 </div>
