@@ -74,6 +74,59 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         setTimeout(() => setIsRefreshing(false), 1000);
     };
 
+    // Auto-sync every 5 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (refetch) refetch();
+        }, 5 * 60 * 1000); // 5 minutes
+        return () => clearInterval(interval);
+    }, [refetch]);
+
+    // Save expense function
+    const saveExpense = async (amount: number, description: string, category: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+
+            // Get current finance data
+            const { data: currentData } = await supabase
+                .from('finance_data_2025_12_18_18_42')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!currentData) return false;
+
+            const updatedBalanceARS = (currentData.current_balance_ars || 0) - amount;
+            const updatedPendingExpenses = [...(currentData.pending_expenses || []), {
+                id: Date.now(),
+                amount,
+                currency: 'ARS',
+                type: 'expense',
+                category,
+                description: description || 'مصروف سريع',
+                timestamp: new Date().toISOString(),
+                source: 'dashboard_quick_add'
+            }];
+
+            const { error } = await supabase
+                .from('finance_data_2025_12_18_18_42')
+                .update({
+                    current_balance_ars: updatedBalanceARS,
+                    pending_expenses: updatedPendingExpenses,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+            if (refetch) refetch();
+            return true;
+        } catch (e) {
+            console.error('Error saving expense:', e);
+            return false;
+        }
+    };
+
     // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
 
@@ -528,8 +581,16 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </Button>
                                 ))}
                             </div>
-                            <Button className="w-full" onClick={() => {
-                                toast({ title: 'تم حفظ المصروف' });
+                            <Button className="w-full" onClick={async () => {
+                                const amount = parseFloat((document.getElementById('expense-amount') as HTMLInputElement)?.value || '0');
+                                const desc = (document.getElementById('expense-desc') as HTMLInputElement)?.value || '';
+                                if (!amount || amount <= 0) { toast({ title: 'أدخل المبلغ' }); return; }
+                                const success = await saveExpense(amount, desc, 'أخرى');
+                                if (success) {
+                                    toast({ title: 'تم حفظ المصروف', description: `${amount} ARS` });
+                                } else {
+                                    toast({ title: 'فشل حفظ المصروف', variant: 'destructive' });
+                                }
                                 setShowAddDialog(null);
                             }}>
                                 <Plus className="w-4 h-4 ml-2" /> حفظ المصروف
@@ -560,12 +621,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </select>
                                 </div>
                             </div>
-                            <Button className="w-full" onClick={() => {
+                            <Button className="w-full" onClick={async () => {
                                 const title = (document.getElementById('task-title') as HTMLInputElement)?.value;
                                 if (!title) { toast({ title: 'أدخل عنوان المهمة' }); return; }
                                 const priority = (document.getElementById('task-priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high' || 'medium';
                                 const deadline = (document.getElementById('task-date') as HTMLInputElement)?.value || todayStr;
-                                addTask({ title, type: 'task', deadline, priority });
+                                await addTask({ title, type: 'task', deadline, priority });
+                                if (refetch) refetch();
                                 toast({ title: 'تم حفظ المهمة', description: title });
                                 setShowAddDialog(null);
                             }}>
