@@ -37,6 +37,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
     const [printRange, setPrintRange] = useState('today');
+    const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | null>(null);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -168,14 +169,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </Card>
 
             {/* ===== 3. QUICK ACTIONS ===== */}
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-5 gap-2">
                 {[
-                    { icon: CalendarPlus, label: 'موعد', color: 'bg-orange-100 text-orange-600', action: () => onNavigateToTab('appointments') },
-                    { icon: CheckSquare, label: 'مهمة', color: 'bg-blue-100 text-blue-600', action: () => onNavigateToTab('productivity') },
-                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => onNavigateToTab('map') },
-                    { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => onNavigateToTab('shopping') },
-                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onNavigateToTab('productivity') },
-                    { icon: Printer, label: 'تقرير', color: 'bg-gray-100 text-gray-600', action: () => setShowPrintDialog(true) },
+                    { icon: CalendarPlus, label: 'موعد', color: 'bg-orange-100 text-orange-600', action: () => setShowAddDialog('appointment') },
+                    { icon: CheckSquare, label: 'مهمة', color: 'bg-blue-100 text-blue-600', action: () => setShowAddDialog('task') },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowAddDialog('location') },
+                    { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => setShowAddDialog('shopping') },
+                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => setShowAddDialog('note') },
                 ].map((item, idx) => (
                     <button
                         key={idx}
@@ -200,8 +200,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             <thead>
                                 <tr className="text-xs text-gray-500 border-b">
                                     <th className="text-right py-2 px-2">النوع</th>
-                                    <th className="text-right py-2 px-2">العنوان</th>
-                                    <th className="text-right py-2 px-2">التوقيت</th>
+                                    <th className="text-right py-2 px-2">التفاصيل</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -209,16 +208,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 {todayMedications.slice(0, 2).map((med, i) => (
                                     <tr key={`med-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-red-50 text-red-600 text-[10px]"><Pill className="w-3 h-3 ml-1" />أدوية</Badge></td>
-                                        <td className="py-2 px-2 font-medium">{med.name}</td>
-                                        <td className="py-2 px-2 text-gray-500">{med.time}</td>
+                                        <td className="py-2 px-2 font-medium">{med.name} - {med.time}</td>
                                     </tr>
                                 ))}
                                 {/* Appointments */}
                                 {todayAppointments.slice(0, 2).map((apt, i) => (
                                     <tr key={`apt-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-orange-50 text-orange-600 text-[10px]"><CalendarPlus className="w-3 h-3 ml-1" />موعد</Badge></td>
-                                        <td className="py-2 px-2 font-medium">{apt.title}</td>
-                                        <td className="py-2 px-2 text-gray-500">{apt.time || '--'}</td>
+                                        <td className="py-2 px-2 font-medium">{apt.title} - {apt.time || '--'}</td>
                                     </tr>
                                 ))}
                                 {/* Tasks */}
@@ -226,19 +223,16 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     <tr key={`task-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-blue-50 text-blue-600 text-[10px]"><CheckSquare className="w-3 h-3 ml-1" />مهمة</Badge></td>
                                         <td className="py-2 px-2 font-medium">{task.title}</td>
-                                        <td className="py-2 px-2 text-gray-500">--</td>
                                     </tr>
                                 ))}
                                 {/* Habits */}
                                 {todayHabits.slice(0, 2).map((habit, i) => (
                                     <tr key={`habit-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-yellow-50 text-yellow-600 text-[10px]"><Flame className="w-3 h-3 ml-1" />عادة</Badge></td>
-                                        <td className="py-2 px-2 font-medium">{habit.name}</td>
-                                        <td className="py-2 px-2 text-gray-500">🔥 {habit.streak || 0}</td>
+                                        <td className="py-2 px-2 font-medium">{habit.name} - 🔥 {habit.streak || 0}</td>
                                     </tr>
-                                ))}
-                                {(todayMedications.length + todayAppointments.length + todayTasks.length + todayHabits.length) === 0 && (
-                                    <tr><td colSpan={3} className="text-center py-4 text-gray-400">لا توجد عناصر لليوم</td></tr>
+                                ))}                                {(todayMedications.length + todayAppointments.length + todayTasks.length + todayHabits.length) === 0 && (
+                                    <tr><td colSpan={2} className="text-center py-4 text-gray-400">لا توجد عناصر لليوم</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -246,52 +240,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </CardContent>
             </Card>
 
-            {/* ===== 5. WEEKLY CALENDAR ===== */}
-            <Card className="border-purple-100 shadow-sm">
-                <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                            <CalendarPlus className="w-5 h-5 text-purple-500" />
-                            التقويم الأسبوعي
-                        </h3>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() - 7)))}>
-                                <ChevronRight className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() + 7)))}>
-                                <ChevronLeft className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                        {weekDays.map((day, idx) => {
-                            const dateStr = day.toISOString().split('T')[0];
-                            const isToday = dateStr === todayStr;
-                            const dayAppts = appointments.filter(a => a.date === dateStr);
-                            const dayMeds = medications.length; // Simplified - show count
-
-                            return (
-                                <div
-                                    key={idx}
-                                    className={`p-2 rounded-lg cursor-pointer transition-all ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}`}
-                                    onClick={() => onNavigateToTab('calendar')}
-                                >
-                                    <span className="text-[10px] text-gray-500 block">{DAYS_AR[idx]}</span>
-                                    <span className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
-                                    {dayAppts.length > 0 && <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mx-auto mt-1" />}
-                                </div>
-                            );
-                        })}
-                    </div>
-                    {/* Mini Legend */}
-                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                        <div className="flex items-center gap-1"><Pill className="w-3 h-3 text-red-400" /> الأدوية</div>
-                        <div className="flex items-center gap-1"><CalendarPlus className="w-3 h-3 text-orange-400" /> المواعيد</div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* ===== 6. MAPS SECTION ===== */}
+            {/* ===== 5. MAPS SECTION ===== */}
             <Card className="border-green-100 shadow-sm">
                 <CardContent className="p-4">
                     <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
