@@ -9,9 +9,6 @@ import {
     Shield,
     Database,
     LogOut,
-    Layout,
-    ArrowUp,
-    ArrowDown,
     RefreshCw,
     Download,
     Globe,
@@ -19,8 +16,6 @@ import {
     FileText,
     Calendar,
     DollarSign,
-    PlusCircle,
-    MinusCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,60 +39,8 @@ const SettingsPanel = () => {
         await supabase.auth.signOut();
     };
 
-    // Dashboard Customization Logic
-    const DEFAULT_ORDER = [
-        'header',
-        'prayer',
-        'finance_summary',
-        'appointments_widget',
-        'quick_actions',
-        'full_map'
-    ];
-    const VALID_SECTIONS = ['header', 'prayer', 'finance_daily', 'finance_summary', 'appointments_widget', 'quick_actions', 'full_map', 'saved_locations', 'daily_calendar', 'full_appointments', 'full_shopping'];
-
-    const [dashboardOrder, setDashboardOrder] = useState<string[]>(() => {
-        try {
-            const saved = localStorage.getItem('baraka_dashboard_order');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Filter out deprecated/invalid modules
-                const validOrder = parsed.filter((id: string) => VALID_SECTIONS.includes(id));
-                if (validOrder.length > 0) {
-                    return validOrder;
-                }
-            }
-            return DEFAULT_ORDER;
-        } catch { return DEFAULT_ORDER; }
-    });
-
-    const moveSection = (index: number, direction: 'up' | 'down') => {
-        const newOrder = [...dashboardOrder];
-        if (direction === 'up' && index > 0) {
-            [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
-        } else if (direction === 'down' && index < newOrder.length - 1) {
-            [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-        }
-        setDashboardOrder(newOrder);
-        localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-        window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
-        toast({ title: "تم تحديث الترتيب" });
-    };
-
-    const SECTION_LABELS: Record<string, string> = {
-        'header': '🏠 رأس الصفحة (التاريخ والوقت)',
-        'prayer': '🕌 أوقات الصلاة',
-        'finance_daily': '💸 مصروف اليوم',
-        'finance_summary': '💰 الملخص المالي',
-        'appointments_widget': '📅 المواعيد والتذكيرات (ملخص)',
-        'quick_actions': '⚡ الاختصارات السريعة',
-        'full_map': '🗺️ الخريطة التفاعلية (كاملة)',
-        'saved_locations': '📍 المواقع المحفوظة',
-        'daily_calendar': '📅 التقويم اليومي',
-        'full_appointments': '📝 إدارة المواعيد (كاملة)',
-        'full_shopping': '🛍️ قائمة التسوق (كاملة)',
-    };
-
     // Reminder Customizations State - Enhanced
+
     const [reminders, setReminders] = useState<any>(() => {
         try {
             const saved = localStorage.getItem('baraka_reminders_settings');
@@ -167,111 +110,8 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
-            {/* Interface Customization */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <Layout className="w-5 h-5 text-purple-600" />
-                        تخصيص الواجهة الرئيسية
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">اسحب الأقسام لإعادة ترتيبها</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {dashboardOrder.filter(s => SECTION_LABELS[s]).map((section) => (
-                        <div
-                            key={section}
-                            draggable
-                            onDragStart={(e) => {
-                                e.dataTransfer.setData("text/plain", section);
-                                e.currentTarget.style.opacity = "0.5";
-                            }}
-                            onDragEnd={(e) => {
-                                e.currentTarget.style.opacity = "1";
-                            }}
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                            }}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                const draggedSection = e.dataTransfer.getData("text/plain");
-                                const targetSection = section;
-                                if (draggedSection !== targetSection) {
-                                    const newLineup = [...dashboardOrder];
-                                    const draggedIdx = newLineup.indexOf(draggedSection);
-                                    const targetIdx = newLineup.indexOf(targetSection);
-                                    if (draggedIdx !== -1 && targetIdx !== -1) {
-                                        newLineup.splice(draggedIdx, 1);
-                                        newLineup.splice(targetIdx, 0, draggedSection);
-                                        setDashboardOrder(newLineup);
-                                        localStorage.setItem('baraka_dashboard_order', JSON.stringify(newLineup));
-                                        window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
-                                        toast({ title: "تم الترتيب" });
-                                    }
-                                }
-                            }}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border cursor-move hover:bg-gray-100 transition-colors"
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-gray-400">☰</span>
-                                <span className="font-medium arabic-body">{SECTION_LABELS[section]}</span>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                    // Prevent deleting the last section
-                                    if (dashboardOrder.length <= 1) {
-                                        toast({ title: "تنبيه", description: "يجب إبقاء قسم واحد على الأقل", variant: "destructive" });
-                                        return;
-                                    }
-                                    // Use section ID to delete, not index
-                                    const newOrder = dashboardOrder.filter(s => s !== section);
-                                    setDashboardOrder(newOrder);
-                                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-                                    window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
-                                }}
-                                className="text-red-500 hover:bg-red-50 hover:text-red-600 h-8 w-8 p-0"
-                                disabled={dashboardOrder.length <= 1}
-                            >
-                                <MinusCircle className="w-4 h-4" />
-                            </Button>
-                        </div>
-                    ))}
-
-                    {/* Available Sections */}
-                    <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-bold mb-3 text-gray-600 flex items-center gap-2">
-                            <PlusCircle className="w-4 h-4" />
-                            أقسام متاحة للإضافة:
-                        </h4>
-                        <div className="grid gap-2">
-                            {Object.keys(SECTION_LABELS).filter(s => !dashboardOrder.includes(s)).map(section => (
-                                <div key={section} className="flex items-center justify-between p-3 bg-white border border-dashed rounded-lg hover:bg-gray-50">
-                                    <span className="text-sm text-gray-600">{SECTION_LABELS[section]}</span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                            const newOrder = [...dashboardOrder, section];
-                                            setDashboardOrder(newOrder);
-                                            localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
-                                            window.dispatchEvent(new Event('barakah_dashboard_order_updated'));
-                                        }}
-                                        className="text-emerald-600 hover:bg-emerald-50 h-8 w-8 p-0"
-                                    >
-                                        <PlusCircle className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                            {Object.keys(SECTION_LABELS).filter(s => !dashboardOrder.includes(s)).length === 0 && (
-                                <p className="text-xs text-gray-400 text-center py-2">جميع الأقسام مضافة</p>
-                            )}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Reminder Customizations - Enhanced */}
+
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg arabic-title">
