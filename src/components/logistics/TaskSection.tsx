@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, FileText, CalendarDays } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, CalendarDays } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
-import TaskTemplatesManager from '@/components/TaskTemplatesManager';
+
 
 
 interface TaskSectionProps {
@@ -570,8 +570,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         setIsMultiSelectMode(false);
     };
 
-    // Local state for internal tab switching (weekly, templates)
-    const [internalTab, setInternalTab] = useState<'list' | 'monthly' | 'weekly' | 'templates'>('list');
+    // Local state for internal tab switching (weekly)
+    const [internalTab, setInternalTab] = useState<'list' | 'monthly' | 'weekly'>('list');
 
     return (
         <div className="space-y-6">
@@ -605,26 +605,11 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     <CalendarDays className="w-4 h-4 inline-block ml-1" />
                     الأسبوعي
                 </button>
-                <button
-                    onClick={() => setInternalTab('templates')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'templates'
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <FileText className="w-4 h-4 inline-block ml-1" />
-                    القوالب
-                </button>
             </div>
 
             {/* Weekly Calendar View */}
             {internalTab === 'weekly' && (
                 <WeeklyCalendar />
-            )}
-
-            {/* Templates View */}
-            {internalTab === 'templates' && (
-                <TaskTemplatesManager />
             )}
 
             {internalTab === 'monthly' ? (
