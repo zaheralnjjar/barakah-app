@@ -249,8 +249,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         const dayAppts = appointments.filter(a => a.date === dateStr);
         const dayMeds = medications;
         const allItems = [
-            ...dayMeds.map(m => ({ type: 'med' as const, name: m.name, time: m.time })),
-            ...dayAppts.map(a => ({ type: 'apt' as const, name: a.title, time: a.time || '--' }))
+            ...dayMeds.map(m => ({ type: 'med' as const, name: m.name, time: m.time, id: m.id || m.name })),
+            ...dayAppts.map(a => ({ type: 'apt' as const, name: a.title, time: a.time || '--', id: a.id, isCompleted: (a as any).is_completed }))
         ].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
         return (
@@ -268,11 +268,32 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     {allItems.slice(0, 10).map((item, i) => (
                         <div
                             key={i}
-                            onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
-                            className={`text-xs px-2 py-1.5 rounded-lg cursor-pointer hover:opacity-80 ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}
+                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'} ${(item as any).isCompleted ? 'opacity-50' : ''}`}
                         >
-                            <div className="font-medium truncate">{item.name}</div>
-                            <div className="text-[10px] opacity-70">{item.time}</div>
+                            <input
+                                type="checkbox"
+                                checked={(item as any).isCompleted || false}
+                                onChange={async (e) => {
+                                    e.stopPropagation();
+                                    if (item.type === 'apt') {
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        if (!user) return;
+                                        await supabase.from('appointments').update({ is_completed: !(item as any).isCompleted }).eq('id', item.id);
+                                        if (refetch) refetch();
+                                        toast({ title: (item as any).isCompleted ? 'تم إلغاء الإتمام' : 'تم الإتمام ✓' });
+                                    } else {
+                                        toast({ title: 'سيتم حفظ حالة الدواء قريباً' });
+                                    }
+                                }}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 cursor-pointer flex-shrink-0"
+                            />
+                            <div
+                                className={`flex-1 min-w-0 cursor-pointer ${(item as any).isCompleted ? 'line-through' : ''}`}
+                                onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
+                            >
+                                <div className="font-medium truncate">{item.name}</div>
+                                <div className="text-[10px] opacity-70">{item.time}</div>
+                            </div>
                         </div>
                     ))}
                     {allItems.length === 0 && (

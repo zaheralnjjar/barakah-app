@@ -21,7 +21,9 @@ import {
   Bell,
   Calendar,
   RotateCw,
-  Power
+  Power,
+  MoreVertical,
+  Pencil
 } from 'lucide-react';
 import { fetchBNARate } from '@/lib/currency';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1147,8 +1149,8 @@ const FinancialController = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Transactions - Restored */}
-      <Card className="col-span-full">
+      {/* Recent Transactions - Modern Minimalist Design */}
+      <Card className="col-span-full shadow-lg border-0">
         <CardHeader className="pb-3">
           <CardTitle className="arabic-title text-sm flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1157,45 +1159,73 @@ const FinancialController = () => {
             </div>
             <div className="flex gap-2">
               {/* Filters */}
-              <select className="text-xs border rounded p-1 h-8" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+              <select className="text-xs border rounded-lg p-1 h-8 bg-gray-50" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
                 <option value="all">كل الفئات</option>
                 {expenseCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <Input type="date" className="h-8 w-32 text-xs" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+              <Input type="date" className="h-8 w-32 text-xs rounded-lg" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {getFilteredTransactions().length === 0 ? (
               <p className="text-center text-gray-400 py-4">لا توجد معاملات</p>
             ) : (
               getFilteredTransactions().map((t: any) => (
-                <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border hover:bg-white hover:shadow-sm transition-all">
+                <div
+                  key={t.id}
+                  className={`flex justify-between items-center p-4 rounded-2xl shadow-sm hover:shadow-md transition-all ${t.type === 'expense' ? 'bg-gradient-to-r from-white to-red-50/30' : 'bg-gradient-to-r from-white to-green-50/30'
+                    }`}
+                >
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${t.type === 'expense' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                    {/* Icon with pastel background */}
+                    <div className={`p-2.5 rounded-xl ${t.type === 'expense' ? 'bg-rose-100 text-rose-500' : 'bg-emerald-100 text-emerald-500'
+                      }`}>
                       {t.type === 'expense' ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-800">{t.description}</p>
-                      <div className="flex gap-2 text-xs text-gray-500">
-                        <span>{new Date(t.timestamp).toLocaleDateString('ar')}</span>
-                        <span>•</span>
-                        <span>{t.category}</span>
-                      </div>
+                      <p className="text-sm text-gray-600">{t.category || 'أخرى'}</p>
+                      <p className="font-bold text-gray-800 text-base">{t.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(t.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`font-bold dir-ltr ${t.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
-                      {t.type === 'expense' ? '-' : '+'}{parseFloat(t.amount).toLocaleString()} {t.currency}
-                    </span>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => handleShare(t)}>
-                        <Share2 className="w-4 h-4" />
+                    {/* Amount - larger and bold */}
+                    <div className="text-left">
+                      <span className={`font-bold text-lg dir-ltr block ${t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                        }`}>
+                        {t.type === 'expense' ? '-' : '+'}{parseFloat(t.amount).toLocaleString()}
+                      </span>
+                      <span className="text-xs text-gray-400">{t.currency}</span>
+                    </div>
+                    {/* Three-dot menu */}
+                    <div className="relative group">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600">
+                        <MoreVertical className="w-4 h-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500" onClick={() => deleteTransaction(t.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="absolute left-0 top-full mt-1 bg-white shadow-lg rounded-lg border py-1 hidden group-hover:block z-10 min-w-[100px]">
+                        <button
+                          className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
+                          onClick={() => toast({ title: 'قريباً', description: 'تعديل المعاملة قيد التطوير' })}
+                        >
+                          <Pencil className="w-3 h-3 text-gray-500" /> تعديل
+                        </button>
+                        <button
+                          className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
+                          onClick={() => handleShare(t)}
+                        >
+                          <Share2 className="w-3 h-3 text-blue-500" /> مشاركة
+                        </button>
+                        <button
+                          className="w-full px-3 py-2 text-right text-sm hover:bg-red-50 text-red-500 flex items-center gap-2"
+                          onClick={() => deleteTransaction(t.id)}
+                        >
+                          <Trash2 className="w-3 h-3" /> حذف
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
