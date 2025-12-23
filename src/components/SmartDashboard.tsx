@@ -279,7 +279,52 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* ===== QUICK ADD DIALOG ===== */}
+            <Dialog open={showAddDialog !== null} onOpenChange={(open) => !open && setShowAddDialog(null)}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            {showAddDialog === 'appointment' && <><CalendarPlus className="w-5 h-5 text-orange-500" /> إضافة موعد</>}
+                            {showAddDialog === 'task' && <><CheckSquare className="w-5 h-5 text-blue-500" /> إضافة مهمة</>}
+                            {showAddDialog === 'location' && <><MapPin className="w-5 h-5 text-green-500" /> حفظ موقع</>}
+                            {showAddDialog === 'shopping' && <><ShoppingCart className="w-5 h-5 text-pink-500" /> إضافة للتسوق</>}
+                            {showAddDialog === 'note' && <><FileText className="w-5 h-5 text-yellow-500" /> ملاحظة سريعة</>}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Input placeholder="العنوان" className="text-right" id="quick-add-title" />
+                        {showAddDialog === 'appointment' && (
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input type="date" id="quick-add-date" />
+                                <Input type="time" id="quick-add-time" />
+                            </div>
+                        )}
+                        <Button
+                            className="w-full h-12"
+                            onClick={() => {
+                                const title = (document.getElementById('quick-add-title') as HTMLInputElement)?.value;
+                                if (!title) { toast({ title: 'أدخل العنوان' }); return; }
+
+                                // Navigate to the appropriate tab with the action
+                                if (showAddDialog === 'appointment') onNavigateToTab('appointments');
+                                else if (showAddDialog === 'task') onNavigateToTab('productivity');
+                                else if (showAddDialog === 'location') onNavigateToTab('map');
+                                else if (showAddDialog === 'shopping') onNavigateToTab('shopping');
+                                else if (showAddDialog === 'note') onNavigateToTab('productivity');
+
+                                setShowAddDialog(null);
+                                toast({ title: `تم فتح قسم ${showAddDialog === 'appointment' ? 'المواعيد' : showAddDialog === 'task' ? 'المهام' : showAddDialog === 'location' ? 'الخريطة' : showAddDialog === 'shopping' ? 'التسوق' : 'الملاحظات'}` });
+                            }}
+                        >
+                            <Plus className="w-5 h-5 ml-2" />
+                            انتقل للإضافة
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
+
     );
 };
 
