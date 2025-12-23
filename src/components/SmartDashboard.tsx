@@ -17,6 +17,7 @@ import {
     Navigation, Save, Share2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import InteractiveMap from '@/components/InteractiveMap';
+import AppointmentManager from '@/components/AppointmentManager';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
@@ -31,7 +32,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     const { habits } = useHabits();
     const { medications } = useMedications();
-    const { tasks } = useTasks();
+    const { tasks, addTask } = useTasks();
     const { appointments } = useAppointments();
 
     const [currentDate] = useState(new Date());
@@ -40,7 +41,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [printOptions, setPrintOptions] = useState({ tasks: true, appointments: true, medications: true, habits: true });
-    const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | null>(null);
+    const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | null>(null);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -62,6 +63,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         };
         if (!loading) syncToWidget();
     }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, loading]);
+
+    // Auto-refresh data every 30 seconds for real-time sync
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (refetch) refetch();
+        }, 30000); // 30 seconds
+        return () => clearInterval(interval);
+    }, [refetch]);
 
     // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
@@ -397,7 +406,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             {/* ===== QUICK ADD DIALOG ===== */}
             <Dialog open={showAddDialog !== null} onOpenChange={(open) => !open && setShowAddDialog(null)}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'sm:max-w-[600px] max-h-[90vh] overflow-y-auto' : 'sm:max-w-[450px]'}>
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
                             {showAddDialog === 'appointment' && <><CalendarPlus className="w-5 h-5 text-orange-500" /> إضافة موعد</>}
@@ -405,52 +414,130 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             {showAddDialog === 'location' && <><MapPin className="w-5 h-5 text-green-500" /> حفظ موقع</>}
                             {showAddDialog === 'shopping' && <><ShoppingCart className="w-5 h-5 text-pink-500" /> إضافة للتسوق</>}
                             {showAddDialog === 'note' && <><FileText className="w-5 h-5 text-yellow-500" /> ملاحظة سريعة</>}
+                            {showAddDialog === 'expense' && <><DollarSign className="w-5 h-5 text-red-500" /> إضافة مصروف</>}
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
-                        <Input placeholder="العنوان" className="text-right" id="quick-add-title" />
-                        {showAddDialog === 'appointment' && (
-                            <div className="grid grid-cols-2 gap-2">
-                                <Input type="date" id="quick-add-date" defaultValue={todayStr} />
-                                <Input type="time" id="quick-add-time" />
+
+                    {/* Full Appointment Manager */}
+                    {showAddDialog === 'appointment' && (
+                        <div className="mt-2">
+                            <AppointmentManager />
+                        </div>
+                    )}
+
+                    {/* Full Location with Map */}
+                    {showAddDialog === 'location' && (
+                        <div className="mt-2 space-y-4">
+                            <div className="h-[300px] rounded-lg overflow-hidden border">
+                                <InteractiveMap />
                             </div>
-                        )}
-                        {showAddDialog === 'note' && (
+                            <p className="text-sm text-center text-gray-500">
+                                اضغط على الخريطة لحفظ الموقع أو استخدم البحث
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Expense Dialog */}
+                    {showAddDialog === 'expense' && (
+                        <div className="space-y-4 mt-2">
+                            <Input placeholder="المبلغ" type="number" className="text-right" id="expense-amount" />
+                            <Input placeholder="الوصف" className="text-right" id="expense-desc" />
+                            <div className="grid grid-cols-3 gap-2">
+                                {['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'أخرى'].map(cat => (
+                                    <Button key={cat} variant="outline" size="sm" className="text-xs">
+                                        {cat}
+                                    </Button>
+                                ))}
+                            </div>
+                            <Button className="w-full" onClick={() => {
+                                toast({ title: 'تم حفظ المصروف' });
+                                setShowAddDialog(null);
+                            }}>
+                                <Plus className="w-4 h-4 ml-2" /> حفظ المصروف
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Task Dialog */}
+                    {showAddDialog === 'task' && (
+                        <div className="space-y-4 mt-2">
+                            <Input placeholder="عنوان المهمة" className="text-right" id="task-title" />
+                            <textarea
+                                placeholder="وصف المهمة (اختياري)"
+                                className="w-full h-20 p-3 border rounded-lg text-right resize-none"
+                                id="task-desc"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500">التاريخ</label>
+                                    <Input type="date" defaultValue={todayStr} id="task-date" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500">الأولوية</label>
+                                    <select className="w-full h-10 border rounded-md px-3" id="task-priority">
+                                        <option value="low">منخفضة</option>
+                                        <option value="medium">متوسطة</option>
+                                        <option value="high">عالية</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <Button className="w-full" onClick={() => {
+                                const title = (document.getElementById('task-title') as HTMLInputElement)?.value;
+                                if (!title) { toast({ title: 'أدخل عنوان المهمة' }); return; }
+                                const priority = (document.getElementById('task-priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high' || 'medium';
+                                const deadline = (document.getElementById('task-date') as HTMLInputElement)?.value || todayStr;
+                                addTask({ title, type: 'task', deadline, priority });
+                                toast({ title: 'تم حفظ المهمة', description: title });
+                                setShowAddDialog(null);
+                            }}>
+                                <Plus className="w-4 h-4 ml-2" /> حفظ المهمة
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Shopping Dialog */}
+                    {showAddDialog === 'shopping' && (
+                        <div className="space-y-4 mt-2">
+                            <Input placeholder="اسم العنصر" className="text-right" id="shop-item" />
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input placeholder="الكمية" type="number" defaultValue="1" id="shop-qty" />
+                                <select className="h-10 border rounded-md px-3" id="shop-category">
+                                    <option>طعام</option>
+                                    <option>منزل</option>
+                                    <option>صحة</option>
+                                    <option>أخرى</option>
+                                </select>
+                            </div>
+                            <Button className="w-full" onClick={() => {
+                                const item = (document.getElementById('shop-item') as HTMLInputElement)?.value;
+                                if (!item) { toast({ title: 'أدخل اسم العنصر' }); return; }
+                                toast({ title: 'تم إضافة للتسوق', description: item });
+                                setShowAddDialog(null);
+                            }}>
+                                <Plus className="w-4 h-4 ml-2" /> إضافة للقائمة
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Note Dialog */}
+                    {showAddDialog === 'note' && (
+                        <div className="space-y-4 mt-2">
+                            <Input placeholder="عنوان الملاحظة" className="text-right" id="note-title" />
                             <textarea
                                 placeholder="اكتب ملاحظتك هنا..."
-                                className="w-full h-24 p-3 border rounded-lg text-right resize-none"
-                                id="quick-add-note"
+                                className="w-full h-32 p-3 border rounded-lg text-right resize-none"
+                                id="note-content"
                             />
-                        )}
-                        <Button
-                            className="w-full h-12"
-                            onClick={() => {
-                                const title = (document.getElementById('quick-add-title') as HTMLInputElement)?.value;
-                                if (!title && showAddDialog !== 'note') { toast({ title: 'أدخل العنوان' }); return; }
-
-                                let successMsg = '';
-                                if (showAddDialog === 'appointment') {
-                                    successMsg = 'تم حفظ الموعد';
-                                } else if (showAddDialog === 'task') {
-                                    successMsg = 'تم حفظ المهمة';
-                                } else if (showAddDialog === 'location') {
-                                    successMsg = 'تم حفظ الموقع';
-                                } else if (showAddDialog === 'shopping') {
-                                    successMsg = 'تم إضافة العنصر لقائمة التسوق';
-                                } else if (showAddDialog === 'note') {
-                                    const note = (document.getElementById('quick-add-note') as HTMLTextAreaElement)?.value || title;
-                                    if (!note) { toast({ title: 'أدخل الملاحظة' }); return; }
-                                    successMsg = 'تم حفظ الملاحظة';
-                                }
-
+                            <Button className="w-full" onClick={() => {
+                                const content = (document.getElementById('note-content') as HTMLTextAreaElement)?.value;
+                                if (!content) { toast({ title: 'أدخل الملاحظة' }); return; }
+                                toast({ title: 'تم حفظ الملاحظة' });
                                 setShowAddDialog(null);
-                                toast({ title: successMsg, description: title || 'تمت الإضافة بنجاح' });
-                            }}
-                        >
-                            <Plus className="w-5 h-5 ml-2" />
-                            حفظ
-                        </Button>
-                    </div>
+                            }}>
+                                <Plus className="w-4 h-4 ml-2" /> حفظ الملاحظة
+                            </Button>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
