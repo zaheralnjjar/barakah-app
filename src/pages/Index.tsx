@@ -17,6 +17,8 @@ import AppointmentManager from '@/components/AppointmentManager';
 import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
+import CalendarSection from '@/components/CalendarSection';
+
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
@@ -258,8 +260,9 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
-                <DailyCalendar />
+                <CalendarSection />
               </TabsContent>
+
 
 
               <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">

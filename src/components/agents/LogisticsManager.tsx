@@ -439,17 +439,18 @@ const LogisticsManager = () => {
             }}
           />
 
-          {/* Daily Checklist */}
-          <DailyChecklist />
+          {/* Daily Checklist & Appointments Side by Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <DailyChecklist />
+            <AppointmentManager />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <HabitTracker />
             <MedicationManager />
           </div>
-
-          {/* Appointments Section */}
-          <AppointmentManager />
         </div>
+
       </div>
     </div>
   );

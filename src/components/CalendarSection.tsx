@@ -1,0 +1,245 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import DailyCalendar from '@/components/DailyCalendar';
+import WeeklyCalendar from '@/components/WeeklyCalendar';
+import { useTasks } from '@/hooks/useTasks';
+import { useAppointments } from '@/hooks/useAppointments';
+import { useHabits } from '@/hooks/useHabits';
+import { useMedications } from '@/hooks/useMedications';
+
+const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+const CalendarSection: React.FC = () => {
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+    const { tasks } = useTasks();
+    const { appointments } = useAppointments();
+    const { habits } = useHabits();
+    const { medications } = useMedications();
+
+    // Get data for a specific date
+    const getDateData = (dateStr: string) => {
+        const dateTasks = tasks.filter(t => t.deadline === dateStr);
+        const dateAppointments = appointments.filter(a => a.date === dateStr);
+        return { tasks: dateTasks, appointments: dateAppointments };
+    };
+
+    // Generate calendar days
+    const generateCalendarDays = () => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDay = firstDay.getDay();
+
+        const days: { date: Date; isCurrentMonth: boolean }[] = [];
+
+        // Previous month days
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+        for (let i = startingDay - 1; i >= 0; i--) {
+            days.push({
+                date: new Date(year, month - 1, prevMonthLastDay - i),
+                isCurrentMonth: false
+            });
+        }
+
+        // Current month days
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push({
+                date: new Date(year, month, i),
+                isCurrentMonth: true
+            });
+        }
+
+        // Next month days
+        const remainingDays = 42 - days.length;
+        for (let i = 1; i <= remainingDays; i++) {
+            days.push({
+                date: new Date(year, month + 1, i),
+                isCurrentMonth: false
+            });
+        }
+
+        return days;
+    };
+
+    const calendarDays = generateCalendarDays();
+    const today = new Date().toISOString().split('T')[0];
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl arabic-title text-primary font-bold">📅 التقويم</h1>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm">
+                <button
+                    onClick={() => setViewMode('daily')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'daily'
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <List className="w-4 h-4 inline-block ml-1" />
+                    اليومي
+                </button>
+                <button
+                    onClick={() => setViewMode('weekly')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'weekly'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <CalendarDays className="w-4 h-4 inline-block ml-1" />
+                    الأسبوعي
+                </button>
+                <button
+                    onClick={() => setViewMode('monthly')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'monthly'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <CalendarIcon className="w-4 h-4 inline-block ml-1" />
+                    الشهري
+                </button>
+            </div>
+
+            {/* Daily View */}
+            {viewMode === 'daily' && (
+                <DailyCalendar />
+            )}
+
+            {/* Weekly View */}
+            {viewMode === 'weekly' && (
+                <WeeklyCalendar />
+            )}
+
+            {/* Monthly View */}
+            {viewMode === 'monthly' && (
+                <Card className="border-2 border-purple-200">
+                    <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-violet-50">
+                        <div className="flex items-center justify-between">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </Button>
+                            <CardTitle className="text-lg font-bold text-purple-700">
+                                {MONTHS_AR[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                            </CardTitle>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        {/* Days Header */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {DAYS_AR.map(day => (
+                                <div key={day} className="text-center text-xs font-bold text-gray-500 py-1">
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Calendar Grid */}
+                        <div className="grid grid-cols-7 gap-1">
+                            {calendarDays.map((day, idx) => {
+                                const dateStr = day.date.toISOString().split('T')[0];
+                                const data = getDateData(dateStr);
+                                const isToday = dateStr === today;
+                                const hasItems = data.tasks.length > 0 || data.appointments.length > 0;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedDate(dateStr)}
+                                        className={`
+                                            p-2 min-h-[60px] rounded-lg cursor-pointer transition-all
+                                            ${!day.isCurrentMonth ? 'opacity-40' : ''}
+                                            ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}
+                                            ${selectedDate === dateStr ? 'ring-2 ring-purple-500' : ''}
+                                        `}
+                                    >
+                                        <div className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>
+                                            {day.date.getDate()}
+                                        </div>
+                                        {hasItems && (
+                                            <div className="mt-1 space-y-0.5">
+                                                {data.tasks.length > 0 && (
+                                                    <div className="text-[9px] bg-blue-100 text-blue-700 rounded px-1 truncate">
+                                                        {data.tasks.length} مهام
+                                                    </div>
+                                                )}
+                                                {data.appointments.length > 0 && (
+                                                    <div className="text-[9px] bg-orange-100 text-orange-700 rounded px-1 truncate">
+                                                        {data.appointments.length} موعد
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Selected Date Details */}
+                        {selectedDate && (
+                            <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                <h3 className="font-bold text-purple-700 mb-3">
+                                    📅 {new Date(selectedDate).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </h3>
+                                {(() => {
+                                    const data = getDateData(selectedDate);
+                                    if (data.tasks.length === 0 && data.appointments.length === 0) {
+                                        return <p className="text-sm text-gray-500">لا توجد أحداث في هذا اليوم</p>;
+                                    }
+                                    return (
+                                        <div className="space-y-2">
+                                            {data.appointments.map(apt => (
+                                                <div key={apt.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
+                                                    <span className="text-orange-500">📍</span>
+                                                    <span className="font-medium">{apt.title}</span>
+                                                    {apt.time && <span className="text-gray-500 mr-auto">{apt.time}</span>}
+                                                </div>
+                                            ))}
+                                            {data.tasks.map(task => (
+                                                <div key={task.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
+                                                    <span className="text-blue-500">✅</span>
+                                                    <span className="font-medium">{task.title}</span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded mr-auto ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-green-100 text-green-700'
+                                                        }`}>
+                                                        {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
+};
+
+export default CalendarSection;
