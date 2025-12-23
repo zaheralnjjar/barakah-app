@@ -488,7 +488,7 @@ END:VCALENDAR`;
                 </div>
 
                 {/* Pending Appointments */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="space-y-2 max-h-[280px] overflow-y-auto">
                     {pendingApts.length === 0 ? (
                         <p className="text-center text-muted-foreground arabic-body text-sm py-4">
                             لا توجد مواعيد قادمة

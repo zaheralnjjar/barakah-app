@@ -330,7 +330,7 @@ const LocationSaver: React.FC = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="pt-4 px-4">
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
                     {locations.length === 0 ? (
                         <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                             <MapPin className="w-8 h-8 text-gray-300 mx-auto mb-2" />

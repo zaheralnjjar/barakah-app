@@ -60,10 +60,11 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
     useMapEvents({
         click(e) {
             setPosition(e.latlng);
-            // Center map on clicked position with offset for popup
-            setTimeout(() => {
-                map.setView([e.latlng.lat + 0.002, e.latlng.lng], map.getZoom());
-            }, 100);
+            // Center map on clicked position with immediate effect
+            map.setView([e.latlng.lat, e.latlng.lng], map.getZoom(), {
+                animate: true,
+                duration: 0.5
+            });
 
             // Reverse geocode to get address
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ar`)
@@ -610,6 +611,7 @@ const InteractiveMap = () => {
                                                 <Checkbox
                                                     checked={selectedLocations.has(res.id)}
                                                     onCheckedChange={() => toggleSelectLocation(res.id)}
+                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                                     className="shrink-0"
                                                 />
                                             )}

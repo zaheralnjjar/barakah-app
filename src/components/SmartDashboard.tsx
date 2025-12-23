@@ -209,6 +209,210 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
 
+    // Professional Financial Report Print
+    const printFinancialReport = () => {
+        const reportDate = new Date().toLocaleDateString('ar', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const html = `
+            <html dir="rtl">
+            <head>
+                <title>التقرير المالي - ${reportDate}</title>
+                <meta charset="UTF-8">
+                <style>
+                    @page { size: A4; margin: 15mm; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        padding: 20px;
+                    }
+                    .header {
+                        text-align: center;
+                        border-bottom: 3px solid #10b981;
+                        padding-bottom: 15px;
+                        margin-bottom: 30px;
+                    }
+                    .header h1 {
+                        color: #10b981;
+                        font-size: 28px;
+                        margin-bottom: 5px;
+                    }
+                    .header .logo {
+                        font-size: 40px;
+                        margin-bottom: 10px;
+                    }
+                    .date {
+                        color: #6b7280;
+                        font-size: 14px;
+                        margin-top: 10px;
+                    }
+                    .summary-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 15px;
+                        margin-bottom: 30px;
+                    }
+                    .summary-card {
+                        padding: 20px;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 2px solid;
+                    }
+                    .summary-card.balance { background: #d1fae5; border-color: #10b981; }
+                    .summary-card.debt { background: #fee2e2; border-color: #ef4444; }
+                    .summary-card.daily { background: #dbeafe; border-color: #3b82f6; }
+                    .summary-card.expense { background: #e9d5ff; border-color: #a855f7; }
+                    .summary-card .label {
+                        font-size: 14px;
+                        color: #6b7280;
+                        margin-bottom: 8px;
+                    }
+                    .summary-card .value {
+                        font-size: 32px;
+                        font-weight: bold;
+                    }
+                    .summary-card.balance .value { color: #10b981; }
+                    .summary-card.debt .value { color: #ef4444; }
+                    .summary-card.daily .value { color: #3b82f6; }
+                    .summary-card.expense .value { color: #a855f7; }
+                    .transactions {
+                        margin-top: 30px;
+                    }
+                    .transactions h3 {
+                        color: #374151;
+                        font-size: 20px;
+                        margin-bottom: 15px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #e5e7eb;
+                    }
+                    .transaction-item {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 12px;
+                        margin-bottom: 8px;
+                        background: #f9fafb;
+                        border-radius: 8px;
+                        border-right: 4px solid #10b981;
+                    }
+                    .transaction-item.expense {
+                        border-right-color: #ef4444;
+                    }
+                    .transaction-desc {
+                        font-size: 14px;
+                        color: #374151;
+                    }
+                    .transaction-amount {
+                        font-weight: bold;
+                        font-size: 16px;
+                    }
+                    .transaction-amount.expense { color: #ef4444; }
+                    .transaction-amount.income { color: #10b981; }
+                    .footer {
+                        margin-top: 50px;
+                        text-align: center;
+                        color: #9ca3af;
+                        font-size: 12px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                    }
+                    @media print {
+                        body { padding: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="logo">🌟</div>
+                    <h1>نظام بركة لإدارة الحياة</h1>
+                    <h2 style="color: #10b981; font-size: 22px; margin-top: 10px;">التقرير المالي</h2>
+                    <div class="date">${reportDate}</div>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-card balance">
+                        <div class="label">الرصيد الحالي</div>
+                        <div class="value">${totalBalanceARS.toLocaleString()}</div>
+                        <div class="label" style="margin-top: 5px;">ARS</div>
+                    </div>
+                    <div class="summary-card debt">
+                        <div class="label">إجمالي الديون</div>
+                        <div class="value">${(financeData?.total_debt || 0).toLocaleString()}</div>
+                        <div class="label" style="margin-top: 5px;">ARS</div>
+                    </div>
+                    <div class="summary-card daily">
+                        <div class="label">الحد اليومي المتاح</div>
+                        <div class="value">${dailyLimitARS.toLocaleString()}</div>
+                        <div class="label" style="margin-top: 5px;">ARS</div>
+                    </div>
+                    <div class="summary-card expense">
+                        <div class="label">مصروف اليوم</div>
+                        <div class="value">${todayExpense.toLocaleString()}</div>
+                        <div class="label" style="margin-top: 5px;">ARS</div>
+                    </div>
+                </div>
+
+                <div class="transactions">
+                    <h3>📊 آخر المعاملات</h3>
+                    ${financeData?.pending_expenses && financeData.pending_expenses.length > 0
+                ? financeData.pending_expenses.slice(0, 10).map((t: any) => `
+                            <div class="transaction-item ${t.type === 'expense' ? 'expense' : 'income'}">
+                                <span class="transaction-desc">${t.description || 'معاملة'}</span>
+                                <span class="transaction-amount ${t.type === 'expense' ? 'expense' : 'income'}">
+                                    ${t.type === 'expense' ? '-' : '+'}${t.amount.toLocaleString()} ${t.currency}
+                                </span>
+                            </div>
+                        `).join('')
+                : '<p style="text-align: center; color: #9ca3af; padding: 20px;">لا توجد معاملات مسجلة</p>'
+            }
+                </div>
+
+                <div class="footer">
+                    <p>طُبع في: ${new Date().toLocaleString('ar')}</p>
+                    <p style="margin-top: 5px;">✨ نظام بركة لإدارة الحياة</p>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Create iframe for printing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.opacity = '0.01';
+        iframe.style.pointerEvents = 'none';
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+            doc.open();
+            doc.write(html);
+            doc.close();
+
+            setTimeout(() => {
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 1000);
+            }, 500);
+        }
+
+        setShowFinancialReport(false);
+        toast({ title: '📄 جاري الطباعة...', description: 'تم تحضير التقرير المالي للطباعة' });
+    };
+
     const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
     const gregorianDate = currentDate.toLocaleDateString('ar', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const dayName = currentDate.toLocaleDateString('ar', { weekday: 'long' });
@@ -296,8 +500,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     type="button"
                                     onClick={handleToggle}
                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isCompleted
-                                            ? 'bg-green-500 border-green-500 text-white'
-                                            : 'bg-white border-gray-400 hover:border-green-500'
+                                        ? 'bg-green-500 border-green-500 text-white'
+                                        : 'bg-white border-gray-400 hover:border-green-500'
                                         }`}
                                 >
                                     {isCompleted && <CheckSquare className="w-4 h-4" />}
@@ -472,9 +676,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <Clock className="w-5 h-5 text-blue-500" />
                         التقرير اليومي
                     </h3>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-y-auto max-h-[280px]">
                         <table className="w-full text-sm">
-                            <thead>
+                            <thead className="sticky top-0 bg-white z-10">
                                 <tr className="text-xs text-gray-500 border-b">
                                     <th className="py-2 px-1 w-8">✓</th>
                                     <th className="text-right py-2 px-2">النوع</th>
@@ -483,7 +687,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {/* Medications */}
-                                {todayMedications.slice(0, 2).map((med, i) => (
+                                {todayMedications.slice(0, 4).map((med, i) => (
                                     <tr key={`med-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
@@ -493,7 +697,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Appointments */}
-                                {todayAppointments.slice(0, 2).map((apt, i) => (
+                                {todayAppointments.slice(0, 4).map((apt, i) => (
                                     <tr key={`apt-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input
@@ -513,7 +717,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Tasks */}
-                                {todayTasks.slice(0, 2).map((task, i) => (
+                                {todayTasks.slice(0, 4).map((task, i) => (
                                     <tr key={`task-${i}`} className={`hover:bg-gray-50 ${(task as any).isCompleted ? 'opacity-50 line-through' : ''}`}>
                                         <td className="py-2 px-1 text-center">
                                             <input
@@ -530,7 +734,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Habits */}
-                                {todayHabits.slice(0, 2).map((habit, i) => (
+                                {todayHabits.slice(0, 4).map((habit, i) => (
                                     <tr key={`habit-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
@@ -594,8 +798,50 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </CardContent>
             </Card>
 
+            {/* ===== PRAYER TIMES (TODAY) ===== */}
+            <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                <CardContent className="p-4">
+                    <div className="flex justify-between items-center mb-3">
+                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                            <Moon className="w-5 h-5 text-teal-600" />
+                            مواقيت الصلاة اليوم
+                        </h3>
+                        {nextPrayer && (
+                            <Badge variant="outline" className="bg-teal-100 text-teal-700 border-teal-200">
+                                القادمة: {typeof nextPrayer === 'string' ? nextPrayer : (nextPrayer as any)?.name} ({timeUntilNext})
+                            </Badge>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-2 text-center">
+                        {['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((prayerKey) => {
+                            const prayerNameMap: Record<string, string> = { 'Fajr': 'الفجر', 'Dhuhr': 'الظهر', 'Asr': 'العصر', 'Maghrib': 'المغرب', 'Isha': 'العشاء' };
+                            const isNext = (typeof nextPrayer === 'string' ? nextPrayer : (nextPrayer as any)?.name) === prayerKey;
+                            const time = prayerTimes.find(p => p.name === 'Fajr' ? prayerKey === 'Fajr'
+                                : p.name === 'Dhuhr' ? prayerKey === 'Dhuhr'
+                                    : p.name === 'Asr' ? prayerKey === 'Asr'
+                                        : p.name === 'Maghrib' ? prayerKey === 'Maghrib'
+                                            : p.name === 'Isha' ? prayerKey === 'Isha' : false
+                            )?.time || prayerTimes.find(p => p.name === prayerKey)?.time || '--:--';
+
+                            // Simplification: just find by name
+                            const pTime = prayerTimes.find(p => p.name === prayerKey)?.time || '--:--';
+
+                            return (
+                                <div key={prayerKey} className={`p-2 rounded-lg border ${isNext ? 'bg-teal-100 border-teal-300 ring-1 ring-teal-400' : 'bg-white border-gray-100'}`}>
+                                    <span className="text-xs text-gray-500 block mb-1">{prayerNameMap[prayerKey]}</span>
+                                    <span className="font-bold text-gray-800 text-sm">{pTime}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
+
+
+
             {/* ===== 6. MAPS SECTION ===== */}
-            <Card className="border-green-100 shadow-sm">
+            < Card className="border-green-100 shadow-sm" >
                 <CardContent className="p-4">
                     <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
                         <MapPin className="w-5 h-5 text-green-500" />
@@ -608,10 +854,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <InteractiveMap />
                     </div>
                 </CardContent>
-            </Card>
+            </Card >
 
             {/* ===== UNIFIED PRINT DIALOG ===== */}
-            <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+            < Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog} >
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
@@ -735,11 +981,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         </Button>
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* ===== QUICK ADD DIALOG ===== */}
-            <Dialog open={showAddDialog !== null} onOpenChange={(open) => !open && setShowAddDialog(null)}>
-                <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'sm:max-w-[600px] max-h-[90vh] overflow-y-auto' : 'sm:max-w-[450px]'}>
+            < Dialog open={showAddDialog !== null} onOpenChange={(open) => !open && setShowAddDialog(null)}>
+                <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'sm:max-w-[800px] max-h-[95vh] overflow-y-auto' : 'sm:max-w-[450px]'}>
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
                             {showAddDialog === 'appointment' && <><CalendarPlus className="w-5 h-5 text-orange-500" /> إضافة موعد</>}
@@ -761,11 +1007,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     {/* Full Location with Map */}
                     {showAddDialog === 'location' && (
                         <div className="mt-2 space-y-4">
-                            <div className="h-[300px] rounded-lg overflow-hidden border">
+                            <div className="h-[500px] rounded-lg overflow-hidden border-2 border-green-200">
                                 <InteractiveMap />
                             </div>
-                            <p className="text-sm text-center text-gray-500">
-                                اضغط على الخريطة لحفظ الموقع أو استخدم البحث
+                            <p className="text-sm text-center text-gray-500 bg-green-50 p-2 rounded-lg">
+                                💡 اضغط على الخريطة لحفظ الموقع أو استخدم البحث
                             </p>
                         </div>
                     )}
@@ -924,10 +1170,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         </div>
                     )}
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* ===== FINANCIAL REPORT DIALOG ===== */}
-            <Dialog open={showFinancialReport} onOpenChange={setShowFinancialReport}>
+            < Dialog open={showFinancialReport} onOpenChange={setShowFinancialReport} >
                 <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
@@ -973,8 +1219,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
                         {/* Print Options */}
                         <div className="flex gap-2">
-                            <Button variant="outline" className="flex-1" onClick={() => { window.print(); }}>
-                                <Printer className="w-4 h-4 ml-2" /> طباعة
+                            <Button variant="outline" className="flex-1" onClick={printFinancialReport}>
+                                <Printer className="w-4 h-4 ml-2" /> طباعة احترافية
                             </Button>
                             <Button className="flex-1" onClick={() => { setShowFinancialReport(false); onNavigateToTab('finance'); }}>
                                 <DollarSign className="w-4 h-4 ml-2" /> فتح المالية
@@ -982,8 +1228,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
-        </div>
+            </Dialog >
+        </div >
 
     );
 };

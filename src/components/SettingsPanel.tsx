@@ -22,6 +22,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
 import CategoryManager from '@/components/CategoryManager';
+import DataArchiver from '@/components/DataArchiver';
 
 const SettingsPanel = () => {
     const { toast } = useToast();
@@ -263,6 +264,8 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
+
+
             {/* Financial Categories */}
             <Card>
                 <CardHeader>
@@ -275,6 +278,9 @@ const SettingsPanel = () => {
                     <CategoryManager />
                 </CardContent>
             </Card>
+
+            {/* Archiving & Reset */}
+            <DataArchiver />
 
             {/* Backup & Data */}
             <Card>
