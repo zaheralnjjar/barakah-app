@@ -50,51 +50,56 @@ export const useDashboardData = () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Fetch Finance
-            const { data: finance } = await supabase
-                .from('finance_data_2025_12_18_18_42')
-                .select('*')
-                .eq('user_id', user.id)
-                .single();
-            setFinanceData(finance || {});
+            // Run all queries in parallel for faster loading
+            const [financeResult, logisticsResult, appointmentsResult, prayerResult] = await Promise.all([
+                // 1. Finance Data
+                supabase
+                    .from('finance_data_2025_12_18_18_42')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single(),
 
-            // 2. Fetch Shopping List & Locations
-            const { data: logistics } = await supabase
-                .from(TABLES.logistics)
-                .select('shopping_list, locations')
-                .eq('user_id', user.id)
-                .single();
+                // 2. Logistics (Shopping & Locations)
+                supabase
+                    .from(TABLES.logistics)
+                    .select('shopping_list, locations')
+                    .eq('user_id', user.id)
+                    .single(),
 
-            if (logistics?.shopping_list) {
-                setShoppingListSummary(logistics.shopping_list.filter((i: any) => !i.completed).slice(0, 10));
+                // 3. Appointments
+                supabase
+                    .from('appointments')
+                    .select('*', { count: 'exact' })
+                    .eq('user_id', user.id)
+                    .eq('is_completed', false)
+                    .order('date', { ascending: true })
+                    .limit(5),
+
+                // 4. Prayer Settings
+                supabase
+                    .from('prayer_settings')
+                    .select('source')
+                    .eq('user_id', user.id)
+                    .single()
+            ]);
+
+            // Process results
+            setFinanceData(financeResult.data || {});
+
+            if (logisticsResult.data?.shopping_list) {
+                setShoppingListSummary(logisticsResult.data.shopping_list.filter((i: any) => !i.completed).slice(0, 10));
             }
-            if (logistics?.locations) {
-                const locs = Array.isArray(logistics.locations) ? logistics.locations as any[] : [];
+            if (logisticsResult.data?.locations) {
+                const locs = Array.isArray(logisticsResult.data.locations) ? logisticsResult.data.locations as any[] : [];
                 setSavedLocations(locs.slice(0, 5));
             }
 
-            // 3. Fetch Appointments
-            const { data: apts, count: aptCount } = await supabase
-                .from('appointments')
-                .select('*', { count: 'exact' })
-                .eq('user_id', user.id)
-                .eq('is_completed', false)
-                .order('date', { ascending: true })
-                .limit(5);
-
-            setRecentAppointments(apts || []);
-
-            // 4. Fetch Prayer Settings
-            const { data: prayerSettings } = await supabase
-                .from('prayer_settings')
-                .select('source')
-                .eq('user_id', user.id)
-                .single();
+            setRecentAppointments(appointmentsResult.data || []);
 
             setStats({
-                appointmentsCount: aptCount || 0,
-                savedLocationsCount: logistics?.locations ? (Array.isArray(logistics.locations) ? logistics.locations.length : 0) : 0,
-                prayerSource: prayerSettings?.source || 'غير محدد',
+                appointmentsCount: appointmentsResult.count || 0,
+                savedLocationsCount: logisticsResult.data?.locations ? (Array.isArray(logisticsResult.data.locations) ? logisticsResult.data.locations.length : 0) : 0,
+                prayerSource: prayerResult.data?.source || 'غير محدد',
                 nextPrayer: '--:--'
             });
 

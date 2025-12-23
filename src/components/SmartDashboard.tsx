@@ -127,6 +127,80 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     };
 
+    // Save shopping item function
+    const saveShoppingItem = async (itemName: string, quantity: number, category: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+
+            // Get current logistics data
+            const { data: logistics } = await supabase
+                .from('logistics_data_2025_12_18_18_42')
+                .select('shopping_list')
+                .eq('user_id', user.id)
+                .single();
+
+            const currentList = logistics?.shopping_list || [];
+            const updatedList = [...currentList, {
+                id: Date.now(),
+                name: itemName,
+                quantity,
+                category,
+                completed: false,
+                createdAt: new Date().toISOString(),
+                source: 'dashboard_quick_add'
+            }];
+
+            const { error } = await supabase
+                .from('logistics_data_2025_12_18_18_42')
+                .update({ shopping_list: updatedList })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+            if (refetch) refetch();
+            return true;
+        } catch (e) {
+            console.error('Error saving shopping item:', e);
+            return false;
+        }
+    };
+
+    // Save note function
+    const saveNote = async (title: string, content: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+
+            // Get current productivity data
+            const { data: prod } = await supabase
+                .from('productivity_data_2025_12_18_18_42')
+                .select('notes')
+                .eq('user_id', user.id)
+                .single();
+
+            const currentNotes = prod?.notes || [];
+            const updatedNotes = [...currentNotes, {
+                id: Date.now(),
+                title: title || 'ملاحظة بدون عنوان',
+                content,
+                createdAt: new Date().toISOString(),
+                source: 'dashboard_quick_add'
+            }];
+
+            const { error } = await supabase
+                .from('productivity_data_2025_12_18_18_42')
+                .update({ notes: updatedNotes })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+            if (refetch) refetch();
+            return true;
+        } catch (e) {
+            console.error('Error saving note:', e);
+            return false;
+        }
+    };
+
     // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
 
@@ -270,16 +344,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <div className="col-span-1 p-2 bg-emerald-50 rounded-xl">
                             <span className="text-[10px] text-gray-500 block">الرصيد</span>
                             <span className="text-sm md:text-lg font-bold text-emerald-600 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
+                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(totalBalanceARS / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Daily Limit */}
                         <div className="col-span-1 p-2 bg-blue-50 rounded-xl">
                             <span className="text-[10px] text-gray-500 block">الحد اليومي</span>
                             <span className="text-sm md:text-lg font-bold text-blue-600 tabular-nums">{dailyLimitARS.toLocaleString()}</span>
+                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(dailyLimitARS / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Today Expense */}
                         <div className="col-span-1 p-2 bg-red-50 rounded-xl">
                             <span className="text-[10px] text-gray-500 block">مصروف اليوم</span>
                             <span className="text-sm md:text-lg font-bold text-red-600 tabular-nums">{todayExpense.toLocaleString()}</span>
+                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(todayExpense / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Remaining Days */}
                         <div className="col-span-1 p-2 bg-purple-50 rounded-xl">
@@ -362,6 +439,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-xs text-gray-500 border-b">
+                                    <th className="py-2 px-1 w-8">✓</th>
                                     <th className="text-right py-2 px-2">النوع</th>
                                     <th className="text-right py-2 px-2">التفاصيل</th>
                                 </tr>
@@ -370,6 +448,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 {/* Medications */}
                                 {todayMedications.slice(0, 2).map((med, i) => (
                                     <tr key={`med-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-1 text-center">
+                                            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
+                                        </td>
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-red-50 text-red-600 text-[10px]"><Pill className="w-3 h-3 ml-1" />أدوية</Badge></td>
                                         <td className="py-2 px-2 font-medium">{med.name} - {med.time}</td>
                                     </tr>
@@ -377,13 +458,36 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 {/* Appointments */}
                                 {todayAppointments.slice(0, 2).map((apt, i) => (
                                     <tr key={`apt-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-1 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={(apt as any).is_completed || false}
+                                                onChange={async () => {
+                                                    const { data: { user } } = await supabase.auth.getUser();
+                                                    if (!user) return;
+                                                    await supabase.from('appointments').update({ is_completed: !(apt as any).is_completed }).eq('id', apt.id);
+                                                    if (refetch) refetch();
+                                                }}
+                                                className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer"
+                                            />
+                                        </td>
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-orange-50 text-orange-600 text-[10px]"><CalendarPlus className="w-3 h-3 ml-1" />موعد</Badge></td>
                                         <td className="py-2 px-2 font-medium">{apt.title} - {apt.time || '--'}</td>
                                     </tr>
                                 ))}
                                 {/* Tasks */}
                                 {todayTasks.slice(0, 2).map((task, i) => (
-                                    <tr key={`task-${i}`} className="hover:bg-gray-50">
+                                    <tr key={`task-${i}`} className={`hover:bg-gray-50 ${(task as any).isCompleted ? 'opacity-50 line-through' : ''}`}>
+                                        <td className="py-2 px-1 text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={(task as any).isCompleted || false}
+                                                onChange={() => {
+                                                    toast({ title: 'انتقل لقسم الإنتاجية لتحديث حالة المهمة' });
+                                                }}
+                                                className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer"
+                                            />
+                                        </td>
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-blue-50 text-blue-600 text-[10px]"><CheckSquare className="w-3 h-3 ml-1" />مهمة</Badge></td>
                                         <td className="py-2 px-2 font-medium">{task.title}</td>
                                     </tr>
@@ -391,11 +495,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 {/* Habits */}
                                 {todayHabits.slice(0, 2).map((habit, i) => (
                                     <tr key={`habit-${i}`} className="hover:bg-gray-50">
+                                        <td className="py-2 px-1 text-center">
+                                            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
+                                        </td>
                                         <td className="py-2 px-2"><Badge variant="outline" className="bg-yellow-50 text-yellow-600 text-[10px]"><Flame className="w-3 h-3 ml-1" />عادة</Badge></td>
                                         <td className="py-2 px-2 font-medium">{habit.name} - 🔥 {habit.streak || 0}</td>
                                     </tr>
                                 ))}                                {(todayMedications.length + todayAppointments.length + todayTasks.length + todayHabits.length) === 0 && (
-                                    <tr><td colSpan={2} className="text-center py-4 text-gray-400">لا توجد عناصر لليوم</td></tr>
+                                    <tr><td colSpan={3} className="text-center py-4 text-gray-400">لا توجد عناصر لليوم</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -649,10 +756,17 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     <option>أخرى</option>
                                 </select>
                             </div>
-                            <Button className="w-full" onClick={() => {
+                            <Button className="w-full" onClick={async () => {
                                 const item = (document.getElementById('shop-item') as HTMLInputElement)?.value;
+                                const qty = parseInt((document.getElementById('shop-qty') as HTMLInputElement)?.value || '1');
+                                const cat = (document.getElementById('shop-category') as HTMLSelectElement)?.value || 'أخرى';
                                 if (!item) { toast({ title: 'أدخل اسم العنصر' }); return; }
-                                toast({ title: 'تم إضافة للتسوق', description: item });
+                                const success = await saveShoppingItem(item, qty, cat);
+                                if (success) {
+                                    toast({ title: 'تم إضافة للتسوق', description: item });
+                                } else {
+                                    toast({ title: 'فشل الإضافة', variant: 'destructive' });
+                                }
                                 setShowAddDialog(null);
                             }}>
                                 <Plus className="w-4 h-4 ml-2" /> إضافة للقائمة
@@ -669,10 +783,16 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 className="w-full h-32 p-3 border rounded-lg text-right resize-none"
                                 id="note-content"
                             />
-                            <Button className="w-full" onClick={() => {
+                            <Button className="w-full" onClick={async () => {
+                                const title = (document.getElementById('note-title') as HTMLInputElement)?.value || '';
                                 const content = (document.getElementById('note-content') as HTMLTextAreaElement)?.value;
                                 if (!content) { toast({ title: 'أدخل الملاحظة' }); return; }
-                                toast({ title: 'تم حفظ الملاحظة' });
+                                const success = await saveNote(title, content);
+                                if (success) {
+                                    toast({ title: 'تم حفظ الملاحظة', description: title || 'ملاحظة جديدة' });
+                                } else {
+                                    toast({ title: 'فشل حفظ الملاحظة', variant: 'destructive' });
+                                }
                                 setShowAddDialog(null);
                             }}>
                                 <Plus className="w-4 h-4 ml-2" /> حفظ الملاحظة
