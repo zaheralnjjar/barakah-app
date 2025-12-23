@@ -36,6 +36,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
+    const [printRange, setPrintRange] = useState('today');
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -122,14 +123,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     {/* Logo & Actions */}
                     <div className="flex items-center gap-3">
                         <span className="text-2xl font-bold text-emerald-600 hidden sm:block">البركة</span>
-                        <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => setShowPrintDialog(true)} className="h-9 px-3 rounded-full hover:bg-emerald-50">
-                                <Printer className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-9 px-3 rounded-full text-red-500 hover:bg-red-50" onClick={handleLogout}>
-                                <LogOut className="w-4 h-4" />
-                            </Button>
-                        </div>
+                        <Button variant="ghost" size="sm" className="h-9 px-3 rounded-full text-red-500 hover:bg-red-50" onClick={handleLogout}>
+                            <LogOut className="w-4 h-4" />
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -322,12 +318,12 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </DialogHeader>
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-2">
-                            <Button variant="outline" onClick={() => { }} className="h-10">اليوم</Button>
-                            <Button variant="outline" onClick={() => { }} className="h-10">الأسبوع</Button>
-                            <Button variant="outline" onClick={() => { }} className="h-10">الشهر</Button>
-                            <Button variant="outline" onClick={() => { }} className="h-10">مخصص</Button>
+                            <Button variant={printRange === 'today' ? 'default' : 'outline'} onClick={() => setPrintRange('today')} className="h-10">اليوم</Button>
+                            <Button variant={printRange === 'week' ? 'default' : 'outline'} onClick={() => setPrintRange('week')} className="h-10">الأسبوع</Button>
+                            <Button variant={printRange === 'month' ? 'default' : 'outline'} onClick={() => setPrintRange('month')} className="h-10">الشهر</Button>
+                            <Button variant={printRange === 'custom' ? 'default' : 'outline'} onClick={() => setPrintRange('custom')} className="h-10">مخصص</Button>
                         </div>
-                        <Button onClick={() => setShowPrintDialog(false)} className="w-full h-12 text-lg">
+                        <Button onClick={() => { window.print(); setShowPrintDialog(false); }} className="w-full h-12 text-lg">
                             <Printer className="w-5 h-5 ml-2" />
                             طباعة الآن
                         </Button>
