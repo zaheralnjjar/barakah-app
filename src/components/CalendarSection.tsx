@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star } from 'lucide-react';
 import DailyCalendar from '@/components/DailyCalendar';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -21,6 +22,19 @@ const CalendarSection: React.FC = () => {
     const { appointments } = useAppointments();
     const { habits } = useHabits();
     const { medications } = useMedications();
+    const { prayerTimes = [], nextPrayer, timeUntilNext } = useDashboardData();
+
+    // Prayer icon helper
+    const getPrayerIcon = (name: string) => {
+        switch (name) {
+            case 'fajr': return Moon;
+            case 'dhuhr': return Sun;
+            case 'asr': return Sun;
+            case 'maghrib': return Sunset;
+            case 'isha': return Star;
+            default: return Moon;
+        }
+    };
 
     // Get data for a specific date
     const getDateData = (dateStr: string) => {
@@ -78,6 +92,36 @@ const CalendarSection: React.FC = () => {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl arabic-title text-primary font-bold">📅 التقويم</h1>
             </div>
+
+            {/* Prayer Times Row */}
+            <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                <CardContent className="py-3">
+                    <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap gap-2">
+                        {prayerTimes.map((prayer) => {
+                            const Icon = getPrayerIcon(prayer.name);
+                            const isNext = nextPrayer?.name === prayer.name;
+                            return (
+                                <div
+                                    key={prayer.name}
+                                    className={`flex flex-col items-center px-3 py-2 rounded-lg min-w-[65px] transition-all ${isNext ? 'bg-emerald-100 border-2 border-emerald-400 scale-105' : 'bg-white/50'
+                                        }`}
+                                >
+                                    <span className="text-xs text-gray-600 font-medium">{prayer.nameAr}</span>
+                                    <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                        {prayer.time}
+                                    </span>
+                                    {isNext && timeUntilNext && (
+                                        <span className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                                            {timeUntilNext}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* View Toggle */}
             <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm">
@@ -223,8 +267,8 @@ const CalendarSection: React.FC = () => {
                                                     <span className="text-blue-500">✅</span>
                                                     <span className="font-medium">{task.title}</span>
                                                     <span className={`text-xs px-2 py-0.5 rounded mr-auto ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-green-100 text-green-700'
+                                                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-green-100 text-green-700'
                                                         }`}>
                                                         {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
                                                     </span>
