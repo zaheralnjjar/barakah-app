@@ -42,6 +42,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [printOptions, setPrintOptions] = useState({ tasks: true, appointments: true, medications: true, habits: true });
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | null>(null);
+    const [showFinancialReport, setShowFinancialReport] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -164,10 +165,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         </div>
                         {/* Action Buttons - Hidden on mobile, shown on larger screens */}
                         <div className="hidden md:flex col-span-3 items-center justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); onNavigateToTab('finance'); }}>
+                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); setShowAddDialog('expense'); }}>
                                 <Plus className="w-4 h-4" /> إضافة مصروف
                             </Button>
-                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); onNavigateToTab('finance'); }}>
+                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); setShowFinancialReport(true); }}>
                                 <FileText className="w-4 h-4" /> تقرير مالي
                             </Button>
                         </div>
@@ -538,6 +539,64 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             </Button>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* ===== FINANCIAL REPORT DIALOG ===== */}
+            <Dialog open={showFinancialReport} onOpenChange={setShowFinancialReport}>
+                <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-emerald-500" />
+                            التقرير المالي
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-emerald-50 rounded-lg text-center">
+                                <span className="text-sm text-gray-500 block">الرصيد الحالي</span>
+                                <span className="text-xl font-bold text-emerald-600">{totalBalanceARS.toLocaleString()} ARS</span>
+                            </div>
+                            <div className="p-3 bg-red-50 rounded-lg text-center">
+                                <span className="text-sm text-gray-500 block">الديون</span>
+                                <span className="text-xl font-bold text-red-600">{(financeData?.total_debt || 0).toLocaleString()} ARS</span>
+                            </div>
+                            <div className="p-3 bg-blue-50 rounded-lg text-center">
+                                <span className="text-sm text-gray-500 block">الحد اليومي</span>
+                                <span className="text-xl font-bold text-blue-600">{dailyLimitARS.toLocaleString()} ARS</span>
+                            </div>
+                            <div className="p-3 bg-purple-50 rounded-lg text-center">
+                                <span className="text-sm text-gray-500 block">مصروف اليوم</span>
+                                <span className="text-xl font-bold text-purple-600">{todayExpense.toLocaleString()} ARS</span>
+                            </div>
+                        </div>
+
+                        {/* Recent Transactions */}
+                        <div className="border rounded-lg p-3">
+                            <h4 className="font-medium text-gray-700 mb-2">آخر المعاملات</h4>
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                {financeData?.pending_expenses?.slice(0, 5).map((t: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
+                                        <span>{t.description || 'معاملة'}</span>
+                                        <span className={t.type === 'expense' ? 'text-red-500' : 'text-green-500'}>
+                                            {t.type === 'expense' ? '-' : '+'}{t.amount} {t.currency}
+                                        </span>
+                                    </div>
+                                )) || <p className="text-gray-400 text-center">لا توجد معاملات</p>}
+                            </div>
+                        </div>
+
+                        {/* Print Options */}
+                        <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => { window.print(); }}>
+                                <Printer className="w-4 h-4 ml-2" /> طباعة
+                            </Button>
+                            <Button className="flex-1" onClick={() => { setShowFinancialReport(false); onNavigateToTab('finance'); }}>
+                                <DollarSign className="w-4 h-4 ml-2" /> فتح المالية
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
