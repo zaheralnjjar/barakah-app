@@ -87,14 +87,56 @@ const DataBackup: React.FC = () => {
                 supabase.from(TABLES.logistics).select('*').eq('user_id', user.id).single(),
             ]);
 
-            const summary = `نسخة احتياطية - بركة
-التاريخ: ${new Date().toLocaleDateString('ar')}
-الرصيد: ${finance.data?.balance || 0}
-المواقع: ${logistics.data?.locations?.length || 0}`;
+            // Also get appointments
+            const { data: appointments } = await supabase.from('appointments').select('*').eq('user_id', user.id);
 
-            await Share.share({ title: 'نسخة احتياطية - بركة', text: summary, dialogTitle: 'مشاركة الملخص' });
+            const backupData = {
+                version: '2.0',
+                exportDate: new Date().toISOString(),
+                userId: user.id,
+                data: {
+                    finance: finance.data,
+                    logistics: logistics.data,
+                    appointments: appointments || [],
+                    localStorage: {
+                        baraka_medications_v2: localStorage.getItem('baraka_medications_v2'),
+                        baraka_habits: localStorage.getItem('baraka_habits'),
+                        baraka_subscriptions: localStorage.getItem('baraka_subscriptions'),
+                        baraka_budgets: localStorage.getItem('baraka_budgets'),
+                        baraka_savings: localStorage.getItem('baraka_savings'),
+                        baraka_quick_notes: localStorage.getItem('baraka_quick_notes'),
+                        baraka_reminders_settings: localStorage.getItem('baraka_reminders_settings'),
+                    }
+                }
+            };
+
+            const fileName = `baraka_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+            // For mobile (Capacitor), we would typically save to filesystem first then share.
+            // Simplified approach for generic sharing:
+            if (navigator.share) {
+                const file = new File([JSON.stringify(backupData, null, 2)], fileName, { type: 'application/json' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'نسخة احتياطية - بركة',
+                        text: 'ملف النسخة الاحتياطية لتطبيق بركة'
+                    });
+                    return;
+                }
+            }
+
+            // Fallback: Use Capacitor Share with text or file path usage if Filesystem was implemented.
+            // Since we rely on simple sharing, we can default to exporting if direct file share isn't supported.
+            await Share.share({
+                title: 'نسخة احتياطية',
+                text: JSON.stringify(backupData), // Sharing as text string JSON if file share fails
+                dialogTitle: 'مشاركة ملف JSON'
+            });
+
         } catch (e) {
-            toast({ title: 'تعذرت المشاركة' });
+            console.error(e);
+            toast({ title: 'تعذرت المشاركة كملف', description: 'تأكد من دعم جهازك للمشاركة' });
         }
     };
 

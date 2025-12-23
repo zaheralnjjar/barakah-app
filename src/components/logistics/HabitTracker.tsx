@@ -45,7 +45,8 @@ export const HabitTracker = () => {
             updateHabit(editingHabit.id, {
                 name: editingHabit.name,
                 frequency: editingHabit.frequency,
-                timesPerDay: editingHabit.timesPerDay
+                timesPerDay: editingHabit.timesPerDay,
+                customDays: editingHabit.customDays
             });
             setEditingHabit(null);
         }
@@ -370,9 +371,38 @@ export const HabitTracker = () => {
                                         <SelectItem value="daily">يومياً</SelectItem>
                                         <SelectItem value="weekly">أسبوعياً</SelectItem>
                                         <SelectItem value="monthly">شهرياً</SelectItem>
+                                        <SelectItem value="specific_days">أيام محددة</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {editingHabit.frequency === 'specific_days' && (
+                                <div>
+                                    <label className="text-sm font-bold mb-2 block">اختر الأيام</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {DAYS_AR.map(day => (
+                                            <button
+                                                key={day}
+                                                type="button"
+                                                onClick={() => {
+                                                    const current = editingHabit.customDays || [];
+                                                    if (current.includes(day)) {
+                                                        setEditingHabit({ ...editingHabit, customDays: current.filter((d: string) => d !== day) });
+                                                    } else {
+                                                        setEditingHabit({ ...editingHabit, customDays: [...current, day] });
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${editingHabit.customDays?.includes(day)
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {day}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             {editingHabit.frequency === 'daily' && (
                                 <div>
                                     <label className="text-sm font-bold mb-1 block">عدد المرات يومياً</label>

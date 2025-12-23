@@ -146,11 +146,74 @@ export const useArchiver = () => {
         }
     };
 
-    // استرجاع أرشيف (اختياري - للعرض فقط أو الاستعادة)
+    // استرجاع أرشيف
     const restoreArchive = async (archiveId: string) => {
-        // منطق الاستعادة معقد لأنه يتطلب استبدال البيانات الحالية
-        // سنكتفي حالياً بعرض أن هذا متاح مستقبلاً
-        toast({ title: 'قريباً', description: 'ميزة استعادة الأرشيف ستتوفر في التحديث القادم' });
+        setIsArchiving(true); // Reuse loading state
+        try {
+            const { data: archive, error } = await supabase
+                .from('archives')
+                .select('*')
+                .eq('id', archiveId)
+                .single();
+
+            if (error) throw error;
+            if (!archive) throw new Error('الأرشيف غير موجود');
+
+            const { content, sections } = archive;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not found');
+
+            // Restore logic
+            if (content.tasks && content.tasks.length > 0) {
+                // Clear current tasks first to avoid duplicates/conflicts
+                await supabase.from('tasks').delete().eq('user_id', user.id);
+                // Insert archived tasks (remove id to create new ones, or keep to restore exact state)
+                // We keep IDs to maintain relationships if any
+                await supabase.from('tasks').upsert(content.tasks);
+            }
+
+            if (content.appointments && content.appointments.length > 0) {
+                await supabase.from('appointments').delete().eq('user_id', user.id);
+                await supabase.from('appointments').upsert(content.appointments);
+            }
+
+            if (content.shopping && content.shopping.length > 0) {
+                await supabase.from('shopping_list').delete().eq('user_id', user.id);
+                await supabase.from('shopping_list').upsert(content.shopping);
+            }
+
+            if (content.habits && content.habits.length > 0) {
+                await supabase.from('habits').delete().eq('user_id', user.id);
+                await supabase.from('habits').upsert(content.habits);
+            }
+
+            if (content.finance && content.finance.length > 0) {
+                // Assuming finance settings is one row per user
+                const financeData = content.finance[0];
+                if (financeData) {
+                    await supabase.from('finance_settings').upsert({
+                        ...financeData,
+                        user_id: user.id
+                    });
+                }
+            }
+
+            if (content.notes && content.notes.length > 0) {
+                const notesData = content.notes[0]; // { notes: [...] }
+                await supabase.from('productivity_data_2025_12_18_18_42').update({
+                    notes: notesData.notes || []
+                }).eq('user_id', user.id);
+            }
+
+            toast({ title: 'تمت الاستعادة بنجاح', description: 'تم استرجاع البيانات من الأرشيف' });
+            setTimeout(() => window.location.reload(), 1500); // Reload to reflect changes
+
+        } catch (error: any) {
+            console.error('Restore error:', error);
+            toast({ title: 'خطأ في الاستعادة', description: error.message, variant: 'destructive' });
+        } finally {
+            setIsArchiving(false);
+        }
     };
 
     return {

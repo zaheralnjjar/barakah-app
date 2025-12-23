@@ -729,17 +729,17 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                 <CalendarIcon className="w-5 h-5 text-orange-500" />
                                 المواعيد القادمة
                             </h3>
-                            <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="grid gap-3 sm:grid-cols-2 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                                 {appointments.map(apt => (
                                     <div key={apt.id} className="border rounded-lg p-3 flex items-center justify-between bg-orange-50/30 border-orange-100">
                                         <div>
-                                            <p className="font-bold text-sm text-gray-800">{apt.title}</p>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                            <p className="font-bold text-xs text-gray-800">{apt.title}</p>
+                                            <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-1">
                                                 <span>{apt.date}</span>
                                                 <span>•</span>
                                                 <span>{apt.time}</span>
                                             </div>
-                                            {apt.location && <p className="text-xs text-blue-500 mt-1">{apt.location}</p>}
+                                            {apt.location && <p className="text-[10px] text-blue-500 mt-1">{apt.location}</p>}
                                         </div>
                                         <div className="flex gap-1">
                                             {/* Edit not hooked up yet */}
@@ -753,8 +753,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                     )}
 
                     {/* Tasks & Projects */}
-                    <div className="space-y-4">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+                        <h3 className="font-bold text-gray-800 flex items-center gap-2 sticky top-0 bg-white z-10 py-2 border-b">
                             <PieChartIcon className="w-5 h-5 text-purple-600" />
                             المهام والمشاريع الحالية
                         </h3>
@@ -763,47 +763,47 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                             <div
                                 key={task.id}
                                 className={`
-                                    border rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group
+                                    border rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group mb-3
                                     ${task.priority === 'high' ? 'border-r-4 border-r-red-500' : 'border-r-4 border-r-transparent'}
                                     ${task.progress === 100 ? 'opacity-75 bg-gray-50' : ''}
                                 `}
                             >
-                                <div className="p-5 flex flex-wrap gap-4 justify-between items-start">
+                                <div className="p-4 flex flex-wrap gap-3 justify-between items-start">
 
                                     {/* Progress Ring */}
-                                    <div className="w-14 h-14 relative flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                    <div className="w-10 h-10 relative flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                                         <svg className="w-full h-full transform -rotate-90 drop-shadow-sm">
-                                            <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-100" />
-                                            <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" fill="transparent"
+                                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-gray-100" />
+                                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="transparent"
                                                 className={`${task.progress === 100 ? 'text-green-500' : 'text-indigo-600'}`}
-                                                strokeDasharray={138.2} strokeDashoffset={138.2 - (138.2 * task.progress) / 100}
+                                                strokeDasharray={100} strokeDashoffset={100 - (100 * task.progress) / 100}
                                                 strokeLinecap="round"
                                             />
                                         </svg>
-                                        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold font-mono">{task.progress}%</span>
+                                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold font-mono">{task.progress}%</span>
                                     </div>
 
                                     {/* Details */}
-                                    <div className="flex-1 min-w-[200px]">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <h4 className={`font-bold text-lg group-hover:text-indigo-600 transition-colors ${task.progress === 100 ? 'line-through text-gray-400' : 'text-gray-900'}`}>{task.title}</h4>
-                                            {task.type === 'project' && <Badge variant="outline" className="text-[10px] border-indigo-200 text-indigo-700 bg-indigo-50">مشروع</Badge>}
-                                            <Badge className={`text-[10px] px-2 py-0.5 rounded-full ${task.priority === 'high' ? 'bg-red-100 text-red-700 border-red-200 border' :
+                                    <div className="flex-1 min-w-[180px]">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className={`font-bold text-sm text-right flex-1 group-hover:text-indigo-600 transition-colors ${task.progress === 100 ? 'line-through text-gray-400' : 'text-gray-900'}`}>{task.title}</h4>
+                                            {task.type === 'project' && <Badge variant="outline" className="text-[9px] border-indigo-200 text-indigo-700 bg-indigo-50 h-5">مشروع</Badge>}
+                                            <Badge className={`text-[9px] px-1.5 py-0 rounded-full h-5 ${task.priority === 'high' ? 'bg-red-100 text-red-700 border-red-200 border' :
                                                 task.priority === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200 border' :
                                                     'bg-blue-100 text-blue-700 border-blue-200 border'
                                                 }`}>
                                                 {task.priority === 'high' ? 'مستعجل' : task.priority === 'medium' ? 'متوسط' : 'عادي'}
                                             </Badge>
                                         </div>
-                                        {task.description && <p className="text-sm text-gray-500 mb-3 line-clamp-2 leading-relaxed">{task.description}</p>}
-                                        <div className="flex items-center gap-4 text-xs text-gray-400">
-                                            <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${new Date(task.deadline) < new Date() && task.progress < 100 ? 'bg-red-50 text-red-500' : 'bg-gray-50'}`}>
-                                                <CalendarIcon className="w-3.5 h-3.5" />
+                                        {task.description && <p className="text-xs text-gray-500 mb-2 line-clamp-2 leading-relaxed text-right">{task.description}</p>}
+                                        <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                                            <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${new Date(task.deadline) < new Date() && task.progress < 100 ? 'bg-red-50 text-red-500' : 'bg-gray-50'}`}>
+                                                <CalendarIcon className="w-3 h-3" />
                                                 {task.deadline}
                                             </span>
                                             {task.subtasks.length > 0 && (
-                                                <span className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
-                                                    <Layers className="w-3.5 h-3.5" />
+                                                <span className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-md">
+                                                    <Layers className="w-3 h-3" />
                                                     {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}
                                                 </span>
                                             )}
@@ -811,46 +811,46 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center">
                                         {task.type === 'task' && (
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className={`h-8 w-8 ${pomodoro.taskId === task.id ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-green-600'}`}
+                                                className={`h-7 w-7 ${pomodoro.taskId === task.id ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-green-600'}`}
                                                 onClick={() => pomodoro.taskId === task.id ? pomodoro.stop() : pomodoro.start(task.id)}
                                             >
-                                                <Clock className="w-4 h-4" />
+                                                <Clock className="w-3.5 h-3.5" />
                                             </Button>
                                         )}
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600" onClick={() => onEditTask(task)}>
-                                            <Edit className="w-4 h-4" />
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-blue-600" onClick={() => onEditTask(task)}>
+                                            <Edit className="w-3.5 h-3.5" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-purple-600" onClick={() => onShareTask(task)}>
-                                            <Share2 className="w-4 h-4" />
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-purple-600" onClick={() => onShareTask(task)}>
+                                            <Share2 className="w-3.5 h-3.5" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => onDeleteTask(task.id)}>
-                                            <Trash2 className="w-4 h-4" />
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => onDeleteTask(task.id)}>
+                                            <Trash2 className="w-3.5 h-3.5" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
-                                            {expandedTaskId === task.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
+                                            {expandedTaskId === task.id ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                                         </Button>
                                     </div>
                                 </div>
 
                                 {/* Subtasks */}
                                 {expandedTaskId === task.id && (
-                                    <div className="bg-gray-50/50 p-4 border-t">
-                                        <p className="text-xs font-bold text-gray-500 mb-2">المهام الفرعية</p>
-                                        <div className="space-y-2 mb-3">
+                                    <div className="bg-gray-50/50 p-3 border-t">
+                                        <p className="text-[10px] font-bold text-gray-500 mb-2">المهام الفرعية</p>
+                                        <div className="space-y-1 mb-2">
                                             {task.subtasks.map(sub => (
                                                 <div key={sub.id} className="flex items-center gap-2 group">
                                                     <input
                                                         type="checkbox"
                                                         checked={sub.completed}
                                                         onChange={() => onToggleSubtask(task.id, sub.id)}
-                                                        className="accent-purple-600"
+                                                        className="accent-purple-600 w-3 h-3"
                                                     />
-                                                    <span className={`text-sm flex-1 ${sub.completed ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
+                                                    <span className={`text-xs flex-1 ${sub.completed ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
                                                     <Trash2
                                                         className="w-3 h-3 text-red-300 opacity-0 group-hover:opacity-100 cursor-pointer"
                                                         onClick={() => onDeleteSubtask(task.id, sub.id)}
@@ -861,7 +861,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                         <div className="flex gap-2">
                                             <Input
                                                 placeholder="مهمة فرعية جديدة..."
-                                                className="h-8 text-xs bg-white"
+                                                className="h-7 text-xs bg-white"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         onAddSubtask(task.id, e.currentTarget.value);

@@ -26,7 +26,7 @@ export interface MainTask {
 
 
 export const useTasks = () => {
-    const [tasks, setTasks] = useState<MainTask[]>(() => {
+    const loadTasksFromStorage = () => {
         try {
             const savedTasks = localStorage.getItem('baraka_tasks');
             if (savedTasks) return JSON.parse(savedTasks);
@@ -35,8 +35,14 @@ export const useTasks = () => {
             console.error("Error loading tasks", e);
             return [];
         }
-    });
+    };
+
+    const [tasks, setTasks] = useState<MainTask[]>(loadTasksFromStorage);
     const { toast } = useToast();
+
+    const refreshTasks = () => {
+        setTasks(loadTasksFromStorage());
+    };
 
     // Sync to Storage & Native Widget
     useEffect(() => {
@@ -162,6 +168,7 @@ export const useTasks = () => {
         setPreparatoryFor,
         getPreparatoryTasks,
         getLinkedTasks,
+        refreshTasks,
     };
 };
 

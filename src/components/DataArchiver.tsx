@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 const DataArchiver = () => {
-    const { archives, isArchiving, isLoading, fetchArchives, archiveAndReset } = useArchiver();
+    const { archives, isArchiving, isLoading, fetchArchives, archiveAndReset, restoreArchive } = useArchiver();
     const [selectedSections, setSelectedSections] = useState<ArchiveSection[]>([]);
     const [archiveLabel, setArchiveLabel] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -133,27 +133,40 @@ const DataArchiver = () => {
                     </Dialog>
                 </div>
 
-                {/* Previous Archives List */}
+                {/* Previous Archives List (Last 3) */}
                 {archives.length > 0 && (
                     <div className="mt-6 pt-6 border-t">
                         <h4 className="flex items-center gap-2 font-bold text-gray-700 mb-3 text-sm">
                             <History className="w-4 h-4" />
-                            سجل الأرشيف
+                            سجل الأرشيف (آخر 3 ملفات)
                         </h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                            {archives.map((arch) => (
+                        <div className="space-y-2">
+                            {archives.slice(0, 3).map((arch) => (
                                 <div key={arch.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm border hover:bg-gray-100 transition-colors">
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="font-medium text-gray-800">{arch.label || 'بدون عنوان'}</p>
-                                        <p className="text-xs text-gray-500">{new Date(arch.created_at).toLocaleDateString('ar-EG')}</p>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            <span className="text-[10px] text-gray-500 ml-2">{new Date(arch.created_at).toLocaleDateString('ar-EG')}</span>
+                                            {arch.sections.map((s: string) => (
+                                                <Badge key={s} variant="secondary" className="text-[10px] px-1 h-5 bg-white border">{sectionsList.find(sl => sl.id === s)?.label || s}</Badge>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2 text-xs">
-                                        {arch.sections.map((s: string) => (
-                                            <Badge key={s} variant="outline" className="text-[10px] px-1 h-5">{sectionsList.find(sl => sl.id === s)?.label || s}</Badge>
-                                        ))}
-                                    </div>
-                                    {/* زر استعادة يمكن إضافته مستقبلاً */}
-                                    {/* <Button size="sm" variant="ghost" className="h-6 w-6 p-0"><RotateCcw className="w-3 h-3 text-blue-500" /></Button> */}
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 px-2 text-xs gap-1 hover:bg-blue-50 hover:text-blue-700 border-blue-200"
+                                        onClick={() => {
+                                            if (confirm('هل أنت متأكد من استعادة هذا الأرشيف؟ سيتم استبدال البيانات الحالية ببيانات الأرشيف.')) {
+                                                restoreArchive(arch.id);
+                                            }
+                                        }}
+                                        disabled={isArchiving}
+                                    >
+                                        <RotateCcw className="w-3 h-3" />
+                                        استعادة
+                                    </Button>
                                 </div>
                             ))}
                         </div>

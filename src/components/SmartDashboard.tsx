@@ -32,8 +32,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     const { habits } = useHabits();
     const { medications, toggleMedTaken } = useMedications();
-    const { tasks, addTask } = useTasks();
-    const { appointments } = useAppointments();
+    const { tasks, addTask, updateTask, refreshTasks } = useTasks();
+    const { appointments, refreshAppointments } = useAppointments();
 
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -432,11 +432,23 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     })() : 0;
 
     // Today's data
+    // Today's data
+    const FILTER_DAY_NAMES = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const todayStr = new Date().toISOString().split('T')[0];
+    const todayName = FILTER_DAY_NAMES[new Date().getDay()];
+
     const todayTasks = tasks.filter(t => t.deadline === todayStr);
     const todayAppointments = appointments.filter(a => a.date === todayStr);
-    const todayMedications = medications;
-    const todayHabits = habits;
+
+    // Fix: Filter medications and habits based on frequency and custom days
+    const todayMedications = medications.filter(m =>
+        m.frequency === 'daily' ||
+        (m.frequency === 'specific_days' && m.customDays?.includes(todayName))
+    );
+    const todayHabits = habits.filter(h =>
+        h.frequency === 'daily' ||
+        (h.frequency === 'specific_days' && h.customDays?.includes(todayName))
+    );
 
     // Week days for weekly calendar
     const getWeekDays = () => {
@@ -455,12 +467,26 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const renderDayCard = (day: Date, idx: number, fullWidth = false) => {
         const dateStr = day.toISOString().split('T')[0];
         const isToday = dateStr === todayStr;
+        const dayNameForFilter = FILTER_DAY_NAMES[day.getDay()];
+
         const dayAppts = appointments.filter(a => a.date === dateStr);
-        const dayMeds = medications;
+        // Fix: Use correct filtering for dayMeds
+        const dayMeds = medications.filter(m =>
+            m.frequency === 'daily' ||
+            (m.frequency === 'specific_days' && m.customDays?.includes(dayNameForFilter))
+        );
+        // Add: Include tasks for the day
+        const dayTasks = tasks.filter(t => t.deadline === dateStr);
+
         const allItems = [
             ...dayMeds.map(m => ({ type: 'med' as const, name: m.name, time: m.time, id: m.id || m.name })),
-            ...dayAppts.map(a => ({ type: 'apt' as const, name: a.title, time: a.time || '--', id: a.id, isCompleted: (a as any).is_completed }))
-        ].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            ...dayAppts.map(a => ({ type: 'apt' as const, name: a.title, time: a.time || '--', id: a.id, isCompleted: (a as any).is_completed })),
+            ...dayTasks.map(t => ({ type: 'task' as const, name: t.title, time: 'مهام', id: t.id, isCompleted: t.progress === 100 }))
+        ].sort((a, b) => {
+            const timeA = a.time === 'مهام' ? '23:59' : (a.time || '');
+            const timeB = b.time === 'مهام' ? '23:59' : (b.time || '');
+            return timeA.localeCompare(timeB);
+        });
 
         return (
             <div
@@ -476,7 +502,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 <div className={`${fullWidth ? 'h-[60px]' : 'h-[100px]'} overflow-y-auto p-2 space-y-1.5`}>
                     {allItems.slice(0, 10).map((item, i) => {
                         const isTaken = item.type === 'med' && medications.find(m => m.id === item.id)?.takenHistory?.[dateStr];
-                        const isCompleted = item.type === 'apt' ? (item as any).isCompleted : isTaken;
+                        const isCompleted = item.type === 'apt' ? (item as any).isCompleted : (item.type === 'task' ? (item as any).isCompleted : isTaken);
 
                         const handleToggle = async () => {
                             if (item.type === 'apt') {
@@ -488,13 +514,24 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             } else if (item.type === 'med') {
                                 toggleMedTaken(item.id, dateStr);
                                 toast({ title: isTaken ? 'تم إلغاء التناول' : 'تم تناول الدواء ✓' });
+                            } else if (item.type === 'task') {
+                                const taskToUpdate = tasks.find(t => t.id === item.id);
+                                if (taskToUpdate) {
+                                    updateTask({
+                                        ...taskToUpdate,
+                                        progress: isCompleted ? 0 : 100
+                                    });
+                                    toast({ title: isCompleted ? 'تم إلغاء الإنجاز' : 'تم إنجاز المهمة ✓' });
+                                }
                             }
                         };
 
                         return (
                             <div
                                 key={i}
-                                className={`flex items-center gap-2 text-xs px-2 py-2 rounded-lg ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'} ${isCompleted ? 'opacity-50 bg-gray-100' : ''}`}
+                                className={`flex items-center gap-2 text-xs px-2 py-2 rounded-lg ${item.type === 'med' ? 'bg-red-100 text-red-700' :
+                                    item.type === 'apt' ? 'bg-orange-100 text-orange-700' :
+                                        'bg-blue-100 text-blue-700'} ${isCompleted ? 'opacity-50 bg-gray-100' : ''}`}
                             >
                                 <button
                                     type="button"
@@ -507,8 +544,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     {isCompleted && <CheckSquare className="w-4 h-4" />}
                                 </button>
                                 <div
-                                    className={`flex-1 min-w-0 ${isCompleted ? 'line-through text-gray-500' : ''}`}
-                                    onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'logistics')}
+                                    className={`flex-1 min-w-0 ${isCompleted ? 'line-through text-gray-500' : ''} cursor-pointer`}
+                                    onClick={() => onNavigateToTab(
+                                        item.type === 'apt' ? 'appointments' :
+                                            item.type === 'task' ? 'tasks' : 'logistics'
+                                    )}
                                 >
                                     <div className="font-medium truncate">{item.name}</div>
                                     <div className="text-[10px] opacity-70">{item.time}</div>
@@ -582,27 +622,28 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 <CardContent className="p-4">
                     <div className="grid grid-cols-4 md:grid-cols-7 gap-2 text-center">
                         {/* Balance */}
-                        <div className="col-span-1 p-2 bg-emerald-50 rounded-xl">
-                            <span className="text-[10px] text-gray-500 block">الرصيد</span>
-                            <span className="text-sm md:text-lg font-bold text-emerald-600 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
-                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(totalBalanceARS / exchangeRate).toLocaleString() : '--'}</span>
+                        <div className="col-span-1 p-2 bg-emerald-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
+                            <span className="text-[10px] text-gray-500 leading-none">الرصيد</span>
+                            <span className="text-sm md:text-lg font-bold text-emerald-600 tabular-nums leading-none">{totalBalanceARS.toLocaleString()}</span>
+                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(totalBalanceARS / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Daily Limit */}
-                        <div className="col-span-1 p-2 bg-blue-50 rounded-xl">
-                            <span className="text-[10px] text-gray-500 block">الحد اليومي</span>
-                            <span className="text-sm md:text-lg font-bold text-blue-600 tabular-nums">{dailyLimitARS.toLocaleString()}</span>
-                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(dailyLimitARS / exchangeRate).toLocaleString() : '--'}</span>
+                        <div className="col-span-1 p-2 bg-blue-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
+                            <span className="text-[10px] text-gray-500 leading-none">الحد اليومي</span>
+                            <span className="text-sm md:text-lg font-bold text-blue-600 tabular-nums leading-none">{dailyLimitARS.toLocaleString()}</span>
+                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(dailyLimitARS / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Today Expense */}
-                        <div className="col-span-1 p-2 bg-red-50 rounded-xl">
-                            <span className="text-[10px] text-gray-500 block">مصروف اليوم</span>
-                            <span className="text-sm md:text-lg font-bold text-red-600 tabular-nums">{todayExpense.toLocaleString()}</span>
-                            <span className="text-[8px] text-gray-400 block">~${exchangeRate ? Math.round(todayExpense / exchangeRate).toLocaleString() : '--'}</span>
+                        <div className="col-span-1 p-2 bg-red-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
+                            <span className="text-[10px] text-gray-500 leading-none">مصروف اليوم</span>
+                            <span className="text-sm md:text-lg font-bold text-red-600 tabular-nums leading-none">{todayExpense.toLocaleString()}</span>
+                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(todayExpense / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                         {/* Remaining Days */}
-                        <div className="col-span-1 p-2 bg-purple-50 rounded-xl">
-                            <span className="text-[10px] text-gray-500 block">الأيام المتبقية</span>
-                            <span className="text-sm md:text-lg font-bold text-purple-600">{remainingDays}</span>
+                        <div className="col-span-1 p-2 bg-purple-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
+                            <span className="text-[10px] text-gray-500 leading-none">الأيام المتبقية</span>
+                            <span className="text-sm md:text-lg font-bold text-purple-600 leading-none">{remainingDays}</span>
+                            <span className="text-[10px] text-transparent leading-none">.</span>
                         </div>
                         {/* Action Buttons - Hidden on mobile, shown on larger screens */}
                         <div className="hidden md:flex col-span-3 items-center justify-end gap-2">
@@ -801,36 +842,32 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== PRAYER TIMES (TODAY) ===== */}
             <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
                 <CardContent className="p-4">
-                    <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                            <Moon className="w-5 h-5 text-teal-600" />
-                            مواقيت الصلاة اليوم
-                        </h3>
-                        {nextPrayer && (
-                            <Badge variant="outline" className="bg-teal-100 text-teal-700 border-teal-200">
-                                القادمة: {typeof nextPrayer === 'string' ? nextPrayer : (nextPrayer as any)?.name} ({timeUntilNext})
-                            </Badge>
+                    <div className="flex justify-center items-center mb-2">
+                        {nextPrayer ? (
+                            <div className="text-center font-bold text-teal-800 text-xs flex items-center justify-center gap-1 whitespace-nowrap">
+                                <span className="text-teal-600">الصلاة القادمة:</span>
+                                <span>{(nextPrayer as any)?.nameAr || (typeof nextPrayer === 'string' ? nextPrayer : '')}</span>
+                                <span className="text-gray-300 mx-1">|</span>
+                                <span className="text-orange-600 bg-orange-50 px-1 rounded">{timeUntilNext}</span>
+                            </div>
+                        ) : (
+                            <div className="text-center text-gray-500 text-xs">جاري تحميل أوقات الصلاة...</div>
                         )}
                     </div>
 
                     <div className="grid grid-cols-5 gap-2 text-center">
-                        {['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((prayerKey) => {
-                            const prayerNameMap: Record<string, string> = { 'Fajr': 'الفجر', 'Dhuhr': 'الظهر', 'Asr': 'العصر', 'Maghrib': 'المغرب', 'Isha': 'العشاء' };
-                            const isNext = (typeof nextPrayer === 'string' ? nextPrayer : (nextPrayer as any)?.name) === prayerKey;
-                            const time = prayerTimes.find(p => p.name === 'Fajr' ? prayerKey === 'Fajr'
-                                : p.name === 'Dhuhr' ? prayerKey === 'Dhuhr'
-                                    : p.name === 'Asr' ? prayerKey === 'Asr'
-                                        : p.name === 'Maghrib' ? prayerKey === 'Maghrib'
-                                            : p.name === 'Isha' ? prayerKey === 'Isha' : false
-                            )?.time || prayerTimes.find(p => p.name === prayerKey)?.time || '--:--';
+                        {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((prayerKey) => {
+                            const prayerNameMap: Record<string, string> = { 'fajr': 'الفجر', 'dhuhr': 'الظهر', 'asr': 'العصر', 'maghrib': 'المغرب', 'isha': 'العشاء' };
+                            const nextPrayerName = (nextPrayer as any)?.name?.toLowerCase() || '';
+                            const isNext = nextPrayerName === prayerKey;
 
-                            // Simplification: just find by name
-                            const pTime = prayerTimes.find(p => p.name === prayerKey)?.time || '--:--';
+                            // Find time with case-insensitive search
+                            const pTime = prayerTimes.find(p => p.name.toLowerCase() === prayerKey)?.time || '--:--';
 
                             return (
-                                <div key={prayerKey} className={`p-2 rounded-lg border ${isNext ? 'bg-teal-100 border-teal-300 ring-1 ring-teal-400' : 'bg-white border-gray-100'}`}>
+                                <div key={prayerKey} className={`flex flex-col items-center justify-center p-2 rounded-lg border h-16 ${isNext ? 'bg-teal-100 border-teal-300 ring-1 ring-teal-400' : 'bg-white border-gray-100'}`}>
                                     <span className="text-xs text-gray-500 block mb-1">{prayerNameMap[prayerKey]}</span>
-                                    <span className="font-bold text-gray-800 text-sm">{pTime}</span>
+                                    <span className="font-bold text-gray-800 text-sm" dir="ltr">{pTime}</span>
                                 </div>
                             );
                         })}
@@ -984,7 +1021,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </Dialog >
 
             {/* ===== QUICK ADD DIALOG ===== */}
-            < Dialog open={showAddDialog !== null} onOpenChange={(open) => !open && setShowAddDialog(null)}>
+            <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
+                if (!open) {
+                    if (showAddDialog === 'appointment') refreshAppointments();
+                    if (showAddDialog === 'task') refreshTasks(); // In case task is added via this dialog
+
+                    setShowAddDialog(null);
+                }
+            }}>
                 <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'sm:max-w-[800px] max-h-[95vh] overflow-y-auto' : 'sm:max-w-[450px]'}>
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">

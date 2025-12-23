@@ -20,19 +20,22 @@ export const useAppointments = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const { toast } = useToast();
 
+    const loadAppointments = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+            .from('appointments')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('date', { ascending: true });
+        if (data) setAppointments(data);
+    };
+
     useEffect(() => {
-        const loadAppointments = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            const { data } = await supabase
-                .from('appointments')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('date', { ascending: true });
-            if (data) setAppointments(data);
-        };
         loadAppointments();
     }, []);
+
+    const refreshAppointments = loadAppointments;
 
     const addAppointment = async (apptData: Omit<Appointment, 'id'>) => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -142,6 +145,7 @@ export const useAppointments = () => {
         linkTask,
         unlinkTask,
         getAppointmentsWithPreparatoryTasks,
+        refreshAppointments,
     };
 };
 
