@@ -65,13 +65,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         if (!loading) syncToWidget();
     }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, loading]);
 
-    // Auto-refresh data every 30 seconds for real-time sync
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (refetch) refetch();
-        }, 30000); // 30 seconds
-        return () => clearInterval(interval);
-    }, [refetch]);
+    // Pull-to-refresh state
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const handlePullRefresh = async () => {
+        setIsRefreshing(true);
+        if (refetch) await refetch();
+        setTimeout(() => setIsRefreshing(false), 1000);
+    };
 
     // --- Helper Functions ---
     const handleLogout = async () => { await supabase.auth.signOut(); };
@@ -114,25 +114,97 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const weekDays = getWeekDays();
     const DAYS_AR = ['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
 
+    // Render day card for weekly calendar
+    const renderDayCard = (day: Date, idx: number, fullWidth = false) => {
+        const dateStr = day.toISOString().split('T')[0];
+        const isToday = dateStr === todayStr;
+        const dayAppts = appointments.filter(a => a.date === dateStr);
+        const dayMeds = medications;
+        const allItems = [
+            ...dayMeds.map(m => ({ type: 'med' as const, name: m.name, time: m.time })),
+            ...dayAppts.map(a => ({ type: 'apt' as const, name: a.title, time: a.time || '--' }))
+        ].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+        return (
+            <div
+                key={idx}
+                className={`rounded-xl transition-all ${fullWidth ? '' : ''} ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'}`}
+            >
+                {/* Day Header */}
+                <div className={`text-center py-2 border-b ${isToday ? 'border-purple-200 bg-purple-50' : 'border-gray-200'} rounded-t-xl`}>
+                    <span className="text-xs font-medium text-gray-600 block">{DAYS_AR[idx]}</span>
+                    <span className={`text-lg font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
+                </div>
+                {/* Items inside day - scrollable */}
+                <div className={`${fullWidth ? 'h-[60px]' : 'h-[100px]'} overflow-y-auto p-2 space-y-1`}>
+                    {allItems.slice(0, 10).map((item, i) => (
+                        <div
+                            key={i}
+                            onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
+                            className={`text-xs px-2 py-1.5 rounded-lg cursor-pointer hover:opacity-80 ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}
+                        >
+                            <div className="flex items-center gap-1">
+                                <span>{item.type === 'med' ? '💊' : '📅'}</span>
+                                <span className="font-medium truncate flex-1">{item.name}</span>
+                                <span className="text-[10px] opacity-70">{item.time}</span>
+                            </div>
+                        </div>
+                    ))}
+                    {allItems.length === 0 && (
+                        <div className="text-xs text-gray-400 text-center py-3">{fullWidth ? 'لا توجد أنشطة' : '-'}</div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     if (loading) return <div className="p-8 text-center">جاري التحميل...</div>;
 
     return (
-        <div className="space-y-4 p-2 md:p-4 max-w-6xl mx-auto">
+        <div
+            className="space-y-4 p-2 md:p-4 max-w-6xl mx-auto"
+            onTouchStart={(e) => {
+                const startY = e.touches[0].clientY;
+                const handleTouchEnd = (endEvent: TouchEvent) => {
+                    const endY = endEvent.changedTouches[0].clientY;
+                    if (startY < 50 && endY - startY > 100) {
+                        handlePullRefresh();
+                    }
+                    document.removeEventListener('touchend', handleTouchEnd);
+                };
+                document.addEventListener('touchend', handleTouchEnd as EventListener);
+            }}
+        >
+            {/* Pull-to-refresh indicator */}
+            {isRefreshing && (
+                <div className="fixed top-0 left-0 right-0 z-50 bg-emerald-500 text-white text-center py-2 text-sm animate-pulse">
+                    🔄 جاري التحديث...
+                </div>
+            )}
 
             {/* ===== 1. HEADER ===== */}
             <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                     {/* Date Info - Single Box */}
-                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[140px]">
+                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[130px]">
                         <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
                         <div className="border-t border-emerald-300 my-1"></div>
                         <span className="text-xs block">{hijriDate}</span>
                     </div>
 
                     {/* Logo & Actions */}
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-emerald-600 hidden sm:block">البركة</span>
-                        <Button variant="ghost" size="sm" className="h-9 px-3 rounded-full text-red-500 hover:bg-red-50" onClick={handleLogout}>
+                    <div className="flex items-center gap-2">
+                        <div className="text-right">
+                            <h1 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">البركة</h1>
+                            <span className="text-[10px] text-gray-400 hidden sm:block">Barakah Life</span>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
+                            onClick={handleLogout}
+                            title="تسجيل الخروج"
+                        >
                             <LogOut className="w-4 h-4" />
                         </Button>
                     </div>
@@ -265,54 +337,30 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             </Button>
                         </div>
                     </div>
-                    <div className="grid grid-cols-7 gap-1">
-                        {weekDays.map((day, idx) => {
-                            const dateStr = day.toISOString().split('T')[0];
-                            const isToday = dateStr === todayStr;
-                            const dayAppts = appointments.filter(a => a.date === dateStr);
-                            const dayMeds = medications; // All meds for now (daily)
-                            const allItems = [
-                                ...dayMeds.map(m => ({ type: 'med', name: m.name, time: m.time })),
-                                ...dayAppts.map(a => ({ type: 'apt', name: a.title, time: a.time || '--' }))
-                            ].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-                            return (
-                                <div
-                                    key={idx}
-                                    className={`rounded-lg transition-all ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}`}
-                                >
-                                    {/* Day Header */}
-                                    <div className={`text-center py-1.5 border-b ${isToday ? 'border-purple-200' : 'border-gray-200'}`}>
-                                        <span className="text-[10px] text-gray-500 block">{DAYS_AR[idx]}</span>
-                                        <span className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
-                                    </div>
-                                    {/* Items inside day - scrollable */}
-                                    <div className="h-[80px] overflow-y-auto p-1 space-y-0.5">
-                                        {allItems.slice(0, 10).map((item, i) => (
-                                            <div
-                                                key={i}
-                                                onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
-                                                className={`text-[9px] px-1 py-1 rounded cursor-pointer hover:opacity-80 ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                                    }`}
-                                                title={`${item.name} - ${item.time}`}
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    <span>{item.type === 'med' ? '💊' : '📅'}</span>
-                                                    <span className="font-medium truncate flex-1">{item.name}</span>
-                                                </div>
-                                                <div className="text-[8px] opacity-70">{item.time}</div>
-                                            </div>
-                                        ))}
-                                        {allItems.length === 0 && (
-                                            <div className="text-[9px] text-gray-400 text-center py-4">لا توجد عناصر</div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    {/* Mobile: 3-row grid layout */}
+                    <div className="md:hidden space-y-2">
+                        {/* Row 1: Mon, Tue, Wed */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {weekDays.slice(0, 3).map((day, idx) => renderDayCard(day, idx))}
+                        </div>
+                        {/* Row 2: Thu, Fri, Sat */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {weekDays.slice(3, 6).map((day, idx) => renderDayCard(day, idx + 3))}
+                        </div>
+                        {/* Row 3: Sunday (full width) */}
+                        <div className="grid grid-cols-1 gap-2">
+                            {weekDays.slice(6, 7).map((day, idx) => renderDayCard(day, idx + 6, true))}
+                        </div>
                     </div>
+
+                    {/* Desktop: 7-column grid */}
+                    <div className="hidden md:grid grid-cols-7 gap-1">
+                        {weekDays.map((day, idx) => renderDayCard(day, idx))}
+                    </div>
+
                     {/* Legend */}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
                         <div className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full"></span> الأدوية</div>
                         <div className="flex items-center gap-1"><span className="w-2 h-2 bg-orange-400 rounded-full"></span> المواعيد</div>
                     </div>
