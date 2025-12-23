@@ -9,7 +9,12 @@ export interface Appointment {
     time: string;
     location?: string;
     notes?: string;
+    // New fields for task linking
+    preparatoryTaskIds?: string[];  // Tasks that are preparatory for this appointment
+    linkedTaskIds?: string[];       // Tasks linked to this appointment
+    convertedFromTaskId?: string;   // If this appointment was converted from a task
 }
+
 
 export const useAppointments = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -70,9 +75,73 @@ export const useAppointments = () => {
         }
     };
 
+    // Add a preparatory task to an appointment
+    const addPreparatoryTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                const existing = a.preparatoryTaskIds || [];
+                if (!existing.includes(taskId)) {
+                    return { ...a, preparatoryTaskIds: [...existing, taskId] };
+                }
+            }
+            return a;
+        }));
+    };
+
+    // Remove a preparatory task from an appointment
+    const removePreparatoryTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                return {
+                    ...a,
+                    preparatoryTaskIds: (a.preparatoryTaskIds || []).filter(id => id !== taskId)
+                };
+            }
+            return a;
+        }));
+    };
+
+    // Link a task to an appointment
+    const linkTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                const existing = a.linkedTaskIds || [];
+                if (!existing.includes(taskId)) {
+                    return { ...a, linkedTaskIds: [...existing, taskId] };
+                }
+            }
+            return a;
+        }));
+    };
+
+    // Unlink a task from an appointment
+    const unlinkTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                return {
+                    ...a,
+                    linkedTaskIds: (a.linkedTaskIds || []).filter(id => id !== taskId)
+                };
+            }
+            return a;
+        }));
+    };
+
+    // Get appointments that have preparatory tasks
+    const getAppointmentsWithPreparatoryTasks = (): Appointment[] => {
+        return appointments.filter(a => a.preparatoryTaskIds && a.preparatoryTaskIds.length > 0);
+    };
+
     return {
         appointments,
         addAppointment,
-        deleteAppointment
+        deleteAppointment,
+        // New linking functions
+        addPreparatoryTask,
+        removePreparatoryTask,
+        linkTask,
+        unlinkTask,
+        getAppointmentsWithPreparatoryTasks,
     };
 };
+

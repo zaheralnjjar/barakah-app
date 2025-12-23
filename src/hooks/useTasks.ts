@@ -18,7 +18,12 @@ export interface MainTask {
     progress: number;
     priority: 'low' | 'medium' | 'high';
     type: 'task' | 'project';
+    // New fields for appointment linking
+    linkedAppointmentId?: string;  // Linked appointment ID
+    isPreparatoryFor?: string;     // This task is preparatory for this appointment ID
+    reminderBeforeAppointment?: number; // Reminder minutes before appointment
 }
+
 
 export const useTasks = () => {
     const [tasks, setTasks] = useState<MainTask[]>(() => {
@@ -105,6 +110,43 @@ export const useTasks = () => {
         }));
     };
 
+    // Link a task to an appointment
+    const linkToAppointment = (taskId: string, appointmentId: string) => {
+        setTasks(prev => prev.map(t =>
+            t.id === taskId ? { ...t, linkedAppointmentId: appointmentId } : t
+        ));
+        toast({ title: 'تم الربط', description: 'تم ربط المهمة بالموعد' });
+    };
+
+    // Unlink a task from an appointment
+    const unlinkFromAppointment = (taskId: string) => {
+        setTasks(prev => prev.map(t =>
+            t.id === taskId ? { ...t, linkedAppointmentId: undefined } : t
+        ));
+    };
+
+    // Set a task as preparatory for an appointment
+    const setPreparatoryFor = (taskId: string, appointmentId: string, reminderMinutes: number = 60) => {
+        setTasks(prev => prev.map(t =>
+            t.id === taskId ? {
+                ...t,
+                isPreparatoryFor: appointmentId,
+                reminderBeforeAppointment: reminderMinutes
+            } : t
+        ));
+        toast({ title: 'تم التعيين', description: 'تم تعيين المهمة كمهمة تحضيرية' });
+    };
+
+    // Get all preparatory tasks for a specific appointment
+    const getPreparatoryTasks = (appointmentId: string): MainTask[] => {
+        return tasks.filter(t => t.isPreparatoryFor === appointmentId);
+    };
+
+    // Get all tasks linked to a specific appointment
+    const getLinkedTasks = (appointmentId: string): MainTask[] => {
+        return tasks.filter(t => t.linkedAppointmentId === appointmentId);
+    };
+
     return {
         tasks,
         setTasks,
@@ -113,6 +155,13 @@ export const useTasks = () => {
         deleteMainTask,
         addSubtask,
         toggleSubtask,
-        deleteSubtask
+        deleteSubtask,
+        // New linking functions
+        linkToAppointment,
+        unlinkFromAppointment,
+        setPreparatoryFor,
+        getPreparatoryTasks,
+        getLinkedTasks,
     };
 };
+

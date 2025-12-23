@@ -3,11 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, FileText, CalendarDays } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
+import WeeklyCalendar from '@/components/WeeklyCalendar';
+import TaskTemplatesManager from '@/components/TaskTemplatesManager';
+
 
 interface TaskSectionProps {
     tasks: MainTask[];
@@ -567,31 +570,65 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
         setIsMultiSelectMode(false);
     };
 
+    // Local state for internal tab switching (weekly, templates)
+    const [internalTab, setInternalTab] = useState<'list' | 'monthly' | 'weekly' | 'templates'>('list');
+
     return (
         <div className="space-y-6">
             {/* View Toggle */}
-            <div className="flex gap-2 mb-6 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto sm:mx-0 shadow-sm">
+            <div className="flex gap-2 mb-6 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto sm:mx-0 shadow-sm overflow-x-auto">
                 <button
-                    onClick={() => setActiveTab('task')}
-                    className={`px-6 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${activeTab !== 'calendar'
+                    onClick={() => { setActiveTab('task'); setInternalTab('list'); }}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'list'
                         ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
                         : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                         }`}
                 >
-                    📋 قائمة المهام
+                    📋 المهام
                 </button>
                 <button
-                    onClick={() => setActiveTab('calendar')}
-                    className={`px-6 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${activeTab === 'calendar'
+                    onClick={() => { setActiveTab('calendar'); setInternalTab('monthly'); }}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'monthly'
                         ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
                         : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                         }`}
                 >
-                    📅 التقويم الشهري
+                    📅 الشهري
+                </button>
+                <button
+                    onClick={() => setInternalTab('weekly')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'weekly'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <CalendarDays className="w-4 h-4 inline-block ml-1" />
+                    الأسبوعي
+                </button>
+                <button
+                    onClick={() => setInternalTab('templates')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'templates'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <FileText className="w-4 h-4 inline-block ml-1" />
+                    القوالب
                 </button>
             </div>
 
-            {activeTab === 'calendar' ? (
+            {/* Weekly Calendar View */}
+            {internalTab === 'weekly' && (
+                <WeeklyCalendar />
+            )}
+
+            {/* Templates View */}
+            {internalTab === 'templates' && (
+                <TaskTemplatesManager />
+            )}
+
+            {internalTab === 'monthly' ? (
+
                 <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
                     {/* Month Navigation */}
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white">
@@ -697,7 +734,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         })}
                     </div>
                 </div>
-            ) : (
+            ) : internalTab === 'list' ? (
+
                 <>
                     {/* Appointments Section */}
                     {appointments.length > 0 && (
@@ -853,7 +891,8 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         ))}
                     </div>
                 </>
-            )}
+            ) : null}
+
 
             {/* Day Details Dialog */}
             <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>

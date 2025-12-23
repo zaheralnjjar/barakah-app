@@ -17,13 +17,20 @@ import {
   Edit,
   Trash2,
   Share2,
-  X
+  X,
+  Bell,
+  Calendar,
+  RotateCw,
+  Power
 } from 'lucide-react';
 import { fetchBNARate } from '@/lib/currency';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAppStore } from '@/stores/useAppStore';
 import { Share } from '@capacitor/share';
+import { useRecurringExpenses, RecurringExpense } from '@/hooks/useRecurringExpenses';
+import { Badge } from '@/components/ui/badge';
+
 
 const FinancialController = () => {
   const [financeData, setFinanceData] = useState<any>(null);
@@ -162,9 +169,45 @@ const FinancialController = () => {
   const incomeCategories = useAppStore((s) => s.incomeCategories);
   const { toast } = useToast();
 
+  // Recurring expenses hook
+  const {
+    recurringExpenses,
+    addRecurringExpense,
+    deleteRecurringExpense,
+    toggleActive,
+    getDueExpenses,
+    getUpcomingReminders,
+    markAsProcessed,
+    getMonthlyTotal,
+  } = useRecurringExpenses();
+
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [newRecurring, setNewRecurring] = useState({
+    name: '',
+    amount: '',
+    currency: 'ARS' as 'ARS' | 'USD',
+    category: 'فواتير',
+    cycle: 'monthly' as 'monthly' | 'yearly',
+    dayOfMonth: 1,
+    monthOfYear: 1,
+    reminderDays: 3,
+  });
+
+  // Process due recurring expenses on mount
+  useEffect(() => {
+    const dueExpenses = getDueExpenses();
+    if (dueExpenses.length > 0) {
+      toast({
+        title: `💰 لديك ${dueExpenses.length} مصروفات متكررة مستحقة اليوم`,
+        description: dueExpenses.map(e => e.name).join('، '),
+      });
+    }
+  }, []);
+
   useEffect(() => {
     loadFinanceData();
   }, []);
+
 
   const loadFinanceData = async () => {
     try {
@@ -765,6 +808,243 @@ const FinancialController = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Recurring Expenses Section */}
+      <Card className="col-span-full border-2 border-amber-200">
+        <CardHeader className="pb-3 bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardTitle className="arabic-title text-sm flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RotateCw className="w-4 h-4 text-amber-600" />
+              المصروفات المتكررة
+              {getUpcomingReminders().length > 0 && (
+                <Badge className="bg-amber-500 text-white text-[10px]">
+                  {getUpcomingReminders().length} قادمة
+                </Badge>
+              )}
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowRecurringDialog(true)} className="border-amber-300">
+              <PlusCircle className="w-4 h-4 ml-1" /> إضافة
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {/* Upcoming Reminders */}
+          {getUpcomingReminders().length > 0 && (
+            <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <h4 className="font-bold text-amber-700 mb-2 flex items-center gap-2 text-sm">
+                <Bell className="w-4 h-4" /> تذكيرات قادمة
+              </h4>
+              <div className="space-y-2">
+                {getUpcomingReminders().map(reminder => (
+                  <div key={reminder.id} className="flex items-center justify-between text-sm">
+                    <span>{reminder.name}</span>
+                    <span className="text-amber-600 font-bold">
+                      بعد {reminder.daysUntil} {reminder.daysUntil === 1 ? 'يوم' : 'أيام'} - {reminder.amount} {reminder.currency}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Due Expenses */}
+          {getDueExpenses().length > 0 && (
+            <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+              <h4 className="font-bold text-red-700 mb-2 flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4" /> مستحقة اليوم!
+              </h4>
+              <div className="space-y-2">
+                {getDueExpenses().map(expense => (
+                  <div key={expense.id} className="flex items-center justify-between">
+                    <span className="font-medium">{expense.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-600 font-bold">{expense.amount} {expense.currency}</span>
+                      <Button
+                        size="sm"
+                        className="h-7 bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          markAsProcessed(expense.id);
+                          toast({ title: 'تم', description: `تم تسجيل دفع ${expense.name}` });
+                        }}
+                      >
+                        تم الدفع ✓
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recurring Expenses List */}
+          {recurringExpenses.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">لا توجد مصروفات متكررة</p>
+          ) : (
+            <div className="space-y-2">
+              {recurringExpenses.map(expense => (
+                <div
+                  key={expense.id}
+                  className={`flex items-center justify-between p-2 rounded-lg border ${expense.isActive ? 'bg-white' : 'bg-gray-100 opacity-60'
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-6 w-6 p-0 ${expense.isActive ? 'text-green-600' : 'text-gray-400'}`}
+                      onClick={() => toggleActive(expense.id)}
+                    >
+                      <Power className="w-4 h-4" />
+                    </Button>
+                    <div>
+                      <p className="font-medium text-sm">{expense.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {expense.cycle === 'monthly' ? 'شهري' : 'سنوي'} - يوم {expense.dayOfMonth}
+                        {expense.cycle === 'yearly' && ` / شهر ${expense.monthOfYear}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-amber-600">{expense.amount} {expense.currency}</span>
+                    <Badge className="text-[9px]">{expense.category}</Badge>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 text-red-400"
+                      onClick={() => deleteRecurringExpense(expense.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 border-t mt-2">
+                <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
+                <span className="font-bold text-amber-700">
+                  {getMonthlyTotal().ars.toLocaleString()} ARS + ${getMonthlyTotal().usd}
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Recurring Expense Dialog */}
+      <Dialog open={showRecurringDialog} onOpenChange={setShowRecurringDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-right">إضافة مصروف متكرر</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="اسم المصروف (مثل: فاتورة الكهرباء)"
+              value={newRecurring.name}
+              onChange={e => setNewRecurring({ ...newRecurring, name: e.target.value })}
+              className="text-right"
+            />
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="المبلغ"
+                value={newRecurring.amount}
+                onChange={e => setNewRecurring({ ...newRecurring, amount: e.target.value })}
+              />
+              <select
+                value={newRecurring.currency}
+                onChange={e => setNewRecurring({ ...newRecurring, currency: e.target.value as 'ARS' | 'USD' })}
+                className="border rounded px-2"
+              >
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+            <Select
+              value={newRecurring.category}
+              onValueChange={v => setNewRecurring({ ...newRecurring, category: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="الفئة" />
+              </SelectTrigger>
+              <SelectContent>
+                {expenseCategories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <select
+                value={newRecurring.cycle}
+                onChange={e => setNewRecurring({ ...newRecurring, cycle: e.target.value as 'monthly' | 'yearly' })}
+                className="flex-1 border rounded p-2"
+              >
+                <option value="monthly">شهري</option>
+                <option value="yearly">سنوي</option>
+              </select>
+              <Input
+                type="number"
+                placeholder="يوم الشهر (1-31)"
+                min={1}
+                max={31}
+                value={newRecurring.dayOfMonth}
+                onChange={e => setNewRecurring({ ...newRecurring, dayOfMonth: parseInt(e.target.value) || 1 })}
+                className="w-24"
+              />
+              {newRecurring.cycle === 'yearly' && (
+                <Input
+                  type="number"
+                  placeholder="الشهر (1-12)"
+                  min={1}
+                  max={12}
+                  value={newRecurring.monthOfYear}
+                  onChange={e => setNewRecurring({ ...newRecurring, monthOfYear: parseInt(e.target.value) || 1 })}
+                  className="w-24"
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">تذكير قبل</Label>
+              <Input
+                type="number"
+                min={1}
+                max={30}
+                value={newRecurring.reminderDays}
+                onChange={e => setNewRecurring({ ...newRecurring, reminderDays: parseInt(e.target.value) || 3 })}
+                className="w-16"
+              />
+              <span className="text-sm text-gray-500">أيام</span>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowRecurringDialog(false)}>إلغاء</Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => {
+                if (!newRecurring.name || !newRecurring.amount) {
+                  toast({ title: 'خطأ', description: 'يرجى إدخال جميع البيانات', variant: 'destructive' });
+                  return;
+                }
+                addRecurringExpense({
+                  ...newRecurring,
+                  amount: parseFloat(newRecurring.amount),
+                });
+                setNewRecurring({
+                  name: '',
+                  amount: '',
+                  currency: 'ARS',
+                  category: 'فواتير',
+                  cycle: 'monthly',
+                  dayOfMonth: 1,
+                  monthOfYear: 1,
+                  reminderDays: 3,
+                });
+                setShowRecurringDialog(false);
+              }}
+            >
+              إضافة
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Subscription Dialog */}
       <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>

@@ -40,13 +40,16 @@ const MODULES = {
     FULL_MAP: 'full_map'                    // "Then the map"
 };
 
-const DEFAULT_ORDER = [
-    MODULES.HEADER,
-    MODULES.PRAYER,
-    MODULES.FINANCE_SUMMARY,
-    MODULES.APPOINTMENTS_WIDGET,
-    MODULES.QUICK_ACTIONS,
-    MODULES.FULL_MAP
+// Fixed dashboard order as requested by user (not customizable)
+const FIXED_DASHBOARD_ORDER = [
+    MODULES.HEADER,           // 1. رأس الصفحة (التاريخ والوقت)
+    MODULES.PRAYER,           // 2. أوقات الصلاة
+    MODULES.FINANCE_SUMMARY,  // 3. الملخص المالي
+    MODULES.FULL_MAP,         // 4. الخريطة التفاعلية كاملة
+    MODULES.APPOINTMENTS_WIDGET, // 5. المواعيد والتذكير
+    MODULES.DAILY_CALENDAR,   // 6. التقويم اليومي
+    MODULES.FULL_SHOPPING,    // 7. قائمة التسوق
+    MODULES.QUICK_ACTIONS     // 8. الاختصارات السريعة
 ];
 
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
@@ -60,57 +63,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { tasks } = useTasks();
     const { appointments } = useAppointments();
 
-    const [dashboardOrder, setDashboardOrder] = useState<string[]>(DEFAULT_ORDER);
+    // Use fixed order - no customization
+    const dashboardOrder = FIXED_DASHBOARD_ORDER;
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
     const [printRange, setPrintRange] = useState('today');
     const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
-
-    // Valid module IDs for validation
-    const VALID_MODULE_IDS = Object.values(MODULES);
-
-    useEffect(() => {
-        const loadLayout = () => {
-            const saved = localStorage.getItem('baraka_dashboard_order');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        // Filter out any invalid/deprecated module IDs
-                        const validOrder = parsed.filter((id: string) => VALID_MODULE_IDS.includes(id));
-                        if (validOrder.length > 0) {
-                            setDashboardOrder(validOrder);
-                            // Auto-cleanup: Save the cleaned version if it changed
-                            if (validOrder.length !== parsed.length) {
-                                localStorage.setItem('baraka_dashboard_order', JSON.stringify(validOrder));
-                                console.log('Dashboard: Cleaned up invalid module IDs from localStorage');
-                            }
-                        } else {
-                            // All modules were invalid, reset to defaults
-                            setDashboardOrder(DEFAULT_ORDER);
-                            localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
-                            console.log('Dashboard: Reset to default order due to invalid data');
-                        }
-                    } else {
-                        // Empty array, reset to defaults
-                        setDashboardOrder(DEFAULT_ORDER);
-                        localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
-                    }
-                } catch (e) {
-                    console.error("Layout parse error", e);
-                    setDashboardOrder(DEFAULT_ORDER);
-                    localStorage.setItem('baraka_dashboard_order', JSON.stringify(DEFAULT_ORDER));
-                }
-            } else {
-                setDashboardOrder(DEFAULT_ORDER);
-            }
-        };
-
-        loadLayout();
-        window.addEventListener('barakah_dashboard_order_updated', loadLayout);
-        return () => window.removeEventListener('barakah_dashboard_order_updated', loadLayout);
-    }, []);
 
     // Sync data to Android Widget
     useEffect(() => {
