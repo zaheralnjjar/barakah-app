@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
     LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star,
     Clock, Printer, Plus, FileText, CheckSquare, Pill, Flame, Bell, Search,
-    Navigation, Save, Share2, ChevronLeft, ChevronRight
+    Navigation, Save, Share2, ChevronLeft, ChevronRight, Target, Sparkles
 } from 'lucide-react';
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
@@ -41,8 +41,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [printOptions, setPrintOptions] = useState({ tasks: true, appointments: true, medications: true, habits: true });
-    const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | null>(null);
+    const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [showFinancialReport, setShowFinancialReport] = useState(false);
+    const [showEventMenu, setShowEventMenu] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -143,11 +144,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             onClick={() => onNavigateToTab(item.type === 'apt' ? 'appointments' : 'productivity')}
                             className={`text-xs px-2 py-1.5 rounded-lg cursor-pointer hover:opacity-80 ${item.type === 'med' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}
                         >
-                            <div className="flex items-center gap-1">
-                                <span>{item.type === 'med' ? '💊' : '📅'}</span>
-                                <span className="font-medium truncate flex-1">{item.name}</span>
-                                <span className="text-[10px] opacity-70">{item.time}</span>
-                            </div>
+                            <div className="font-medium truncate">{item.name}</div>
+                            <div className="text-[10px] opacity-70">{item.time}</div>
                         </div>
                     ))}
                     {allItems.length === 0 && (
@@ -251,11 +249,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 3. QUICK ACTIONS ===== */}
             <div className="grid grid-cols-5 gap-2">
                 {[
-                    { icon: CalendarPlus, label: 'موعد', color: 'bg-orange-100 text-orange-600', action: () => setShowAddDialog('appointment') },
-                    { icon: CheckSquare, label: 'مهمة', color: 'bg-blue-100 text-blue-600', action: () => setShowAddDialog('task') },
-                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowAddDialog('location') },
-                    { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => setShowAddDialog('shopping') },
                     { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => setShowAddDialog('note') },
+                    { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => setShowAddDialog('shopping') },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowAddDialog('location') },
+                    { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => setShowAddDialog('expense') },
+                    { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
                 ].map((item, idx) => (
                     <button
                         key={idx}
@@ -267,6 +265,38 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </button>
                 ))}
             </div>
+
+            {/* Event Type Selection Menu */}
+            <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
+                <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center">اختر نوع الحدث</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-3 gap-3 py-4">
+                        <button
+                            onClick={() => { setShowEventMenu(false); setShowAddDialog('appointment'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-orange-100 text-orange-600 hover:scale-105 transition-transform"
+                        >
+                            <CalendarPlus className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">موعد</span>
+                        </button>
+                        <button
+                            onClick={() => { setShowEventMenu(false); setShowAddDialog('task'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-blue-100 text-blue-600 hover:scale-105 transition-transform"
+                        >
+                            <CheckSquare className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">مهمة</span>
+                        </button>
+                        <button
+                            onClick={() => { setShowEventMenu(false); setShowAddDialog('goal'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-emerald-100 text-emerald-600 hover:scale-105 transition-transform"
+                        >
+                            <Target className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">هدف</span>
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* ===== 4. DAILY REPORT ===== */}
             <Card className="border-blue-100 shadow-sm">
@@ -584,6 +614,36 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 setShowAddDialog(null);
                             }}>
                                 <Plus className="w-4 h-4 ml-2" /> حفظ الملاحظة
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Goal Dialog */}
+                    {showAddDialog === 'goal' && (
+                        <div className="space-y-4 mt-2">
+                            <Input placeholder="عنوان الهدف" className="text-right" id="goal-title" />
+                            <textarea
+                                placeholder="وصف الهدف..."
+                                className="w-full h-20 p-3 border rounded-lg text-right resize-none"
+                                id="goal-desc"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500">التاريخ المستهدف</label>
+                                    <Input type="date" id="goal-date" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500">التقدم الحالي %</label>
+                                    <Input type="number" defaultValue="0" min="0" max="100" id="goal-progress" />
+                                </div>
+                            </div>
+                            <Button className="w-full" onClick={() => {
+                                const title = (document.getElementById('goal-title') as HTMLInputElement)?.value;
+                                if (!title) { toast({ title: 'أدخل عنوان الهدف' }); return; }
+                                toast({ title: 'تم حفظ الهدف', description: title });
+                                setShowAddDialog(null);
+                            }}>
+                                <Target className="w-4 h-4 ml-2" /> حفظ الهدف
                             </Button>
                         </div>
                     )}
