@@ -37,6 +37,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
     const [printRange, setPrintRange] = useState('today');
+    const [printStartDate, setPrintStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [printEndDate, setPrintEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [printOptions, setPrintOptions] = useState({ tasks: true, appointments: true, medications: true, habits: true });
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | null>(null);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
@@ -109,16 +112,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    {/* Date Info */}
-                    <div className="flex items-center gap-4">
-                        <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center">
-                            <span className="text-2xl font-bold block">{currentDate.getDate()}</span>
-                            <span className="text-xs">{dayName}</span>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-gray-800">{gregorianDate}</p>
-                            <p className="text-sm text-emerald-600">{hijriDate}</p>
-                        </div>
+                    {/* Date Info - Single Box */}
+                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[140px]">
+                        <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
+                        <div className="border-t border-emerald-300 my-1"></div>
+                        <span className="text-xs block">{hijriDate}</span>
                     </div>
 
                     {/* Logo & Actions */}
@@ -324,7 +322,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             {/* ===== PRINT DIALOG ===== */}
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className="sm:max-w-[450px]">
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
                             <Printer className="w-5 h-5 text-primary" />
@@ -332,13 +330,59 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-2">
-                            <Button variant={printRange === 'today' ? 'default' : 'outline'} onClick={() => setPrintRange('today')} className="h-10">اليوم</Button>
-                            <Button variant={printRange === 'week' ? 'default' : 'outline'} onClick={() => setPrintRange('week')} className="h-10">الأسبوع</Button>
-                            <Button variant={printRange === 'month' ? 'default' : 'outline'} onClick={() => setPrintRange('month')} className="h-10">الشهر</Button>
-                            <Button variant={printRange === 'custom' ? 'default' : 'outline'} onClick={() => setPrintRange('custom')} className="h-10">مخصص</Button>
+                        {/* Range Selection */}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-2">اختر الفترة:</p>
+                            <div className="grid grid-cols-4 gap-2">
+                                <Button variant={printRange === 'today' ? 'default' : 'outline'} onClick={() => setPrintRange('today')} className="h-9 text-sm">اليوم</Button>
+                                <Button variant={printRange === 'week' ? 'default' : 'outline'} onClick={() => setPrintRange('week')} className="h-9 text-sm">الأسبوع</Button>
+                                <Button variant={printRange === 'month' ? 'default' : 'outline'} onClick={() => setPrintRange('month')} className="h-9 text-sm">الشهر</Button>
+                                <Button variant={printRange === 'custom' ? 'default' : 'outline'} onClick={() => setPrintRange('custom')} className="h-9 text-sm">مخصص</Button>
+                            </div>
                         </div>
-                        <Button onClick={() => { window.print(); setShowPrintDialog(false); }} className="w-full h-12 text-lg">
+
+                        {/* Custom Date Range */}
+                        {printRange === 'custom' && (
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500">من</label>
+                                    <Input type="date" value={printStartDate} onChange={e => setPrintStartDate(e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500">إلى</label>
+                                    <Input type="date" value={printEndDate} onChange={e => setPrintEndDate(e.target.value)} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Items Selection */}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-2">اختر العناصر:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                    <input type="checkbox" checked={printOptions.tasks} onChange={e => setPrintOptions(p => ({ ...p, tasks: e.target.checked }))} className="rounded" />
+                                    <CheckSquare className="w-4 h-4 text-blue-500" />
+                                    <span className="text-sm">المهام</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                    <input type="checkbox" checked={printOptions.appointments} onChange={e => setPrintOptions(p => ({ ...p, appointments: e.target.checked }))} className="rounded" />
+                                    <CalendarPlus className="w-4 h-4 text-orange-500" />
+                                    <span className="text-sm">المواعيد</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                    <input type="checkbox" checked={printOptions.medications} onChange={e => setPrintOptions(p => ({ ...p, medications: e.target.checked }))} className="rounded" />
+                                    <Pill className="w-4 h-4 text-red-500" />
+                                    <span className="text-sm">الأدوية</span>
+                                </label>
+                                <label className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                    <input type="checkbox" checked={printOptions.habits} onChange={e => setPrintOptions(p => ({ ...p, habits: e.target.checked }))} className="rounded" />
+                                    <Flame className="w-4 h-4 text-yellow-500" />
+                                    <span className="text-sm">العادات</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <Button onClick={() => { onNavigateToTab('calendar'); setShowPrintDialog(false); }} className="w-full h-12 text-lg">
                             <Printer className="w-5 h-5 ml-2" />
                             طباعة الآن
                         </Button>
@@ -362,29 +406,44 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <Input placeholder="العنوان" className="text-right" id="quick-add-title" />
                         {showAddDialog === 'appointment' && (
                             <div className="grid grid-cols-2 gap-2">
-                                <Input type="date" id="quick-add-date" />
+                                <Input type="date" id="quick-add-date" defaultValue={todayStr} />
                                 <Input type="time" id="quick-add-time" />
                             </div>
+                        )}
+                        {showAddDialog === 'note' && (
+                            <textarea
+                                placeholder="اكتب ملاحظتك هنا..."
+                                className="w-full h-24 p-3 border rounded-lg text-right resize-none"
+                                id="quick-add-note"
+                            />
                         )}
                         <Button
                             className="w-full h-12"
                             onClick={() => {
                                 const title = (document.getElementById('quick-add-title') as HTMLInputElement)?.value;
-                                if (!title) { toast({ title: 'أدخل العنوان' }); return; }
+                                if (!title && showAddDialog !== 'note') { toast({ title: 'أدخل العنوان' }); return; }
 
-                                // Navigate to the appropriate tab with the action
-                                if (showAddDialog === 'appointment') onNavigateToTab('appointments');
-                                else if (showAddDialog === 'task') onNavigateToTab('productivity');
-                                else if (showAddDialog === 'location') onNavigateToTab('map');
-                                else if (showAddDialog === 'shopping') onNavigateToTab('shopping');
-                                else if (showAddDialog === 'note') onNavigateToTab('productivity');
+                                let successMsg = '';
+                                if (showAddDialog === 'appointment') {
+                                    successMsg = 'تم حفظ الموعد';
+                                } else if (showAddDialog === 'task') {
+                                    successMsg = 'تم حفظ المهمة';
+                                } else if (showAddDialog === 'location') {
+                                    successMsg = 'تم حفظ الموقع';
+                                } else if (showAddDialog === 'shopping') {
+                                    successMsg = 'تم إضافة العنصر لقائمة التسوق';
+                                } else if (showAddDialog === 'note') {
+                                    const note = (document.getElementById('quick-add-note') as HTMLTextAreaElement)?.value || title;
+                                    if (!note) { toast({ title: 'أدخل الملاحظة' }); return; }
+                                    successMsg = 'تم حفظ الملاحظة';
+                                }
 
                                 setShowAddDialog(null);
-                                toast({ title: `تم فتح قسم ${showAddDialog === 'appointment' ? 'المواعيد' : showAddDialog === 'task' ? 'المهام' : showAddDialog === 'location' ? 'الخريطة' : showAddDialog === 'shopping' ? 'التسوق' : 'الملاحظات'}` });
+                                toast({ title: successMsg, description: title || 'تمت الإضافة بنجاح' });
                             }}
                         >
                             <Plus className="w-5 h-5 ml-2" />
-                            انتقل للإضافة
+                            حفظ
                         </Button>
                     </div>
                 </DialogContent>
