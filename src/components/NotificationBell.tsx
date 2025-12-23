@@ -1,65 +1,149 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, X, Check } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Bell, Calendar, Pill, Moon, DollarSign, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMedications } from '@/hooks/useMedications';
+import { useAppointments } from '@/hooks/useAppointments';
+import { useRecurringExpenses } from '@/hooks/useRecurringExpenses';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 interface Notification {
     id: string;
     title: string;
     message: string;
-    timestamp: string;
+    timestamp: Date;
     read: boolean;
-    type: 'info' | 'warning' | 'success' | 'alert';
+    type: 'prayer' | 'appointment' | 'medication' | 'expense' | 'info';
+    icon: React.ReactNode;
 }
 
 export const NotificationBell = () => {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const { medications } = useMedications();
+    const { appointments } = useAppointments();
+    const { recurringExpenses, getUpcomingReminders } = useRecurringExpenses();
+    const { nextPrayer, timeUntilNext, prayerTimes } = useDashboardData();
 
-    // Load notifications locally (simulated)
-    useEffect(() => {
-        const loadNotifications = () => {
-            const stored = localStorage.getItem('baraka_notifications');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                setNotifications(parsed);
-                setUnreadCount(parsed.filter((n: Notification) => !n.read).length);
-            } else {
-                // Mock data for demo if empty
-                const mock: Notification[] = [
-                    { id: '1', title: 'مرحباً بك', message: 'تطبيق بركة جاهز لمساعدتك', timestamp: new Date().toISOString(), read: false, type: 'info' },
-                    { id: '2', title: 'صلاة العصر', message: 'باقي 15 دقيقة على الأذان', timestamp: new Date(Date.now() - 3600000).toISOString(), read: false, type: 'alert' }
-                ];
-                setNotifications(mock);
-                localStorage.setItem('baraka_notifications', JSON.stringify(mock));
-                setUnreadCount(2);
+    const [readIds, setReadIds] = useState<Set<string>>(() => {
+        try {
+            return new Set(JSON.parse(localStorage.getItem('baraka_read_notifications') || '[]'));
+        } catch { return new Set(); }
+    });
+
+    // Generate real notifications from data sources
+    const notifications = useMemo(() => {
+        const notifs: Notification[] = [];
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const tomorrowStr = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+
+        // 1. Next Prayer Notification
+        if (nextPrayer && timeUntilNext) {
+            notifs.push({
+                id: `prayer-${nextPrayer}`,
+                title: `صلاة ${nextPrayer}`,
+                message: `باقي ${timeUntilNext} على الأذان`,
+                timestamp: now,
+                read: readIds.has(`prayer-${nextPrayer}`),
+                type: 'prayer',
+                icon: <Moon className="w-4 h-4 text-blue-500" />
+            });
+        }
+
+        // 2. Today's Appointments
+        const todayAppts = appointments.filter(a => a.date === todayStr);
+        todayAppts.forEach(apt => {
+            notifs.push({
+                id: `apt-today-${apt.id}`,
+                title: `موعد اليوم: ${apt.title}`,
+                message: apt.time ? `الساعة ${apt.time}` : 'طوال اليوم',
+                timestamp: now,
+                read: readIds.has(`apt-today-${apt.id}`),
+                type: 'appointment',
+                icon: <Calendar className="w-4 h-4 text-orange-500" />
+            });
+        });
+
+        // 3. Tomorrow's Appointments
+        const tomorrowAppts = appointments.filter(a => a.date === tomorrowStr);
+        tomorrowAppts.forEach(apt => {
+            notifs.push({
+                id: `apt-tomorrow-${apt.id}`,
+                title: `موعد غداً: ${apt.title}`,
+                message: apt.time ? `الساعة ${apt.time}` : 'طوال اليوم',
+                timestamp: now,
+                read: readIds.has(`apt-tomorrow-${apt.id}`),
+                type: 'appointment',
+                icon: <Calendar className="w-4 h-4 text-amber-500" />
+            });
+        });
+
+        // 4. Today's Medications
+        const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const todayDayName = dayMap[now.getDay()];
+
+        medications.forEach(med => {
+            const isTodayDue = med.frequency === 'daily' ||
+                (med.frequency === 'specific_days' && med.customDays?.includes(todayDayName));
+
+            if (isTodayDue) {
+                const taken = med.takenHistory?.[todayStr];
+                notifs.push({
+                    id: `med-${med.id}-${todayStr}`,
+                    title: taken ? `✓ ${med.name}` : `💊 ${med.name}`,
+                    message: taken ? 'تم تناوله اليوم' : `موعد الجرعة: ${med.time}`,
+                    timestamp: now,
+                    read: taken || readIds.has(`med-${med.id}-${todayStr}`),
+                    type: 'medication',
+                    icon: <Pill className={`w-4 h-4 ${taken ? 'text-green-500' : 'text-red-500'}`} />
+                });
             }
-        };
+        });
 
-        loadNotifications();
-        // Update every minute
-        const interval = setInterval(loadNotifications, 60000);
-        return () => clearInterval(interval);
-    }, []);
+        // 5. Upcoming Recurring Expenses (from hook)
+        try {
+            const upcomingExpenses = getUpcomingReminders?.() || [];
+            upcomingExpenses.forEach((exp: any) => {
+                notifs.push({
+                    id: `expense-${exp.id}`,
+                    title: `📅 ${exp.name}`,
+                    message: `بعد ${exp.daysUntil} ${exp.daysUntil === 1 ? 'يوم' : 'أيام'} - ${exp.amount} ${exp.currency}`,
+                    timestamp: now,
+                    read: readIds.has(`expense-${exp.id}`),
+                    type: 'expense',
+                    icon: <DollarSign className="w-4 h-4 text-amber-600" />
+                });
+            });
+        } catch (e) { }
+
+        // Sort: unread first, then by type priority
+        return notifs.sort((a, b) => {
+            if (a.read !== b.read) return a.read ? 1 : -1;
+            return 0;
+        });
+    }, [medications, appointments, nextPrayer, timeUntilNext, readIds, getUpcomingReminders]);
+
+    const unreadCount = notifications.filter(n => !n.read).length;
 
     const markAsRead = (id: string) => {
-        const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-        setNotifications(updated);
-        setUnreadCount(updated.filter(n => !n.read).length);
-        localStorage.setItem('baraka_notifications', JSON.stringify(updated));
+        const newReadIds = new Set(readIds);
+        newReadIds.add(id);
+        setReadIds(newReadIds);
+        localStorage.setItem('baraka_read_notifications', JSON.stringify([...newReadIds]));
     };
 
-    const clearAll = () => {
-        setNotifications([]);
-        setUnreadCount(0);
-        localStorage.removeItem('baraka_notifications');
+    const markAllAsRead = () => {
+        const newReadIds = new Set(notifications.map(n => n.id));
+        setReadIds(newReadIds);
+        localStorage.setItem('baraka_read_notifications', JSON.stringify([...newReadIds]));
+    };
+
+    const clearReadHistory = () => {
+        setReadIds(new Set());
+        localStorage.removeItem('baraka_read_notifications');
     };
 
     return (
@@ -70,56 +154,67 @@ export const NotificationBell = () => {
                         <Bell className="w-5 h-5" />
                     </Button>
                     {unreadCount > 0 && (
-                        <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center border-2 border-emerald-600">
-                            {unreadCount}
+                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
+                            {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}
                 </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto z-[200]">
-                <div className="flex items-center justify-between p-2 border-b">
-                    <span className="font-bold text-sm arabic-title">الإشعارات ({notifications.length})</span>
-                    <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs text-red-500 h-6">
-                        مسح الكل
-                    </Button>
+            <DropdownMenuContent align="end" className="w-80 max-h-[450px] overflow-y-auto z-[200]">
+                <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-emerald-50 to-blue-50">
+                    <span className="font-bold text-sm arabic-title flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-emerald-600" />
+                        الإشعارات ({notifications.length})
+                    </span>
+                    <div className="flex gap-1">
+                        {unreadCount > 0 && (
+                            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-[10px] text-blue-600 h-6">
+                                قراءة الكل
+                            </Button>
+                        )}
+                    </div>
                 </div>
+
                 {notifications.length === 0 ? (
                     <div className="p-8 text-center text-gray-400">
-                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm arabic-body">لا توجد إشعارات جديدة</p>
+                        <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-300" />
+                        <p className="text-sm arabic-body">لا توجد إشعارات</p>
+                        <p className="text-xs text-gray-400 mt-1">كل شيء في أمان! 🎉</p>
                     </div>
                 ) : (
                     <div className="py-1">
                         {notifications.map((notification) => (
                             <div
                                 key={notification.id}
-                                className={`p-3 border-b last:border-b-0 hover:bg-gray-50 flex gap-3 ${notification.read ? 'opacity-60' : 'bg-blue-50/50'}`}
+                                onClick={() => !notification.read && markAsRead(notification.id)}
+                                className={`p-3 border-b last:border-b-0 hover:bg-gray-50 flex gap-3 cursor-pointer transition-all ${notification.read ? 'opacity-60 bg-gray-50/50' : 'bg-white'
+                                    }`}
                             >
-                                <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${notification.type === 'alert' ? 'bg-red-500' :
-                                        notification.type === 'success' ? 'bg-green-500' :
-                                            notification.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-                                    }`} />
-                                <div className="flex-1 space-y-1">
-                                    <div className="flex items-start justify-between">
-                                        <p className="font-bold text-sm arabic-body">{notification.title}</p>
-                                        <span className="text-[10px] text-gray-400">
-                                            {new Date(notification.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                                    {notification.icon}
+                                </div>
+                                <div className="flex-1 space-y-0.5 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className={`font-bold text-sm arabic-body truncate ${notification.read ? 'text-gray-500' : 'text-gray-800'}`}>
+                                            {notification.title}
+                                        </p>
+                                        {!notification.read && (
+                                            <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0 mt-1.5" />
+                                        )}
                                     </div>
                                     <p className="text-xs text-gray-600 leading-relaxed">{notification.message}</p>
-                                    {!notification.read && (
-                                        <button
-                                            onClick={() => markAsRead(notification.id)}
-                                            className="text-[10px] text-blue-600 hover:underline mt-1"
-                                        >
-                                            تحديد كمقروء
-                                        </button>
-                                    )}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
+
+                {/* Footer */}
+                <div className="p-2 border-t bg-gray-50 text-center">
+                    <p className="text-[10px] text-gray-400">
+                        آخر تحديث: {new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                </div>
             </DropdownMenuContent>
         </DropdownMenu>
     );

@@ -521,6 +521,9 @@ const PrayerManager = () => {
                             <p className="text-emerald-100 arabic-body text-sm">
                                 {new Date().toLocaleDateString('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </p>
+                            <p className="text-emerald-200/80 arabic-body text-xs mt-0.5">
+                                {new Date().toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'long' })}
+                            </p>
                         </div>
                     </div>
                 </CardContent>
@@ -750,8 +753,11 @@ const PrayerManager = () => {
                                     const isToday = day.date === new Date().toISOString().split('T')[0];
                                     return (
                                         <tr key={index} className={`hover:bg-gray-50 transition-colors ${isToday ? 'bg-emerald-50/60' : ''}`}>
-                                            <td className="p-4 font-medium whitespace-nowrap dir-ltr text-right">
-                                                <span className="font-english">{day.date}</span>
+                                            <td className="p-4 font-medium whitespace-nowrap text-right">
+                                                <div className="font-english dir-ltr">{day.date}</div>
+                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                    {new Date(day.date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' })}
+                                                </div>
                                             </td>
                                             <td className="p-4 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
                                             <td className="p-4 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>

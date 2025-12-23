@@ -67,17 +67,43 @@ const Index = () => {
       const diffX = currentX.current - startX.current;
       const diffY = currentY.current - startY.current;
 
-      // Only process as swipe if: duration > MIN_SWIPE_TIME AND horizontal movement > threshold
-      if (swipeDuration > MIN_SWIPE_TIME && Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
-        if (diffX > 0) {
-          // Swipe left-to-right (RTL: going back = go to home)
+      // Tabs order for sequential navigation
+      const TABS_ORDER = ['dashboard', 'finance', 'logistics', 'appointments', 'prayer', 'map', 'settings'];
+
+      // Only process as swipe if: duration > MIN_SWIPE_TIME AND movement > threshold
+      if (swipeDuration > MIN_SWIPE_TIME && Math.abs(diffX) > SWIPE_THRESHOLD) {
+        // Horizontal swipe - navigate tabs
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          const currentIndex = TABS_ORDER.indexOf(activeTab);
+
+          if (diffX > 0) {
+            // Swipe right (in RTL = go to previous tab)
+            if (currentIndex > 0) {
+              setActiveTab(TABS_ORDER[currentIndex - 1]);
+              toast({ title: `← الانتقال`, duration: 1000 });
+            }
+          } else {
+            // Swipe left (in RTL = go to next tab)
+            if (currentIndex < TABS_ORDER.length - 1) {
+              setActiveTab(TABS_ORDER[currentIndex + 1]);
+              toast({ title: `→ الانتقال`, duration: 1000 });
+            }
+          }
+        }
+      }
+
+      // Vertical swipe gestures
+      if (swipeDuration > MIN_SWIPE_TIME && Math.abs(diffY) > SWIPE_THRESHOLD && Math.abs(diffY) > Math.abs(diffX)) {
+        if (diffY > 0) {
+          // Swipe down - refresh page
+          window.location.reload();
+          toast({ title: '🔄 جاري التحديث...', duration: 1500 });
+        } else {
+          // Swipe up - go to dashboard
           if (activeTab !== 'dashboard') {
             setActiveTab('dashboard');
-            toast({ title: "العودة للرئيسية", duration: 1500 });
+            toast({ title: '🏠 الرئيسية', duration: 1000 });
           }
-        } else {
-          // Swipe right-to-left (RTL: refresh current page)
-          window.location.reload();
         }
       }
 
