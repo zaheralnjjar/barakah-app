@@ -65,18 +65,60 @@ export const QuickNotes = () => {
         toast({ title: 'تم الحذف' });
     };
 
+    const handleShareAll = async () => {
+        if (notes.length === 0) {
+            toast({ title: 'لا توجد ملاحظات للمشاركة' });
+            return;
+        }
+
+        let shareText = '📝 ملاحظاتي - تطبيق بركة\n';
+        shareText += '━━━━━━━━━━━━━━━━━━━\n\n';
+
+        notes.forEach((note, idx) => {
+            shareText += `📌 ${note.title}\n`;
+            shareText += `${note.content}\n`;
+            shareText += '\n─────────────────\n\n';
+        });
+
+        shareText += `\n✨ المجموع: ${notes.length} ملاحظة`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'ملاحظاتي', text: shareText });
+            } catch (e) {
+                await navigator.clipboard.writeText(shareText);
+                toast({ title: 'تم نسخ جميع الملاحظات' });
+            }
+        } else {
+            await navigator.clipboard.writeText(shareText);
+            toast({ title: 'تم نسخ جميع الملاحظات' });
+        }
+    };
+
     return (
         <Card>
             <CardHeader className="pb-2">
                 <CardTitle className="arabic-title text-base flex items-center justify-between">
                     <span className="flex items-center gap-2">📝 ملاحظات سريعة</span>
-                    <Button
-                        size="sm"
-                        className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => setShowAddNote(true)}
-                    >
-                        <Plus className="w-4 h-4" /> إضافة
-                    </Button>
+                    <div className="flex gap-1">
+                        {notes.length > 0 && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1"
+                                onClick={handleShareAll}
+                            >
+                                <Share2 className="w-4 h-4" />
+                            </Button>
+                        )}
+                        <Button
+                            size="sm"
+                            className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => setShowAddNote(true)}
+                        >
+                            <Plus className="w-4 h-4" /> إضافة
+                        </Button>
+                    </div>
                 </CardTitle>
             </CardHeader>
             <CardContent>
