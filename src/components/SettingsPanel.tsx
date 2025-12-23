@@ -5,18 +5,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
     Settings,
-    User,
     Shield,
     Database,
-    LogOut,
     RefreshCw,
     Download,
-    Globe,
-    PieChart,
-    FileText,
     Calendar,
-    DollarSign,
 } from 'lucide-react';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -87,30 +82,8 @@ const SettingsPanel = () => {
                 <h1 className="text-2xl font-bold arabic-title text-gray-800">الإعدادات</h1>
             </div>
 
-            {/* Statistics Entry Point */}
-            <Card
-                className="cursor-pointer hover:border-orange-300 transition-colors"
-                onClick={() => {
-                    // Navigate to analytics - need to call parent navigation
-                    // For now, use a workaround with window event
-                    window.dispatchEvent(new CustomEvent('navigate-to-tab', { detail: 'analytics' }));
-                }}
-            >
-                <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-orange-100 p-2 rounded-xl">
-                            <PieChart className="w-5 h-5 text-orange-600" />
-                        </div>
-                        <div>
-                            <h3 className="font-bold arabic-title">الإحصائيات والتقارير</h3>
-                            <p className="text-xs text-gray-500">عرض التحليلات والرسوم البيانية</p>
-                        </div>
-                    </div>
-                    <span className="text-gray-400">←</span>
-                </CardContent>
-            </Card>
-
             {/* Reminder Customizations - Enhanced */}
+
 
             <Card>
                 <CardHeader>

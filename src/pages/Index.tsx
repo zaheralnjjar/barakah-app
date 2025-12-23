@@ -16,11 +16,12 @@ import AuthForm from '@/components/AuthForm';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
+import DailyCalendar from '@/components/DailyCalendar';
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
 import { NotificationBell } from '@/components/NotificationBell';
+
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -256,9 +257,10 @@ const Index = () => {
                 <SmartDashboard onNavigateToTab={setActiveTab} />
               </TabsContent>
 
-              <TabsContent value="analytics" className="animate-fade-in data-[state=active]:block">
-                <AnalyticsDashboard />
+              <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
+                <DailyCalendar />
               </TabsContent>
+
 
               <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
                 <FinancialController />
