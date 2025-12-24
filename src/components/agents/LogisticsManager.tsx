@@ -437,16 +437,6 @@ const LogisticsManager = () => {
         </button>
       </div>
 
-      {/* Stats Overview */}
-      <TaskStats
-        tasks={taskHook.tasks}
-        habits={habitHook.habits}
-        appointments={apptHook.appointments}
-        resources={resources}
-        showStatsDialog={showStatsDialog}
-        setShowStatsDialog={setShowStatsDialog}
-      />
-
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
