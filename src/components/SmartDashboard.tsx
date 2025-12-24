@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
     LogOut, MapPin, DollarSign, CalendarPlus, ShoppingCart, Sun, Moon, Sunset, Star,
     Clock, Printer, Plus, FileText, CheckSquare, Pill, Flame, Bell, Search,
-    Navigation, Save, Share2, ChevronLeft, ChevronRight, Target, Sparkles
+    Navigation, Save, Share2, ChevronLeft, ChevronRight, Target, Sparkles, Trash2
 } from 'lucide-react';
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
@@ -52,6 +52,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [showFinancialReport, setShowFinancialReport] = useState(false);
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
+    const [showSavedLocations, setShowSavedLocations] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -678,13 +679,122 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             <span className="text-[10px] text-gray-500">تحديد وبحث وحفظ</span>
                         </button>
                         <button
-                            onClick={() => { setShowLocationMenu(false); onNavigateToTab('map'); }}
+                            onClick={() => { setShowLocationMenu(false); setShowSavedLocations(true); }}
                             className="flex flex-col items-center p-4 rounded-xl bg-blue-100 text-blue-600 hover:scale-105 transition-transform"
                         >
                             <MapPin className="w-8 h-8 mb-2" />
                             <span className="text-sm font-medium">المواقع</span>
                             <span className="text-[10px] text-gray-500">المواقع المحفوظة</span>
                         </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Saved Locations List Dialog */}
+            <Dialog open={showSavedLocations} onOpenChange={setShowSavedLocations}>
+                <DialogContent className="sm:max-w-[450px] max-h-[80vh]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center flex items-center justify-center gap-2">
+                            <MapPin className="w-5 h-5 text-blue-500" />
+                            المواقع المحفوظة
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="overflow-y-auto max-h-[50vh]">
+                        {(() => {
+                            const savedLocations = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+                            if (savedLocations.length === 0) {
+                                return (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <MapPin className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                        <p>لا توجد مواقع محفوظة</p>
+                                        <Button
+                                            className="mt-4 bg-green-500 hover:bg-green-600"
+                                            onClick={() => { setShowSavedLocations(false); setShowAddDialog('location'); }}
+                                        >
+                                            إضافة موقع جديد
+                                        </Button>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="space-y-2">
+                                    {savedLocations.map((loc: any) => {
+                                        const coords = loc.url?.replace('geo:', '').split(',') || [];
+                                        return (
+                                            <div key={loc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    <div className="bg-blue-100 p-1.5 rounded-full shrink-0">
+                                                        <MapPin className="w-4 h-4 text-blue-600" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-sm truncate">{loc.title}</p>
+                                                        <p className="text-xs text-gray-500 truncate">{loc.address || `${coords[0]?.slice(0, 8) || '--'}, ${coords[1]?.slice(0, 8) || '--'}`}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-green-600 hover:bg-green-50"
+                                                        onClick={() => {
+                                                            const url = `https://www.google.com/maps/dir/?api=1&destination=${loc.url.replace('geo:', '')}`;
+                                                            window.open(url, '_blank');
+                                                        }}
+                                                    >
+                                                        <Navigation className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                        onClick={() => {
+                                                            const url = `https://www.google.com/maps/search/?api=1&query=${loc.url.replace('geo:', '')}`;
+                                                            if (navigator.share) {
+                                                                navigator.share({ title: loc.title, url }).catch(() => { });
+                                                            } else {
+                                                                navigator.clipboard.writeText(url);
+                                                                toast({ title: "تم نسخ الرابط" });
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Share2 className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                                        onClick={() => {
+                                                            const updated = savedLocations.filter((l: any) => l.id !== loc.id);
+                                                            localStorage.setItem('baraka_resources', JSON.stringify(updated));
+                                                            setShowSavedLocations(false);
+                                                            setTimeout(() => setShowSavedLocations(true), 100);
+                                                            toast({ title: "تم حذف الموقع" });
+                                                        }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setShowSavedLocations(false)}
+                        >
+                            إغلاق
+                        </Button>
+                        <Button
+                            className="flex-1 bg-green-500 hover:bg-green-600"
+                            onClick={() => { setShowSavedLocations(false); setShowAddDialog('location'); }}
+                        >
+                            <Plus className="w-4 h-4 ml-1" /> إضافة موقع
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>

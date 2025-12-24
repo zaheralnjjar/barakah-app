@@ -78,6 +78,10 @@ const LogisticsManager = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showStatsDialog, setShowStatsDialog] = useState(false);
   const [editingTask, setEditingTask] = useState<MainTask | null>(null);
+  const [showAddHabit, setShowAddHabit] = useState(false);
+  const [showAddMedication, setShowAddMedication] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newMedicationName, setNewMedicationName] = useState('');
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -422,20 +426,99 @@ const LogisticsManager = () => {
           <span className="text-[10px] font-medium">مشروع</span>
         </button>
         <button
-          onClick={() => toast({ title: 'العادات', description: 'استخدم قسم العادات أدناه' })}
+          onClick={() => setShowAddHabit(true)}
           className="flex flex-col items-center justify-center p-3 rounded-xl bg-orange-100 text-orange-600 hover:scale-105 transition-transform"
         >
           <Flame className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">عادات</span>
+          <span className="text-[10px] font-medium">عادة</span>
         </button>
         <button
-          onClick={() => toast({ title: 'الأدوية', description: 'استخدم قسم الأدوية أدناه' })}
+          onClick={() => setShowAddMedication(true)}
           className="flex flex-col items-center justify-center p-3 rounded-xl bg-purple-100 text-purple-600 hover:scale-105 transition-transform"
         >
           <Pill className="w-5 h-5 mb-1" />
-          <span className="text-[10px] font-medium">أدوية</span>
+          <span className="text-[10px] font-medium">دواء</span>
         </button>
       </div>
+
+      {/* Add Habit Dialog */}
+      <Dialog open={showAddHabit} onOpenChange={setShowAddHabit}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" />
+              إضافة عادة جديدة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="اسم العادة"
+              className="text-right"
+              value={newHabitName}
+              onChange={(e) => setNewHabitName(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button
+              className="w-full bg-orange-500 hover:bg-orange-600"
+              onClick={() => {
+                if (newHabitName.trim()) {
+                  habitHook.addHabit(newHabitName);
+                  setNewHabitName('');
+                  setShowAddHabit(false);
+                  toast({ title: 'تم إضافة العادة بنجاح' });
+                }
+              }}
+            >
+              إضافة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Medication Dialog */}
+      <Dialog open={showAddMedication} onOpenChange={setShowAddMedication}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2">
+              <Pill className="w-5 h-5 text-purple-500" />
+              إضافة دواء جديد
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="اسم الدواء"
+              className="text-right"
+              value={newMedicationName}
+              onChange={(e) => setNewMedicationName(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button
+              className="w-full bg-purple-500 hover:bg-purple-600"
+              onClick={() => {
+                if (newMedicationName.trim()) {
+                  medHook.addMedication({
+                    name: newMedicationName,
+                    time: '08:00',
+                    frequency: 'daily',
+                    startDate: new Date().toISOString().split('T')[0],
+                    customDays: [],
+                    endDate: '',
+                    isPermanent: true,
+                    reminder: true
+                  });
+                  setNewMedicationName('');
+                  setShowAddMedication(false);
+                  toast({ title: 'تم إضافة الدواء بنجاح' });
+                }
+              }}
+            >
+              إضافة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
