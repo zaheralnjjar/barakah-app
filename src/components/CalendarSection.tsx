@@ -23,6 +23,13 @@ const CalendarSection: React.FC = () => {
 
     // Quick add popup state
     const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+    const [viewAllDate, setViewAllDate] = useState<string | null>(null);
+
+    // Refs for long press handling
+    const pressTimer = React.useRef<NodeJS.Timeout | null>(null);
+    const isLongPress = React.useRef(false);
+    const isScrolling = React.useRef(false);
+
     const [addType, setAddType] = useState<'appointment' | 'task' | null>(null);
     const [formData, setFormData] = useState({ title: '', time: '', location: '', description: '', priority: 'medium' });
 
@@ -207,25 +214,87 @@ const CalendarSection: React.FC = () => {
                         </div>
 
                         {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-1">
+                        <div className="grid grid-cols-7 gap-1 select-none">
                             {calendarDays.map((day, idx) => {
-                                const dateStr = day.date.toISOString().split('T')[0];
+                                // Use manual string construction to avoid timezone shifts
+                                const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
                                 const data = getDateData(dateStr);
                                 const isToday = dateStr === today;
                                 const hasItems = data.tasks.length > 0 || data.appointments.length > 0;
 
+                                // Long press handlers
+                                const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
+                                    // Only allow left click for mouse
+                                    if ('button' in e && e.button !== 0) return;
+
+                                    isScrolling.current = false;
+                                    isLongPress.current = false;
+
+                                    // Store start position for movement threshold
+                                    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+                                    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+                                    (window as any).startPos = { x: clientX, y: clientY };
+
+                                    pressTimer.current = setTimeout(() => {
+                                        isLongPress.current = true;
+                                        if (navigator.vibrate) navigator.vibrate(50);
+                                        setViewAllDate(dateStr);
+                                    }, 400); // Reduced to 400ms for better responsiveness
+                                };
+
+                                const handleEnd = () => {
+                                    if (pressTimer.current) clearTimeout(pressTimer.current);
+                                    if (!isLongPress.current && !isScrolling.current) {
+                                        setSelectedDate(dateStr);
+                                        setQuickAddDate(dateStr);
+                                    }
+                                    // Clear flags after a short delay to prevent double firing
+                                    setTimeout(() => {
+                                        isLongPress.current = false;
+                                        isScrolling.current = false;
+                                    }, 100);
+                                };
+
+                                const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
+                                    if (pressTimer.current) {
+                                        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+                                        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+                                        const startPos = (window as any).startPos;
+
+                                        if (startPos) {
+                                            const moveX = Math.abs(clientX - startPos.x);
+                                            const moveY = Math.abs(clientY - startPos.y);
+                                            // Allow movement (jitter) of 20px for trackpads
+                                            if (moveX > 20 || moveY > 20) {
+                                                isScrolling.current = true;
+                                                clearTimeout(pressTimer.current);
+                                            }
+                                        }
+                                    }
+                                };
+
                                 return (
                                     <div
                                         key={idx}
-                                        onClick={() => {
-                                            setSelectedDate(dateStr);
-                                            setQuickAddDate(dateStr);
+                                        onTouchStart={handleStart}
+                                        onTouchEnd={handleEnd}
+                                        onTouchMove={handleMove}
+                                        onMouseDown={handleStart}
+                                        onMouseUp={handleEnd}
+                                        onMouseMove={handleMove}
+                                        onMouseLeave={() => {
+                                            if (pressTimer.current) clearTimeout(pressTimer.current);
+                                        }}
+                                        onContextMenu={(e) => {
+                                            // Prevent context menu to allow long press interactions
+                                            e.preventDefault();
                                         }}
                                         className={`
-                                            p-2 min-h-[60px] rounded-lg cursor-pointer transition-all
+                                            p-2 min-h-[60px] rounded-lg cursor-pointer transition-all relative select-none
                                             ${!day.isCurrentMonth ? 'opacity-40' : ''}
                                             ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}
                                             ${selectedDate === dateStr ? 'ring-2 ring-purple-500' : ''}
+                                            active:scale-95 duration-200
                                         `}
                                     >
                                         <div className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>
@@ -447,6 +516,84 @@ const CalendarSection: React.FC = () => {
                         >
                             <Plus className="w-4 h-4 ml-2" /> حفظ المهمة
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* View All Activities Dialog */}
+            <Dialog open={!!viewAllDate} onOpenChange={() => setViewAllDate(null)}>
+                <DialogContent className="max-w-[90%] sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center font-bold text-purple-700">
+                            {viewAllDate && (() => {
+                                const [y, m, d] = viewAllDate.split('-').map(Number);
+                                return new Date(y, m - 1, d).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                            })()}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto space-y-3 p-1">
+                        {viewAllDate && (() => {
+                            const data = getDateData(viewAllDate);
+                            if (data.tasks.length === 0 && data.appointments.length === 0) {
+                                return (
+                                    <div className="text-center py-8 text-gray-500 flex flex-col items-center">
+                                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                                            <CalendarIcon className="w-6 h-6 text-gray-400" />
+                                        </div>
+                                        <p>لا توجد أحداث في هذا اليوم</p>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="space-y-3">
+                                    {/* Appointments */}
+                                    {data.appointments.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-bold text-orange-700 flex items-center">
+                                                <CalendarIcon className="w-4 h-4 ml-1" /> المواعيد
+                                            </h4>
+                                            {data.appointments.map(apt => (
+                                                <div key={apt.id} className="bg-orange-50 border border-orange-100 rounded-lg p-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold text-gray-800">{apt.title}</span>
+                                                        <span className="text-xs bg-white px-2 py-1 rounded text-orange-600 font-medium">{apt.time}</span>
+                                                    </div>
+                                                    {apt.location && (
+                                                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                            <MapPin className="w-3 h-3 ml-1" /> {apt.location}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Tasks */}
+                                    {data.tasks.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-bold text-blue-700 flex items-center">
+                                                <ClipboardList className="w-4 h-4 ml-1" /> المهام
+                                            </h4>
+                                            {data.tasks.map(task => (
+                                                <div key={task.id} className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold text-gray-800">{task.title}</span>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-green-100 text-green-700'
+                                                            }`}>
+                                                            {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                                        </span>
+                                                    </div>
+                                                    {task.description && (
+                                                        <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </DialogContent>
             </Dialog>
