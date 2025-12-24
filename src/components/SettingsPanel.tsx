@@ -25,6 +25,8 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
 import CategoryManager from '@/components/CategoryManager';
 import DataArchiver from '@/components/DataArchiver';
+import { BatteryOptimizationGuide } from '@/components/BatteryOptimizationGuide';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
 
 const SettingsPanel = () => {
     const { toast } = useToast();
@@ -88,6 +90,36 @@ const SettingsPanel = () => {
                 </div>
                 <h1 className="text-2xl font-bold arabic-title text-gray-800">الإعدادات</h1>
             </div>
+
+            {/* Application Tools */}
+            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100 mb-6 shadow-sm">
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title text-indigo-700">
+                        <Shield className="w-5 h-5" />
+                        أدوات التطبيق
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs text-indigo-600/80">تحسين الأداء والتثبيت</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <PWAInstallButton />
+                    <BatteryOptimizationGuide />
+                </CardContent>
+            </Card>
+
+            {/* Application Tools */}
+            <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100 mb-6 shadow-sm">
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title text-indigo-700">
+                        <Shield className="w-5 h-5" />
+                        أدوات التطبيق
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs text-indigo-600/80">تحسين الأداء والتثبيت</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <PWAInstallButton />
+                    <BatteryOptimizationGuide />
+                </CardContent>
+            </Card>
 
             {/* Reminder Customizations - Enhanced */}
 

@@ -15,7 +15,8 @@ import {
     Share2,
     Edit2,
     CheckSquare,
-    Navigation
+    Navigation,
+    Save
 } from 'lucide-react';
 import {
     Dialog,
@@ -41,64 +42,117 @@ L.Icon.Default.mergeOptions({
 interface LocationMarkerProps {
     position: { lat: number; lng: number } | null;
     setPosition: (pos: L.LatLng) => void;
-    onSave: (addressName: string) => void;
-    onShare: (pos: L.LatLng) => void;
+    onSave: (addressName: string, addressDetails: string | undefined, position: { lat: number; lng: number }) => void;
+    onShare: (pos: { lat: number; lng: number }) => void;
 }
 
 function LocationMarker({ position, setPosition, onSave, onShare }: LocationMarkerProps) {
     const [addressName, setAddressName] = useState('');
-    const { toast } = useToast();
+    const [addressDetails, setAddressDetails] = useState('');
+    const [isLoadingAddress, setIsLoadingAddress] = useState(false);
     const map = useMap();
+
+    useEffect(() => {
+        if (!position) return;
+
+        setIsLoadingAddress(true);
+        // Fetch address using Nominatim (OSM)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&accept-language=ar`)
+            .then(res => res.json())
+            .then(data => {
+                const addr = data.address || {};
+                const road = addr.road || '';
+                const number = addr.house_number || '';
+                // Construct address string
+                const parts = [road, number, addr.suburb].filter(Boolean);
+                const fullAddress = parts.join('، ');
+
+                setAddressDetails(fullAddress);
+                // Default name can be the road name if available, or empty to let user type
+                if (!addressName && road) setAddressName(road);
+            })
+            .catch(() => setAddressDetails('')) // Fail silently or show empty
+            .finally(() => setIsLoadingAddress(false));
+    }, [position]);
 
     const handleNavigate = () => {
         if (position) {
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${position.lat},${position.lng}`;
-            window.open(url, '_blank');
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${position.lat},${position.lng}`, '_blank');
         }
     };
 
     useMapEvents({
         click(e) {
             setPosition(e.latlng);
-            // Center map on clicked position with immediate effect
             map.setView([e.latlng.lat, e.latlng.lng], map.getZoom(), {
                 animate: true,
                 duration: 0.5
             });
-
-            // Reverse geocode to get address
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&accept-language=ar`)
-                .then(res => res.json())
-                .then(data => {
-                    const addr = data.address || {};
-                    const name = addr.road || addr.suburb || addr.city || data.display_name?.split(',')[0] || 'موقع جديد';
-                    const number = addr.house_number || '';
-                    setAddressName(number ? `${name} ${number}` : name);
-                })
-                .catch(() => setAddressName('موقع جديد'));
         },
     });
 
-    return position ? (
+    if (!position) return null;
+
+    return (
         <Marker position={position}>
             <Popup>
-                <div className="flex flex-col gap-2 p-1 min-w-[180px]">
-                    <p className="text-sm font-bold text-center mb-1">{addressName || 'الموقع المحدد'}</p>
-                    <div className="flex gap-1 justify-center flex-wrap">
-                        <Button size="sm" onClick={() => onSave(addressName)} className="h-7 text-xs bg-blue-600 hover:bg-blue-700 flex-1">
-                            حفظ
+                <div className="p-2 min-w-[220px] text-right space-y-3">
+                    <p className="text-center font-bold text-sm text-primary mb-2">الموقع المحدد</p>
+
+                    <div className="space-y-1">
+                        <Input
+                            placeholder="اسم الموقع (مثال: المنزل)"
+                            value={addressName}
+                            onChange={(e) => setAddressName(e.target.value)}
+                            className="h-8 text-sm text-right"
+                        />
+                    </div>
+
+                    <div className="space-y-1 relative">
+                        <Input
+                            placeholder="تفاصيل العنوان (الشارع، الرقم)"
+                            value={addressDetails}
+                            onChange={(e) => setAddressDetails(e.target.value)}
+                            className="h-8 text-sm text-right pl-7"
+                        />
+                        {isLoadingAddress && <Loader2 className="w-3 h-3 absolute left-2 top-2.5 animate-spin text-gray-400" />}
+                    </div>
+
+                    <div className="flex items-center justify-center gap-3 pt-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 rounded-full border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                            onClick={() => onSave(addressName, addressDetails, position)}
+                            title="حفظ الموقع"
+                        >
+                            <Save className="w-5 h-5" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => onShare(position as any)} className="h-7 text-xs flex-1">
-                            مشاركة
+
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 rounded-full border-purple-200 hover:bg-purple-50 hover:text-purple-600"
+                            onClick={() => onShare(position)}
+                            title="مشاركة"
+                        >
+                            <Share2 className="w-5 h-5" />
                         </Button>
-                        <Button size="sm" variant="secondary" onClick={handleNavigate} className="h-7 text-xs flex-1 bg-green-500 hover:bg-green-600 text-white">
-                            ملاحة
+
+                        <Button
+                            variant="default"
+                            size="icon"
+                            className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700 shadow-md"
+                            onClick={handleNavigate}
+                            title="ملاحة"
+                        >
+                            <Navigation className="w-5 h-5 text-white" />
                         </Button>
                     </div>
                 </div>
             </Popup>
         </Marker>
-    ) : null;
+    );
 }
 
 function ChangeView({ center, zoom }: any) {
@@ -132,9 +186,9 @@ const InteractiveMap = () => {
     // Edit State
     const [editingResource, setEditingResource] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
-
-    // Address suggestions
     const [searchSuggestions, setSearchSuggestions] = useState<any[]>([]);
+
+    const [currentMarkerPosition, setCurrentMarkerPosition] = useState<{ lat: number, lng: number } | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
 
@@ -210,26 +264,67 @@ const InteractiveMap = () => {
         return LOCATION_CATEGORIES.find(c => c.id === category)?.icon || '📍';
     };
 
-    const saveLocation = (addressName: string) => {
-        if (!newItem.location) return;
+    const saveLocation = async (addressName: string, addressDetails?: string, positionArg?: { lat: number; lng: number }) => {
+        const position = positionArg || currentMarkerPosition;
 
-        const [lat, lng] = newItem.location.split(',').map(s => s.trim());
+        if (!position || !addressName.trim()) {
+            toast({ title: "الرجاء تحديد موقع وإدخال اسم", variant: "destructive" });
+            return;
+        }
 
-        const newRes = {
-            id: Date.now().toString(),
-            title: addressName || 'موقع جديد',
-            url: `geo:${lat},${lng}`,
-            category: selectedCategory
-        };
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
 
-        const updated = [...savedLocations, newRes];
-        localStorage.setItem('baraka_resources', JSON.stringify(updated));
-        setSavedLocations(updated);
+            const newLocation = {
+                id: Date.now().toString(),
+                title: addressName,
+                address: addressDetails ? addressDetails : `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
+                category: selectedCategory,
+                lat: position.lat,
+                lng: position.lng,
+                url: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
+                user_id: user?.id
+            };
 
-        toast({ title: `تم حفظ ${getCategoryIcon(selectedCategory)} ${addressName}` });
-        setNewItem({ name: '', location: '' });
-        setSearchQuery('');
-        setSelectedCategory('other');
+            if (user) {
+                const { error } = await supabase.from('saved_locations').insert({
+                    user_id: user.id,
+                    title: newLocation.title,
+                    address: newLocation.address,
+                    category: newLocation.category,
+                    lat: newLocation.lat,
+                    lng: newLocation.lng,
+                    url: newLocation.url
+                });
+
+                if (error) throw error;
+            }
+
+            const updatedLocations = [...savedLocations, newLocation];
+            setSavedLocations(updatedLocations);
+            localStorage.setItem('baraka_saved_locations', JSON.stringify(updatedLocations));
+
+            toast({ title: "تم حفظ الموقع بنجاح" });
+            setNewItem({ name: '', location: '' });
+            setSearchQuery('');
+            setSelectedCategory('other');
+        } catch (error: any) {
+            console.error('Error saving location:', error);
+            const newLocation = {
+                id: Date.now().toString(),
+                title: addressName,
+                address: addressDetails ? addressDetails : `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
+                category: selectedCategory,
+                lat: position.lat,
+                lng: position.lng,
+                url: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
+                user_id: 'guest'
+            };
+            const updatedLocations = [...savedLocations, newLocation];
+            setSavedLocations(updatedLocations);
+            localStorage.setItem('baraka_saved_locations', JSON.stringify(updatedLocations));
+            toast({ title: "تم حفظ الموقع محلياً" });
+        }
     };
 
     const performSearch = async () => {
@@ -296,14 +391,17 @@ const InteractiveMap = () => {
                 const number = addr.house_number || '';
                 const addressName = number ? `${road} ${number}` : road;
 
-                const newRes = {
+                const newLocation = {
                     id: Date.now().toString(),
                     title: addressName,
-                    url: `geo:${latitude},${longitude}`,
+                    address: addressName,
+                    lat: latitude,
+                    lng: longitude,
+                    url: `https://www.google.com/maps?q=${latitude},${longitude}`,
                     category: 'other'
                 };
-                const updated = [...savedLocations, newRes];
-                localStorage.setItem('baraka_resources', JSON.stringify(updated));
+                const updated = [...savedLocations, newLocation];
+                localStorage.setItem('baraka_saved_locations', JSON.stringify(updated));
                 setSavedLocations(updated);
 
                 toast({ title: "تم الحفظ السريع!", description: addressName });
@@ -449,9 +547,9 @@ const InteractiveMap = () => {
                             />
                             {/* Current selection marker */}
                             <LocationMarker
-                                position={newItem.location ? { lat: parseFloat(newItem.location.split(',')[0]), lng: parseFloat(newItem.location.split(',')[1]) } : null}
+                                position={currentMarkerPosition}
                                 setPosition={(pos) => {
-                                    setNewItem({ ...newItem, location: `${pos.lat}, ${pos.lng}` });
+                                    setCurrentMarkerPosition(pos);
                                     setMapCenter([pos.lat, pos.lng]);
                                 }}
                                 onSave={saveLocation}
@@ -465,14 +563,24 @@ const InteractiveMap = () => {
                             />
                             {/* Saved locations markers */}
                             {savedLocations.map((loc: any) => {
-                                const coords = loc.url.replace('geo:', '').split(',');
-                                const lat = parseFloat(coords[0]);
-                                const lng = parseFloat(coords[1]);
+                                let lat = typeof loc.lat === 'number' ? loc.lat : parseFloat(loc.lat);
+                                let lng = typeof loc.lng === 'number' ? loc.lng : parseFloat(loc.lng);
+
+                                // Fallback for legacy data
+                                if ((isNaN(lat) || isNaN(lng)) && loc.url && loc.url.startsWith('geo:')) {
+                                    const coords = loc.url.replace('geo:', '').split(',');
+                                    lat = parseFloat(coords[0]);
+                                    lng = parseFloat(coords[1]);
+                                }
+
+                                if (isNaN(lat) || isNaN(lng)) return null;
+
                                 return (
                                     <Marker key={loc.id} position={[lat, lng]}>
                                         <Popup>
-                                            <div className="text-center">
-                                                <p className="font-bold">{getCategoryIcon(loc.category)} {loc.title}</p>
+                                            <div className="text-center min-w-[150px]">
+                                                <p className="font-bold text-sm mb-1">{getCategoryIcon(loc.category)} {loc.title}</p>
+                                                {loc.address && <p className="text-xs text-gray-500 mb-2 whitespace-normal">{loc.address}</p>}
                                                 <div className="flex gap-1 mt-2 justify-center">
                                                     <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => {
                                                         setMapCenter([lat, lng]);
@@ -535,6 +643,7 @@ const InteractiveMap = () => {
                                                     const lng = parseFloat(s.lon);
                                                     setMapCenter([lat, lng]);
                                                     setSearchQuery(formattedName);
+                                                    setCurrentMarkerPosition({ lat, lng }); // Set current marker position
                                                     setNewItem({ name: formattedName, location: `${lat}, ${lng}` });
                                                     setShowSuggestions(false);
                                                     toast({ title: "📍 تم تحديد الموقع", description: formattedName });
@@ -556,105 +665,107 @@ const InteractiveMap = () => {
             </CardContent>
 
             {/* Locations Table */}
-            {savedLocations.length > 0 && (
-                <div className="border-t bg-white">
-                    <div className="p-3 bg-gray-50 border-b">
-                        <h3 className="font-bold text-sm flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-blue-600" />
-                            المواقع المحفوظة ({savedLocations.length})
-                        </h3>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-100">
-                                <tr>
-                                    <th className="text-right p-3 font-bold">الاسم</th>
-                                    <th className="text-right p-3 font-bold">العنوان</th>
-                                    <th className="text-center p-3 font-bold w-40">الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {savedLocations.map((loc: any) => {
-                                    const coords = loc.url?.replace('geo:', '').split(',') || [];
-                                    return (
-                                        <tr key={loc.id} className="border-b hover:bg-blue-50/50 transition-colors">
-                                            <td className="p-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-blue-100 p-1.5 rounded-full">
-                                                        <MapPin className="w-3 h-3 text-blue-600" />
+            {
+                savedLocations.length > 0 && (
+                    <div className="border-t bg-white">
+                        <div className="p-3 bg-gray-50 border-b">
+                            <h3 className="font-bold text-sm flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-blue-600" />
+                                المواقع المحفوظة ({savedLocations.length})
+                            </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-gray-100">
+                                    <tr>
+                                        <th className="text-right p-3 font-bold">الاسم</th>
+                                        <th className="text-right p-3 font-bold">العنوان</th>
+                                        <th className="text-center p-3 font-bold w-40">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {savedLocations.map((loc: any) => {
+                                        const coords = loc.url?.replace('geo:', '').split(',') || [];
+                                        return (
+                                            <tr key={loc.id} className="border-b hover:bg-blue-50/50 transition-colors">
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="bg-blue-100 p-1.5 rounded-full">
+                                                            <MapPin className="w-3 h-3 text-blue-600" />
+                                                        </div>
+                                                        <span className="font-medium">{loc.title}</span>
                                                     </div>
-                                                    <span className="font-medium">{loc.title}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-3 text-gray-600 text-xs">
-                                                {loc.address || `${coords[0]?.slice(0, 8) || '--'}, ${coords[1]?.slice(0, 8) || '--'}`}
-                                            </td>
-                                            <td className="p-3">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    {/* Navigate */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-green-600 hover:bg-green-50"
-                                                        onClick={() => {
-                                                            const url = `https://www.google.com/maps/dir/?api=1&destination=${loc.url.replace('geo:', '')}`;
-                                                            window.open(url, '_blank');
-                                                        }}
-                                                        title="الملاحة"
-                                                    >
-                                                        <Navigation className="w-4 h-4" />
-                                                    </Button>
-                                                    {/* Share */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-blue-600 hover:bg-blue-50"
-                                                        onClick={() => {
-                                                            const url = `https://www.google.com/maps/search/?api=1&query=${loc.url.replace('geo:', '')}`;
-                                                            if (navigator.share) {
-                                                                navigator.share({ title: loc.title, url }).catch(() => { });
-                                                            } else {
-                                                                navigator.clipboard.writeText(url);
-                                                                toast({ title: "تم نسخ الرابط" });
-                                                            }
-                                                        }}
-                                                        title="مشاركة"
-                                                    >
-                                                        <Share2 className="w-4 h-4" />
-                                                    </Button>
-                                                    {/* Edit */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-orange-600 hover:bg-orange-50"
-                                                        onClick={() => {
-                                                            setEditingResource(loc);
-                                                            setIsEditOpen(true);
-                                                        }}
-                                                        title="تعديل"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </Button>
-                                                    {/* Delete */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-red-600 hover:bg-red-50"
-                                                        onClick={() => deleteLocation(loc.id)}
-                                                        title="حذف"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                                </td>
+                                                <td className="p-3 text-gray-600 text-xs">
+                                                    {loc.address || `${coords[0]?.slice(0, 8) || '--'}, ${coords[1]?.slice(0, 8) || '--'}`}
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        {/* Navigate */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-green-600 hover:bg-green-50"
+                                                            onClick={() => {
+                                                                const url = `https://www.google.com/maps/dir/?api=1&destination=${loc.url.replace('geo:', '')}`;
+                                                                window.open(url, '_blank');
+                                                            }}
+                                                            title="الملاحة"
+                                                        >
+                                                            <Navigation className="w-4 h-4" />
+                                                        </Button>
+                                                        {/* Share */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                            onClick={() => {
+                                                                const url = `https://www.google.com/maps/search/?api=1&query=${loc.url.replace('geo:', '')}`;
+                                                                if (navigator.share) {
+                                                                    navigator.share({ title: loc.title, url }).catch(() => { });
+                                                                } else {
+                                                                    navigator.clipboard.writeText(url);
+                                                                    toast({ title: "تم نسخ الرابط" });
+                                                                }
+                                                            }}
+                                                            title="مشاركة"
+                                                        >
+                                                            <Share2 className="w-4 h-4" />
+                                                        </Button>
+                                                        {/* Edit */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-orange-600 hover:bg-orange-50"
+                                                            onClick={() => {
+                                                                setEditingResource(loc);
+                                                                setIsEditOpen(true);
+                                                            }}
+                                                            title="تعديل"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </Button>
+                                                        {/* Delete */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                                            onClick={() => deleteLocation(loc.id)}
+                                                            title="حذف"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -720,7 +831,7 @@ const InteractiveMap = () => {
                     )}
                 </DialogContent>
             </Dialog>
-        </Card>
+        </Card >
     );
 };
 

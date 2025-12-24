@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { cloudSync } from '@/lib/cloudSync';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const AUTO_SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -98,10 +99,18 @@ export const useCloudSync = () => {
             }, AUTO_SYNC_INTERVAL);
         }
 
+        // Realtime Subscription
+        const channel = supabase.channel('global_sync')
+            .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+                syncNow(true);
+            })
+            .subscribe();
+
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
             }
+            supabase.removeChannel(channel);
         };
     }, [autoSyncEnabled, syncNow]);
 

@@ -27,6 +27,22 @@ export const useHabits = () => {
 
     useEffect(() => {
         localStorage.setItem('baraka_habits', JSON.stringify(habits));
+        window.dispatchEvent(new Event('habits-updated'));
+    }, [habits]);
+
+    useEffect(() => {
+        const handleUpdates = () => {
+            const current = localStorage.getItem('baraka_habits');
+            if (current && current !== JSON.stringify(habits)) {
+                try {
+                    setHabits(JSON.parse(current));
+                } catch (e) {
+                    // ignore
+                }
+            }
+        };
+        window.addEventListener('habits-updated', handleUpdates);
+        return () => window.removeEventListener('habits-updated', handleUpdates);
     }, [habits]);
 
     const addHabit = (

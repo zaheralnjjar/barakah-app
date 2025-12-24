@@ -29,13 +29,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ShoppingList from '@/components/ShoppingList';
 
 // Hooks
@@ -80,8 +74,29 @@ const LogisticsManager = () => {
   const [editingTask, setEditingTask] = useState<MainTask | null>(null);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [showAddMedication, setShowAddMedication] = useState(false);
+
+  // Extended Habit State
   const [newHabitName, setNewHabitName] = useState('');
-  const [newMedicationName, setNewMedicationName] = useState('');
+  const [habitFreq, setHabitFreq] = useState<'daily' | 'weekly' | 'monthly' | 'specific_days'>('daily');
+  const [habitTimesPerDay, setHabitTimesPerDay] = useState(1);
+  const [habitCustomDays, setHabitCustomDays] = useState<string[]>([]);
+  const [habitTimes, setHabitTimes] = useState<string[]>(['']);
+
+  // Extended Medication State
+  const [medData, setMedData] = useState({
+    name: '',
+    time: '08:00',
+    frequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'specific_days',
+    customDays: [] as string[],
+    customTimes: {} as Record<string, string>,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    isPermanent: true,
+    reminder: true
+  });
+
+  const DAYS_AR = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+  const PRAYER_TIMES = ['بعد الفجر', 'بعد الظهر', 'بعد العصر', 'بعد المغرب', 'بعد العشاء'];
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -443,7 +458,7 @@ const LogisticsManager = () => {
 
       {/* Add Habit Dialog */}
       <Dialog open={showAddHabit} onOpenChange={setShowAddHabit}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-right flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
@@ -451,20 +466,75 @@ const LogisticsManager = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Input
-              placeholder="اسم العادة"
-              className="text-right"
-              value={newHabitName}
-              onChange={(e) => setNewHabitName(e.target.value)}
-            />
+            <div>
+              <label className="text-sm font-bold mb-1 block">اسم العادة</label>
+              <Input
+                placeholder="اسم العادة"
+                className="text-right"
+                value={newHabitName}
+                onChange={(e) => setNewHabitName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-bold mb-1 block">التكرار</label>
+              <Select value={habitFreq} onValueChange={(v: any) => setHabitFreq(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">يومياً</SelectItem>
+                  <SelectItem value="weekly">أسبوعياً</SelectItem>
+                  <SelectItem value="monthly">شهرياً</SelectItem>
+                  <SelectItem value="specific_days">أيام محددة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {habitFreq === 'daily' && (
+              <div>
+                <label className="text-sm font-bold mb-1 block">عدد المرات يومياً</label>
+                <Select value={habitTimesPerDay.toString()} onValueChange={(v) => setHabitTimesPerDay(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">مرة واحدة</SelectItem>
+                    <SelectItem value="2">مرتين</SelectItem>
+                    <SelectItem value="3">3 مرات</SelectItem>
+                    <SelectItem value="4">4 مرات</SelectItem>
+                    <SelectItem value="5">5 مرات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {habitFreq === 'specific_days' && (
+              <div>
+                <label className="text-sm font-bold mb-2 block">اختر الأيام</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS_AR.map(day => (
+                    <button
+                      key={day}
+                      onClick={() => {
+                        if (habitCustomDays.includes(day)) setHabitCustomDays(prev => prev.filter(d => d !== day));
+                        else setHabitCustomDays(prev => [...prev, day]);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${habitCustomDays.includes(day) ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter className="sm:justify-start">
             <Button
               className="w-full bg-orange-500 hover:bg-orange-600"
               onClick={() => {
                 if (newHabitName.trim()) {
-                  habitHook.addHabit(newHabitName);
+                  habitHook.addHabit(newHabitName, habitFreq, habitCustomDays, habitTimesPerDay);
                   setNewHabitName('');
+                  setHabitFreq('daily');
+                  setHabitTimesPerDay(1);
+                  setHabitCustomDays([]);
                   setShowAddHabit(false);
                   toast({ title: 'تم إضافة العادة بنجاح' });
                 }
@@ -478,7 +548,7 @@ const LogisticsManager = () => {
 
       {/* Add Medication Dialog */}
       <Dialog open={showAddMedication} onOpenChange={setShowAddMedication}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-right flex items-center gap-2">
               <Pill className="w-5 h-5 text-purple-500" />
@@ -486,29 +556,141 @@ const LogisticsManager = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Input
-              placeholder="اسم الدواء"
-              className="text-right"
-              value={newMedicationName}
-              onChange={(e) => setNewMedicationName(e.target.value)}
-            />
+            <div>
+              <label className="text-sm font-bold mb-1 block">اسم الدواء</label>
+              <Input
+                placeholder="اسم الدواء"
+                className="text-right"
+                value={medData.name}
+                onChange={(e) => setMedData({ ...medData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-bold block">عدد المرات يومياً</label>
+                <Select
+                  value={(Object.keys(medData.customTimes || {}).length || 1).toString()}
+                  onValueChange={(v) => {
+                    const count = Number(v);
+                    const times: { [key: string]: string } = {};
+                    for (let i = 0; i < count; i++) {
+                      times[`dose_${i}`] = medData.customTimes?.[`dose_${i}`] || '';
+                    }
+                    setMedData({ ...medData, customTimes: times });
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">مرة واحدة</SelectItem>
+                    <SelectItem value="2">مرتين</SelectItem>
+                    <SelectItem value="3">3 مرات</SelectItem>
+                    <SelectItem value="4">4 مرات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-bold block">التكرار</label>
+                <Select
+                  value={medData.frequency}
+                  onValueChange={(v: any) => setMedData({ ...medData, frequency: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">يومي</SelectItem>
+                    <SelectItem value="specific_days">أيام محددة</SelectItem>
+                    <SelectItem value="weekly">أسبوعي</SelectItem>
+                    <SelectItem value="monthly">شهري</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {Object.keys(medData.customTimes || {}).length > 0 ? (
+              <div className="grid gap-2">
+                <label className="text-sm font-bold">أوقات الجرعات</label>
+                <div className="space-y-2">
+                  {Object.keys(medData.customTimes || {}).map((key, i) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-16">الجرعة {i + 1}:</span>
+                      <Input
+                        type="time"
+                        value={medData.customTimes?.[key] || ''}
+                        onChange={e => setMedData({
+                          ...medData,
+                          customTimes: { ...medData.customTimes, [key]: e.target.value }
+                        })}
+                        className="flex-1"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <label className="text-sm font-bold">وقت الجرعة</label>
+                <Input
+                  type="time"
+                  value={medData.time}
+                  onChange={e => setMedData({ ...medData, time: e.target.value })}
+                />
+              </div>
+            )}
+
+            {medData.frequency === 'specific_days' && (
+              <div className="grid gap-2">
+                <label className="text-sm font-bold">حدد الأيام</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS_AR.map(day => (
+                    <button
+                      key={day}
+                      onClick={() => {
+                        if (medData.customDays.includes(day)) setMedData({ ...medData, customDays: medData.customDays.filter(d => d !== day) });
+                        else setMedData({ ...medData, customDays: [...medData.customDays, day] });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${medData.customDays.includes(day) ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={medData.isPermanent}
+                onChange={e => setMedData({ ...medData, isPermanent: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <label className="text-sm">دواء دائم (بدون تاريخ انتهاء)</label>
+            </div>
+
+            {!medData.isPermanent && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <label className="text-sm">تاريخ البدء</label>
+                  <Input type="date" value={medData.startDate} onChange={e => setMedData({ ...medData, startDate: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm">تاريخ الانتهاء</label>
+                  <Input type="date" value={medData.endDate} onChange={e => setMedData({ ...medData, endDate: e.target.value })} />
+                </div>
+              </div>
+            )}
+
           </div>
           <DialogFooter className="sm:justify-start">
             <Button
               className="w-full bg-purple-500 hover:bg-purple-600"
               onClick={() => {
-                if (newMedicationName.trim()) {
-                  medHook.addMedication({
-                    name: newMedicationName,
-                    time: '08:00',
-                    frequency: 'daily',
-                    startDate: new Date().toISOString().split('T')[0],
-                    customDays: [],
-                    endDate: '',
-                    isPermanent: true,
-                    reminder: true
+                if (medData.name.trim()) {
+                  medHook.addMedication(medData);
+                  setMedData({
+                    name: '', time: '08:00', frequency: 'daily', customDays: [], customTimes: {},
+                    startDate: new Date().toISOString().split('T')[0], endDate: '', isPermanent: true, reminder: true
                   });
-                  setNewMedicationName('');
                   setShowAddMedication(false);
                   toast({ title: 'تم إضافة الدواء بنجاح' });
                 }

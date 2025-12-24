@@ -60,8 +60,15 @@ export const useAppointments = () => {
         if (data) {
             setAppointments(prev => [...prev, data]);
             toast({ title: "تم حجز الموعد" });
+            window.dispatchEvent(new Event('appointments-updated'));
         }
     };
+
+    useEffect(() => {
+        const handleUpdates = () => loadAppointments();
+        window.addEventListener('appointments-updated', handleUpdates);
+        return () => window.removeEventListener('appointments-updated', handleUpdates);
+    }, []);
 
     const deleteAppointment = async (id: string) => {
         // Optimistic update? Or wait?
@@ -71,6 +78,7 @@ export const useAppointments = () => {
         try {
             const { error } = await supabase.from('appointments').delete().eq('id', id);
             if (error) throw error;
+            window.dispatchEvent(new Event('appointments-updated'));
         } catch (e) {
             console.error(e);
             toast({ title: 'خطأ في الحذف' });

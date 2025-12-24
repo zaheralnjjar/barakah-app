@@ -66,6 +66,22 @@ export const useMedications = () => {
 
     useEffect(() => {
         localStorage.setItem('baraka_medications_v2', JSON.stringify(medications));
+        window.dispatchEvent(new Event('medications-updated'));
+    }, [medications]);
+
+    useEffect(() => {
+        const handleUpdates = () => {
+            const current = localStorage.getItem('baraka_medications_v2');
+            if (current && current !== JSON.stringify(medications)) {
+                try {
+                    setMedications(JSON.parse(current));
+                } catch (e) {
+                    // ignore
+                }
+            }
+        };
+        window.addEventListener('medications-updated', handleUpdates);
+        return () => window.removeEventListener('medications-updated', handleUpdates);
     }, [medications]);
 
     const addMedication = (med: Omit<Medication, 'id' | 'takenHistory'>) => {
