@@ -21,6 +21,7 @@ import AppointmentManager from '@/components/AppointmentManager';
 import PrayerTimesRow from '@/components/PrayerTimesRow';
 import { NotificationBell } from '@/components/NotificationBell';
 
+
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
 }
@@ -35,7 +36,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { habits } = useHabits();
     const { medications, toggleMedTaken } = useMedications();
     const { tasks, addTask, updateTask, refreshTasks } = useTasks();
-    const { appointments, refreshAppointments } = useAppointments();
+    const { appointments, refreshAppointments, addAppointment } = useAppointments();
 
     const [currentDate] = useState(new Date());
     const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -53,6 +54,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
+    const [showBarakahPopup, setShowBarakahPopup] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -546,7 +548,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
                 <div className="flex items-center justify-between gap-3">
-                    {/* Date Info - Right Side */}
+                    {/* Date Info - Right Side (First in RTL) */}
                     <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[120px]">
                         <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
                         <div className="border-t border-emerald-300 my-1"></div>
@@ -554,17 +556,36 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
 
                     {/* Logo - Centered & Larger */}
-                    <div className="flex-1 text-center">
+                    <div className="flex-1 text-center cursor-pointer" onClick={() => setShowBarakahPopup(true)}>
                         <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">البركة</h1>
                         <span className="text-xs text-gray-400">Barakah Life</span>
                     </div>
 
-                    {/* Notification Bell - Left Side */}
+                    {/* Notification Bell - Left Side (Last in RTL) */}
                     <div className="flex items-center">
                         <NotificationBell />
                     </div>
                 </div>
             </div>
+
+            {/* Barakah Credits Popup */}
+            <Dialog open={showBarakahPopup} onOpenChange={setShowBarakahPopup}>
+                <DialogContent className="w-[85%] max-w-[280px] rounded-xl text-center bg-white/95 backdrop-blur border-emerald-100 !top-32 !translate-y-0 p-4 shadow-xl">
+                    <DialogHeader className="mb-2">
+                        <DialogTitle className="text-emerald-700 font-bold text-lg">✨ البركة ✨</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-2 space-y-3">
+                        <p className="text-base font-medium text-gray-700 leading-relaxed font-arabic">
+                            "اللهم بارك لنا في أعمالنا وأعمارنا"
+                        </p>
+                        <div className="w-12 h-1 bg-emerald-100 mx-auto rounded-full"></div>
+                        <div className="text-xs text-gray-500">
+                            <p>فكرة وتنفيذ</p>
+                            <p className="font-bold text-emerald-600 mt-1">محمد زاهر</p>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* ===== 2. FINANCIAL SUMMARY ===== */}
             <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden" onClick={() => onNavigateToTab('finance')}>
@@ -1317,6 +1338,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
                 </DialogContent>
             </Dialog >
+
         </div >
 
     );

@@ -44,6 +44,7 @@ export const useAppointments = () => {
             return;
         }
         const { data, error } = await supabase.from('appointments').insert({
+            id: crypto.randomUUID(), // Generate ID explicitly
             user_id: user.id,
             title: apptData.title,
             date: apptData.date,

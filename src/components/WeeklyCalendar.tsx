@@ -2,6 +2,8 @@ import React, { useState, DragEvent, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useTasks, MainTask } from '@/hooks/useTasks';
 import { useAppointments, Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
@@ -12,7 +14,11 @@ import {
     ChevronRight,
     Printer,
     Calendar,
-    GripVertical
+    GripVertical,
+    ClipboardList,
+    Clock,
+    MapPin,
+    Plus
 } from 'lucide-react';
 
 interface WeeklyCalendarProps {
@@ -20,8 +26,8 @@ interface WeeklyCalendarProps {
 }
 
 const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
-    const { tasks, updateTask } = useTasks();
-    const { appointments } = useAppointments();
+    const { tasks, updateTask, addTask } = useTasks();
+    const { appointments, addAppointment } = useAppointments();
     const { habits } = useHabits();
     const { medications } = useMedications();
     const { toast } = useToast();
@@ -36,6 +42,12 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
 
     const [draggedItem, setDraggedItem] = useState<{ type: 'task'; id: string } | null>(null);
     const [prayerSchedule, setPrayerSchedule] = useState<any>({});
+
+    // Quick add popup state
+    const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+    const [quickAddHour, setQuickAddHour] = useState<number | null>(null);
+    const [addType, setAddType] = useState<'appointment' | 'task' | null>(null);
+    const [formData, setFormData] = useState({ title: '', time: '', location: '', description: '', priority: 'medium' });
 
     useEffect(() => {
         try {
@@ -352,10 +364,15 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
                                     return (
                                         <div
                                             key={dayIdx}
-                                            className={`min-h-[50px] p-1 border-r text-[10px] transition-colors ${isToday ? 'bg-blue-50/50' : 'bg-white'
+                                            className={`min-h-[50px] p-1 border-r text-[10px] transition-colors cursor-pointer ${isToday ? 'bg-blue-50/50' : 'bg-white'
                                                 } ${draggedItem ? 'hover:bg-blue-100' : 'hover:bg-gray-50'}`}
                                             onDragOver={handleDragOver}
                                             onDrop={(e) => handleDrop(e, dateStr)}
+                                            onClick={() => {
+                                                setQuickAddDate(dateStr);
+                                                setQuickAddHour(hour);
+                                                setFormData({ ...formData, time: `${hour.toString().padStart(2, '0')}:00` });
+                                            }}
                                         >
                                             {/* Show appointments at this hour */}
                                             {data.appointments
@@ -370,20 +387,25 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
                                                 ))
                                             }
 
-                                            {/* Show tasks (draggable, show at 9:00) */}
-                                            {hour === 9 && data.tasks.map(task => (
-                                                <div
-                                                    key={task.id}
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                                                    onDragEnd={handleDragEnd}
-                                                    className={`bg-blue-100 text-blue-700 p-1 rounded mb-1 truncate cursor-move flex items-center gap-1 ${draggedItem?.id === task.id ? 'opacity-50' : ''
-                                                        }`}
-                                                >
-                                                    <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                                    <span className="truncate">{task.title}</span>
-                                                </div>
-                                            ))}
+                                            {/* Show tasks (draggable, show at task time or 9:00 default) */}
+                                            {data.tasks
+                                                .filter(task => {
+                                                    const taskHour = task.time ? parseInt(task.time.split(':')[0]) : 9;
+                                                    return taskHour === hour;
+                                                })
+                                                .map(task => (
+                                                    <div
+                                                        key={task.id}
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, 'task', task.id)}
+                                                        onDragEnd={handleDragEnd}
+                                                        className={`bg-blue-100 text-blue-700 p-1 rounded mb-1 truncate cursor-move flex items-center gap-1 ${draggedItem?.id === task.id ? 'opacity-50' : ''
+                                                            }`}
+                                                    >
+                                                        <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                        <span className="truncate">{task.title}</span>
+                                                    </div>
+                                                ))}
 
                                             {/* Show habits in morning */}
                                             {(hour === 7 || hour === 8) && data.habits.slice(0, 1).map(h => (
@@ -422,6 +444,183 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
                     اسحب المهمة إلى اليوم المطلوب
                 </div>
             )}
+
+            {/* Quick Add Type Selection Popup */}
+            <Dialog open={!!quickAddDate && !addType} onOpenChange={() => { setQuickAddDate(null); setAddType(null); setQuickAddHour(null); }}>
+                <DialogContent className="max-w-xs">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-lg">
+                            إضافة في {quickAddDate ? new Date(quickAddDate).toLocaleDateString('ar', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+                            {quickAddHour !== null && <span className="block text-sm text-gray-500">الساعة {quickAddHour}:00</span>}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 p-4">
+                        <button
+                            onClick={() => setAddType('appointment')}
+                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-all"
+                        >
+                            <Calendar className="w-10 h-10 text-orange-500" />
+                            <span className="font-bold text-orange-700">موعد</span>
+                        </button>
+                        <button
+                            onClick={() => setAddType('task')}
+                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all"
+                        >
+                            <ClipboardList className="w-10 h-10 text-blue-500" />
+                            <span className="font-bold text-blue-700">مهمة</span>
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Appointment Form */}
+            <Dialog open={addType === 'appointment'} onOpenChange={(open) => {
+                if (!open) {
+                    setAddType(null);
+                    setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-orange-500" />
+                            إضافة موعد جديد
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <Input
+                            placeholder="عنوان الموعد"
+                            value={formData.title}
+                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            className="text-right"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    type="time"
+                                    value={formData.time}
+                                    onChange={e => setFormData({ ...formData, time: e.target.value })}
+                                    className="pr-10"
+                                />
+                            </div>
+                            <div className="relative">
+                                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="المكان"
+                                    value={formData.location}
+                                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                                    className="text-right pr-10"
+                                />
+                            </div>
+                        </div>
+                        <Input
+                            placeholder="ملاحظات"
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="text-right"
+                        />
+                        <Button
+                            className="w-full bg-orange-500 hover:bg-orange-600"
+                            onClick={async () => {
+                                if (!formData.title || !quickAddDate) {
+                                    toast({ title: 'أدخل عنوان الموعد', variant: 'destructive' });
+                                    return;
+                                }
+                                // Use quickAddHour for the time, or formData.time if user changed it
+                                const appointmentTime = formData.time || (quickAddHour !== null ? `${quickAddHour.toString().padStart(2, '0')}:00` : '09:00');
+                                await addAppointment({
+                                    title: formData.title,
+                                    date: quickAddDate,
+                                    time: appointmentTime,
+                                    location: formData.location,
+                                    notes: formData.description
+                                });
+                                toast({ title: '✅ تم إضافة الموعد' });
+                                setAddType(null);
+                                setQuickAddDate(null);
+                                setQuickAddHour(null);
+                                setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                            }}
+                        >
+                            <Plus className="w-4 h-4 ml-2" /> حفظ الموعد
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Task Form */}
+            <Dialog open={addType === 'task'} onOpenChange={(open) => {
+                if (!open) {
+                    setAddType(null);
+                    setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                }
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ClipboardList className="w-5 h-5 text-blue-500" />
+                            إضافة مهمة جديدة
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <Input
+                            placeholder="عنوان المهمة"
+                            value={formData.title}
+                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            className="text-right"
+                        />
+                        <Input
+                            placeholder="وصف المهمة"
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="text-right"
+                        />
+                        <div className="flex gap-2">
+                            <span className="text-sm text-gray-600 self-center">الأولوية:</span>
+                            {['low', 'medium', 'high'].map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setFormData({ ...formData, priority: p })}
+                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${formData.priority === p
+                                        ? p === 'high' ? 'bg-red-500 text-white' : p === 'medium' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {p === 'high' ? 'عالية' : p === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                </button>
+                            ))}
+                        </div>
+                        <Button
+                            className="w-full bg-blue-500 hover:bg-blue-600"
+                            onClick={async () => {
+                                if (!formData.title || !quickAddDate) {
+                                    toast({ title: 'أدخل عنوان المهمة', variant: 'destructive' });
+                                    return;
+                                }
+                                // Use quickAddHour for the time, or formData.time if user changed it
+                                const taskTime = formData.time || (quickAddHour !== null ? `${quickAddHour.toString().padStart(2, '0')}:00` : '09:00');
+
+                                await addTask({
+                                    title: formData.title,
+                                    description: formData.description,
+                                    deadline: quickAddDate,
+                                    time: taskTime,
+                                    priority: formData.priority as 'low' | 'medium' | 'high',
+                                    type: 'task'
+                                });
+                                toast({ title: '✅ تم إضافة المهمة' });
+                                setAddType(null);
+                                setQuickAddDate(null);
+                                setQuickAddHour(null);
+                                setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                            }}
+                        >
+                            <Plus className="w-4 h-4 ml-2" /> حفظ المهمة
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 };

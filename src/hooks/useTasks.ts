@@ -14,6 +14,7 @@ export interface MainTask {
     description?: string;
     startDate?: string;
     deadline: string;
+    time?: string; // Optional time for the task
     subtasks: SubTask[];
     progress: number;
     priority: 'low' | 'medium' | 'high';

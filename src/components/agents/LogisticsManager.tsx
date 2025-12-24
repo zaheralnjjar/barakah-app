@@ -705,13 +705,15 @@ const LogisticsManager = () => {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Column 1: Shopping & Quick Notes */}
-        <div className="space-y-6">
+        {/* Column 1: Shopping, Quick Notes, Habit & Medication Trackers */}
+        <div className="space-y-4">
           <ShoppingList />
           <QuickNotes />
+          <HabitTracker />
+          <MedicationManager />
         </div>
 
-        {/* Column 2 & 3: Tasks and Trackers */}
+        {/* Column 2 & 3: Tasks and Appointments */}
         <div className="lg:col-span-2 space-y-6">
           <TaskSection
             tasks={taskHook.tasks}
@@ -739,11 +741,6 @@ const LogisticsManager = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DailyChecklist />
             <AppointmentManager />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <HabitTracker />
-            <MedicationManager />
           </div>
         </div>
 

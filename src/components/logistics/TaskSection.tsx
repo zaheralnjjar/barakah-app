@@ -126,41 +126,21 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
     };
 
     const printViaIframe = (htmlContent: string) => {
-        const iframe = document.createElement('iframe');
-        Object.assign(iframe.style, {
-            position: 'fixed',
-            top: '0',
-            left: '0',
-            width: '1px',
-            height: '1px',
-            border: '0',
-            opacity: '0.01',
-            pointerEvents: 'none',
-            zIndex: '-1',
-            visibility: 'hidden'
-        });
+        // Open in new window with close button (like DailyChecklist)
+        const printWindow = window.open('', '_blank', 'width=900,height=700');
+        if (printWindow) {
+            // Add close button and print button to the HTML
+            const htmlWithButtons = htmlContent.replace(
+                '<div class="header">',
+                `<div class="no-print" style="display:flex;gap:10px;margin-bottom:15px;">
+                    <button onclick="window.close()" style="background:#ef4444;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-family:Tajawal;">✕ إغلاق</button>
+                    <button onclick="window.print()" style="background:#16a34a;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-family:Tajawal;">🖨️ طباعة</button>
+                </div>
+                <div class="header">`
+            );
 
-        // Android WebView Fix: Add sandbox attribute to prevent main window navigation issues
-        iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-modals');
-
-        document.body.appendChild(iframe);
-
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-            doc.open();
-            doc.write(htmlContent);
-            doc.close();
-
-            // Allow content to load/render
-            setTimeout(() => {
-                iframe.contentWindow?.print();
-                // Cleanup after reasonable time
-                setTimeout(() => {
-                    if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                    }
-                }, 5000);
-            }, 500);
+            printWindow.document.write(htmlWithButtons);
+            printWindow.document.close();
         }
     };
 
@@ -711,10 +691,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                             </div>
                                             {apt.location && <p className="text-[10px] text-blue-500 mt-1">{apt.location}</p>}
                                         </div>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-0.5">
                                             {/* Edit not hooked up yet */}
-                                            <Button variant="ghost" size="icon" className="h-7 w-7"><Edit className="w-3 h-3" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => onDeleteAppointment(apt.id)}><Trash2 className="w-3 h-3" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="w-2.5 h-2.5" /></Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => onDeleteAppointment(apt.id)}><Trash2 className="w-2.5 h-2.5" /></Button>
                                         </div>
                                     </div>
                                 ))}
@@ -781,28 +761,28 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex items-center">
+                                    <div className="flex items-center gap-0.5">
                                         {task.type === 'task' && (
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className={`h-7 w-7 ${pomodoro.taskId === task.id ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-green-600'}`}
+                                                className={`h-6 w-6 ${pomodoro.taskId === task.id ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-green-600'}`}
                                                 onClick={() => pomodoro.taskId === task.id ? pomodoro.stop() : pomodoro.start(task.id)}
                                             >
-                                                <Clock className="w-3.5 h-3.5" />
+                                                <Clock className="w-3 h-3" />
                                             </Button>
                                         )}
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-blue-600" onClick={() => onEditTask(task)}>
-                                            <Edit className="w-3.5 h-3.5" />
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-blue-600" onClick={() => onEditTask(task)}>
+                                            <Edit className="w-3 h-3" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-purple-600" onClick={() => onShareTask(task)}>
-                                            <Share2 className="w-3.5 h-3.5" />
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-purple-600" onClick={() => onShareTask(task)}>
+                                            <Share2 className="w-3 h-3" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => onDeleteTask(task.id)}>
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => onDeleteTask(task.id)}>
+                                            <Trash2 className="w-3 h-3" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
-                                            {expandedTaskId === task.id ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
+                                            {expandedTaskId === task.id ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                         </Button>
                                     </div>
                                 </div>
@@ -821,6 +801,16 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                                         className="accent-purple-600 w-3 h-3"
                                                     />
                                                     <span className={`text-xs flex-1 ${sub.completed ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
+
+                                                    {/* Pomodoro for subtask */}
+                                                    <button
+                                                        onClick={() => pomodoro.taskId === `${task.id}-${sub.id}` ? pomodoro.stop() : pomodoro.start(`${task.id}-${sub.id}`)}
+                                                        className={`p-1 rounded transition-all ${pomodoro.taskId === `${task.id}-${sub.id}` ? 'text-red-500 animate-pulse bg-red-50' : 'text-gray-300 hover:text-green-600 opacity-0 group-hover:opacity-100'}`}
+                                                        title="مؤقت بومودورو"
+                                                    >
+                                                        <Clock className="w-3 h-3" />
+                                                    </button>
+
                                                     <Trash2
                                                         className="w-3 h-3 text-red-300 opacity-0 group-hover:opacity-100 cursor-pointer"
                                                         onClick={() => onDeleteSubtask(task.id, sub.id)}

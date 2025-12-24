@@ -146,7 +146,7 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
                 </head>
                 <body>
                     <div class="no-print">
-                        <button class="back-btn" onclick="window.close()" style="background: #f3f4f6; color: #374151;">← رجوع</button>
+                        <button class="back-btn" onclick="window.close()" style="background: #f3f4f6; color: #374151;">← إغلاق</button>
                         <button class="back-btn" onclick="window.print()" style="background: #16a34a; color: white;">🖨️ طباعة</button>
                     </div>
                     <h1>📅 جدول اليوم</h1>
@@ -209,8 +209,8 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
             <Card>
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-2">
-                            <CalendarDays className="w-5 h-5 text-primary" />
+                        <CardTitle className="flex items-center gap-2 text-base font-bold whitespace-nowrap">
+                            <CalendarDays className="w-4 h-4 text-primary" />
                             تقويم الأنشطة اليومية
                         </CardTitle>
                         <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>

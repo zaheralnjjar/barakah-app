@@ -125,6 +125,32 @@ export const DailyChecklist = () => {
         }
     };
 
+    // Request notification permission on mount
+    useEffect(() => {
+        const requestPermission = async () => {
+            try {
+                // Try Capacitor LocalNotifications
+                const { display } = await LocalNotifications.checkPermissions();
+                if (display !== 'granted') {
+                    await LocalNotifications.requestPermissions();
+                }
+            } catch (e) {
+                // Fallback for web - use browser Notification API
+                if ('Notification' in window && Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+            }
+        };
+        requestPermission();
+    }, []);
+
+    // Helper to show browser notification fallback
+    const showBrowserNotification = (title: string, body: string) => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body, icon: '/icon-192.png' });
+        }
+    };
+
     const scheduleNotification = async (item: ChecklistItem) => {
         if (!item.time) {
             toast({ title: '⚠️ هذا العنصر بدون وقت محدد' });
@@ -141,15 +167,34 @@ export const DailyChecklist = () => {
                 return;
             }
 
-            await LocalNotifications.schedule({
-                notifications: [{
-                    id: Math.floor(Math.random() * 100000),
-                    title: `⏰ تذكير: ${item.title}`,
-                    body: `حان وقت ${item.title}`,
-                    schedule: { at: notificationTime },
-                    sound: 'default'
-                }]
-            });
+            // Calculate delay
+            const delay = notificationTime.getTime() - Date.now();
+
+            try {
+                // Try Capacitor first
+                await LocalNotifications.schedule({
+                    notifications: [{
+                        id: Math.floor(Math.random() * 100000),
+                        title: `⏰ تذكير: ${item.title}`,
+                        body: `حان وقت ${item.title}`,
+                        schedule: { at: notificationTime },
+                        sound: 'default',
+                        channelId: 'barakah_notifications',
+                        smallIcon: 'ic_notification',
+                        largeIcon: 'ic_notification'
+                    }]
+                });
+            } catch (capacitorError) {
+                // Fallback: use setTimeout + browser notification
+                setTimeout(() => {
+                    showBrowserNotification(`⏰ تذكير: ${item.title}`, `حان وقت ${item.title}`);
+                    // Also play a sound
+                    try {
+                        const audio = new Audio('/notification.mp3');
+                        audio.play().catch(() => { });
+                    } catch (e) { }
+                }, delay);
+            }
 
             toast({ title: '✅ تم جدولة التنبيه', description: `${item.time}` });
         } catch (e) {
@@ -169,15 +214,29 @@ export const DailyChecklist = () => {
                 notificationTime.setHours(hours, minutes - 5, 0);
 
                 if (notificationTime > new Date()) {
-                    await LocalNotifications.schedule({
-                        notifications: [{
-                            id: Math.floor(Math.random() * 100000),
-                            title: `⏰ ${item.icon} ${item.title}`,
-                            body: `حان وقت ${item.title}`,
-                            schedule: { at: notificationTime },
-                            sound: 'default'
-                        }]
-                    });
+                    const delay = notificationTime.getTime() - Date.now();
+
+                    try {
+                        await LocalNotifications.schedule({
+                            notifications: [{
+                                id: Math.floor(Math.random() * 100000),
+                                title: `⏰ ${item.icon} ${item.title}`,
+                                body: `حان وقت ${item.title}`,
+                                schedule: { at: notificationTime },
+                                sound: 'default',
+                                channelId: 'barakah_notifications'
+                            }]
+                        });
+                    } catch (capacitorError) {
+                        // Fallback for web
+                        setTimeout(() => {
+                            showBrowserNotification(`⏰ ${item.title}`, `حان وقت ${item.title}`);
+                            try {
+                                const audio = new Audio('/notification.mp3');
+                                audio.play().catch(() => { });
+                            } catch (e) { }
+                        }, delay);
+                    }
                     scheduled++;
                 }
             } catch (e) {
@@ -185,7 +244,11 @@ export const DailyChecklist = () => {
             }
         }
 
-        toast({ title: `✅ تم جدولة ${scheduled} تنبيه` });
+        if (scheduled > 0) {
+            toast({ title: `✅ تم جدولة ${scheduled} تنبيه` });
+        } else {
+            toast({ title: '⚠️ لا توجد عناصر لجدولتها', description: 'جميع الأوقات قد مرت' });
+        }
     };
 
     const navigateDate = (days: number) => {
@@ -242,7 +305,7 @@ export const DailyChecklist = () => {
                         <h1>📋 قائمة المهام اليومية</h1>
                         <p class="date">${selectedDate.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     </div>
-                    <button class="back-btn no-print" onclick="window.close()">← رجوع</button>
+                    <button class="back-btn no-print" onclick="window.close()">← إغلاق</button>
                 </div>
 
                 <div class="progress">
@@ -265,7 +328,7 @@ export const DailyChecklist = () => {
                     </div>
                 </div>
 
-                <button class="back-btn no-print" onclick="window.close()" style="background: #f3f4f6; color: #374151; margin-bottom: 15px; margin-left: 10px;">← رجوع</button>
+                <button class="back-btn no-print" onclick="window.close()" style="background: #f3f4f6; color: #374151; margin-bottom: 15px; margin-left: 10px;">← إغلاق</button>
                 <button class="back-btn no-print" onclick="window.print()" style="background: #16a34a; margin-bottom: 15px;">🖨️ طباعة</button>
 
                 <table>

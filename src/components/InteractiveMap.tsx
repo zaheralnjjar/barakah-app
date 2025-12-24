@@ -50,6 +50,7 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
     const [addressName, setAddressName] = useState('');
     const [addressDetails, setAddressDetails] = useState('');
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+    const [locationImage, setLocationImage] = useState<string | null>(null);
     const map = useMap();
 
     useEffect(() => {
@@ -93,60 +94,101 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
 
     if (!position) return null;
 
+    // Use street name as default if no name provided
+    const getDisplayName = () => addressName.trim() || addressDetails || `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`;
+
     return (
         <Marker position={position}>
             <Popup>
-                <div className="p-2 min-w-[220px] text-right space-y-3">
-                    <p className="text-center font-bold text-sm text-primary mb-2">الموقع المحدد</p>
+                <div className="p-2 min-w-[250px] text-right space-y-2">
+                    <p className="text-center font-bold text-sm text-primary mb-2">📍 حفظ الموقع</p>
 
+                    {/* Name Input */}
                     <div className="space-y-1">
+                        <label className="text-xs text-gray-500">اسم الموقع</label>
                         <Input
-                            placeholder="اسم الموقع (مثال: المنزل)"
+                            placeholder="المنزل، العمل، المسجد..."
                             value={addressName}
                             onChange={(e) => setAddressName(e.target.value)}
-                            className="h-8 text-sm text-right"
+                            className="h-9 text-sm text-right"
                         />
                     </div>
 
+                    {/* Address Details */}
                     <div className="space-y-1 relative">
+                        <label className="text-xs text-gray-500">العنوان</label>
                         <Input
-                            placeholder="تفاصيل العنوان (الشارع، الرقم)"
+                            placeholder="الشارع، الرقم..."
                             value={addressDetails}
                             onChange={(e) => setAddressDetails(e.target.value)}
-                            className="h-8 text-sm text-right pl-7"
+                            className="h-9 text-sm text-right pl-7"
                         />
-                        {isLoadingAddress && <Loader2 className="w-3 h-3 absolute left-2 top-2.5 animate-spin text-gray-400" />}
+                        {isLoadingAddress && <Loader2 className="w-3 h-3 absolute left-2 top-7 animate-spin text-gray-400" />}
                     </div>
 
-                    <div className="flex items-center justify-center gap-3 pt-2">
+                    {/* Image Upload */}
+                    <div className="space-y-1">
+                        <label className="text-xs text-gray-500">صورة (اختياري)</label>
+                        {locationImage ? (
+                            <div className="relative inline-block">
+                                <img src={locationImage} alt="" className="w-16 h-16 object-cover rounded-lg" />
+                                <button
+                                    onClick={() => setLocationImage(null)}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center"
+                                >✕</button>
+                            </div>
+                        ) : (
+                            <label className="flex items-center justify-center gap-2 p-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-400 hover:bg-green-50 text-xs">
+                                <span>📷</span>
+                                <span className="text-gray-500">إضافة صورة</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = (ev) => setLocationImage(ev.target?.result as string);
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                />
+                            </label>
+                        )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-center gap-2 pt-2">
                         <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 rounded-full border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-                            onClick={() => onSave(addressName, addressDetails, position)}
-                            title="حفظ الموقع"
+                            size="sm"
+                            className="flex-1 h-9 bg-green-500 hover:bg-green-600 text-white"
+                            onClick={() => {
+                                const saveName = getDisplayName();
+                                onSave(saveName, addressDetails, position);
+                            }}
                         >
-                            <Save className="w-5 h-5" />
+                            <Save className="w-4 h-4 ml-1" /> حفظ
                         </Button>
 
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-10 w-10 rounded-full border-purple-200 hover:bg-purple-50 hover:text-purple-600"
+                            className="h-9 w-9 border-purple-200 hover:bg-purple-50"
                             onClick={() => onShare(position)}
                             title="مشاركة"
                         >
-                            <Share2 className="w-5 h-5" />
+                            <Share2 className="w-4 h-4" />
                         </Button>
 
                         <Button
-                            variant="default"
+                            variant="outline"
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700 shadow-md"
+                            className="h-9 w-9 border-blue-200 hover:bg-blue-50"
                             onClick={handleNavigate}
                             title="ملاحة"
                         >
-                            <Navigation className="w-5 h-5 text-white" />
+                            <Navigation className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
@@ -256,7 +298,14 @@ const InteractiveMap = () => {
     }, []);
 
     const loadLocations = () => {
-        const data = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+        // Try new key first, then fallback to old keys
+        let data = JSON.parse(localStorage.getItem('baraka_locations') || '[]');
+        if (data.length === 0) {
+            data = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
+        }
+        if (data.length === 0) {
+            data = JSON.parse(localStorage.getItem('baraka_saved_locations') || '[]');
+        }
         setSavedLocations(data);
     };
 
@@ -302,7 +351,10 @@ const InteractiveMap = () => {
 
             const updatedLocations = [...savedLocations, newLocation];
             setSavedLocations(updatedLocations);
-            localStorage.setItem('baraka_saved_locations', JSON.stringify(updatedLocations));
+            // Save to all keys for compatibility
+            localStorage.setItem('baraka_locations', JSON.stringify(updatedLocations));
+            localStorage.setItem('baraka_resources', JSON.stringify(updatedLocations));
+            window.dispatchEvent(new Event('locations-updated'));
 
             toast({ title: "تم حفظ الموقع بنجاح" });
             setNewItem({ name: '', location: '' });
@@ -322,7 +374,10 @@ const InteractiveMap = () => {
             };
             const updatedLocations = [...savedLocations, newLocation];
             setSavedLocations(updatedLocations);
-            localStorage.setItem('baraka_saved_locations', JSON.stringify(updatedLocations));
+            // Save to all keys for compatibility
+            localStorage.setItem('baraka_locations', JSON.stringify(updatedLocations));
+            localStorage.setItem('baraka_resources', JSON.stringify(updatedLocations));
+            window.dispatchEvent(new Event('locations-updated'));
             toast({ title: "تم حفظ الموقع محلياً" });
         }
     };
@@ -401,8 +456,11 @@ const InteractiveMap = () => {
                     category: 'other'
                 };
                 const updated = [...savedLocations, newLocation];
-                localStorage.setItem('baraka_saved_locations', JSON.stringify(updated));
+                // Save to all keys for compatibility
+                localStorage.setItem('baraka_locations', JSON.stringify(updated));
+                localStorage.setItem('baraka_resources', JSON.stringify(updated));
                 setSavedLocations(updated);
+                window.dispatchEvent(new Event('locations-updated'));
 
                 toast({ title: "تم الحفظ السريع!", description: addressName });
             } catch (e) {
@@ -419,8 +477,11 @@ const InteractiveMap = () => {
     const saveEditResource = () => {
         if (!editingResource || !editingResource.title.trim()) return;
         const updated = savedLocations.map((r: any) => r.id === editingResource.id ? editingResource : r);
+        // Save to all keys for compatibility
+        localStorage.setItem('baraka_locations', JSON.stringify(updated));
         localStorage.setItem('baraka_resources', JSON.stringify(updated));
         setSavedLocations(updated);
+        window.dispatchEvent(new Event('locations-updated'));
         toast({ title: "تم تحديث الاسم" });
         setIsEditOpen(false);
         setEditingResource(null);
@@ -428,10 +489,13 @@ const InteractiveMap = () => {
 
     const deleteLocation = (id: string) => {
         const updated = savedLocations.filter((i: any) => i.id !== id);
+        // Save to all keys for compatibility
+        localStorage.setItem('baraka_locations', JSON.stringify(updated));
         localStorage.setItem('baraka_resources', JSON.stringify(updated));
         setSavedLocations(updated);
         selectedLocations.delete(id);
         setSelectedLocations(new Set(selectedLocations));
+        window.dispatchEvent(new Event('locations-updated'));
         toast({ title: "تم الحذف" });
     };
 
@@ -531,9 +595,9 @@ const InteractiveMap = () => {
             </CardHeader>
             <CardContent className="p-0">
                 {/* 70/30 Split Layout - Desktop: Horizontal | Mobile: Vertical */}
-                <div className="flex flex-col lg:flex-row h-[85vh] min-h-[600px]">
+                <div className="flex flex-col lg:flex-row h-auto lg:h-[80vh] min-h-[400px]">
                     {/* Map Section - 70% on Desktop */}
-                    <div className="h-[55vh] lg:h-full lg:w-[70%] w-full relative z-0 order-1">
+                    <div className="h-[400px] lg:h-full lg:w-[70%] w-full relative z-0 order-1">
                         <MapContainer
                             center={mapCenter}
                             zoom={13}
@@ -667,7 +731,7 @@ const InteractiveMap = () => {
             {/* Locations Table */}
             {
                 savedLocations.length > 0 && (
-                    <div className="border-t bg-white">
+                    <div className="border-t bg-white order-2">
                         <div className="p-3 bg-gray-50 border-b">
                             <h3 className="font-bold text-sm flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-blue-600" />
@@ -679,13 +743,11 @@ const InteractiveMap = () => {
                                 <thead className="bg-gray-100">
                                     <tr>
                                         <th className="text-right p-3 font-bold">الاسم</th>
-                                        <th className="text-right p-3 font-bold">العنوان</th>
                                         <th className="text-center p-3 font-bold w-40">الإجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {savedLocations.map((loc: any) => {
-                                        const coords = loc.url?.replace('geo:', '').split(',') || [];
                                         return (
                                             <tr key={loc.id} className="border-b hover:bg-blue-50/50 transition-colors">
                                                 <td className="p-3">
@@ -695,9 +757,6 @@ const InteractiveMap = () => {
                                                         </div>
                                                         <span className="font-medium">{loc.title}</span>
                                                     </div>
-                                                </td>
-                                                <td className="p-3 text-gray-600 text-xs">
-                                                    {loc.address || `${coords[0]?.slice(0, 8) || '--'}, ${coords[1]?.slice(0, 8) || '--'}`}
                                                 </td>
                                                 <td className="p-3">
                                                     <div className="flex items-center justify-center gap-1">

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X } from 'lucide-react';
 import DailyCalendar from '@/components/DailyCalendar';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
 import { useTasks } from '@/hooks/useTasks';
@@ -9,6 +11,7 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { useToast } from '@/hooks/use-toast';
 
 const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -18,11 +21,17 @@ const CalendarSection: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-    const { tasks } = useTasks();
-    const { appointments } = useAppointments();
+    // Quick add popup state
+    const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+    const [addType, setAddType] = useState<'appointment' | 'task' | null>(null);
+    const [formData, setFormData] = useState({ title: '', time: '', location: '', description: '', priority: 'medium' });
+
+    const { tasks, addTask } = useTasks();
+    const { appointments, addAppointment } = useAppointments();
     const { habits } = useHabits();
     const { medications } = useMedications();
     const { prayerTimes = [], nextPrayer, timeUntilNext } = useDashboardData();
+    const { toast } = useToast();
 
     // Prayer icon helper
     const getPrayerIcon = (name: string) => {
@@ -90,7 +99,7 @@ const CalendarSection: React.FC = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl arabic-title text-primary font-bold">📅 التقويم</h1>
+                <h1 className="text-lg arabic-title text-primary font-bold">📅 التقويم</h1>
             </div>
 
             {/* Prayer Times Row */}
@@ -111,11 +120,7 @@ const CalendarSection: React.FC = () => {
                                     <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'}`}>
                                         {prayer.time}
                                     </span>
-                                    {isNext && timeUntilNext && (
-                                        <span className="text-[10px] text-emerald-600 font-medium mt-0.5">
-                                            {timeUntilNext}
-                                        </span>
-                                    )}
+
                                 </div>
                             );
                         })}
@@ -212,7 +217,10 @@ const CalendarSection: React.FC = () => {
                                 return (
                                     <div
                                         key={idx}
-                                        onClick={() => setSelectedDate(dateStr)}
+                                        onClick={() => {
+                                            setSelectedDate(dateStr);
+                                            setQuickAddDate(dateStr);
+                                        }}
                                         className={`
                                             p-2 min-h-[60px] rounded-lg cursor-pointer transition-all
                                             ${!day.isCurrentMonth ? 'opacity-40' : ''}
@@ -224,16 +232,19 @@ const CalendarSection: React.FC = () => {
                                             {day.date.getDate()}
                                         </div>
                                         {hasItems && (
-                                            <div className="mt-1 space-y-0.5">
-                                                {data.tasks.length > 0 && (
-                                                    <div className="text-[9px] bg-blue-100 text-blue-700 rounded px-1 truncate">
-                                                        {data.tasks.length} مهام
+                                            <div className="mt-1 space-y-0.5 max-h-[40px] overflow-hidden">
+                                                {data.appointments.slice(0, 2).map(apt => (
+                                                    <div key={apt.id} className="text-[8px] bg-orange-100 text-orange-700 rounded px-1 truncate">
+                                                        📅 {apt.title}
                                                     </div>
-                                                )}
-                                                {data.appointments.length > 0 && (
-                                                    <div className="text-[9px] bg-orange-100 text-orange-700 rounded px-1 truncate">
-                                                        {data.appointments.length} موعد
+                                                ))}
+                                                {data.tasks.slice(0, 2).map(task => (
+                                                    <div key={task.id} className="text-[8px] bg-blue-100 text-blue-700 rounded px-1 truncate">
+                                                        ✅ {task.title}
                                                     </div>
+                                                ))}
+                                                {(data.appointments.length > 2 || data.tasks.length > 2) && (
+                                                    <div className="text-[7px] text-gray-400 text-center">+المزيد</div>
                                                 )}
                                             </div>
                                         )}
@@ -282,6 +293,163 @@ const CalendarSection: React.FC = () => {
                     </CardContent>
                 </Card>
             )}
+            {/* Quick Add Type Selection Popup */}
+            <Dialog open={!!quickAddDate && !addType} onOpenChange={() => { setQuickAddDate(null); setAddType(null); }}>
+                <DialogContent className="max-w-xs">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-lg">
+                            إضافة في {quickAddDate ? new Date(quickAddDate).toLocaleDateString('ar', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4 p-4">
+                        <button
+                            onClick={() => setAddType('appointment')}
+                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-all"
+                        >
+                            <CalendarIcon className="w-10 h-10 text-orange-500" />
+                            <span className="font-bold text-orange-700">موعد</span>
+                        </button>
+                        <button
+                            onClick={() => setAddType('task')}
+                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all"
+                        >
+                            <ClipboardList className="w-10 h-10 text-blue-500" />
+                            <span className="font-bold text-blue-700">مهمة</span>
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Appointment Form */}
+            <Dialog open={addType === 'appointment'} onOpenChange={() => { setAddType(null); setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' }); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CalendarIcon className="w-5 h-5 text-orange-500" />
+                            إضافة موعد جديد
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <Input
+                            placeholder="عنوان الموعد"
+                            value={formData.title}
+                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            className="text-right"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    type="time"
+                                    value={formData.time}
+                                    onChange={e => setFormData({ ...formData, time: e.target.value })}
+                                    className="pr-10"
+                                />
+                            </div>
+                            <div className="relative">
+                                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    placeholder="المكان"
+                                    value={formData.location}
+                                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                                    className="text-right pr-10"
+                                />
+                            </div>
+                        </div>
+                        <Input
+                            placeholder="ملاحظات"
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="text-right"
+                        />
+                        <Button
+                            className="w-full bg-orange-500 hover:bg-orange-600"
+                            onClick={async () => {
+                                if (!formData.title || !quickAddDate) {
+                                    toast({ title: 'أدخل عنوان الموعد', variant: 'destructive' });
+                                    return;
+                                }
+                                await addAppointment({
+                                    title: formData.title,
+                                    date: quickAddDate,
+                                    time: formData.time || '09:00',
+                                    location: formData.location,
+                                    notes: formData.description
+                                });
+                                toast({ title: '✅ تم إضافة الموعد' });
+                                setAddType(null);
+                                setQuickAddDate(null);
+                                setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                            }}
+                        >
+                            <Plus className="w-4 h-4 ml-2" /> حفظ الموعد
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Task Form */}
+            <Dialog open={addType === 'task'} onOpenChange={() => { setAddType(null); setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' }); }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ClipboardList className="w-5 h-5 text-blue-500" />
+                            إضافة مهمة جديدة
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-2">
+                        <Input
+                            placeholder="عنوان المهمة"
+                            value={formData.title}
+                            onChange={e => setFormData({ ...formData, title: e.target.value })}
+                            className="text-right"
+                        />
+                        <Input
+                            placeholder="وصف المهمة"
+                            value={formData.description}
+                            onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            className="text-right"
+                        />
+                        <div className="flex gap-2">
+                            <span className="text-sm text-gray-600 self-center">الأولوية:</span>
+                            {['low', 'medium', 'high'].map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setFormData({ ...formData, priority: p })}
+                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${formData.priority === p
+                                        ? p === 'high' ? 'bg-red-500 text-white' : p === 'medium' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {p === 'high' ? 'عالية' : p === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                </button>
+                            ))}
+                        </div>
+                        <Button
+                            className="w-full bg-blue-500 hover:bg-blue-600"
+                            onClick={async () => {
+                                if (!formData.title || !quickAddDate) {
+                                    toast({ title: 'أدخل عنوان المهمة', variant: 'destructive' });
+                                    return;
+                                }
+                                await addTask({
+                                    title: formData.title,
+                                    description: formData.description,
+                                    deadline: quickAddDate,
+                                    priority: formData.priority as 'low' | 'medium' | 'high',
+                                    type: 'task'
+                                });
+                                toast({ title: '✅ تم إضافة المهمة' });
+                                setAddType(null);
+                                setQuickAddDate(null);
+                                setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
+                            }}
+                        >
+                            <Plus className="w-4 h-4 ml-2" /> حفظ المهمة
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

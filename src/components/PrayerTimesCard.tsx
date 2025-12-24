@@ -15,34 +15,55 @@ const PrayerTimesCard: React.FC = () => {
         return emojis[name] || '🕌';
     };
 
+    const today = new Date();
+    const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { day: 'numeric', month: 'long' }).format(today);
+    const gregorianDate = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long' }).format(today);
+    const dayName = new Intl.DateTimeFormat('ar-EG', { weekday: 'long' }).format(today);
+
     return (
-        <Card className="overflow-hidden">
-            <CardHeader className="pb-2 bg-gradient-to-r from-amber-500/10 to-amber-600/5">
+        <Card className="overflow-hidden shadow-sm border-0">
+            <CardHeader className="pb-2 pt-3 px-4">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="arabic-title text-lg flex items-center gap-2">
+                    <CardTitle className="arabic-title text-base flex items-center gap-2 text-gray-700">
                         🕌 أوقات الصلاة
                     </CardTitle>
-                    <Button size="icon" variant="ghost" onClick={refetch} disabled={isLoading}>
-                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-400 font-normal">
+                            {source === 'api' ? 'تلقائي' : source === 'manual' ? 'يدوي' : 'ملف'}
+                        </span>
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={refetch} disabled={isLoading}>
+                            <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="pt-1 px-3 pb-3">
                 {/* Next Prayer Highlight */}
                 {nextPrayer && (
-                    <div className="bg-primary/10 rounded-lg p-3 mb-4 text-center">
-                        <p className="text-xs text-muted-foreground arabic-body">الصلاة القادمة</p>
-                        <p className="text-xl font-bold arabic-title text-primary">
-                            {getPrayerEmoji(nextPrayer.name)} {nextPrayer.nameAr}
-                        </p>
-                        <div className="flex items-center justify-center gap-2 mt-1">
-                            <Badge variant="secondary" className="arabic-body">
-                                <Clock className="w-3 h-3 ml-1" />
-                                {nextPrayer.time}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground arabic-body">
-                                باقي {timeUntilNext}
-                            </span>
+                    <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-xl p-4 mb-3 shadow-lg relative overflow-hidden">
+                        {/* Background pattern opacity */}
+                        <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
+
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="flex items-center gap-1.5 mb-2 px-3 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-xs border border-white/10">
+                                <Clock className="w-3 h-3" />
+                                <span>الصلاة القادمة</span>
+                            </div>
+
+                            <div className="flex flex-col items-center my-1">
+                                <h2 className="text-3xl font-bold mb-1 tracking-wide">{nextPrayer.nameAr}</h2>
+                                <p className="text-lg font-medium opacity-90 dir-rtl text-emerald-50">
+                                    باقي {timeUntilNext}
+                                </p>
+                            </div>
+
+                            <div className="w-full h-px bg-white/20 my-3"></div>
+
+                            <div className="flex items-center justify-between w-full text-xs opacity-90 px-1 font-medium arabic-body">
+                                <span>{gregorianDate}</span>
+                                <span className="bg-white/20 px-2 py-0.5 rounded-md">{dayName}</span>
+                                <span>{hijriDate}</span>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -55,8 +76,8 @@ const PrayerTimesCard: React.FC = () => {
                             <div
                                 key={prayer.name}
                                 className={`text-center p-2 rounded-lg ${nextPrayer?.name === prayer.name
-                                        ? 'bg-primary/20 ring-2 ring-primary/30'
-                                        : 'bg-gray-50'
+                                    ? 'bg-primary/20 ring-2 ring-primary/30'
+                                    : 'bg-gray-50'
                                     }`}
                             >
                                 <p className="text-lg">{getPrayerEmoji(prayer.name)}</p>
@@ -66,12 +87,7 @@ const PrayerTimesCard: React.FC = () => {
                         ))}
                 </div>
 
-                {/* Source indicator */}
-                <div className="mt-3 text-center">
-                    <Badge variant="outline" className="text-xs arabic-body">
-                        {source === 'api' ? 'تلقائي' : source === 'manual' ? 'يدوي' : 'من ملف'}
-                    </Badge>
-                </div>
+
             </CardContent>
         </Card>
     );

@@ -124,17 +124,52 @@ export const QuickNotes = () => {
             <CardContent>
                 {/* 3x2 Icon Grid */}
                 {notes.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {displayedNotes.map((note, idx) => (
                             <div
                                 key={idx}
-                                onClick={() => setSelectedNote(note)}
-                                className="bg-gradient-to-br from-amber-50 to-yellow-100 rounded-xl p-3 cursor-pointer hover:shadow-md transition-all border border-amber-200 aspect-square flex flex-col items-center justify-center gap-2"
+                                className="bg-gradient-to-br from-amber-50 to-yellow-100 rounded-xl p-2 border border-amber-200 flex flex-col"
                             >
-                                <StickyNote className="w-8 h-8 text-amber-600" />
-                                <p className="text-xs font-medium text-gray-700 text-center line-clamp-2 leading-tight">
-                                    {note.title}
-                                </p>
+                                {/* Note Icon & Title - Clickable for details */}
+                                <div
+                                    onClick={() => setSelectedNote(note)}
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-amber-100 rounded-lg p-1.5 -mx-1 transition-colors"
+                                >
+                                    <StickyNote className="w-6 h-6 text-amber-600 shrink-0" />
+                                    <p className="text-xs font-medium text-gray-700 line-clamp-2 leading-tight flex-1">
+                                        {note.title}
+                                    </p>
+                                </div>
+
+                                {/* Quick Action Buttons */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-amber-200/50">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleShare(note); }}
+                                        className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-500 transition-colors"
+                                        title="مشاركة"
+                                    >
+                                        <Share2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedNote(note);
+                                            setEditNote({ title: note.title, content: note.content });
+                                            setIsEditing(true);
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-amber-200 text-amber-600 transition-colors"
+                                        title="تعديل"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(note.id); }}
+                                        className="p-1.5 rounded-lg hover:bg-red-100 text-red-500 transition-colors"
+                                        title="حذف"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
