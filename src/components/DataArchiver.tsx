@@ -133,15 +133,15 @@ const DataArchiver = () => {
                     </Dialog>
                 </div>
 
-                {/* Previous Archives List (Last 3) */}
+                {/* Archives List (Scrollable) */}
                 {archives.length > 0 && (
                     <div className="mt-6 pt-6 border-t">
                         <h4 className="flex items-center gap-2 font-bold text-gray-700 mb-3 text-sm">
                             <History className="w-4 h-4" />
-                            سجل الأرشيف (آخر 3 ملفات)
+                            سجل الأرشيف الكامل
                         </h4>
-                        <div className="space-y-2">
-                            {archives.slice(0, 3).map((arch) => (
+                        <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                            {archives.map((arch) => (
                                 <div key={arch.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm border hover:bg-gray-100 transition-colors">
                                     <div className="flex-1">
                                         <p className="font-medium text-gray-800">{arch.label || 'بدون عنوان'}</p>

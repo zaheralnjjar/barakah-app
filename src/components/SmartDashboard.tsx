@@ -20,6 +20,7 @@ import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerTimesRow from '@/components/PrayerTimesRow';
 import { NotificationBell } from '@/components/NotificationBell';
+import HolidaysDialog from '@/components/HolidaysDialog';
 
 
 interface SmartDashboardProps {
@@ -55,6 +56,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
     const [showBarakahPopup, setShowBarakahPopup] = useState(false);
+    const [showHolidaysPopup, setShowHolidaysPopup] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -548,8 +550,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
                 <div className="flex items-center justify-between gap-3">
-                    {/* Date Info - Right Side (First in RTL) */}
-                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[120px]">
+                    {/* Date Info - Right Side (First in RTL) - CLICKABLE */}
+                    <div
+                        className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[120px] cursor-pointer hover:bg-emerald-200 transition-colors"
+                        onClick={() => setShowHolidaysPopup(true)}
+                    >
                         <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
                         <div className="border-t border-emerald-300 my-1"></div>
                         <span className="text-xs block">{hijriDate}</span>
@@ -567,6 +572,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Holidays Dialog */}
+            <HolidaysDialog open={showHolidaysPopup} onOpenChange={setShowHolidaysPopup} />
 
             {/* Barakah Credits Popup */}
             <Dialog open={showBarakahPopup} onOpenChange={setShowBarakahPopup}>
