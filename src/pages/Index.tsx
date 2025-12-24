@@ -181,10 +181,7 @@ const Index = () => {
 
 
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative">
-        {/* Notification Bell - Always visible Top Right */}
-        <div className="absolute top-4 left-4 z-50">
-          <NotificationBell />
-        </div>
+
 
         {/* Content Area - No Padding Container for full width */}
         <div className="w-full">

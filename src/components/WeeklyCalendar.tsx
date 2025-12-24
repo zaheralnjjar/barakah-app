@@ -1,4 +1,4 @@
-import React, { useState, DragEvent } from 'react';
+import React, { useState, DragEvent, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +35,14 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
     });
 
     const [draggedItem, setDraggedItem] = useState<{ type: 'task'; id: string } | null>(null);
+    const [prayerSchedule, setPrayerSchedule] = useState<any>({});
+
+    useEffect(() => {
+        try {
+            const schedule = localStorage.getItem('baraka_prayer_schedule');
+            if (schedule) setPrayerSchedule(JSON.parse(schedule));
+        } catch (e) { }
+    }, []);
 
     const DAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const HOURS = Array.from({ length: 18 }, (_, i) => i + 4); // 04:00 to 21:00
@@ -323,6 +331,8 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
                             );
                         })}
                     </div>
+
+
 
                     {/* Hours Grid */}
                     <div className="max-h-[500px] overflow-y-auto">

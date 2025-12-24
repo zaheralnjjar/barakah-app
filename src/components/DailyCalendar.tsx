@@ -139,16 +139,22 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
                     <style>
                         body { font-family: Tajawal, Arial; padding: 30px; white-space: pre-wrap; line-height: 1.8; }
                         h1 { color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 10px; }
+                        .no-print { margin-bottom: 15px; }
+                        .back-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-left: 10px; }
+                        @media print { .no-print { display: none; } }
                     </style>
                 </head>
                 <body>
+                    <div class="no-print">
+                        <button class="back-btn" onclick="window.close()" style="background: #f3f4f6; color: #374151;">← رجوع</button>
+                        <button class="back-btn" onclick="window.print()" style="background: #16a34a; color: white;">🖨️ طباعة</button>
+                    </div>
                     <h1>📅 جدول اليوم</h1>
                     <pre>${report}</pre>
                 </body>
                 </html>
             `);
             win.document.close();
-            win.print();
         }
         setShowExportDialog(false);
     };
@@ -241,23 +247,6 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {/* Prayers */}
-                        {todayPrayers.length > 0 && (
-                            <div className="border rounded-lg p-3 bg-emerald-50/50">
-                                <h4 className="font-bold text-sm mb-2 flex items-center gap-2">
-                                    <span>🕌</span> أوقات الصلاة
-                                </h4>
-                                <div className="grid grid-cols-5 gap-2 text-center text-xs">
-                                    {todayPrayers.map((p, i) => (
-                                        <div key={i} className="bg-white p-2 rounded shadow-sm">
-                                            <span className="block">{p.icon}</span>
-                                            <span className="font-medium">{p.name}</span>
-                                            <span className="block text-muted-foreground">{p.time || '--'}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Appointments */}
                         {dayAppointments.length > 0 && (

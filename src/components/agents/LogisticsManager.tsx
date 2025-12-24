@@ -9,7 +9,9 @@ import {
   Calendar as CalendarIcon,
   Layers,
   Share2,
-  Clock
+  Clock,
+  Pill,
+  Flame
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -394,6 +396,45 @@ const LogisticsManager = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Quick Action Icons */}
+      <div className="grid grid-cols-5 gap-2">
+        <button
+          onClick={() => { setActiveTab('task'); setIsAddDialogOpen(true); }}
+          className="flex flex-col items-center justify-center p-3 rounded-xl bg-blue-100 text-blue-600 hover:scale-105 transition-transform"
+        >
+          <CheckSquare className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">مهمة</span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('appointment'); setIsAddDialogOpen(true); }}
+          className="flex flex-col items-center justify-center p-3 rounded-xl bg-green-100 text-green-600 hover:scale-105 transition-transform"
+        >
+          <CalendarIcon className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">موعد</span>
+        </button>
+        <button
+          onClick={() => { setActiveTab('project'); setIsAddDialogOpen(true); }}
+          className="flex flex-col items-center justify-center p-3 rounded-xl bg-teal-100 text-teal-600 hover:scale-105 transition-transform"
+        >
+          <Layers className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">مشروع</span>
+        </button>
+        <button
+          onClick={() => toast({ title: 'العادات', description: 'استخدم قسم العادات أدناه' })}
+          className="flex flex-col items-center justify-center p-3 rounded-xl bg-orange-100 text-orange-600 hover:scale-105 transition-transform"
+        >
+          <Flame className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">عادات</span>
+        </button>
+        <button
+          onClick={() => toast({ title: 'الأدوية', description: 'استخدم قسم الأدوية أدناه' })}
+          className="flex flex-col items-center justify-center p-3 rounded-xl bg-purple-100 text-purple-600 hover:scale-105 transition-transform"
+        >
+          <Pill className="w-5 h-5 mb-1" />
+          <span className="text-[10px] font-medium">أدوية</span>
+        </button>
       </div>
 
       {/* Stats Overview */}

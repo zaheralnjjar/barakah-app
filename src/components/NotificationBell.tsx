@@ -43,11 +43,11 @@ export const NotificationBell = () => {
         // 1. Next Prayer Notification
         if (nextPrayer && timeUntilNext) {
             notifs.push({
-                id: `prayer-${nextPrayer}`,
-                title: `صلاة ${nextPrayer}`,
+                id: `prayer-${nextPrayer.name}`,
+                title: `صلاة ${nextPrayer.nameAr}`,
                 message: `باقي ${timeUntilNext} على الأذان`,
                 timestamp: now,
-                read: readIds.has(`prayer-${nextPrayer}`),
+                read: readIds.has(`prayer-${nextPrayer.name}`),
                 type: 'prayer',
                 icon: <Moon className="w-4 h-4 text-blue-500" />
             });
@@ -150,11 +150,15 @@ export const NotificationBell = () => {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <div className="relative">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 bg-white/10 hover:bg-white/20 text-white rounded-full">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200 rounded-full shadow-sm"
+                    >
                         <Bell className="w-5 h-5" />
                     </Button>
                     {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
+                        <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 rounded-full text-[11px] text-white flex items-center justify-center font-bold shadow-lg animate-pulse border-2 border-white">
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}

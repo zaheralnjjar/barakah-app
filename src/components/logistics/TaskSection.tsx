@@ -575,37 +575,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
     return (
         <div className="space-y-6">
-            {/* View Toggle */}
-            <div className="flex gap-2 mb-6 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto sm:mx-0 shadow-sm overflow-x-auto">
-                <button
-                    onClick={() => { setActiveTab('task'); setInternalTab('list'); }}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'list'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    📋 المهام
-                </button>
-                <button
-                    onClick={() => { setActiveTab('calendar'); setInternalTab('monthly'); }}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'monthly'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    📅 الشهري
-                </button>
-                <button
-                    onClick={() => setInternalTab('weekly')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${internalTab === 'weekly'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <CalendarDays className="w-4 h-4 inline-block ml-1" />
-                    الأسبوعي
-                </button>
-            </div>
+
 
             {/* Weekly Calendar View */}
             {internalTab === 'weekly' && (

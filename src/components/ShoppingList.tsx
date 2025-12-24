@@ -235,7 +235,7 @@ const ShoppingList = () => {
                 </div>
 
                 {/* Items List */}
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
                     {items.map((item) => (
                         <div
                             key={item.id}

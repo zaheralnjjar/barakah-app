@@ -265,7 +265,8 @@ export const DailyChecklist = () => {
                     </div>
                 </div>
 
-                <button class="back-btn no-print" onclick="window.print()" style="background: #2563eb; margin-bottom: 15px;">🖨️ طباعة</button>
+                <button class="back-btn no-print" onclick="window.close()" style="background: #f3f4f6; color: #374151; margin-bottom: 15px; margin-left: 10px;">← رجوع</button>
+                <button class="back-btn no-print" onclick="window.print()" style="background: #16a34a; margin-bottom: 15px;">🖨️ طباعة</button>
 
                 <table>
                     <tr>
@@ -351,7 +352,7 @@ export const DailyChecklist = () => {
                 </div>
 
                 {/* Checklist Items */}
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
                     {checklistItems.map(item => (
                         <div
                             key={item.id}

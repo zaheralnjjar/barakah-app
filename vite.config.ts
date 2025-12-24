@@ -287,6 +287,36 @@ export default defineConfig(({ mode }) => {
         "react-router-dom-original": "react-router-dom",
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-ui': [
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-select',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-accordion',
+            ],
+            'vendor-charts': ['recharts'],
+            'vendor-map': ['leaflet', 'react-leaflet'],
+            // Feature chunks
+            'feature-prayer': [
+              './src/components/PrayerManager.tsx',
+              './src/hooks/usePrayerTimes.ts',
+            ],
+            'feature-map': [
+              './src/components/InteractiveMap.tsx',
+              './src/components/LocationSaver.tsx',
+            ],
+          },
+        },
+      },
+    },
     define: {
       // Define environment variables for build-time configuration
       // In production, this will be false by default unless explicitly set to 'true'

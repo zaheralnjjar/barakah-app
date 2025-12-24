@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Share } from '@capacitor/share';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +11,7 @@ import {
     RefreshCw,
     Download,
     Calendar,
+    LogOut,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -30,6 +32,10 @@ const SettingsPanel = () => {
     const { syncNow, pullData, isSyncing } = useCloudSync();
     const lastSync = useAppStore(s => s.lastSync);
     const quickActions = useAppStore(s => s.quickActions);
+
+    const [showChangePassword, setShowChangePassword] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -135,32 +141,79 @@ const SettingsPanel = () => {
                             <Checkbox checked={reminders.sound} onCheckedChange={() => toggleReminder('sound')} />
                         </div>
                         {reminders.sound && (
-                            <div className="pr-4">
+                            <div className="pr-4 space-y-2">
                                 <label className="text-xs text-gray-500 block mb-1">نغمة التنبيه</label>
-                                <select
-                                    className="w-full text-sm border rounded p-1"
-                                    value={reminders.soundType || 'default'}
-                                    onChange={(e) => {
-                                        const newSound = e.target.value;
-                                        const updated = { ...reminders, soundType: newSound };
-                                        setReminders(updated);
-                                        localStorage.setItem('baraka_reminders_settings', JSON.stringify(updated));
+                                <div className="flex gap-2">
+                                    <select
+                                        className="flex-1 text-sm border rounded p-1.5"
+                                        value={reminders.soundType || 'default'}
+                                        onChange={(e) => {
+                                            const newSound = e.target.value;
+                                            const updated = { ...reminders, soundType: newSound };
+                                            setReminders(updated);
+                                            localStorage.setItem('baraka_reminders_settings', JSON.stringify(updated));
+                                        }}
+                                    >
+                                        <optgroup label="🔔 أصوات بسيطة">
+                                            <option value="default">الافتراضي</option>
+                                            <option value="beep">تنبيه رقمي</option>
+                                            <option value="bell">جرس</option>
+                                            <option value="gentle">هادئ</option>
+                                            <option value="chime">رنين</option>
+                                        </optgroup>
+                                        <optgroup label="🕌 إسلامية">
+                                            <option value="athan_short">أذان قصير</option>
+                                            <option value="takbir">تكبير</option>
+                                            <option value="bismillah">بسملة</option>
+                                        </optgroup>
+                                        <optgroup label="🎵 موسيقى">
+                                            <option value="piano">بيانو</option>
+                                            <option value="harp">قيثارة</option>
+                                            <option value="marimba">ماريمبا</option>
+                                        </optgroup>
+                                        <optgroup label="🌿 طبيعة">
+                                            <option value="bird">طيور</option>
+                                            <option value="water">ماء</option>
+                                            <option value="wind">رياح</option>
+                                        </optgroup>
+                                    </select>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="px-3"
+                                        onClick={() => {
+                                            try {
+                                                const soundType = reminders.soundType || 'default';
+                                                const audio = new Audio(`/sounds/${soundType}.mp3`);
+                                                audio.volume = (reminders.volume || 100) / 100;
+                                                audio.play().catch(e => console.log('Audio error:', e));
+                                            } catch (e) {
+                                                console.error("Audio playback failed", e);
+                                            }
+                                        }}
+                                    >
+                                        ▶️ معاينة
+                                    </Button>
+                                </div>
 
-                                        // Play demo sound
-                                        try {
-                                            const audio = new Audio(`/sounds/${newSound}.mp3`);
-                                            audio.play().catch(e => console.log('Audio error:', e));
-                                        } catch (e) {
-                                            console.error("Audio playback failed", e);
-                                        }
-                                    }}
-                                >
-                                    <option value="default">الافتراضي (بسيط)</option>
-                                    <option value="athan_short">أذان قصير</option>
-                                    <option value="beep">تنبيه رقمي</option>
-                                    <option value="bell">جرس</option>
-                                    <option value="gentle">هادئ</option>
-                                </select>
+                                {/* Volume Control */}
+                                <div className="flex items-center gap-2 mt-2">
+                                    <span className="text-xs text-gray-500">🔈</span>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={reminders.volume || 100}
+                                        onChange={(e) => {
+                                            const updated = { ...reminders, volume: parseInt(e.target.value) };
+                                            setReminders(updated);
+                                            localStorage.setItem('baraka_reminders_settings', JSON.stringify(updated));
+                                        }}
+                                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span className="text-xs text-gray-500">🔊</span>
+                                    <span className="text-xs w-8">{reminders.volume || 100}%</span>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -310,6 +363,91 @@ const SettingsPanel = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Logout Section */}
+            <Card className="border-red-100">
+                <CardContent className="pt-6 space-y-3">
+                    <Button
+                        variant="outline"
+                        className="w-full h-12 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 gap-2"
+                        onClick={() => setShowChangePassword(true)}
+                    >
+                        <Shield className="w-5 h-5" />
+                        تغيير كلمة المرور
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="w-full h-12 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 gap-2"
+                        onClick={handleLogout}
+                    >
+                        <LogOut className="w-5 h-5" />
+                        تسجيل الخروج
+                    </Button>
+                </CardContent>
+            </Card>
+
+            {/* Change Password Dialog */}
+            <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-blue-600" />
+                            تغيير كلمة المرور
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div>
+                            <Label className="text-right block mb-2">كلمة المرور الجديدة</Label>
+                            <Input
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="أدخل كلمة المرور الجديدة"
+                                className="text-right"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-right block mb-2">تأكيد كلمة المرور</Label>
+                            <Input
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="أعد إدخال كلمة المرور"
+                                className="text-right"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setShowChangePassword(false)} className="flex-1">
+                            إلغاء
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (newPassword !== confirmPassword) {
+                                    toast({ title: "خطأ", description: "كلمتا المرور غير متطابقتين", variant: "destructive" });
+                                    return;
+                                }
+                                if (newPassword.length < 6) {
+                                    toast({ title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", variant: "destructive" });
+                                    return;
+                                }
+                                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                                if (error) {
+                                    toast({ title: "خطأ", description: error.message, variant: "destructive" });
+                                } else {
+                                    toast({ title: "تم بنجاح", description: "تم تغيير كلمة المرور" });
+                                    setShowChangePassword(false);
+                                    setNewPassword('');
+                                    setConfirmPassword('');
+                                }
+                            }}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700"
+                        >
+                            تغيير
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 };

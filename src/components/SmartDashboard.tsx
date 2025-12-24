@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
+import PrayerTimesRow from '@/components/PrayerTimesRow';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
@@ -49,6 +51,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [showFinancialReport, setShowFinancialReport] = useState(false);
     const [showEventMenu, setShowEventMenu] = useState(false);
+    const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -211,128 +214,54 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     // Professional Financial Report Print
     const printFinancialReport = () => {
-        const reportDate = new Date().toLocaleDateString('ar', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        const reportDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        const html = `
-            <html dir="rtl">
+        // Clean and modern HTML template for printing
+        let html = `
+    <html dir="rtl">
             <head>
                 <title>التقرير المالي - ${reportDate}</title>
-                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
                 <style>
-                    @page { size: A4; margin: 15mm; }
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body {
-                        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-                        line-height: 1.6;
-                        color: #333;
-                        padding: 20px;
-                    }
-                    .header {
-                        text-align: center;
-                        border-bottom: 3px solid #10b981;
-                        padding-bottom: 15px;
-                        margin-bottom: 30px;
-                    }
-                    .header h1 {
-                        color: #10b981;
-                        font-size: 28px;
-                        margin-bottom: 5px;
-                    }
-                    .header .logo {
-                        font-size: 40px;
-                        margin-bottom: 10px;
-                    }
-                    .date {
-                        color: #6b7280;
-                        font-size: 14px;
-                        margin-top: 10px;
-                    }
-                    .summary-grid {
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 15px;
-                        margin-bottom: 30px;
-                    }
-                    .summary-card {
-                        padding: 20px;
-                        border-radius: 12px;
-                        text-align: center;
-                        border: 2px solid;
-                    }
-                    .summary-card.balance { background: #d1fae5; border-color: #10b981; }
-                    .summary-card.debt { background: #fee2e2; border-color: #ef4444; }
-                    .summary-card.daily { background: #dbeafe; border-color: #3b82f6; }
-                    .summary-card.expense { background: #e9d5ff; border-color: #a855f7; }
-                    .summary-card .label {
-                        font-size: 14px;
-                        color: #6b7280;
-                        margin-bottom: 8px;
-                    }
-                    .summary-card .value {
-                        font-size: 32px;
-                        font-weight: bold;
-                    }
-                    .summary-card.balance .value { color: #10b981; }
-                    .summary-card.debt .value { color: #ef4444; }
-                    .summary-card.daily .value { color: #3b82f6; }
-                    .summary-card.expense .value { color: #a855f7; }
-                    .transactions {
-                        margin-top: 30px;
-                    }
-                    .transactions h3 {
-                        color: #374151;
-                        font-size: 20px;
-                        margin-bottom: 15px;
-                        padding-bottom: 10px;
-                        border-bottom: 2px solid #e5e7eb;
-                    }
-                    .transaction-item {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 12px;
-                        margin-bottom: 8px;
-                        background: #f9fafb;
-                        border-radius: 8px;
-                        border-right: 4px solid #10b981;
-                    }
-                    .transaction-item.expense {
-                        border-right-color: #ef4444;
-                    }
-                    .transaction-desc {
-                        font-size: 14px;
-                        color: #374151;
-                    }
-                    .transaction-amount {
-                        font-weight: bold;
-                        font-size: 16px;
-                    }
-                    .transaction-amount.expense { color: #ef4444; }
-                    .transaction-amount.income { color: #10b981; }
-                    .footer {
-                        margin-top: 50px;
-                        text-align: center;
-                        color: #9ca3af;
-                        font-size: 12px;
-                        padding-top: 20px;
-                        border-top: 1px solid #e5e7eb;
-                    }
+                    body { font-family: 'Tajawal', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; margin: 0; background-color: #fff; color: #1f2937; }
+                    .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #10b981; padding-bottom: 20px; }
+                    .header h1 { margin: 0; color: #111827; font-size: 28px; }
+                    .header h2 { margin: 10px 0 0; color: #10b981; font-size: 18px; font-weight: normal; }
+                    .header .date { margin-top: 5px; color: #6b7280; font-size: 14px; }
+                    
+                    .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
+                    .summary-card { padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f9fafb; text-align: center; }
+                    .summary-card.balance { background: #ecfdf5; border-color: #d1fae5; }
+                    .summary-card.expense { background: #fff1f2; border-color: #ffe4e6; }
+                    
+                    .label { font-size: 14px; color: #4b5563; margin-bottom: 5px; }
+                    .value { font-size: 24px; font-weight: bold; color: #111827; direction: ltr; display: inline-block; }
+                    .currency { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+                    h3 { font-size: 18px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-top: 0; }
+
+                    .transactions-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+                    .transactions-table th { text-align: right; padding: 10px; background: #f3f4f6; color: #374151; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+                    .transactions-table td { padding: 10px; border-bottom: 1px solid #f3f4f6; color: #4b5563; }
+                    .transactions-table tr:last-child td { border-bottom: none; }
+                    
+                    .amount { font-weight: 600; direction: ltr; text-align: left; }
+                    .amount.income { color: #059669; }
+                    .amount.expense { color: #dc2626; }
+                    
+                    .footer { margin-top: 50px; text-align: center; color: #9ca3af; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+                    
                     @media print {
-                        body { padding: 0; }
+                        body { padding: 20px; }
                         .no-print { display: none; }
+                        .summary-card { break-inside: avoid; }
                     }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <div class="logo">🌟</div>
-                    <h1>نظام بركة لإدارة الحياة</h1>
-                    <h2 style="color: #10b981; font-size: 22px; margin-top: 10px;">التقرير المالي</h2>
+                    <h1>🌟 نظام بركة لإدارة الحياة</h1>
+                    <h2>التقرير المالي</h2>
                     <div class="date">${reportDate}</div>
                 </div>
 
@@ -340,43 +269,53 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     <div class="summary-card balance">
                         <div class="label">الرصيد الحالي</div>
                         <div class="value">${totalBalanceARS.toLocaleString()}</div>
-                        <div class="label" style="margin-top: 5px;">ARS</div>
+                        <div class="currency">ARS</div>
                     </div>
-                    <div class="summary-card debt">
+                    <div class="summary-card">
                         <div class="label">إجمالي الديون</div>
                         <div class="value">${(financeData?.total_debt || 0).toLocaleString()}</div>
-                        <div class="label" style="margin-top: 5px;">ARS</div>
+                        <div class="currency">ARS</div>
                     </div>
-                    <div class="summary-card daily">
+                    <div class="summary-card">
                         <div class="label">الحد اليومي المتاح</div>
                         <div class="value">${dailyLimitARS.toLocaleString()}</div>
-                        <div class="label" style="margin-top: 5px;">ARS</div>
+                        <div class="currency">ARS</div>
                     </div>
                     <div class="summary-card expense">
                         <div class="label">مصروف اليوم</div>
                         <div class="value">${todayExpense.toLocaleString()}</div>
-                        <div class="label" style="margin-top: 5px;">ARS</div>
+                        <div class="currency">ARS</div>
                     </div>
                 </div>
 
                 <div class="transactions">
                     <h3>📊 آخر المعاملات</h3>
-                    ${financeData?.pending_expenses && financeData.pending_expenses.length > 0
-                ? financeData.pending_expenses.slice(0, 10).map((t: any) => `
-                            <div class="transaction-item ${t.type === 'expense' ? 'expense' : 'income'}">
-                                <span class="transaction-desc">${t.description || 'معاملة'}</span>
-                                <span class="transaction-amount ${t.type === 'expense' ? 'expense' : 'income'}">
-                                    ${t.type === 'expense' ? '-' : '+'}${t.amount.toLocaleString()} ${t.currency}
-                                </span>
-                            </div>
-                        `).join('')
-                : '<p style="text-align: center; color: #9ca3af; padding: 20px;">لا توجد معاملات مسجلة</p>'
+                    <table class="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>الوصف</th>
+                                <th style="text-align: left;">المبلغ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${financeData?.pending_expenses && financeData.pending_expenses.length > 0
+                ? financeData.pending_expenses.slice(0, 15).map((t: any) => `
+                                <tr>
+                                    <td>${t.description || 'معاملة'}</td>
+                                    <td class="amount ${t.type === 'expense' ? 'expense' : 'income'}">
+                                        ${t.type === 'expense' ? '-' : '+'}${t.amount.toLocaleString()} ${t.currency}
+                                    </td>
+                                </tr>
+                            `).join('')
+                : '<tr><td colspan="2" style="text-align: center; padding: 20px; color: #9ca3af;">لا توجد معاملات مسجلة</td></tr>'
             }
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="footer">
-                    <p>طُبع في: ${new Date().toLocaleString('ar')}</p>
-                    <p style="margin-top: 5px;">✨ نظام بركة لإدارة الحياة</p>
+                    <p>تم استخراج التقرير في: ${new Date().toLocaleString('ar-EG')}</p>
+                    <p>✨ نظام بركة لإدارة الحياة</p>
                 </div>
             </body>
             </html>
@@ -498,6 +437,21 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     <span className="text-xs font-medium text-gray-600 block">{DAYS_AR[idx]}</span>
                     <span className={`text-lg font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
                 </div>
+
+                {/* Horizontal Prayers Row */}
+                {prayerTimes.find((p: any) => p.date === dateStr) && (
+                    <div className="flex items-center justify-between px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] text-emerald-800">
+                        {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((pKey) => {
+                            const pTime = prayerTimes.find((p: any) => p.date === dateStr)?.[pKey];
+                            return (
+                                <div key={pKey} className="flex flex-col items-center">
+                                    <span className="opacity-70">{pKey === 'fajr' ? 'فجر' : pKey === 'dhuhr' ? 'ظهر' : pKey === 'asr' ? 'عصر' : pKey === 'maghrib' ? 'مغرب' : 'عشاء'}</span>
+                                    <span className="font-bold">{pTime}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
                 {/* Items inside day - scrollable */}
                 <div className={`${fullWidth ? 'h-[60px]' : 'h-[100px]'} overflow-y-auto p-2 space-y-1.5`}>
                     {allItems.slice(0, 10).map((item, i) => {
@@ -591,68 +545,63 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <div className="bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100">
                 <div className="flex items-center justify-between gap-3">
-                    {/* Date Info - Single Box */}
-                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[130px]">
+                    {/* Date Info - Right Side */}
+                    <div className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[120px]">
                         <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
                         <div className="border-t border-emerald-300 my-1"></div>
                         <span className="text-xs block">{hijriDate}</span>
                     </div>
 
-                    {/* Logo & Actions */}
-                    <div className="flex items-center gap-2">
-                        <div className="text-right">
-                            <h1 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">البركة</h1>
-                            <span className="text-[10px] text-gray-400 hidden sm:block">Barakah Life</span>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
-                            onClick={handleLogout}
-                            title="تسجيل الخروج"
-                        >
-                            <LogOut className="w-4 h-4" />
-                        </Button>
+                    {/* Logo - Centered & Larger */}
+                    <div className="flex-1 text-center">
+                        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">البركة</h1>
+                        <span className="text-xs text-gray-400">Barakah Life</span>
+                    </div>
+
+                    {/* Notification Bell - Left Side */}
+                    <div className="flex items-center">
+                        <NotificationBell />
                     </div>
                 </div>
             </div>
 
             {/* ===== 2. FINANCIAL SUMMARY ===== */}
-            <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all" onClick={() => onNavigateToTab('finance')}>
-                <CardContent className="p-4">
-                    <div className="grid grid-cols-4 md:grid-cols-7 gap-2 text-center">
-                        {/* Balance */}
-                        <div className="col-span-1 p-2 bg-emerald-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
-                            <span className="text-[10px] text-gray-500 leading-none">الرصيد</span>
-                            <span className="text-sm md:text-lg font-bold text-emerald-600 tabular-nums leading-none">{totalBalanceARS.toLocaleString()}</span>
-                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(totalBalanceARS / exchangeRate).toLocaleString() : '--'}</span>
+            <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden" onClick={() => onNavigateToTab('finance')}>
+                <CardContent className="p-0">
+                    {/* Header Row - Compact */}
+                    <div className="grid grid-cols-3 bg-gradient-to-l from-emerald-500 to-teal-500 text-center">
+                        <div className="py-1.5 px-1 border-l border-white/20">
+                            <span className="text-xs font-bold text-white">مصروف اليوم</span>
                         </div>
-                        {/* Daily Limit */}
-                        <div className="col-span-1 p-2 bg-blue-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
-                            <span className="text-[10px] text-gray-500 leading-none">الحد اليومي</span>
-                            <span className="text-sm md:text-lg font-bold text-blue-600 tabular-nums leading-none">{dailyLimitARS.toLocaleString()}</span>
-                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(dailyLimitARS / exchangeRate).toLocaleString() : '--'}</span>
+                        <div className="py-1.5 px-1 border-l border-white/20">
+                            <span className="text-xs font-bold text-white">الحد اليومي</span>
                         </div>
-                        {/* Today Expense */}
-                        <div className="col-span-1 p-2 bg-red-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
-                            <span className="text-[10px] text-gray-500 leading-none">مصروف اليوم</span>
-                            <span className="text-sm md:text-lg font-bold text-red-600 tabular-nums leading-none">{todayExpense.toLocaleString()}</span>
-                            <span className="text-[10px] text-gray-400 leading-none" dir="ltr">~${exchangeRate ? Math.round(todayExpense / exchangeRate).toLocaleString() : '--'}</span>
+                        <div className="py-1.5 px-1">
+                            <span className="text-xs font-bold text-white">الرصيد</span>
                         </div>
-                        {/* Remaining Days */}
-                        <div className="col-span-1 p-2 bg-purple-50 rounded-xl h-24 flex flex-col items-center justify-center gap-1">
-                            <span className="text-[10px] text-gray-500 leading-none">الأيام المتبقية</span>
-                            <span className="text-sm md:text-lg font-bold text-purple-600 leading-none">{remainingDays}</span>
-                            <span className="text-[10px] text-transparent leading-none">.</span>
+                    </div>
+                    {/* Values Row - Local Currency - Compact */}
+                    <div className="grid grid-cols-3 bg-emerald-50 text-center">
+                        <div className="py-2 px-1 border-l border-emerald-100">
+                            <span className="text-lg font-bold text-gray-900 tabular-nums">{todayExpense.toLocaleString()}</span>
                         </div>
-                        {/* Action Buttons - Hidden on mobile, shown on larger screens */}
-                        <div className="hidden md:flex col-span-3 items-center justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); setShowAddDialog('expense'); }}>
-                                <Plus className="w-4 h-4" /> إضافة مصروف
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={(e) => { e.stopPropagation(); setShowFinancialReport(true); }}>
-                                <FileText className="w-4 h-4" /> تقرير مالي
-                            </Button>
+                        <div className="py-2 px-1 border-l border-emerald-100">
+                            <span className="text-lg font-bold text-gray-900 tabular-nums">{dailyLimitARS.toLocaleString()}</span>
+                        </div>
+                        <div className="py-2 px-1">
+                            <span className="text-lg font-bold text-emerald-700 tabular-nums">{totalBalanceARS.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    {/* Values Row - USD - Compact */}
+                    <div className="grid grid-cols-3 bg-gray-50 text-center border-t border-emerald-100">
+                        <div className="py-1 px-1 border-l border-emerald-100">
+                            <span className="text-sm font-medium text-gray-500" dir="ltr">${exchangeRate ? Math.round(todayExpense / exchangeRate).toLocaleString() : '--'}</span>
+                        </div>
+                        <div className="py-1 px-1 border-l border-emerald-100">
+                            <span className="text-sm font-medium text-gray-500" dir="ltr">${exchangeRate ? Math.round(dailyLimitARS / exchangeRate).toLocaleString() : '--'}</span>
+                        </div>
+                        <div className="py-1 px-1">
+                            <span className="text-sm font-medium text-emerald-600" dir="ltr">${exchangeRate ? Math.round(totalBalanceARS / exchangeRate).toLocaleString() : '--'}</span>
                         </div>
                     </div>
                 </CardContent>
@@ -663,7 +612,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 {[
                     { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => setShowAddDialog('note') },
                     { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => setShowAddDialog('shopping') },
-                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowAddDialog('location') },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => setShowAddDialog('expense') },
                     { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
                 ].map((item, idx) => (
@@ -710,6 +659,43 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </DialogContent>
             </Dialog>
 
+            {/* Location Type Selection Menu */}
+            <Dialog open={showLocationMenu} onOpenChange={setShowLocationMenu}>
+                <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center flex items-center justify-center gap-2">
+                            <MapPin className="w-5 h-5 text-green-500" />
+                            الموقع
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-3 py-4">
+                        <button
+                            onClick={() => { setShowLocationMenu(false); setShowAddDialog('location'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-green-100 text-green-600 hover:scale-105 transition-transform"
+                        >
+                            <Navigation className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">خريطة</span>
+                            <span className="text-[10px] text-gray-500">تحديد وبحث وحفظ</span>
+                        </button>
+                        <button
+                            onClick={() => { setShowLocationMenu(false); onNavigateToTab('map'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-blue-100 text-blue-600 hover:scale-105 transition-transform"
+                        >
+                            <MapPin className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">المواقع</span>
+                            <span className="text-[10px] text-gray-500">المواقع المحفوظة</span>
+                        </button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ===== PRAYER TIMES (TODAY) ===== */}
+            <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                <CardContent className="p-4">
+                    <PrayerTimesRow showTimeUntilNext={true} />
+                </CardContent>
+            </Card>
+
             {/* ===== 4. DAILY REPORT ===== */}
             <Card className="border-blue-100 shadow-sm">
                 <CardContent className="p-4">
@@ -728,7 +714,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {/* Medications */}
-                                {todayMedications.slice(0, 4).map((med, i) => (
+                                {todayMedications.map((med, i) => (
                                     <tr key={`med-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
@@ -738,7 +724,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Appointments */}
-                                {todayAppointments.slice(0, 4).map((apt, i) => (
+                                {todayAppointments.map((apt, i) => (
                                     <tr key={`apt-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input
@@ -758,7 +744,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Tasks */}
-                                {todayTasks.slice(0, 4).map((task, i) => (
+                                {todayTasks.map((task, i) => (
                                     <tr key={`task-${i}`} className={`hover:bg-gray-50 ${(task as any).isCompleted ? 'opacity-50 line-through' : ''}`}>
                                         <td className="py-2 px-1 text-center">
                                             <input
@@ -775,7 +761,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                     </tr>
                                 ))}
                                 {/* Habits */}
-                                {todayHabits.slice(0, 4).map((habit, i) => (
+                                {todayHabits.map((habit, i) => (
                                     <tr key={`habit-${i}`} className="hover:bg-gray-50">
                                         <td className="py-2 px-1 text-center">
                                             <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
@@ -839,59 +825,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </CardContent>
             </Card>
 
-            {/* ===== PRAYER TIMES (TODAY) ===== */}
-            <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
-                <CardContent className="p-4">
-                    <div className="flex justify-center items-center mb-2">
-                        {nextPrayer ? (
-                            <div className="text-center font-bold text-teal-800 text-xs flex items-center justify-center gap-1 whitespace-nowrap">
-                                <span className="text-teal-600">الصلاة القادمة:</span>
-                                <span>{(nextPrayer as any)?.nameAr || (typeof nextPrayer === 'string' ? nextPrayer : '')}</span>
-                                <span className="text-gray-300 mx-1">|</span>
-                                <span className="text-orange-600 bg-orange-50 px-1 rounded">{timeUntilNext}</span>
-                            </div>
-                        ) : (
-                            <div className="text-center text-gray-500 text-xs">جاري تحميل أوقات الصلاة...</div>
-                        )}
-                    </div>
 
-                    <div className="grid grid-cols-5 gap-2 text-center">
-                        {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((prayerKey) => {
-                            const prayerNameMap: Record<string, string> = { 'fajr': 'الفجر', 'dhuhr': 'الظهر', 'asr': 'العصر', 'maghrib': 'المغرب', 'isha': 'العشاء' };
-                            const nextPrayerName = (nextPrayer as any)?.name?.toLowerCase() || '';
-                            const isNext = nextPrayerName === prayerKey;
-
-                            // Find time with case-insensitive search
-                            const pTime = prayerTimes.find(p => p.name.toLowerCase() === prayerKey)?.time || '--:--';
-
-                            return (
-                                <div key={prayerKey} className={`flex flex-col items-center justify-center p-2 rounded-lg border h-16 ${isNext ? 'bg-teal-100 border-teal-300 ring-1 ring-teal-400' : 'bg-white border-gray-100'}`}>
-                                    <span className="text-xs text-gray-500 block mb-1">{prayerNameMap[prayerKey]}</span>
-                                    <span className="font-bold text-gray-800 text-sm" dir="ltr">{pTime}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
-
-
-
-            {/* ===== 6. MAPS SECTION ===== */}
-            < Card className="border-green-100 shadow-sm" >
-                <CardContent className="p-4">
-                    <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                        <MapPin className="w-5 h-5 text-green-500" />
-                        الخرائط
-                    </h3>
-
-                    {/* Map */}
-                    <div className="h-[300px] md:h-[400px] rounded-xl overflow-hidden border border-gray-200">
-
-                        <InteractiveMap />
-                    </div>
-                </CardContent>
-            </Card >
 
             {/* ===== UNIFIED PRINT DIALOG ===== */}
             < Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog} >

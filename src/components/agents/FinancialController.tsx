@@ -408,6 +408,57 @@ const FinancialController = () => {
     }
   };
 
+  const updateTransaction = async (id: number, updates: any) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const oldTransaction = financeData.pending_expenses.find((t: any) => t.id === id);
+      if (!oldTransaction) return;
+
+      // Calculate balance adjustments
+      let balanceARS = financeData.current_balance_ars;
+      let balanceUSD = financeData.current_balance_usd;
+
+      // Reverse old transaction effect
+      const oldAmount = parseFloat(oldTransaction.amount);
+      if (oldTransaction.currency === 'ARS') {
+        balanceARS += oldTransaction.type === 'expense' ? oldAmount : -oldAmount;
+      } else {
+        balanceUSD += oldTransaction.type === 'expense' ? oldAmount : -oldAmount;
+      }
+
+      // Apply new transaction effect
+      const newAmount = parseFloat(updates.amount);
+      if (updates.currency === 'ARS') {
+        balanceARS -= updates.type === 'expense' ? newAmount : -newAmount;
+      } else {
+        balanceUSD -= updates.type === 'expense' ? newAmount : -newAmount;
+      }
+
+      // Update transaction in array
+      const updatedExpenses = financeData.pending_expenses.map((t: any) =>
+        t.id === id ? { ...t, ...updates } : t
+      );
+
+      const { error } = await supabase
+        .from('finance_data_2025_12_18_18_42')
+        .update({
+          current_balance_ars: balanceARS,
+          current_balance_usd: balanceUSD,
+          pending_expenses: updatedExpenses,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      loadFinanceData();
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+    }
+  };
+
   // Only updates rate value, source is fixed
   const updateExchangeRate = async (newRate: string) => {
     setUpdating(true);
@@ -683,7 +734,7 @@ const FinancialController = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[250px] overflow-y-auto">
               {savingsGoals.map(goal => (
                 <div key={goal.id} className="space-y-1">
                   <div className="flex justify-between text-sm">
@@ -732,7 +783,7 @@ const FinancialController = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[250px] overflow-y-auto">
               {budgets.map((budget, idx) => {
                 // Calculate spent for this category (mock calculation for now or needs transaction filtering)
                 // For real implementation we filter transactions for current month & category
@@ -779,7 +830,7 @@ const FinancialController = () => {
           {subscriptions.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">لا توجد اشتراكات مسجلة</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[250px] overflow-y-auto">
               {subscriptions.map(sub => (
                 <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
@@ -882,7 +933,7 @@ const FinancialController = () => {
           {recurringExpenses.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">لا توجد مصروفات متكررة</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[250px] overflow-y-auto">
               {recurringExpenses.map(expense => (
                 <div
                   key={expense.id}
@@ -1104,6 +1155,92 @@ const FinancialController = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Transaction Dialog */}
+      <Dialog open={!!editingTransaction} onOpenChange={(open) => !open && setEditingTransaction(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-right flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-orange-500" />
+              تعديل المعاملة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex gap-2">
+              <Button
+                variant={newTransaction.type === 'expense' ? 'default' : 'outline'}
+                onClick={() => setNewTransaction({ ...newTransaction, type: 'expense' })}
+                className={`flex-1 ${newTransaction.type === 'expense' ? 'bg-rose-500 hover:bg-rose-600' : ''}`}
+              >
+                مصروف
+              </Button>
+              <Button
+                variant={newTransaction.type === 'income' ? 'default' : 'outline'}
+                onClick={() => setNewTransaction({ ...newTransaction, type: 'income' })}
+                className={`flex-1 ${newTransaction.type === 'income' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
+              >
+                دخل
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="المبلغ"
+                value={newTransaction.amount}
+                onChange={e => setNewTransaction({ ...newTransaction, amount: e.target.value })}
+                className="flex-1"
+              />
+              <select
+                value={newTransaction.currency}
+                onChange={e => setNewTransaction({ ...newTransaction, currency: e.target.value })}
+                className="border rounded px-3"
+              >
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+            <Input
+              placeholder="الوصف"
+              value={newTransaction.description}
+              onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
+              className="text-right"
+            />
+            <select
+              value={newTransaction.category}
+              onChange={e => setNewTransaction({ ...newTransaction, category: e.target.value })}
+              className="w-full border rounded p-2 text-right"
+            >
+              {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map((cat: string) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setEditingTransaction(null)} className="flex-1">
+              إلغاء
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!editingTransaction) return;
+                setUpdating(true);
+                await updateTransaction(editingTransaction.id, {
+                  amount: newTransaction.amount,
+                  type: newTransaction.type,
+                  category: newTransaction.category,
+                  description: newTransaction.description,
+                  currency: newTransaction.currency
+                });
+                setEditingTransaction(null);
+                setUpdating(false);
+                toast({ title: 'تم تحديث المعاملة' });
+              }}
+              className="flex-1 bg-orange-500 hover:bg-orange-600"
+              disabled={updating}
+            >
+              {updating ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Exchange Rate - Automated */}
       <Card>
@@ -1168,7 +1305,7 @@ const FinancialController = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[350px] overflow-y-auto">
             {getFilteredTransactions().length === 0 ? (
               <p className="text-center text-gray-400 py-4">لا توجد معاملات</p>
             ) : (
@@ -1206,12 +1343,21 @@ const FinancialController = () => {
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
-                      <div className="absolute left-0 top-full mt-1 bg-white shadow-lg rounded-lg border py-1 hidden group-hover:block z-10 min-w-[100px]">
+                      <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg border py-1 hidden group-hover:block z-50 min-w-[120px]">
                         <button
                           className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
-                          onClick={() => toast({ title: 'قريباً', description: 'تعديل المعاملة قيد التطوير' })}
+                          onClick={() => {
+                            setEditingTransaction(t);
+                            setNewTransaction({
+                              amount: t.amount,
+                              type: t.type,
+                              category: t.category,
+                              description: t.description || '',
+                              currency: t.currency
+                            });
+                          }}
                         >
-                          <Pencil className="w-3 h-3 text-gray-500" /> تعديل
+                          <Pencil className="w-3 h-3 text-orange-500" /> تعديل
                         </button>
                         <button
                           className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
