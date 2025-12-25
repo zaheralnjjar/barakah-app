@@ -17,6 +17,7 @@ import {
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PrayerTimesRow from '@/components/PrayerTimesRow';
+import PomodoroTimer from '@/components/PomodoroTimer';
 import { Card, CardContent } from '@/components/ui/card';
 
 // New Components
@@ -42,7 +43,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { tasks, addTask, refreshTasks } = useTasks();
 
     const { appointments, refreshAppointments } = useAppointments();
-    const { saveParking, getParkingOnly } = useLocations();
+    const { saveParking, getParkingOnly, deleteLocation } = useLocations();
 
     const [parkingDuration, setParkingDuration] = useState<string | null>(null);
     const [latestParking, setLatestParking] = useState<any>(null);
@@ -92,6 +93,15 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [getParkingOnly]);
+
+    const stopParking = async () => {
+        if (latestParking) {
+            await deleteLocation(latestParking.id);
+            setParkingDuration(null);
+            setLatestParking(null);
+            toast({ title: '🛑 تم إيقاف المؤقت وحذف الموقف' });
+        }
+    };
 
     // Sync data to Android Widget
     useEffect(() => {
@@ -301,30 +311,43 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <DashboardHeader currentDate={currentDate} />
 
-            {/* ===== PARKING TIMER ===== */}
+            {/* ===== PARKING TIMER (Enhanced) ===== */}
             {parkingDuration && latestParking && (
-                <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between shadow-sm animate-fade-in relative overflow-hidden">
+                <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 shadow-sm animate-fade-in relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-                    <div className="flex items-center gap-3">
-                        <div className="bg-orange-100 p-2 rounded-full animate-pulse">
-                            <Clock className="w-5 h-5 text-orange-600" />
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-orange-100 p-2 rounded-full animate-pulse">
+                                <Clock className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <p className="text-xs text-orange-800 font-bold mb-0.5">مدة الوقوف</p>
+                                <p className="text-xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-xs text-orange-800 font-bold mb-0.5">مدة الوقوف</p>
-                            <p className="text-xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
-                            <p className="text-[10px] text-orange-600/70 mt-1 truncate max-w-[150px]">{latestParking.title}</p>
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={stopParking}
+                                className="h-8 px-3 text-xs"
+                            >
+                                إيقاف 🛑
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-xs gap-1"
+                                onClick={() => {
+                                    // Use Geo intent for better mobile support or maps url
+                                    const url = latestParking.url || `https://www.google.com/maps/search/?api=1&query=${latestParking.lat},${latestParking.lng}`;
+                                    window.open(url, '_blank');
+                                }}
+                            >
+                                ملاحة 🧭
+                            </Button>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 px-3 text-orange-700 hover:bg-orange-100 hover:text-orange-900 gap-1"
-                        onClick={() => {
-                            if (latestParking.url) window.open(latestParking.url, '_blank');
-                        }}
-                    >
-                        موقع السيارة 📍
-                    </Button>
+                    <p className="text-[10px] text-orange-600/70 truncate text-right pr-1">{latestParking.title}</p>
                 </div>
             )}
 
@@ -345,6 +368,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     <PrayerTimesRow showTimeUntilNext={true} />
                 </CardContent>
             </Card>
+
+            {/* ===== POMODORO TIMER ===== */}
+            <PomodoroTimer />
 
             {/* ===== 4. DAILY REPORT ===== */}
             <DailyReportCard
