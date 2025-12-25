@@ -385,6 +385,9 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
         }
     };
 
+    // Prevent empty popup for settings/sync actions (Toast only)
+    if (type === 'settings' || type === 'settings_sync') return null;
+
     return (
         <Dialog open={!!type} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-[90%] sm:max-w-[450px]">
