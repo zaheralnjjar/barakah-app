@@ -7,7 +7,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useLocations } from '@/hooks/useLocations';
 import FinancialTrendChart from '@/components/FinancialTrendChart';
-import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator } from 'lucide-react';
+import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator, Share2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface NavSummaryDialogsProps {
@@ -71,8 +71,13 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
         ].filter(d => d.value > 0);
     }, [tasks, habits, appointments]);
 
+
+
     // Render Content based on Type
     const renderContent = () => {
+        const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const todayStr = new Date().toISOString().split('T')[0];
+
         switch (type) {
             case 'mohamed': // Finance
                 return (
@@ -124,168 +129,65 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                     </div>
                 );
 
-            case 'dashboard': // Home Summary
-                const today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                const nextAppt = appointments
-                    .filter(a => {
-                        const apptDate = new Date(`${a.date}T${a.time}`);
-                        return apptDate > new Date();
-                    })
-                    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0];
-
-                const todayStr = new Date().toISOString().split('T')[0];
-
+            case 'map':
                 return (
-                    <div className="space-y-4 text-center">
-                        <div className="bg-primary/10 p-4 rounded-lg">
-                            <h3 className="font-bold text-primary text-lg">{today}</h3>
-                            <p className="text-sm text-gray-600 mt-1">ملخص يومك</p>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <MapPin className="w-6 h-6 text-blue-500" />
+                            <h3 className="font-bold text-lg">المواقع المحفوظة</h3>
                         </div>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                    <CheckSquare className="w-4 h-4 text-blue-500" />
-                                    <span>المهام المتبقية</span>
-                                </div>
-                                <span className="font-bold">{tasks.filter(t => t.progress < 100).length}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                    <Target className="w-4 h-4 text-amber-500" />
-                                    <span>الأهداف المعلقة</span>
-                                </div>
-                                <span className="font-bold">{habits.filter(h => !(h.history && h.history[todayStr])).length}</span>
-                            </div>
-                            {nextAppt && (
-                                <div className="bg-purple-50 p-3 rounded-lg text-right">
-                                    <p className="text-xs text-purple-600 mb-1">الموعد التالي:</p>
-                                    <p className="font-bold text-purple-800">{nextAppt.title}</p>
-                                    <p className="text-sm text-purple-700">{nextAppt.time} - {nextAppt.location || 'بدون موقع'}</p>
-                                </div>
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                            {locations.length > 0 ? (
+                                locations.map((loc) => (
+                                    <div key={loc.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-full ${loc.category === 'mosque' ? 'bg-emerald-100 text-emerald-600' :
+                                                    loc.category === 'home' ? 'bg-blue-100 text-blue-600' :
+                                                        loc.category === 'work' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
+                                                }`}>
+                                                <MapPin className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-sm">{loc.title}</p>
+                                                <p className="text-[10px] text-gray-500">{loc.address || 'لا يوجد عنوان'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank')}
+                                                className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+                                                title="ملاحة"
+                                            >
+                                                <Target className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (navigator.share) {
+                                                        navigator.share({
+                                                            title: loc.title,
+                                                            text: `موقع ${loc.title}`,
+                                                            url: `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`
+                                                        });
+                                                    } else {
+                                                        navigator.clipboard.writeText(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`);
+                                                    }
+                                                }}
+                                                className="p-2 bg-purple-100 text-purple-600 rounded-full hover:bg-purple-200 transition-colors"
+                                                title="مشاركة"
+                                            >
+                                                <Share2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center text-gray-500 py-4">لا توجد مواقع محفوظة</p>
                             )}
                         </div>
                     </div>
                 );
 
-            case 'prayer': // Prayer Times
-                if (!prayerTimes) return <Loader2 className="animate-spin mx-auto" />;
-                return (
-                    <div className="space-y-4">
-                        <div className="bg-emerald-50 p-4 rounded-lg text-center">
-                            <p className="text-emerald-800 font-medium">الصلاة القادمة</p>
-                            <h2 className="text-2xl font-bold text-emerald-600 mt-1">{nextPrayer ? nextPrayer.nameAr : '-'}</h2>
-                            <p className="text-emerald-700 mt-2 dir-ltr">{timeUntilNext}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-center text-sm">
-                            {prayerTimes.filter(p => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(p.name) || ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(p.name)).map((prayer) => (
-                                <div key={prayer.name} className="flex justify-between p-2 bg-gray-50 rounded border border-gray-100">
-                                    <span>{prayer.nameAr}</span>
-                                    <span className="font-mono font-bold text-primary">{prayer.time.replace(' (WT)', '')}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-
-            case 'map': // Saved Locations
-                return (
-                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                        {locations.length === 0 ? (
-                            <p className="text-center text-gray-500 py-4">لا توجد مواقع محفوظة</p>
-                        ) : (
-                            locations.map((loc) => (
-                                <div key={loc.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <MapPin className="w-5 h-5 text-red-500 mt-1 shrink-0" />
-                                    <div>
-                                        <p className="font-bold text-gray-800">{loc.title}</p>
-                                        <p className="text-xs text-gray-500 line-clamp-2">{loc.address}</p>
-                                        {loc.category && (
-                                            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 bg-gray-200 rounded-full text-gray-600">
-                                                {loc.category}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                );
-
-            case 'home_summary': // General Summary (All Sections) requested by user
-                const todaySummary = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                const nextApptSummary = appointments
-                    .filter(a => {
-                        const apptDate = new Date(`${a.date}T${a.time}`);
-                        return apptDate > new Date();
-                    })
-                    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0];
-
-                const financeBal = financeData?.current_balance || '---';
-
-                return (
-                    <div className="space-y-4">
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl text-white text-center shadow-lg">
-                            <h3 className="font-bold text-lg">{todaySummary}</h3>
-                            <p className="opacity-90 text-sm mt-1">تقرير شامل</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                                <h4 className="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">
-                                    <Moon className="w-3 h-3" /> الصلاة القادمة
-                                </h4>
-                                <div className="text-center">
-                                    <span className="block text-xl font-bold text-emerald-600">{nextPrayer ? nextPrayer.nameAr : '-'}</span>
-                                    <span className="text-xs text-emerald-500 dir-ltr">{timeUntilNext}</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                <h4 className="font-bold text-blue-800 text-sm mb-2 flex items-center gap-2">
-                                    <CheckSquare className="w-3 h-3" /> المهام
-                                </h4>
-                                <div className="flex justify-around text-center">
-                                    <div>
-                                        <span className="block text-lg font-bold text-blue-600">{tasks.filter(t => t.progress === 100).length}</span>
-                                        <span className="text-[10px] text-blue-400">منجز</span>
-                                    </div>
-                                    <div>
-                                        <span className="block text-lg font-bold text-red-500">{tasks.filter(t => t.progress < 100).length}</span>
-                                        <span className="text-[10px] text-red-400">متبقي</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                                <h4 className="font-bold text-purple-800 text-sm mb-2 flex items-center gap-2">
-                                    <Calendar className="w-3 h-3" /> الموعد القادم
-                                </h4>
-                                {nextApptSummary ? (
-                                    <div className="text-sm">
-                                        <p className="font-bold text-purple-700 truncate">{nextApptSummary.title}</p>
-                                        <p className="text-xs text-purple-500 font-mono">{nextApptSummary.time}</p>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-center text-purple-400 py-2">لا توجد مواعيد</p>
-                                )}
-                            </div>
-
-                            <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
-                                <h4 className="font-bold text-amber-800 text-sm mb-2 flex items-center gap-2">
-                                    <Calculator className="w-3 h-3" /> الرصيد
-                                </h4>
-                                <div className="text-center">
-                                    <span className="block text-lg font-bold text-amber-600 font-mono">{financeBal}</span>
-                                    <span className="text-[10px] text-amber-400">ريال</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-
-            case 'calendar_weekly': // Weekly Tasks & Appointments
+            case 'calendar_weekly':
                 const startOfWeek = new Date();
                 const endOfWeek = new Date();
                 endOfWeek.setDate(endOfWeek.getDate() + 7);
@@ -303,6 +205,11 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
 
                 return (
                     <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <Calendar className="w-6 h-6 text-purple-500" />
+                            <h3 className="font-bold text-lg">أسبوعك القادم</h3>
+                        </div>
+
                         {/* Weekly Tasks Section */}
                         <div className="space-y-2">
                             <div className="bg-blue-50 p-3 rounded-lg flex justify-between items-center">
@@ -315,7 +222,11 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                             ) : (
                                 <div className="space-y-2">
                                     {weeklyTasks.map((task, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm">
+                                        <div
+                                            key={i}
+                                            onClick={() => { onClose(); const event = new CustomEvent('navigate-tab', { detail: 'productivity' }); window.dispatchEvent(event); }}
+                                            className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm cursor-pointer hover:bg-blue-50 transition-colors"
+                                        >
                                             <div className={`w-3 h-3 rounded-full ${task.progress === 100 ? 'bg-green-500' : 'bg-gray-300'}`} />
                                             <div className="flex-1">
                                                 <p className={`font-bold text-sm ${task.progress === 100 ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</p>
@@ -347,7 +258,11 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                             ) : (
                                 <div className="space-y-2">
                                     {weeklyAppointments.map((appt, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm">
+                                        <div
+                                            key={i}
+                                            onClick={() => { onClose(); const event = new CustomEvent('navigate-tab', { detail: 'appointments' }); window.dispatchEvent(event); }}
+                                            className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm cursor-pointer hover:bg-purple-50 transition-colors"
+                                        >
                                             <div className="w-1 h-8 bg-purple-500 rounded-full" />
                                             <div className="flex-1">
                                                 <p className="font-bold text-sm text-gray-800">{appt.title}</p>
@@ -371,8 +286,76 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                     </div>
                 );
 
+            case 'prayer':
+                return (
+                    <div className="space-y-4">
+                        <div className="bg-emerald-50 p-4 rounded-lg text-center">
+                            <p className="text-emerald-800 font-medium">الصلاة القادمة</p>
+                            <h2 className="text-2xl font-bold text-emerald-600 mt-1">{nextPrayer ? nextPrayer.nameAr : '-'}</h2>
+                            <p className="text-emerald-700 mt-2 dir-ltr">{timeUntilNext}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-center text-sm">
+                            {prayerTimes.filter(p => ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].includes(p.name) || ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(p.name)).map((prayer) => (
+                                <div key={prayer.name} className="flex justify-between p-2 bg-gray-50 rounded border border-gray-100">
+                                    <span>{prayer.nameAr}</span>
+                                    <span className="font-mono font-bold text-primary">{prayer.time.replace(' (WT)', '')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
+            case 'dashboard': // Home Summary
+            case 'home_summary':
+                const nextApptSummary = appointments
+                    .filter(a => {
+                        const apptDate = new Date(`${a.date}T${a.time}`);
+                        return apptDate > new Date();
+                    })
+                    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0];
+                const financeBal = financeData?.current_balance || '---';
+
+                return (
+                    <div className="space-y-4 text-center">
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl text-white text-center shadow-lg">
+                            <h3 className="font-bold text-lg">{today}</h3>
+                            <p className="opacity-90 text-sm mt-1">تقرير شامل</p>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-3 bg-blue-50 rounded-lg flex flex-col items-center">
+                                    <span className="text-xl font-bold text-blue-600">{tasks.filter(t => t.progress < 100).length}</span>
+                                    <span className="text-xs text-gray-500">مهام متبقية</span>
+                                </div>
+                                <div className="p-3 bg-purple-50 rounded-lg flex flex-col items-center">
+                                    <span className="text-xl font-bold text-purple-600">{appointments.filter(a => a.date === todayStr).length}</span>
+                                    <span className="text-xs text-gray-500">مواعيد اليوم</span>
+                                </div>
+                            </div>
+
+                            {/* Goals Summary */}
+                            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                <div className="flex items-center gap-2">
+                                    <Target className="w-4 h-4 text-amber-500" />
+                                    <span>الأهداف اليومية</span>
+                                </div>
+                                <span className="font-bold text-amber-700">{habits.filter(h => h.history && h.history[todayStr]).length} / {habits.length}</span>
+                            </div>
+
+                            {/* Next Prayer or Event */}
+                            <div className="bg-emerald-50 p-3 rounded-lg text-right">
+                                <p className="text-xs text-emerald-600 mb-1">الصلاة القادمة</p>
+                                <div className="flex justify-between items-end">
+                                    <p className="font-bold text-emerald-800">{nextPrayer ? nextPrayer.nameAr : '...'}</p>
+                                    <p className="text-sm text-emerald-700 dir-ltr font-mono">{timeUntilNext}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
             default:
-                return null;
+                return <p>...</p>;
         }
     };
 

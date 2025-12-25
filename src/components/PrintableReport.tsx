@@ -119,6 +119,86 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                             </div>
                         </section>
                     )}
+
+                    {/* Medications */}
+                    {data.medications?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                                💊 الأدوية
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-red-50">
+                                        <tr>
+                                            <th className="p-3 text-red-900">الدواء</th>
+                                            <th className="p-3 text-red-900 border-r">الوقت/التكرار</th>
+                                            <th className="p-3 text-red-900 border-r">تعليمات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.medications.map((m: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium">{m.name}</td>
+                                                <td className="p-3 border-r dir-ltr text-right">{m.time || m.frequency}</td>
+                                                <td className="p-3 border-r text-gray-500">{m.instructions || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Shopping List */}
+                    {data.shopping?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-pink-700 mb-4 flex items-center gap-2">
+                                🛒 قائمة التسوق
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {data.shopping.map((item: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-2 p-2 border rounded-lg bg-pink-50/30">
+                                            <div className="w-4 h-4 border-2 border-pink-400 rounded"></div>
+                                            <span className="font-medium">{item.text || item.name}</span>
+                                            {item.quantity && <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full mr-auto">{item.quantity}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Finance / Expenses */}
+                    {data.expenses?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-emerald-700 mb-4 flex items-center gap-2">
+                                💰 المصاريف والمالية
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-emerald-50">
+                                        <tr>
+                                            <th className="p-3 text-emerald-900">البند</th>
+                                            <th className="p-3 text-emerald-900 border-r">المبلغ</th>
+                                            <th className="p-3 text-emerald-900 border-r">التاريخ</th>
+                                            <th className="p-3 text-emerald-900 border-r">التصنيف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.expenses.map((e: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium">{e.description || e.category}</td>
+                                                <td className="p-3 border-r font-bold text-emerald-600 dir-ltr text-right">{e.amount} {e.currency}</td>
+                                                <td className="p-3 border-r text-gray-500">{e.date ? new Date(e.date).toLocaleDateString('ar-EG') : '-'}</td>
+                                                <td className="p-3 border-r">{e.category}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
                 </div>
             ) : (
                 // Timeline View

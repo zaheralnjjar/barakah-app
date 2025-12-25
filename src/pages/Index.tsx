@@ -250,14 +250,36 @@ const Index = () => {
           onNavigate={handleNavChange}
           onLongPress={(id) => {
             if (id === 'settings_sync') {
-              // Direct Sync Trigger
+              // Silent Sync Trigger with Toast Feedback
               if (navigator.vibrate) navigator.vibrate(50);
+
               toast({
-                title: "مزامنة البيانات",
-                description: "جاري تحديث البيانات مع السحابة...",
-                duration: 3000
+                title: "جاري المزامنة",
+                description: "يتم تحديث البيانات مع السحابة...",
+                duration: 2000,
               });
-              syncNow();
+
+              // Construct proper async handling
+              const performSync = async () => {
+                try {
+                  await syncNow();
+                  toast({
+                    title: "تمت المزامنة",
+                    description: "تم تحديث البيانات بنجاح",
+                    className: "bg-green-50 border-green-200",
+                    duration: 3000
+                  });
+                } catch (error) {
+                  console.error("Sync failed:", error);
+                  toast({
+                    title: "فشل المزامنة",
+                    description: "يرجى التحقق من الاتصال",
+                    variant: "destructive"
+                  });
+                }
+              };
+
+              performSync();
             } else {
               setActiveSummary(id);
             }

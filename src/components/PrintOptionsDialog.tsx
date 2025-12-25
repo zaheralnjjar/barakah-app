@@ -11,10 +11,13 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { useToast } from '@/hooks/use-toast';
+import { useMedications } from '@/hooks/useMedications';
+import { useAppStore } from '@/stores/useAppStore';
 import PrintableReport from './PrintableReport';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { useRef } from 'react';
+import { useReportArchive } from '@/hooks/useReportArchive';
 
 interface PrintOptionsDialogProps {
     isOpen: boolean;
@@ -39,6 +42,8 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
     const { appointments } = useAppointments();
     const { habits } = useHabits();
     const { prayerTimes } = usePrayerTimes();
+    const { medications } = useMedications();
+    const { finances } = useAppStore();
     const { toast } = useToast();
     const reportRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -47,74 +52,35 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
     const [startDate, setStartDate] = useState<string>(currentDate.toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState<string>(currentDate.toISOString().split('T')[0]);
 
-    // Update active dates when dialog opens or currentDate changes
+    // Update active dates when dialog opens
     React.useEffect(() => {
-        if (isOpen && currentDate) {
-            const d = currentDate.toISOString().split('T')[0];
+        if (isOpen) {
+            // Fix: Use local date instead of UTC to avoid "tomorrow" bug late at night
+            const now = currentDate || new Date();
+            // Create local date string YYYY-MM-DD manually to avoid timezone shifts
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const d = `${year}-${month}-${day}`;
+
             setStartDate(d);
             setEndDate(d);
         }
-    }, [isOpen, currentDate]);
+    }, [isOpen]); // Remove currentDate checks to prevent resetting on every render
 
 
-    const handlePrint = async () => {
+    const { saveReport, reports, deleteReport } = useReportArchive();
+    const [activeTab, setActiveTab] = useState<'create' | 'archive'>('create');
+
+    const handleGenerate = async (saveToArchive: boolean = false) => {
         setIsGenerating(true);
         toast({ title: "جاري تحضير التقرير...", description: "يرجى الانتظار قليلاً" });
 
         const start = new Date(startDate);
         const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Include full end day
+        end.setHours(23, 59, 59, 999);
 
-        // Helper to check if date is in range
-        const isInRange = (dateStr: string) => {
-            const d = new Date(dateStr);
-            return d >= start && d <= end;
-        };
-
-        // Filter Tasks
-        const filteredTasks = selectedTypes.tasks ? tasks.filter(t => {
-            if (!t.deadline) return true; // Include undated? Or maybe just pending. Let's include all pending.
-            return isInRange(t.deadline);
-        }) : [];
-
-        // Filter Appointments
-        const filteredApps = selectedTypes.appointments ? appointments.filter(a => isInRange(a.date)) : [];
-
-        // Prayer Times for Range (Try to get from Monthly Schedule in LocalStorage)
-        let rangePrayerTimes = [];
-        if (selectedTypes.prayerTimes) {
-            try {
-                const storedSchedule = localStorage.getItem('baraka_monthly_schedule');
-                if (storedSchedule) {
-                    const schedule = JSON.parse(storedSchedule);
-                    rangePrayerTimes = schedule.filter((day: any) => isInRange(day.date)).map((d: any) => ({
-                        name: 'Show All', // Simplification for report
-                        date: d.date, // Add date to handle grouping in report
-                        fajr: d.fajr,
-                        sunrise: d.sunrise,
-                        dhuhr: d.dhuhr,
-                        asr: d.asr,
-                        maghrib: d.maghrib,
-                        isha: d.isha
-                    }));
-                } else {
-                    // Fallback to single day (Today's) if no monthly schedule
-                    rangePrayerTimes = prayerTimes.map(p => ({ ...p, date: startDate }));
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        const printData = {
-            tasks: filteredTasks,
-            appointments: filteredApps,
-            habits: selectedTypes.habits ? habits : [],
-            prayerTimes: rangePrayerTimes, // This structure differs slightly now (array of days vs array of times), PrintableReport needs adjustment
-            medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
-            shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
-            expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
-        };
-
-        // Give React a moment to render the hidden report with usage of new data
+        // Wait for render
         setTimeout(async () => {
             if (!reportRef.current) {
                 console.error("Report ref is null");
@@ -124,7 +90,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
 
             try {
                 const canvas = await html2canvas(reportRef.current, {
-                    scale: 2, // Improve quality
+                    scale: 2,
                     useCORS: true,
                     logging: false
                 } as any);
@@ -132,25 +98,21 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const imgWidth = canvas.width;
-                const imgHeight = canvas.height;
-                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-                const imgX = (pdfWidth - imgWidth * ratio) / 2;
-                const imgY = 0; // Top align primarily
-
-                // If content is long, we might need auto-paging, but let's stick to single page fit-width for now 
-                // or just standard fit. Real multi-page HTML2PDF is harder. 
-                // Given the tasks/activities usually fit in 1-2 pages, scaling to fit width is best.
-
                 const imgProps = pdf.getImageProperties(imgData);
                 const pdfNewHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfNewHeight);
-                pdf.save(`barakah-report-${currentDate.toISOString().split('T')[0]}.pdf`);
 
-                toast({ title: "تم التوليد بنجاح", description: "تم تنزيل ملف PDF" });
-                onClose();
+                if (saveToArchive) {
+                    const blob = pdf.output('blob');
+                    await saveReport(`تقرير ${startDate} إلى ${endDate}`, 'PDF', blob);
+                    toast({ title: "تم الحفظ", description: "تم حفظ التقرير في الأرشيف المحلي" });
+                } else {
+                    pdf.save(`barakah-report-${startDate}.pdf`);
+                    toast({ title: "تم التنزيل", description: "تم تنزيل ملف PDF بنجاح" });
+                }
+
+                if (!saveToArchive) onClose();
             } catch (error) {
                 console.error(error);
                 toast({ title: "خطأ", description: "حدث خطأ أثناء توليد التقرير", variant: "destructive" });
@@ -162,103 +124,178 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[500px] rtl-content">
+            <DialogContent className="sm:max-w-[600px] rtl-content max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-center text-xl text-primary font-bold flex items-center justify-center gap-2">
                         <Printer className="w-6 h-6" />
-                        طباعة التقرير
+                        التقارير والطباعة
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-6 py-4">
-                    {/* Date Range Selection */}
-                    <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        <Label className="font-bold flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-blue-500" />
-                            تحديد الفترة:
-                        </Label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label className="text-xs text-gray-500 mb-1 block">من:</Label>
-                                <Input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="text-right"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-xs text-gray-500 mb-1 block">إلى:</Label>
-                                <Input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="text-right"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* View Mode Selection */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${viewMode === 'table' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-200'}`}
-                        >
-                            <List className="w-8 h-8" />
-                            <span className="font-bold">جدول تفصيلي</span>
-                        </button>
-                        <button
-                            onClick={() => setViewMode('timeline')}
-                            className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${viewMode === 'timeline' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-purple-200'}`}
-                        >
-                            <Clock className="w-8 h-8" />
-                            <span className="font-bold">جدول زمني (ساعات)</span>
-                        </button>
-                    </div>
-
-                    {/* Data Types Selection */}
-                    <div className="space-y-3">
-                        <Label className="text-lg font-bold">محتوى التقرير:</Label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-tasks" checked={selectedTypes.tasks} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, tasks: !!c })} />
-                                <Label htmlFor="chk-tasks">المهام</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-apps" checked={selectedTypes.appointments} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, appointments: !!c })} />
-                                <Label htmlFor="chk-apps">المواعيد</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-prayers" checked={selectedTypes.prayerTimes} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, prayerTimes: !!c })} />
-                                <Label htmlFor="chk-prayers">مواقيت الصلاة</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-shopping" checked={selectedTypes.shopping} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, shopping: !!c })} />
-                                <Label htmlFor="chk-shopping">قائمة التسوق</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-meds" checked={selectedTypes.medications} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, medications: !!c })} />
-                                <Label htmlFor="chk-meds">الأدوية</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="chk-expenses" checked={selectedTypes.expenses} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, expenses: !!c })} />
-                                <Label htmlFor="chk-expenses">المصاريف</Label>
-                            </div>
-                        </div>
-                    </div>
+                <div className="flex border-b border-gray-200 mb-4">
+                    <button
+                        onClick={() => setActiveTab('create')}
+                        className={`flex-1 py-2 text-center text-sm font-bold border-b-2 transition-colors ${activeTab === 'create' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    >
+                        إنشاء تقرير جديد
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('archive')}
+                        className={`flex-1 py-2 text-center text-sm font-bold border-b-2 transition-colors ${activeTab === 'archive' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    >
+                        الأرشيف المحفوظ
+                    </button>
                 </div>
 
-                <DialogFooter className="sm:justify-center">
-                    <Button
-                        onClick={handlePrint}
-                        disabled={isGenerating}
-                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90"
-                    >
-                        <FileText className="w-4 h-4 ml-2" />
-                        {isGenerating ? 'جاري التجهيز...' : 'تجهيز وطباعة'}
-                    </Button>
-                </DialogFooter>
+                {activeTab === 'create' ? (
+                    <div className="space-y-6 py-2">
+                        {/* Date Range Selection */}
+                        <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <Label className="font-bold flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-blue-500" />
+                                تحديد الفترة:
+                            </Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs text-gray-500 mb-1 block">من:</Label>
+                                    <Input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="text-right"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-xs text-gray-500 mb-1 block">إلى:</Label>
+                                    <Input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="text-right"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* View Mode Selection */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                onClick={() => setViewMode('table')}
+                                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${viewMode === 'table' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-200'}`}
+                            >
+                                <List className="w-8 h-8" />
+                                <span className="font-bold">جدول تفصيلي</span>
+                            </button>
+                            <button
+                                onClick={() => setViewMode('timeline')}
+                                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${viewMode === 'timeline' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-purple-200'}`}
+                            >
+                                <Clock className="w-8 h-8" />
+                                <span className="font-bold">جدول زمني (ساعات)</span>
+                            </button>
+                        </div>
+
+                        {/* Data Types Selection */}
+                        <div className="space-y-3">
+                            <Label className="text-lg font-bold">محتوى التقرير:</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {/* Checkboxes */}
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-tasks" checked={selectedTypes.tasks} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, tasks: !!c })} />
+                                    <Label htmlFor="chk-tasks">المهام</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-apps" checked={selectedTypes.appointments} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, appointments: !!c })} />
+                                    <Label htmlFor="chk-apps">المواعيد</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-prayers" checked={selectedTypes.prayerTimes} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, prayerTimes: !!c })} />
+                                    <Label htmlFor="chk-prayers">مواقيت الصلاة</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-shopping" checked={selectedTypes.shopping} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, shopping: !!c })} />
+                                    <Label htmlFor="chk-shopping">قائمة التسوق</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-meds" checked={selectedTypes.medications} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, medications: !!c })} />
+                                    <Label htmlFor="chk-meds">الأدوية</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 space-x-reverse">
+                                    <Checkbox id="chk-expenses" checked={selectedTypes.expenses} onCheckedChange={(c) => setSelectedTypes({ ...selectedTypes, expenses: !!c })} />
+                                    <Label htmlFor="chk-expenses">المصاريف</Label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="flex-col sm:flex-row gap-2 sticky bottom-0 bg-white pt-2 border-t mt-4">
+                            <Button
+                                onClick={() => handleGenerate(false)}
+                                disabled={isGenerating}
+                                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 flex-1"
+                            >
+                                <FileText className="w-4 h-4 ml-2" />
+                                {isGenerating ? 'جاري التجهيز...' : 'طباعة / تنزيل PDF'}
+                            </Button>
+                            <Button
+                                onClick={() => handleGenerate(true)}
+                                disabled={isGenerating}
+                                variant="outline"
+                                className="w-full sm:w-auto border-purple-200 text-purple-700 hover:bg-purple-50 flex-1"
+                            >
+                                <Clock className="w-4 h-4 ml-2" />
+                                حفظ في الأرشيف
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                ) : (
+                    <div className="space-y-4 min-h-[400px]">
+                        {reports.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">
+                                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p>لا توجد تقارير محفوظة</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {reports.map(report => (
+                                    <div key={report.id} className="bg-white border rounded-lg p-3 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-red-50 text-red-500 rounded-lg">
+                                                <FileText className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-800 text-sm">{report.title}</h4>
+                                                <p className="text-xs text-gray-500">{new Date(report.date).toLocaleDateString('ar-EG')} - {Math.round(report.size / 1024)} KB</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="text-blue-600 hover:bg-blue-50 h-8 w-8"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = report.pdfData;
+                                                    link.download = `${report.title}.pdf`;
+                                                    link.click();
+                                                }}
+                                            >
+                                                <List className="w-4 h-4 rotate-180" /> {/* Reuse List as Download or import Download */}
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="text-red-600 hover:bg-red-50 h-8 w-8"
+                                                onClick={() => deleteReport(report.id)}
+                                            >
+                                                <Clock className="w-4 h-4 rotate-45" /> {/* Reuse Clock as X or import Trash */}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </DialogContent>
 
             {/* Hidden Report Container */}
@@ -273,7 +310,6 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
 
                     const isInRange = (dateStr: string) => {
                         if (!dateStr) return false;
-                        // Handle date strings that might be YYYY-MM-DD or full ISO
                         const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`);
                         return d >= startData && d <= endData;
                     };
@@ -284,6 +320,31 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                     // Tasks
                     const tsks = selectedTypes.tasks ? tasks.filter(t => !t.deadline || isInRange(t.deadline)) : [];
 
+                    // Data Fetching for New Sections
+                    // Medications
+                    const meds = selectedTypes.medications && medications ? medications.filter(m => {
+                        // Simple logic: if permanent or within range
+                        return m.isPermanent || (m.startDate <= endDate && m.endDate >= startDate);
+                    }) : [];
+
+                    // Shopping List (from LocalStorage)
+                    let shopList = [];
+                    if (selectedTypes.shopping) {
+                        try {
+                            const saved = localStorage.getItem('baraka_shopping_list');
+                            if (saved) shopList = JSON.parse(saved);
+                            // Support new format if it's stored differently
+                            const logisticsData = localStorage.getItem('baraka_logistics_data'); // Check backup loc
+                            if (!shopList.length && logisticsData) {
+                                const log = JSON.parse(logisticsData);
+                                if (log.shopping_list) shopList = log.shopping_list;
+                            }
+                        } catch (e) { console.error("Error reading shopping list", e); }
+                    }
+
+                    // Expenses (from AppStore)
+                    const financeExpenses = selectedTypes.expenses && finances?.expenses ? finances.expenses.filter(e => isInRange(e.date)) : [];
+
                     // Prayers
                     let prayers = [];
                     if (selectedTypes.prayerTimes) {
@@ -292,7 +353,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                             if (storedSchedule) {
                                 prayers = JSON.parse(storedSchedule).filter((d: any) => isInRange(d.date));
                             } else {
-                                // fallback to today if range logic fails or no monthly data
+                                // fallback to today
                                 prayers = prayerTimes.map(p => ({
                                     name: p.nameAr || p.name,
                                     time: p.time,
@@ -307,9 +368,9 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                         appointments: apps,
                         habits: selectedTypes.habits ? habits : [],
                         prayerTimes: prayers,
-                        medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
-                        shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
-                        expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
+                        medications: meds,
+                        shopping: shopList,
+                        expenses: financeExpenses
                     };
                 })()}
             />

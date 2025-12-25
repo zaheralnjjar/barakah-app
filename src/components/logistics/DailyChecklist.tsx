@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     CheckSquare, Check, Pill, Flame, Calendar, Clock, Bell,
-    Share2, Printer, ChevronLeft, ChevronRight
+    Share2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
@@ -409,9 +409,7 @@ export const DailyChecklist = () => {
                     <Button variant="outline" size="sm" className="flex-1" onClick={scheduleAllNotifications}>
                         <Bell className="w-4 h-4 ml-1" /> تنبيه الكل
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={generatePrintReport}>
-                        <Printer className="w-4 h-4 ml-1" /> طباعة
-                    </Button>
+                    {/* Print button removed */}
                 </div>
 
                 {/* Checklist Items */}

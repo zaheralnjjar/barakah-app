@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Printer, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, CalendarDays } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, CalendarDays } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
@@ -597,12 +597,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                 <Badge className="bg-blue-100 text-blue-700">{selectedDates.size} يوم محدد</Badge>
                             )}
                         </div>
-                        {selectedDates.size > 0 && (
-                            <Button size="sm" onClick={() => setShowPrintOptions(true)} className="bg-green-600 hover:bg-green-700">
-                                <Printer className="w-4 h-4 ml-1" />
-                                طباعة ({selectedDates.size})
-                            </Button>
-                        )}
+                        {/* Print button removed */}
                     </div>
 
                     {/* Days Header */}
@@ -848,9 +843,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                 <CalendarIcon className="w-5 h-5 text-emerald-500" />
                                 {selectedDate && new Date(selectedDate).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </span>
-                            <Button variant="outline" size="sm" onClick={() => setShowPrintOptions(true)}>
-                                <Printer className="w-4 h-4 ml-1" /> طباعة
-                            </Button>
+                            {/* Print button removed */}
                         </DialogTitle>
                     </DialogHeader>
 
@@ -1056,23 +1049,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                         <Button variant="outline" onClick={() => setShowPrintOptions(false)}>
                             إلغاء
                         </Button>
-                        <Button
-                            onClick={() => {
-                                if (selectedDates.size > 0) {
-                                    if (printLayout === 'hourly') {
-                                        printHourlyGrid();
-                                    } else {
-                                        printMultipleDays();
-                                    }
-                                } else if (selectedDate) {
-                                    printDayReport(selectedDate);
-                                }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700"
-                        >
-                            <Printer className="w-4 h-4 ml-2" />
-                            طباعة {selectedDates.size > 0 ? `(${selectedDates.size} أيام)` : ''}
-                        </Button>
+                        <Button onClick={() => setShowPrintOptions(false)} variant="outline">إغلاق</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
