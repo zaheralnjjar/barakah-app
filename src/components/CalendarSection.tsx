@@ -404,7 +404,10 @@ const CalendarSection: React.FC = () => {
                         {selectedDate && (
                             <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
                                 <h3 className="font-bold text-purple-700 mb-3">
-                                    📅 {new Date(selectedDate).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    📅 {(() => {
+                                        const [y, m, d] = selectedDate.split('-').map(Number);
+                                        return new Date(y, m - 1, d).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                                    })()}
                                 </h3>
                                 {(() => {
                                     const data = getDateData(selectedDate);
@@ -445,7 +448,10 @@ const CalendarSection: React.FC = () => {
                 <DialogContent className="max-w-xs">
                     <DialogHeader>
                         <DialogTitle className="text-center text-lg">
-                            إضافة في {quickAddDate ? new Date(quickAddDate).toLocaleDateString('ar', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
+                            إضافة في {quickAddDate ? (() => {
+                                const [y, m, d] = quickAddDate.split('-').map(Number);
+                                return new Date(y, m - 1, d).toLocaleDateString('ar', { weekday: 'long', month: 'short', day: 'numeric' });
+                            })() : ''}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="grid grid-cols-3 gap-2 p-4">
