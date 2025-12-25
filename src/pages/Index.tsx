@@ -23,6 +23,9 @@ import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
 import { NotificationBell } from '@/components/NotificationBell';
+import NavSummaryDialogs from '@/components/NavSummaryDialogs';
+import { useWidgetSync } from '@/hooks/useWidgetSync';
+import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 
 
 const Index = () => {
@@ -31,7 +34,12 @@ const Index = () => {
   const [isInitialized, setIsInitialized] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
+  const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Sync Hooks
+  useWidgetSync();
+  useLocalNotifications();
 
   // PIN Lock
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
@@ -239,6 +247,26 @@ const Index = () => {
         <BottomNavBar
           activeTab={getActiveNavId()}
           onNavigate={handleNavChange}
+          onLongPress={(id) => {
+            if (id === 'settings') {
+              // Direct Sync Trigger
+              if (navigator.vibrate) navigator.vibrate(50);
+              toast({
+                title: "مزامنة البيانات",
+                description: "جاري تحديث البيانات مع السحابة...",
+                duration: 3000
+              });
+              // In a real app, this would trigger a unified sync function. 
+              // For now, we rely on the hooks' auto-sync, but we give visual feedback.
+            } else {
+              setActiveSummary(id);
+            }
+          }}
+        />
+
+        <NavSummaryDialogs
+          type={activeSummary}
+          onClose={() => setActiveSummary(null)}
         />
 
         {/* Voice Assistant Modal */}

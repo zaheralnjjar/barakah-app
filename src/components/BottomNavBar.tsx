@@ -4,9 +4,10 @@ import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings } from 'l
 interface BottomNavBarProps {
     activeTab: string;
     onNavigate: (tab: string) => void;
+    onLongPress?: (tab: string) => void;
 }
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) => {
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLongPress }) => {
     // 7 icons: 3 left, home center, 3 right
     const navItems = [
         { id: 'mohamed', label: 'المالية', icon: Calculator },
@@ -18,6 +19,58 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) =>
         { id: 'settings', label: 'الإعدادات', icon: Settings },
     ];
 
+    // Refs for long press
+    const pressTimer = React.useRef<NodeJS.Timeout | null>(null);
+    const isLongPress = React.useRef(false);
+    const isScrolling = React.useRef(false);
+
+    const handleStart = (id: string, e: React.TouchEvent | React.MouseEvent) => {
+        // Only allow left click for mouse
+        if ('button' in e && e.button !== 0) return;
+
+        isScrolling.current = false;
+        isLongPress.current = false;
+
+        // Store start position
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        (window as any).startPos = { x: clientX, y: clientY };
+
+        pressTimer.current = setTimeout(() => {
+            isLongPress.current = true;
+            if (navigator.vibrate) navigator.vibrate(50);
+            if (onLongPress) onLongPress(id);
+        }, 500);
+    };
+
+    const handleEnd = (id: string) => {
+        if (pressTimer.current) clearTimeout(pressTimer.current);
+        if (!isLongPress.current && !isScrolling.current) {
+            onNavigate(id);
+        }
+        // Reset flags
+        setTimeout(() => {
+            isLongPress.current = false;
+            isScrolling.current = false;
+        }, 100);
+    };
+
+    const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
+        if (pressTimer.current) {
+            const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+            const startPos = (window as any).startPos;
+
+            if (startPos) {
+                const moveX = Math.abs(clientX - startPos.x);
+                const moveY = Math.abs(clientY - startPos.y);
+                if (moveX > 20 || moveY > 20) {
+                    isScrolling.current = true;
+                    clearTimeout(pressTimer.current);
+                }
+            }
+        }
+    };
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg z-[9999] safe-area-bottom">
@@ -29,8 +82,17 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate }) =>
                     return (
                         <button
                             key={item.id}
-                            onClick={() => onNavigate(item.id)}
-                            className="flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-95"
+                            onTouchStart={(e) => handleStart(item.id, e)}
+                            onTouchEnd={() => handleEnd(item.id)}
+                            onTouchMove={handleMove}
+                            onMouseDown={(e) => handleStart(item.id, e)}
+                            onMouseUp={() => handleEnd(item.id)}
+                            onMouseMove={handleMove}
+                            onMouseLeave={() => {
+                                if (pressTimer.current) clearTimeout(pressTimer.current);
+                            }}
+                            onContextMenu={(e) => e.preventDefault()}
+                            className="flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-95 select-none"
                         >
                             <div className={`
                                 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200

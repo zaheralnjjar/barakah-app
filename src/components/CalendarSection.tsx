@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X } from 'lucide-react';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3 } from 'lucide-react';
+import PrintOptionsDialog from '@/components/PrintOptionsDialog';
 import DailyCalendar from '@/components/DailyCalendar';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
 import { useTasks } from '@/hooks/useTasks';
@@ -17,9 +18,10 @@ const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خمي
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 const CalendarSection: React.FC = () => {
-    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'grid3x3'>('daily');
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [showPrintDialog, setShowPrintDialog] = useState(false);
 
     // Quick add popup state
     const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
@@ -155,7 +157,17 @@ const CalendarSection: React.FC = () => {
                         }`}
                 >
                     <CalendarDays className="w-4 h-4 inline-block ml-1" />
-                    الأسبوعي
+                    أسبوعي
+                </button>
+                <button
+                    onClick={() => setViewMode('grid3x3')}
+                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'grid3x3'
+                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                >
+                    <Grid3X3 className="w-4 h-4 inline-block ml-1" />
+                    شبكة 3x3
                 </button>
                 <button
                     onClick={() => setViewMode('monthly')}
@@ -167,16 +179,75 @@ const CalendarSection: React.FC = () => {
                     <CalendarIcon className="w-4 h-4 inline-block ml-1" />
                     الشهري
                 </button>
+
+                <div className="mr-auto">
+                    <button
+                        onClick={() => setShowPrintDialog(true)}
+                        className="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
+                        title="طباعة التقرير"
+                    >
+                        <Printer className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
+
+            <PrintOptionsDialog isOpen={showPrintDialog} onClose={() => setShowPrintDialog(false)} />
 
             {/* Daily View */}
             {viewMode === 'daily' && (
                 <DailyCalendar />
             )}
 
-            {/* Weekly View */}
+            {/* Weekly View (Standard) */}
             {viewMode === 'weekly' && (
                 <WeeklyCalendar />
+            )}
+
+            {/* Grid 3x3 View (Custom Request) */}
+            {viewMode === 'grid3x3' && (
+                <div className="grid grid-cols-3 gap-2 rtl-grid">
+                    {/* We need 9 days starting from today or start of week? Let's say Today + 9 days */}
+                    {Array.from({ length: 9 }).map((_, i) => {
+                        const dayDate = new Date();
+                        dayDate.setDate(new Date().getDate() + i);
+                        const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+                        const isToday = dateStr === new Date().toISOString().split('T')[0];
+                        const data = getDateData(dateStr);
+
+                        return (
+                            <div
+                                key={i}
+                                className="h-48 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden"
+                            >
+                                {/* Header (20%) */}
+                                <div className={`h-[20%] p-2 flex items-center justify-between border-b ${isToday ? 'bg-primary/10 text-primary' : 'bg-gray-50 text-gray-700'}`}>
+                                    <span className="font-bold text-sm">{dayDate.toLocaleDateString('ar-EG', { weekday: 'long' })}</span>
+                                    <span className="text-xs opacity-70">{dayDate.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
+                                </div>
+
+                                {/* Body (80%) Scrollable */}
+                                <div className="h-[80%] overflow-y-auto p-2 space-y-1 scrollbar-thin">
+                                    {data.appointments.map(apt => (
+                                        <div key={apt.id} className="text-xs bg-orange-50 text-orange-700 p-1 rounded border border-orange-100 flex items-center gap-1">
+                                            <span className="shrink-0">📍</span>
+                                            <span className="truncate flex-1">{apt.title}</span>
+                                            <span className="text-[10px] opacity-75">{apt.time}</span>
+                                        </div>
+                                    ))}
+                                    {data.tasks.map(task => (
+                                        <div key={task.id} className="text-xs bg-blue-50 text-blue-700 p-1 rounded border border-blue-100 flex items-center gap-1">
+                                            <span className="shrink-0">✅</span>
+                                            <span className="truncate flex-1">{task.title}</span>
+                                        </div>
+                                    ))}
+                                    {data.tasks.length === 0 && data.appointments.length === 0 && (
+                                        <p className="text-center text-xs text-gray-400 mt-4">لا توجد أنشطة</p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
 
             {/* Monthly View */}
@@ -223,9 +294,7 @@ const CalendarSection: React.FC = () => {
                                 const hasItems = data.tasks.length > 0 || data.appointments.length > 0;
 
                                 // Long press handlers
-                                const handleStart = (e: React.TouchEvent | React.MouseEvent) => {
-                                    // Only allow left click for mouse
-                                    if ('button' in e && e.button !== 0) return;
+                                const handleTouchStart = (e: React.TouchEvent) => {
 
                                     isScrolling.current = false;
                                     isLongPress.current = false;
@@ -242,7 +311,7 @@ const CalendarSection: React.FC = () => {
                                     }, 400); // Reduced to 400ms for better responsiveness
                                 };
 
-                                const handleEnd = () => {
+                                const handleTouchEnd = () => {
                                     if (pressTimer.current) clearTimeout(pressTimer.current);
                                     if (!isLongPress.current && !isScrolling.current) {
                                         setSelectedDate(dateStr);
@@ -255,7 +324,7 @@ const CalendarSection: React.FC = () => {
                                     }, 100);
                                 };
 
-                                const handleMove = (e: React.TouchEvent | React.MouseEvent) => {
+                                const handleTouchMove = (e: React.TouchEvent) => {
                                     if (pressTimer.current) {
                                         const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
                                         const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
@@ -276,18 +345,25 @@ const CalendarSection: React.FC = () => {
                                 return (
                                     <div
                                         key={idx}
-                                        onTouchStart={handleStart}
-                                        onTouchEnd={handleEnd}
-                                        onTouchMove={handleMove}
-                                        onMouseDown={handleStart}
-                                        onMouseUp={handleEnd}
-                                        onMouseMove={handleMove}
+                                        // Touch interactions (Mobile/Tablet)
+                                        onTouchStart={handleTouchStart}
+                                        onTouchEnd={handleTouchEnd}
+                                        onTouchMove={handleTouchMove}
+
+                                        // Mouse interactions (Desktop/Web)
+                                        onClick={() => {
+                                            // Single click: Quick Add
+                                            setSelectedDate(dateStr);
+                                            setQuickAddDate(dateStr);
+                                        }}
+                                        onDoubleClick={(e) => {
+                                            // Double click: View All
+                                            e.preventDefault(); // Prevent text selection
+                                            setViewAllDate(dateStr);
+                                        }}
+                                        onContextMenu={(e) => e.preventDefault()}
                                         onMouseLeave={() => {
                                             if (pressTimer.current) clearTimeout(pressTimer.current);
-                                        }}
-                                        onContextMenu={(e) => {
-                                            // Prevent context menu to allow long press interactions
-                                            e.preventDefault();
                                         }}
                                         className={`
                                             p-2 min-h-[60px] rounded-lg cursor-pointer transition-all relative select-none
@@ -370,20 +446,30 @@ const CalendarSection: React.FC = () => {
                             إضافة في {quickAddDate ? new Date(quickAddDate).toLocaleDateString('ar', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 p-4">
+                    <div className="grid grid-cols-3 gap-2 p-4">
                         <button
                             onClick={() => setAddType('appointment')}
-                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-all"
+                            className="flex flex-col items-center gap-2 p-2 rounded-xl border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-all py-4"
                         >
-                            <CalendarIcon className="w-10 h-10 text-orange-500" />
-                            <span className="font-bold text-orange-700">موعد</span>
+                            <CalendarIcon className="w-6 h-6 text-orange-500" />
+                            <span className="font-bold text-xs text-orange-700">موعد</span>
                         </button>
                         <button
                             onClick={() => setAddType('task')}
-                            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all"
+                            className="flex flex-col items-center gap-2 p-2 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all py-4"
                         >
-                            <ClipboardList className="w-10 h-10 text-blue-500" />
-                            <span className="font-bold text-blue-700">مهمة</span>
+                            <ClipboardList className="w-6 h-6 text-blue-500" />
+                            <span className="font-bold text-xs text-blue-700">مهمة</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                setViewAllDate(quickAddDate);
+                                setQuickAddDate(null);
+                            }}
+                            className="flex flex-col items-center gap-2 p-2 rounded-xl border-2 border-purple-200 bg-purple-50 hover:bg-purple-100 transition-all py-4"
+                        >
+                            <List className="w-6 h-6 text-purple-500" />
+                            <span className="font-bold text-xs text-purple-700">عرض</span>
                         </button>
                     </div>
                 </DialogContent>
