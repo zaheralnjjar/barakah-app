@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Calendar, Plus, Settings, DollarSign } from 'lucide-react';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -18,6 +18,7 @@ import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 import CalendarSection from '@/components/CalendarSection';
+import RadialMenu from '@/components/RadialMenu';
 
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
@@ -44,6 +45,53 @@ const Index = () => {
 
   // PIN Lock
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
+
+  // Radial Menu State
+  const [showRadialMenu, setShowRadialMenu] = useState(false);
+  const [radialMenuPosition, setRadialMenuPosition] = useState({ x: 0, y: 0 });
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Long press handler for radial menu
+  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    longPressTimer.current = setTimeout(() => {
+      setRadialMenuPosition({ x: clientX, y: clientY });
+      setShowRadialMenu(true);
+    }, 500); // 500ms long press
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+
+
+  const handleRadialAction = (action: string) => {
+    setShowRadialMenu(false);
+    switch (action) {
+      case 'calendar':
+        setActiveTab('calendar');
+        break;
+      case 'add':
+        // Could open add transaction dialog
+        setActiveTab('finance');
+        break;
+      case 'finance':
+        setActiveTab('finance');
+        break;
+      case 'settings':
+        setActiveTab('settings');
+        break;
+      case 'dashboard':
+        setActiveTab('dashboard');
+        break;
+    }
+  };
 
   // Swipe gestures removed - were interfering with checkbox clicks
 
@@ -189,10 +237,15 @@ const Index = () => {
 
 
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative">
-
-
-        {/* Content Area - No Padding Container for full width */}
+      <div
+        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative"
+        onTouchStart={handleLongPressStart}
+        onTouchEnd={handleLongPressEnd}
+        onTouchCancel={handleLongPressEnd}
+        onMouseDown={handleLongPressStart}
+        onMouseUp={handleLongPressEnd}
+        onMouseLeave={handleLongPressEnd}
+      >        {/* Content Area - No Padding Container for full width */}
         <div className="w-full">
 
           {/* Main Tabs */}
@@ -289,6 +342,20 @@ const Index = () => {
         <NavSummaryDialogs
           type={activeSummary}
           onClose={() => setActiveSummary(null)}
+        />
+
+        {/* Radial Menu - Triggered by long press */}
+        <RadialMenu
+          isOpen={showRadialMenu}
+          onClose={() => setShowRadialMenu(false)}
+          position={radialMenuPosition}
+          actions={{
+            top: { icon: <Calendar className="w-5 h-5" />, label: 'التقويم', action: 'calendar' },
+            right: { icon: <Plus className="w-5 h-5" />, label: 'إضافة', action: 'add' },
+            bottom: { icon: <DollarSign className="w-5 h-5" />, label: 'المالية', action: 'finance' },
+            left: { icon: <Settings className="w-5 h-5" />, label: 'الإعدادات', action: 'settings' },
+          }}
+          onAction={handleRadialAction}
         />
 
         {/* Voice Assistant Modal */}
