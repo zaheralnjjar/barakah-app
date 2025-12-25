@@ -31,14 +31,16 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                                 <table className="w-full text-right">
                                     <thead className="bg-emerald-50">
                                         <tr>
-                                            <th className="p-3 text-emerald-900">الصلاة</th>
+                                            <th className="p-3 text-emerald-900">اليوم</th>
+                                            <th className="p-3 text-emerald-900 border-r">الصلاة</th>
                                             <th className="p-3 text-emerald-900 border-r">الوقت</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
                                         {data.prayerTimes.map((p: any, i: number) => (
                                             <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                                <td className="p-3 font-medium">{p.name}</td>
+                                                <td className="p-3 font-medium text-gray-600">{p.date ? new Date(p.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'numeric' }) : '-'}</td>
+                                                <td className="p-3 border-r font-medium">{p.name}</td>
                                                 <td className="p-3 border-r font-mono dir-ltr text-right">{p.time}</td>
                                             </tr>
                                         ))}
@@ -58,7 +60,8 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                                 <table className="w-full text-right">
                                     <thead className="bg-purple-50">
                                         <tr>
-                                            <th className="p-3 text-purple-900">العنوان</th>
+                                            <th className="p-3 text-purple-900">اليوم</th>
+                                            <th className="p-3 text-purple-900 border-r">العنوان</th>
                                             <th className="p-3 text-purple-900 border-r">الوقت</th>
                                             <th className="p-3 text-purple-900 border-r">المكان</th>
                                         </tr>
@@ -66,7 +69,8 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                                     <tbody className="divide-y">
                                         {data.appointments.map((a: any, i: number) => (
                                             <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                                <td className="p-3 font-medium">{a.title}</td>
+                                                <td className="p-3 font-medium text-gray-600">{a.date ? new Date(a.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'numeric' }) : '-'}</td>
+                                                <td className="p-3 border-r font-medium">{a.title}</td>
                                                 <td className="p-3 border-r font-mono">{a.time}</td>
                                                 <td className="p-3 border-r text-gray-500">{a.location || '-'}</td>
                                             </tr>
@@ -88,6 +92,7 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                                     <thead className="bg-blue-50">
                                         <tr>
                                             <th className="p-3 text-blue-900">المهمة</th>
+                                            <th className="p-3 text-blue-900 border-r">التاريخ</th>
                                             <th className="p-3 text-blue-900 border-r">الأولوية</th>
                                             <th className="p-3 text-blue-900 border-r">الحالة</th>
                                         </tr>
@@ -96,9 +101,12 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                                         {data.tasks.map((t: any, i: number) => (
                                             <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                 <td className="p-3 font-medium">{t.title}</td>
+                                                <td className="p-3 border-r text-gray-600 text-sm">
+                                                    {t.deadline ? new Date(t.deadline).toLocaleDateString('ar-EG') : '-'}
+                                                </td>
                                                 <td className="p-3 border-r">
                                                     <span className={`px-2 py-1 rounded text-xs ${t.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                                            t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                                        t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                                                         }`}>
                                                         {t.priority === 'high' ? 'عالية' : t.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
                                                     </span>
@@ -127,14 +135,21 @@ const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>((
                             return items.map((item, i) => (
                                 <div key={i} className="relative pr-8">
                                     <div className={`absolute -right-3 top-0 w-6 h-6 rounded-full border-4 border-white shadow-sm ${item.type === 'prayer' ? 'bg-emerald-500' :
-                                            item.type === 'appointment' ? 'bg-purple-500' : 'bg-blue-500'
+                                        item.type === 'appointment' ? 'bg-purple-500' : 'bg-blue-500'
                                         }`} />
                                     <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className="font-bold text-lg">{item.name || item.title}</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-lg">{item.name || item.title}</h3>
+                                                    {item.date && (
+                                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                            {new Date(item.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className={`text-xs px-2 rounded ${item.type === 'prayer' ? 'bg-emerald-100 text-emerald-700' :
-                                                        item.type === 'appointment' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                    item.type === 'appointment' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                                                     }`}>
                                                     {item.type === 'prayer' ? 'صلاة' : item.type === 'appointment' ? 'موعد' : 'مهمة'}
                                                 </span>

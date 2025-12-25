@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Printer, Calendar, List, Clock, FileText } from 'lucide-react';
@@ -42,16 +43,72 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
     const reportRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Date Range State
+    const [startDate, setStartDate] = useState<string>(currentDate.toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState<string>(currentDate.toISOString().split('T')[0]);
+
+    // Update active dates when dialog opens or currentDate changes
+    React.useEffect(() => {
+        if (isOpen && currentDate) {
+            const d = currentDate.toISOString().split('T')[0];
+            setStartDate(d);
+            setEndDate(d);
+        }
+    }, [isOpen, currentDate]);
+
+
     const handlePrint = async () => {
         setIsGenerating(true);
         toast({ title: "جاري تحضير التقرير...", description: "يرجى الانتظار قليلاً" });
 
-        // Filter Data based on selection (Mocking items not in hooks yet)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include full end day
+
+        // Helper to check if date is in range
+        const isInRange = (dateStr: string) => {
+            const d = new Date(dateStr);
+            return d >= start && d <= end;
+        };
+
+        // Filter Tasks
+        const filteredTasks = selectedTypes.tasks ? tasks.filter(t => {
+            if (!t.deadline) return true; // Include undated? Or maybe just pending. Let's include all pending.
+            return isInRange(t.deadline);
+        }) : [];
+
+        // Filter Appointments
+        const filteredApps = selectedTypes.appointments ? appointments.filter(a => isInRange(a.date)) : [];
+
+        // Prayer Times for Range (Try to get from Monthly Schedule in LocalStorage)
+        let rangePrayerTimes = [];
+        if (selectedTypes.prayerTimes) {
+            try {
+                const storedSchedule = localStorage.getItem('baraka_monthly_schedule');
+                if (storedSchedule) {
+                    const schedule = JSON.parse(storedSchedule);
+                    rangePrayerTimes = schedule.filter((day: any) => isInRange(day.date)).map((d: any) => ({
+                        name: 'Show All', // Simplification for report
+                        date: d.date, // Add date to handle grouping in report
+                        fajr: d.fajr,
+                        sunrise: d.sunrise,
+                        dhuhr: d.dhuhr,
+                        asr: d.asr,
+                        maghrib: d.maghrib,
+                        isha: d.isha
+                    }));
+                } else {
+                    // Fallback to single day (Today's) if no monthly schedule
+                    rangePrayerTimes = prayerTimes.map(p => ({ ...p, date: startDate }));
+                }
+            } catch (e) { console.error(e); }
+        }
+
         const printData = {
-            tasks: selectedTypes.tasks ? tasks.filter(t => t.progress < 100) : [],
-            appointments: selectedTypes.appointments ? appointments : [],
+            tasks: filteredTasks,
+            appointments: filteredApps,
             habits: selectedTypes.habits ? habits : [],
-            prayerTimes: selectedTypes.prayerTimes ? prayerTimes : [],
+            prayerTimes: rangePrayerTimes, // This structure differs slightly now (array of days vs array of times), PrintableReport needs adjustment
             medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
             shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
             expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
@@ -70,7 +127,7 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                     scale: 2, // Improve quality
                     useCORS: true,
                     logging: false
-                });
+                } as any);
 
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
@@ -114,6 +171,34 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
+                    {/* Date Range Selection */}
+                    <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                        <Label className="font-bold flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-blue-500" />
+                            تحديد الفترة:
+                        </Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-xs text-gray-500 mb-1 block">من:</Label>
+                                <Input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="text-right"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs text-gray-500 mb-1 block">إلى:</Label>
+                                <Input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="text-right"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* View Mode Selection */}
                     <div className="grid grid-cols-2 gap-4">
                         <button
@@ -180,16 +265,53 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
             <PrintableReport
                 ref={reportRef}
                 viewType={viewMode}
-                dateRange={currentDate.toLocaleDateString('ar-EG')}
-                data={{
-                    tasks: selectedTypes.tasks ? tasks.filter(t => t.progress < 100) : [],
-                    appointments: selectedTypes.appointments ? appointments : [],
-                    habits: selectedTypes.habits ? habits : [],
-                    prayerTimes: selectedTypes.prayerTimes ? prayerTimes : [],
-                    medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
-                    shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
-                    expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
-                }}
+                dateRange={`${startDate} - ${endDate}`}
+                data={(() => {
+                    // Date Parsing Fix: Treat inputs as local dates (YYYY-MM-DD + T00:00:00)
+                    const startData = new Date(`${startDate}T00:00:00`);
+                    const endData = new Date(`${endDate}T23:59:59.999`);
+
+                    const isInRange = (dateStr: string) => {
+                        if (!dateStr) return false;
+                        // Handle date strings that might be YYYY-MM-DD or full ISO
+                        const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`);
+                        return d >= startData && d <= endData;
+                    };
+
+                    // Apps
+                    const apps = selectedTypes.appointments ? appointments.filter(a => isInRange(a.date)) : [];
+
+                    // Tasks
+                    const tsks = selectedTypes.tasks ? tasks.filter(t => !t.deadline || isInRange(t.deadline)) : [];
+
+                    // Prayers
+                    let prayers = [];
+                    if (selectedTypes.prayerTimes) {
+                        try {
+                            const storedSchedule = localStorage.getItem('baraka_monthly_schedule');
+                            if (storedSchedule) {
+                                prayers = JSON.parse(storedSchedule).filter((d: any) => isInRange(d.date));
+                            } else {
+                                // fallback to today if range logic fails or no monthly data
+                                prayers = prayerTimes.map(p => ({
+                                    name: p.nameAr || p.name,
+                                    time: p.time,
+                                    date: startDate
+                                }));
+                            }
+                        } catch (e) { console.error("Error parsing schedule", e); }
+                    }
+
+                    return {
+                        tasks: tsks,
+                        appointments: apps,
+                        habits: selectedTypes.habits ? habits : [],
+                        prayerTimes: prayers,
+                        medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
+                        shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
+                        expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
+                    };
+                })()}
             />
         </Dialog>
     );

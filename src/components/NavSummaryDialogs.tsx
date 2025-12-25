@@ -7,7 +7,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useLocations } from '@/hooks/useLocations';
 import FinancialTrendChart from '@/components/FinancialTrendChart';
-import { Loader2, CheckSquare, Target, MapPin } from 'lucide-react';
+import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface NavSummaryDialogsProps {
@@ -211,6 +211,166 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                     </div>
                 );
 
+            case 'home_summary': // General Summary (All Sections) requested by user
+                const todaySummary = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const nextApptSummary = appointments
+                    .filter(a => {
+                        const apptDate = new Date(`${a.date}T${a.time}`);
+                        return apptDate > new Date();
+                    })
+                    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0];
+
+                const financeBal = financeData?.current_balance || '---';
+
+                return (
+                    <div className="space-y-4">
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl text-white text-center shadow-lg">
+                            <h3 className="font-bold text-lg">{todaySummary}</h3>
+                            <p className="opacity-90 text-sm mt-1">تقرير شامل</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                                <h4 className="font-bold text-emerald-800 text-sm mb-2 flex items-center gap-2">
+                                    <Moon className="w-3 h-3" /> الصلاة القادمة
+                                </h4>
+                                <div className="text-center">
+                                    <span className="block text-xl font-bold text-emerald-600">{nextPrayer ? nextPrayer.nameAr : '-'}</span>
+                                    <span className="text-xs text-emerald-500 dir-ltr">{timeUntilNext}</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                <h4 className="font-bold text-blue-800 text-sm mb-2 flex items-center gap-2">
+                                    <CheckSquare className="w-3 h-3" /> المهام
+                                </h4>
+                                <div className="flex justify-around text-center">
+                                    <div>
+                                        <span className="block text-lg font-bold text-blue-600">{tasks.filter(t => t.progress === 100).length}</span>
+                                        <span className="text-[10px] text-blue-400">منجز</span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-lg font-bold text-red-500">{tasks.filter(t => t.progress < 100).length}</span>
+                                        <span className="text-[10px] text-red-400">متبقي</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
+                                <h4 className="font-bold text-purple-800 text-sm mb-2 flex items-center gap-2">
+                                    <Calendar className="w-3 h-3" /> الموعد القادم
+                                </h4>
+                                {nextApptSummary ? (
+                                    <div className="text-sm">
+                                        <p className="font-bold text-purple-700 truncate">{nextApptSummary.title}</p>
+                                        <p className="text-xs text-purple-500 font-mono">{nextApptSummary.time}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-center text-purple-400 py-2">لا توجد مواعيد</p>
+                                )}
+                            </div>
+
+                            <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                <h4 className="font-bold text-amber-800 text-sm mb-2 flex items-center gap-2">
+                                    <Calculator className="w-3 h-3" /> الرصيد
+                                </h4>
+                                <div className="text-center">
+                                    <span className="block text-lg font-bold text-amber-600 font-mono">{financeBal}</span>
+                                    <span className="text-[10px] text-amber-400">ريال</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'calendar_weekly': // Weekly Tasks & Appointments
+                const startOfWeek = new Date();
+                const endOfWeek = new Date();
+                endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+                const weeklyTasks = tasks.filter(t => {
+                    if (!t.deadline) return false;
+                    const d = new Date(t.deadline);
+                    return d >= startOfWeek && d <= endOfWeek;
+                });
+
+                const weeklyAppointments = appointments.filter(a => {
+                    const d = new Date(a.date);
+                    return d >= startOfWeek && d <= endOfWeek;
+                });
+
+                return (
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                        {/* Weekly Tasks Section */}
+                        <div className="space-y-2">
+                            <div className="bg-blue-50 p-3 rounded-lg flex justify-between items-center">
+                                <span className="text-blue-800 font-bold text-sm">مهام الأسبوع القادم</span>
+                                <span className="bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full text-xs">{weeklyTasks.length} مهمة</span>
+                            </div>
+
+                            {weeklyTasks.length === 0 ? (
+                                <p className="text-center text-gray-500 py-4 text-xs">لا يوجد مهام</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {weeklyTasks.map((task, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm">
+                                            <div className={`w-3 h-3 rounded-full ${task.progress === 100 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                            <div className="flex-1">
+                                                <p className={`font-bold text-sm ${task.progress === 100 ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</p>
+                                                <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {new Date(task.deadline!).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' })}
+                                                </p>
+                                            </div>
+                                            <span className={`text-[10px] px-2 py-1 rounded ${task.priority === 'high' ? 'bg-red-100 text-red-600' :
+                                                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'
+                                                }`}>
+                                                {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'عادية'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Weekly Appointments Section */}
+                        <div className="space-y-2">
+                            <div className="bg-purple-50 p-3 rounded-lg flex justify-between items-center">
+                                <span className="text-purple-800 font-bold text-sm">مواعيد الأسبوع القادم</span>
+                                <span className="bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full text-xs">{weeklyAppointments.length} موعد</span>
+                            </div>
+
+                            {weeklyAppointments.length === 0 ? (
+                                <p className="text-center text-gray-500 py-4 text-xs">لا يوجد مواعيد</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {weeklyAppointments.map((appt, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-white border rounded-lg shadow-sm">
+                                            <div className="w-1 h-8 bg-purple-500 rounded-full" />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sm text-gray-800">{appt.title}</p>
+                                                <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {new Date(appt.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' })}
+                                                    <span className="mx-1">|</span>
+                                                    {appt.time}
+                                                </p>
+                                            </div>
+                                            {appt.location && (
+                                                <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded flex items-center gap-1">
+                                                    <MapPin className="w-3 h-3" /> {appt.location}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+
             default:
                 return null;
         }
@@ -224,6 +384,8 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
             case 'prayer': return 'مواقيت الصلاة';
             case 'map': return 'المواقع المحفوظة';
             case 'settings': return 'الإعدادات';
+            case 'home_summary': return 'الملخص الشامل';
+            case 'calendar_weekly': return 'مهام الأسبوع';
             default: return '';
         }
     };

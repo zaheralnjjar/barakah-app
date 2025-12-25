@@ -43,10 +43,23 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
         }, 500);
     };
 
-    const handleEnd = (id: string) => {
+    const handleEnd = (id: string, isHome: boolean) => {
         if (pressTimer.current) clearTimeout(pressTimer.current);
         if (!isLongPress.current && !isScrolling.current) {
+            // Normal navigation
             onNavigate(id);
+        } else if (isLongPress.current) {
+            // Specific Long Press Actions
+            if (isHome && onLongPress) {
+                onLongPress('home_summary');
+            } else if (id === 'settings' && onLongPress) {
+                onLongPress('settings_sync');
+            } else if (id === 'calendar' && onLongPress) {
+                onLongPress('calendar_weekly');
+            } else if (onLongPress) {
+                // Default fallback
+                onLongPress(id);
+            }
         }
         // Reset flags
         setTimeout(() => {
@@ -83,10 +96,10 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
                         <button
                             key={item.id}
                             onTouchStart={(e) => handleStart(item.id, e)}
-                            onTouchEnd={() => handleEnd(item.id)}
+                            onTouchEnd={() => handleEnd(item.id, !!item.isHome)}
                             onTouchMove={handleMove}
                             onMouseDown={(e) => handleStart(item.id, e)}
-                            onMouseUp={() => handleEnd(item.id)}
+                            onMouseUp={() => handleEnd(item.id, !!item.isHome)}
                             onMouseMove={handleMove}
                             onMouseLeave={() => {
                                 if (pressTimer.current) clearTimeout(pressTimer.current);

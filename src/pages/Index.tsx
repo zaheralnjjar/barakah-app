@@ -25,8 +25,8 @@ import PinLock, { usePinLock } from '@/components/PinLock';
 import { NotificationBell } from '@/components/NotificationBell';
 import NavSummaryDialogs from '@/components/NavSummaryDialogs';
 import { useWidgetSync } from '@/hooks/useWidgetSync';
+import { useCloudSync } from '@/hooks/useCloudSync';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
-
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -38,7 +38,8 @@ const Index = () => {
   const { toast } = useToast();
 
   // Sync Hooks
-  useWidgetSync();
+  const { syncNow } = useCloudSync();
+  useWidgetSync(); // Keep for background sync if needed
   useLocalNotifications();
 
   // PIN Lock
@@ -248,7 +249,7 @@ const Index = () => {
           activeTab={getActiveNavId()}
           onNavigate={handleNavChange}
           onLongPress={(id) => {
-            if (id === 'settings') {
+            if (id === 'settings_sync') {
               // Direct Sync Trigger
               if (navigator.vibrate) navigator.vibrate(50);
               toast({
@@ -256,8 +257,7 @@ const Index = () => {
                 description: "جاري تحديث البيانات مع السحابة...",
                 duration: 3000
               });
-              // In a real app, this would trigger a unified sync function. 
-              // For now, we rely on the hooks' auto-sync, but we give visual feedback.
+              syncNow();
             } else {
               setActiveSummary(id);
             }

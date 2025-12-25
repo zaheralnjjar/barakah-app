@@ -95,5 +95,5 @@ export const useWidgetSync = () => {
         return () => clearTimeout(timeout);
     }, [tasks, appointments, habits, prayerTimes]);
 
-    return null; // This hook doesn't return anything, it just works in background
+    return { syncToPreferences };
 };
