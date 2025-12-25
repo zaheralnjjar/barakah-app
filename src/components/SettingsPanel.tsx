@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Settings,
     Shield,
@@ -14,6 +15,14 @@ import {
     LogOut,
     FileSpreadsheet,
     X,
+    Bot,
+    Circle,
+    Plus,
+    DollarSign,
+    FileText,
+    Sparkles,
+    ShoppingCart,
+    Pill,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -23,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import DataBackup from '@/components/DataBackup';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useMultiGoogleSheetsSync } from '@/hooks/useMultiGoogleSheetsSync';
+import { useGemini } from '@/hooks/useGemini';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
@@ -36,6 +46,7 @@ const SettingsPanel = () => {
     const { t } = useTranslation();
     const { syncNow, pullData, isSyncing } = useCloudSync();
     const { sheets, isSyncing: isSyncingSheets, currentSyncSheet, addSheet, removeSheet, toggleSheet, syncSheet, syncAllSheets } = useMultiGoogleSheetsSync();
+    const { apiKey, setApiKey, clearApiKey, isConfigured } = useGemini();
     const lastSync = useAppStore(s => s.lastSync);
     const quickActions = useAppStore(s => s.quickActions);
 
@@ -47,6 +58,42 @@ const SettingsPanel = () => {
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [newSheetName, setNewSheetName] = useState('');
     const [newSheetUrl, setNewSheetUrl] = useState('');
+
+    // Gemini API State
+    const [geminiApiInput, setGeminiApiInput] = useState('');
+
+    // Radial Menu Customization State
+    const [radialMenuActions, setRadialMenuActions] = useState<any>(() => {
+        const saved = localStorage.getItem('baraka_radial_menu_actions');
+        if (saved) {
+            try { return JSON.parse(saved); } catch { }
+        }
+        return {
+            top: 'calendar',
+            right: 'add_transaction',
+            bottom: 'finance',
+            left: 'settings',
+        };
+    });
+
+    const saveRadialMenuActions = (newActions: any) => {
+        setRadialMenuActions(newActions);
+        localStorage.setItem('baraka_radial_menu_actions', JSON.stringify(newActions));
+        toast({ title: 'تم الحفظ', description: 'تم حفظ إعدادات القائمة الدائرية' });
+    };
+
+    // Available actions for radial menu
+    const availableActions = [
+        { value: 'calendar', label: 'التقويم', icon: 'Calendar' },
+        { value: 'add_transaction', label: 'إضافة معاملة', icon: 'Plus' },
+        { value: 'finance', label: 'المالية', icon: 'DollarSign' },
+        { value: 'settings', label: 'الإعدادات', icon: 'Settings' },
+        { value: 'dashboard', label: 'الرئيسية', icon: 'Home' },
+        { value: 'shopping', label: 'قائمة التسوق', icon: 'ShoppingCart' },
+        { value: 'ai_report', label: 'تقرير ذكي (AI)', icon: 'Sparkles' },
+        { value: 'sync_sheets', label: 'مزامنة الجداول', icon: 'FileSpreadsheet' },
+        { value: 'ai_chat', label: 'المساعد الذكي', icon: 'Bot' },
+    ];
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -293,6 +340,109 @@ const SettingsPanel = () => {
                 </DialogContent>
             </Dialog>
 
+            {/* Gemini AI Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Bot className="w-5 h-5 text-purple-600" />
+                        المساعد الذكي (Gemini AI)
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        تحليل مالي ذكي وتقارير تلقائية
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {isConfigured ? (
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-green-600">
+                                <Sparkles className="w-4 h-4" />
+                                <span className="text-sm">المساعد الذكي مفعّل ✓</span>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={clearApiKey}
+                                className="text-red-500 border-red-200"
+                            >
+                                حذف مفتاح API
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <div>
+                                <Label className="text-xs">مفتاح Gemini API</Label>
+                                <Input
+                                    type="password"
+                                    placeholder="AI..."
+                                    value={geminiApiInput}
+                                    onChange={(e) => setGeminiApiInput(e.target.value)}
+                                    className="mt-1 text-left dir-ltr"
+                                />
+                            </div>
+                            <Button
+                                onClick={() => {
+                                    if (geminiApiInput) {
+                                        setApiKey(geminiApiInput);
+                                        setGeminiApiInput('');
+                                    }
+                                }}
+                                disabled={!geminiApiInput}
+                                className="w-full bg-purple-600 hover:bg-purple-700"
+                            >
+                                <Bot className="w-4 h-4 ml-2" />
+                                تفعيل المساعد الذكي
+                            </Button>
+                            <p className="text-[10px] text-gray-400">
+                                احصل على المفتاح من: makersuite.google.com
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Radial Menu Customization */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Circle className="w-5 h-5 text-green-600" />
+                        تخصيص القائمة الدائرية
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        اضغط مطولاً على الشاشة لفتح القائمة
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {(['top', 'right', 'bottom', 'left'] as const).map((position) => (
+                        <div key={position} className="flex items-center justify-between">
+                            <Label className="text-sm">
+                                {position === 'top' ? '⬆️ الأعلى' :
+                                    position === 'right' ? '➡️ اليمين' :
+                                        position === 'bottom' ? '⬇️ الأسفل' : '⬅️ اليسار'}
+                            </Label>
+                            <Select
+                                value={radialMenuActions[position]}
+                                onValueChange={(value) => {
+                                    saveRadialMenuActions({
+                                        ...radialMenuActions,
+                                        [position]: value,
+                                    });
+                                }}
+                            >
+                                <SelectTrigger className="w-40">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableActions.map((action) => (
+                                        <SelectItem key={action.value} value={action.value}>
+                                            {action.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
 
 
             {/* Financial Categories */}

@@ -19,6 +19,7 @@ import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 import CalendarSection from '@/components/CalendarSection';
 import RadialMenu from '@/components/RadialMenu';
+import AIAssistant from '@/components/AIAssistant';
 
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
@@ -69,7 +70,23 @@ const Index = () => {
     }
   };
 
+  // AI Assistant state
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
 
+  // Get saved radial menu actions
+  const getRadialMenuActions = () => {
+    try {
+      const saved = localStorage.getItem('baraka_radial_menu_actions');
+      return saved ? JSON.parse(saved) : {
+        top: 'calendar',
+        right: 'add_transaction',
+        bottom: 'finance',
+        left: 'settings',
+      };
+    } catch {
+      return { top: 'calendar', right: 'add_transaction', bottom: 'finance', left: 'settings' };
+    }
+  };
 
   const handleRadialAction = (action: string) => {
     setShowRadialMenu(false);
@@ -78,8 +95,9 @@ const Index = () => {
         setActiveTab('calendar');
         break;
       case 'add':
-        // Could open add transaction dialog
+      case 'add_transaction':
         setActiveTab('finance');
+        // Could open add transaction dialog directly
         break;
       case 'finance':
         setActiveTab('finance');
@@ -88,7 +106,22 @@ const Index = () => {
         setActiveTab('settings');
         break;
       case 'dashboard':
+      case 'home':
         setActiveTab('dashboard');
+        break;
+      case 'shopping':
+        setActiveTab('productivity');
+        break;
+      case 'ai_chat':
+      case 'ai_report':
+        setShowAIAssistant(true);
+        break;
+      case 'sync_sheets':
+        toast({
+          title: 'جاري المزامنة',
+          description: 'يتم مزامنة الجداول...',
+        });
+        syncNow();
         break;
     }
   };
@@ -356,6 +389,12 @@ const Index = () => {
             left: { icon: <Settings className="w-5 h-5" />, label: 'الإعدادات', action: 'settings' },
           }}
           onAction={handleRadialAction}
+        />
+
+        {/* AI Assistant Dialog */}
+        <AIAssistant
+          isOpen={showAIAssistant}
+          onClose={() => setShowAIAssistant(false)}
         />
 
         {/* Voice Assistant Modal */}
