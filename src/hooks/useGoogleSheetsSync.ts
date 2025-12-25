@@ -161,15 +161,26 @@ export const useGoogleSheetsSync = () => {
                 return 0;
             }
 
-            // Save to database
+            // Save to database - use update since record should exist
             const updatedExpenses = [...existingExpenses, ...newTransactions];
-            await supabase
+            const { error: updateError } = await supabase
                 .from('finance_data_2025_12_18_18_42')
-                .upsert({
-                    user_id: user.id,
+                .update({
                     pending_expenses: updatedExpenses,
                     last_modified: new Date().toISOString(),
-                });
+                })
+                .eq('user_id', user.id);
+
+            if (updateError) {
+                // If update fails, try insert (new user)
+                await supabase
+                    .from('finance_data_2025_12_18_18_42')
+                    .insert({
+                        user_id: user.id,
+                        pending_expenses: updatedExpenses,
+                        last_modified: new Date().toISOString(),
+                    });
+            }
 
             const newState = {
                 lastSync: new Date().toISOString(),
