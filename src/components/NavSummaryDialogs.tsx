@@ -7,8 +7,47 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useLocations } from '@/hooks/useLocations';
 import FinancialTrendChart from '@/components/FinancialTrendChart';
-import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator, Share2, Navigation } from 'lucide-react';
+import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator, Share2, Navigation, Timer, Mic, MicOff } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { Button } from '@/components/ui/button';
+
+// Voice Recording Button - Local Helper Component
+const VoiceRecordingButton: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const { isRecording, recordingDuration, startRecording, stopRecording } = useVoiceRecorder();
+
+    const formatDuration = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <button
+            onClick={async () => {
+                if (isRecording) {
+                    stopRecording();
+                    onClose();
+                } else {
+                    await startRecording();
+                }
+            }}
+            className={`w-full flex items-center gap-3 p-4 rounded-xl transition-colors ${isRecording ? 'bg-red-100 hover:bg-red-200 animate-pulse' : 'bg-pink-50 hover:bg-pink-100'}`}
+        >
+            <div className={`p-2.5 rounded-full ${isRecording ? 'bg-red-300' : 'bg-pink-200'}`}>
+                {isRecording ? <MicOff className="w-5 h-5 text-red-700" /> : <Mic className="w-5 h-5 text-pink-700" />}
+            </div>
+            <div className="text-right flex-1">
+                <p className={`font-bold ${isRecording ? 'text-red-900' : 'text-pink-900'}`}>
+                    {isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}
+                </p>
+                <p className={`text-xs ${isRecording ? 'text-red-600 font-mono' : 'text-pink-600'}`}>
+                    {isRecording ? formatDuration(recordingDuration) : 'يُحفظ محلياً فقط'}
+                </p>
+            </div>
+        </button>
+    );
+};
 
 interface NavSummaryDialogsProps {
     type: string | null;
@@ -366,6 +405,34 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                     </div>
                 );
 
+            case 'settings_quick_menu':
+                return (
+                    <div className="space-y-4 py-2">
+                        <p className="text-center text-sm text-muted-foreground mb-4">إجراءات سريعة</p>
+
+                        {/* Focus Timer */}
+                        <button
+                            onClick={() => {
+                                onClose();
+                                // Dispatch custom event to start pomodoro
+                                window.dispatchEvent(new CustomEvent('start-focus-timer'));
+                            }}
+                            className="w-full flex items-center gap-3 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
+                        >
+                            <div className="bg-indigo-200 p-2.5 rounded-full">
+                                <Timer className="w-5 h-5 text-indigo-700" />
+                            </div>
+                            <div className="text-right flex-1">
+                                <p className="font-bold text-indigo-900">بدء مؤقت التركيز</p>
+                                <p className="text-xs text-indigo-600">جلسة بومودورو 25 دقيقة</p>
+                            </div>
+                        </button>
+
+                        {/* Voice Recording - Uses the hook */}
+                        <VoiceRecordingButton onClose={onClose} />
+                    </div>
+                );
+
             default:
                 return <p>...</p>;
         }
@@ -381,6 +448,7 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
 
             case 'home_summary': return 'الملخص الشامل';
             case 'calendar_weekly': return 'مهام الأسبوع';
+            case 'settings_quick_menu': return 'إجراءات سريعة';
             default: return '';
         }
     };

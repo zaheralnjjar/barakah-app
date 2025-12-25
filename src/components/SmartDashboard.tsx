@@ -311,43 +311,63 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <DashboardHeader currentDate={currentDate} />
 
-            {/* ===== PARKING TIMER (Enhanced) ===== */}
+            {/* ===== PARKING TIMER (Enhanced with 3 Buttons) ===== */}
             {parkingDuration && latestParking && (
-                <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 shadow-sm animate-fade-in relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-orange-100 p-2 rounded-full animate-pulse">
-                                <Clock className="w-5 h-5 text-orange-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-orange-800 font-bold mb-0.5">مدة الوقوف</p>
-                                <p className="text-xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
-                            </div>
+                <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-md animate-fade-in relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-orange-400 to-orange-600"></div>
+
+                    {/* Header Row */}
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="bg-orange-100 p-2.5 rounded-full animate-pulse shadow-inner">
+                            <Clock className="w-5 h-5 text-orange-600" />
                         </div>
-                        <div className="flex gap-2">
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={stopParking}
-                                className="h-8 px-3 text-xs"
-                            >
-                                إيقاف 🛑
-                            </Button>
-                            <Button
-                                size="sm"
-                                className="h-8 px-3 bg-blue-500 hover:bg-blue-600 text-xs gap-1"
-                                onClick={() => {
-                                    // Use Geo intent for better mobile support or maps url
-                                    const url = latestParking.url || `https://www.google.com/maps/search/?api=1&query=${latestParking.lat},${latestParking.lng}`;
-                                    window.open(url, '_blank');
-                                }}
-                            >
-                                ملاحة 🧭
-                            </Button>
+                        <div>
+                            <p className="text-xs text-orange-800 font-bold mb-0.5">مدة الوقوف</p>
+                            <p className="text-2xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
                         </div>
                     </div>
-                    <p className="text-[10px] text-orange-600/70 truncate text-right pr-1">{latestParking.title}</p>
+
+                    {/* Location Title */}
+                    <p className="text-xs text-orange-600/80 truncate mb-3 pr-2 border-b border-orange-200 pb-2">{latestParking.title}</p>
+
+                    {/* Action Buttons Row */}
+                    <div className="flex gap-2 justify-end flex-wrap">
+                        {/* Save Button - Keeps location, stops timer display */}
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 px-3 text-xs border-green-400 text-green-700 hover:bg-green-50 gap-1"
+                            onClick={() => {
+                                setParkingDuration(null);
+                                setLatestParking(null);
+                                toast({ title: '✅ تم حفظ الموقف', description: 'يمكنك العثور عليه في المواقع المحفوظة' });
+                            }}
+                        >
+                            حفظ 💾
+                        </Button>
+
+                        {/* Delete Button - Deletes location entirely */}
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={stopParking}
+                            className="h-9 px-3 text-xs"
+                        >
+                            حذف 🗑️
+                        </Button>
+
+                        {/* Navigate Button */}
+                        <Button
+                            size="sm"
+                            className="h-9 px-3 bg-blue-500 hover:bg-blue-600 text-xs gap-1"
+                            onClick={() => {
+                                const url = latestParking.url || `https://www.google.com/maps/search/?api=1&query=${latestParking.lat},${latestParking.lng}`;
+                                window.open(url, '_blank');
+                            }}
+                        >
+                            ملاحة 🧭
+                        </Button>
+                    </div>
                 </div>
             )}
 
@@ -455,8 +475,15 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         <div className="space-y-4 mt-2">
                             <Input placeholder="عنوان المهمة" className="text-right" id="task-title" />
                             <textarea placeholder="وصف المهمة (اختياري)" className="w-full h-20 p-3 border rounded-lg text-right resize-none" id="task-desc" />
-                            <div className="grid grid-cols-2 gap-2">
-                                <div><label className="text-xs text-gray-500">التاريخ</label><Input type="date" defaultValue={new Date().toISOString().split('T')[0]} id="task-date" /></div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label className="text-xs text-gray-500">التاريخ</label>
+                                    <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} id="task-date" />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500">الوقت</label>
+                                    <Input type="time" defaultValue="09:00" id="task-time" />
+                                </div>
                                 <div>
                                     <label className="text-xs text-gray-500">الأولوية</label>
                                     <select className="w-full h-10 border rounded-md px-3" id="task-priority">
@@ -471,7 +498,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                                 if (!title) { toast({ title: 'أدخل عنوان المهمة' }); return; }
                                 const priority = (document.getElementById('task-priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high' || 'medium';
                                 const deadline = (document.getElementById('task-date') as HTMLInputElement)?.value || new Date().toISOString().split('T')[0];
-                                await addTask({ title, type: 'task', deadline, priority });
+                                const taskTime = (document.getElementById('task-time') as HTMLInputElement)?.value || '09:00';
+                                await addTask({ title, type: 'task', deadline: `${deadline}T${taskTime}`, priority });
                                 if (refetch) refetch();
                                 toast({ title: 'تم حفظ المهمة', description: title });
                                 setShowAddDialog(null);

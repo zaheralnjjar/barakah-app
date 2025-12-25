@@ -257,7 +257,7 @@ const Index = () => {
 
               toast({
                 title: "جاري المزامنة",
-                description: "يتم تحديث البيانات مع السحابة...",
+                description: "يتم تحديث البيانات والإعدادات مع السحابة...",
                 duration: 2000,
               });
 
@@ -267,7 +267,7 @@ const Index = () => {
                   await syncNow();
                   toast({
                     title: "تمت المزامنة",
-                    description: "تم تحديث البيانات بنجاح",
+                    description: "تم تحديث البيانات والإعدادات بنجاح",
                     className: "bg-green-50 border-green-200",
                     duration: 3000
                   });
@@ -282,6 +282,9 @@ const Index = () => {
               };
 
               performSync();
+            } else if (id === 'settings_quick_menu') {
+              // Show Quick Actions Menu (Focus Timer / Voice Recording)
+              setActiveSummary('settings_quick_menu');
             } else {
               // Ignore 'settings' to prevent opening empty dialog (handled by sync above)
               if (id !== 'settings') {
