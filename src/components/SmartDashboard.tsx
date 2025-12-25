@@ -245,7 +245,33 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         e.timestamp?.startsWith(new Date().toISOString().split('T')[0]) && e.type === 'expense'
     ).reduce((acc: number, curr: any) => acc + curr.amount, 0) || 0;
 
-    const dailyLimitARS = financeData?.financial_config?.daily_limit_ars || 0;
+    // Calculate Dynamic Daily Limit (Unified with FinancialController)
+    const calculateDailyLimit = () => {
+        if (!financeData) return 0;
+
+        // 1. Check if explicit limit is set in config
+        const explicitLimit = financeData?.financial_config?.daily_limit_ars || 0;
+        if (explicitLimit > 0) return explicitLimit;
+
+        // 2. Auto-calculate based on Available Balance
+        const balance = financeData.current_balance_ars || 0;
+        const buffer = financeData.emergency_buffer || 0;
+        const debt = financeData.total_debt || 0;
+
+        // Available = Balance - (Buffer + Debt)
+        const available = balance - buffer - debt;
+        if (available <= 0) return 0;
+
+        // Remaining Days in Month
+        const now = new Date();
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const remainingDays = daysInMonth - now.getDate();
+
+        // Safe division (remaining + padding)
+        return Math.floor(available / (remainingDays + 3));
+    };
+
+    const dailyLimitARS = calculateDailyLimit();
     const totalBalanceARS = financeData?.current_balance_ars || 0;
 
     if (loading) return <div className="p-8 text-center text-emerald-600">جاري تحميل البيانات...</div>;
