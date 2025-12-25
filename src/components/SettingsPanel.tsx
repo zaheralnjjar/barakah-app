@@ -13,6 +13,7 @@ import {
     Calendar,
     LogOut,
     FileSpreadsheet,
+    X,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import DataBackup from '@/components/DataBackup';
 import { useCloudSync } from '@/hooks/useCloudSync';
-import { useGoogleSheetsSync } from '@/hooks/useGoogleSheetsSync';
+import { useMultiGoogleSheetsSync } from '@/hooks/useMultiGoogleSheetsSync';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
@@ -34,13 +35,18 @@ const SettingsPanel = () => {
     const { toast } = useToast();
     const { t } = useTranslation();
     const { syncNow, pullData, isSyncing } = useCloudSync();
-    const { syncFromSheets, isSyncing: isSyncingSheets, lastSync: lastSheetSync } = useGoogleSheetsSync();
+    const { sheets, isSyncing: isSyncingSheets, currentSyncSheet, addSheet, removeSheet, toggleSheet, syncSheet, syncAllSheets } = useMultiGoogleSheetsSync();
     const lastSync = useAppStore(s => s.lastSync);
     const quickActions = useAppStore(s => s.quickActions);
 
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+
+    // Multi-Sheet Dialog State
+    const [showAddSheet, setShowAddSheet] = useState(false);
+    const [newSheetName, setNewSheetName] = useState('');
+    const [newSheetUrl, setNewSheetUrl] = useState('');
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -151,28 +157,78 @@ const SettingsPanel = () => {
                 </CardContent>
             </Card>
 
-            {/* Google Sheets Sync */}
+            {/* Google Sheets Sync - Multi-Sheet Support */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                        مزامنة Google Sheets
+                    <CardTitle className="flex items-center justify-between text-lg arabic-title">
+                        <div className="flex items-center gap-2">
+                            <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                            جداول Google Sheets
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowAddSheet(true)}
+                            className="text-xs"
+                        >
+                            + إضافة جدول
+                        </Button>
                     </CardTitle>
                     <CardDescription className="arabic-body text-xs">
-                        استيراد المصاريف تلقائياً من جدول Google Sheets
+                        إدارة جداول Google Sheets المتعددة للاستيراد
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {lastSheetSync && (
-                        <p className="text-sm text-gray-500">
-                            آخر مزامنة: {new Date(lastSheetSync).toLocaleString('ar-EG')}
-                        </p>
+                    {/* Sheet List */}
+                    {sheets.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-4">لا توجد جداول مضافة</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {sheets.map((sheet) => (
+                                <div key={sheet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            checked={sheet.enabled}
+                                            onCheckedChange={() => toggleSheet(sheet.id)}
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium">{sheet.name}</p>
+                                            {sheet.lastSync && (
+                                                <p className="text-[10px] text-gray-400">
+                                                    آخر مزامنة: {new Date(sheet.lastSync).toLocaleDateString('ar-EG')}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-7 w-7"
+                                            onClick={() => syncSheet(sheet.id)}
+                                            disabled={isSyncingSheets}
+                                        >
+                                            <RefreshCw className={`w-3 h-3 ${currentSyncSheet === sheet.id ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                        {sheet.id !== 'default' && (
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-7 w-7 text-red-500 hover:text-red-600"
+                                                onClick={() => removeSheet(sheet.id)}
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
-                    <p className="text-xs text-gray-400">
-                        المزامنة التلقائية: كل 24 ساعة
-                    </p>
+
+                    {/* Sync All Button */}
                     <Button
-                        onClick={() => syncFromSheets()}
+                        onClick={() => syncAllSheets()}
                         disabled={isSyncingSheets}
                         className="w-full bg-green-600 hover:bg-green-700"
                     >
@@ -184,12 +240,58 @@ const SettingsPanel = () => {
                         ) : (
                             <>
                                 <FileSpreadsheet className="w-4 h-4 ml-2" />
-                                مزامنة الآن
+                                مزامنة جميع الجداول
                             </>
                         )}
                     </Button>
                 </CardContent>
             </Card>
+
+            {/* Add Sheet Dialog */}
+            <Dialog open={showAddSheet} onOpenChange={setShowAddSheet}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="arabic-title">إضافة جدول Google Sheets</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div>
+                            <Label className="arabic-body">اسم الجدول (للتمييز)</Label>
+                            <Input
+                                placeholder="مثال: مصروفات الزوجة"
+                                value={newSheetName}
+                                onChange={(e) => setNewSheetName(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label className="arabic-body">رابط الجدول المنشور</Label>
+                            <Input
+                                placeholder="https://docs.google.com/spreadsheets/..."
+                                value={newSheetUrl}
+                                onChange={(e) => setNewSheetUrl(e.target.value)}
+                                className="mt-1 dir-ltr text-left"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                انشر الجدول عبر: ملف {">"} مشاركة {">"} نشر على الويب
+                            </p>
+                        </div>
+                        <Button
+                            onClick={() => {
+                                if (newSheetName && newSheetUrl) {
+                                    addSheet(newSheetName, newSheetUrl);
+                                    setNewSheetName('');
+                                    setNewSheetUrl('');
+                                    setShowAddSheet(false);
+                                }
+                            }}
+                            className="w-full"
+                            disabled={!newSheetName || !newSheetUrl}
+                        >
+                            إضافة الجدول
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
 
 
