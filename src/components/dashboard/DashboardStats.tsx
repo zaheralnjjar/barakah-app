@@ -42,7 +42,9 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                         <span className="text-lg font-bold text-gray-900 tabular-nums">{todayExpense.toLocaleString()}</span>
                     </div>
                     <div className="py-2 px-1 border-l border-emerald-100">
-                        <span className="text-lg font-bold text-gray-900 tabular-nums">{dailyLimitARS.toLocaleString()}</span>
+                        <span className="text-lg font-bold text-gray-900 tabular-nums">
+                            {dailyLimitARS > 0 ? dailyLimitARS.toLocaleString() : <span className="text-sm text-gray-400">غير محدد</span>}
+                        </span>
                     </div>
                     <div className="py-2 px-1">
                         <span className="text-lg font-bold text-emerald-700 tabular-nums">{totalBalanceARS.toLocaleString()}</span>

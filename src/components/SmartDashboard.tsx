@@ -9,8 +9,9 @@ import { useMedications } from '@/hooks/useMedications';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
+import { useLocations } from '@/hooks/useLocations';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -39,7 +40,12 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { habits } = useHabits();
     const { medications } = useMedications();
     const { tasks, addTask, refreshTasks } = useTasks();
+
     const { appointments, refreshAppointments } = useAppointments();
+    const { saveParking, getParkingOnly } = useLocations();
+
+    const [parkingDuration, setParkingDuration] = useState<string | null>(null);
+    const [latestParking, setLatestParking] = useState<any>(null);
 
     const [currentDate] = useState(new Date());
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
@@ -50,6 +56,42 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         const diff = today.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(today.setDate(diff));
     });
+
+    // Parking Timer Logic
+    useEffect(() => {
+        const updateTimer = () => {
+            const spots = getParkingOnly();
+            if (spots.length > 0) {
+                // Sort by createdAt descending
+                const latest = spots.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                setLatestParking(latest);
+
+                const start = new Date(latest.createdAt).getTime();
+                const now = new Date().getTime();
+                const diff = now - start;
+
+                if (diff < 0) {
+                    setParkingDuration('00:00:00');
+                    return;
+                }
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                setParkingDuration(
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                );
+            } else {
+                setParkingDuration(null);
+                setLatestParking(null);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [getParkingOnly]);
 
     // Sync data to Android Widget
     useEffect(() => {
@@ -233,6 +275,33 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* ===== 1. HEADER ===== */}
             <DashboardHeader currentDate={currentDate} />
 
+            {/* ===== PARKING TIMER ===== */}
+            {parkingDuration && latestParking && (
+                <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center justify-between shadow-sm animate-fade-in relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                    <div className="flex items-center gap-3">
+                        <div className="bg-orange-100 p-2 rounded-full animate-pulse">
+                            <Clock className="w-5 h-5 text-orange-600" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-orange-800 font-bold mb-0.5">مدة الوقوف</p>
+                            <p className="text-xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
+                            <p className="text-[10px] text-orange-600/70 mt-1 truncate max-w-[150px]">{latestParking.title}</p>
+                        </div>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 px-3 text-orange-700 hover:bg-orange-100 hover:text-orange-900 gap-1"
+                        onClick={() => {
+                            if (latestParking.url) window.open(latestParking.url, '_blank');
+                        }}
+                    >
+                        موقع السيارة 📍
+                    </Button>
+                </div>
+            )}
+
             {/* ===== 2. FINANCIAL SUMMARY ===== */}
             <DashboardStats
                 onNavigateToFinance={() => onNavigateToTab('finance')}
@@ -242,7 +311,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             />
 
             {/* ===== 3. QUICK ACTIONS ===== */}
-            <QuickActionsGrid onOpenAddDialog={setShowAddDialog} />
+            <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
 
             {/* ===== PRAYER TIMES (TODAY) ===== */}
             <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white mb-6">

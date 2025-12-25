@@ -9,7 +9,7 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false,
         },
-        icon: path.join(__dirname, '../public/icon.png') // Ensure icon exists or remove this line
+        icon: path.join(__dirname, '../public/pwa-512x512.png') // Ensure icon exists or remove this line
     });
 
     const isDev = process.env.NODE_ENV === 'development';

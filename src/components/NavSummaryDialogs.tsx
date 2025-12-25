@@ -7,7 +7,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useLocations } from '@/hooks/useLocations';
 import FinancialTrendChart from '@/components/FinancialTrendChart';
-import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator, Share2 } from 'lucide-react';
+import { Loader2, CheckSquare, Target, MapPin, Moon, Calendar, Calculator, Share2, Navigation } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface NavSummaryDialogsProps {
@@ -142,8 +142,8 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                                     <div key={loc.id} className="bg-gray-50 p-3 rounded-lg border border-gray-100 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-full ${loc.category === 'mosque' ? 'bg-emerald-100 text-emerald-600' :
-                                                    loc.category === 'home' ? 'bg-blue-100 text-blue-600' :
-                                                        loc.category === 'work' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
+                                                loc.category === 'home' ? 'bg-blue-100 text-blue-600' :
+                                                    loc.category === 'work' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100'
                                                 }`}>
                                                 <MapPin className="w-4 h-4" />
                                             </div>
@@ -158,7 +158,7 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                                                 className="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
                                                 title="ملاحة"
                                             >
-                                                <Target className="w-4 h-4" />
+                                                <Navigation className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={() => {
@@ -323,18 +323,27 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                         </div>
                         <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 bg-blue-50 rounded-lg flex flex-col items-center">
+                                <div
+                                    className="p-3 bg-blue-50 rounded-lg flex flex-col items-center cursor-pointer hover:bg-blue-100 transition-colors"
+                                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'productivity' })); }}
+                                >
                                     <span className="text-xl font-bold text-blue-600">{tasks.filter(t => t.progress < 100).length}</span>
                                     <span className="text-xs text-gray-500">مهام متبقية</span>
                                 </div>
-                                <div className="p-3 bg-purple-50 rounded-lg flex flex-col items-center">
+                                <div
+                                    className="p-3 bg-purple-50 rounded-lg flex flex-col items-center cursor-pointer hover:bg-purple-100 transition-colors"
+                                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'appointments' })); }}
+                                >
                                     <span className="text-xl font-bold text-purple-600">{appointments.filter(a => a.date === todayStr).length}</span>
                                     <span className="text-xs text-gray-500">مواعيد اليوم</span>
                                 </div>
                             </div>
 
                             {/* Goals Summary */}
-                            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+                            <div
+                                className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
+                                onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'productivity' })); }}
+                            >
                                 <div className="flex items-center gap-2">
                                     <Target className="w-4 h-4 text-amber-500" />
                                     <span>الأهداف اليومية</span>
@@ -343,7 +352,10 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                             </div>
 
                             {/* Next Prayer or Event */}
-                            <div className="bg-emerald-50 p-3 rounded-lg text-right">
+                            <div
+                                className="bg-emerald-50 p-3 rounded-lg text-right cursor-pointer hover:bg-emerald-100 transition-colors"
+                                onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'prayer' })); }}
+                            >
                                 <p className="text-xs text-emerald-600 mb-1">الصلاة القادمة</p>
                                 <div className="flex justify-between items-end">
                                     <p className="font-bold text-emerald-800">{nextPrayer ? nextPrayer.nameAr : '...'}</p>
@@ -366,7 +378,7 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
             case 'dashboard': return 'ملخص اليوم';
             case 'prayer': return 'مواقيت الصلاة';
             case 'map': return 'المواقع المحفوظة';
-            case 'settings': return 'الإعدادات';
+
             case 'home_summary': return 'الملخص الشامل';
             case 'calendar_weekly': return 'مهام الأسبوع';
             default: return '';

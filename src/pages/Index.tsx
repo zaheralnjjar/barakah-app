@@ -18,7 +18,6 @@ import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 import CalendarSection from '@/components/CalendarSection';
-import AIAssistant from '@/components/AIAssistant';
 
 import BottomNavBar from '@/components/BottomNavBar';
 import InteractiveMap from '@/components/InteractiveMap';
@@ -47,7 +46,7 @@ const Index = () => {
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
 
   // AI Assistant state
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
+
 
   // Swipe gestures removed - were interfering with checkbox clicks
 
@@ -245,14 +244,7 @@ const Index = () => {
           </Tabs>
         </div>
 
-        {/* Floating AI Assistant Button */}
-        <button
-          onClick={() => setShowAIAssistant(true)}
-          className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform active:scale-95"
-          style={{ boxShadow: '0 4px 15px rgba(147, 51, 234, 0.4)' }}
-        >
-          <Bot className="w-7 h-7" />
-        </button>
+
 
         {/* Bottom Navigation */}
         <BottomNavBar
@@ -291,7 +283,10 @@ const Index = () => {
 
               performSync();
             } else {
-              setActiveSummary(id);
+              // Ignore 'settings' to prevent opening empty dialog (handled by sync above)
+              if (id !== 'settings') {
+                setActiveSummary(id);
+              }
             }
           }}
         />
@@ -303,10 +298,7 @@ const Index = () => {
 
 
         {/* AI Assistant Dialog */}
-        <AIAssistant
-          isOpen={showAIAssistant}
-          onClose={() => setShowAIAssistant(false)}
-        />
+
 
         {/* Voice Assistant Modal */}
 

@@ -84,9 +84,9 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
 
     useMapEvents({
         click(e) {
+            if (!e.latlng) return;
             setPosition(e.latlng);
-            map.setView([e.latlng.lat, e.latlng.lng], map.getZoom(), {
-                animate: true,
+            map.flyTo([e.latlng.lat, e.latlng.lng], map.getZoom(), {
                 duration: 0.5
             });
         },

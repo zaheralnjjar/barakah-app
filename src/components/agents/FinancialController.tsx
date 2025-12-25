@@ -46,7 +46,8 @@ const FinancialController = () => {
     currency: 'ARS',
     type: 'expense',
     description: '',
-    category: 'أخرى'
+    category: 'أخرى',
+    date: ''
   });
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filterCategory, setFilterCategory] = useState('all');
@@ -353,7 +354,7 @@ const FinancialController = () => {
         description: `تم ${isExpense ? 'خصم' : 'إضافة'} ${amount} ${newTransaction.currency}`,
       });
 
-      setNewTransaction({ amount: '', currency: 'ARS', type: 'expense', description: '', category: 'أخرى' });
+      setNewTransaction({ amount: '', currency: 'ARS', type: 'expense', description: '', category: 'أخرى', date: '' });
       loadFinanceData();
     } catch (error: any) {
       console.error('Error adding transaction:', error);
@@ -445,7 +446,7 @@ const FinancialController = () => {
       // Update transaction in array
       const updatedExpenses = financeData.pending_expenses.map((t: any) =>
         t.id === id ? { ...t, ...updates } : t
-      );
+      ).sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       const { error } = await supabase
         .from('finance_data_2025_12_18_18_42')
@@ -587,7 +588,7 @@ const FinancialController = () => {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-green-600">
-              {dailyLimit.toLocaleString()} ARS
+              {dailyLimit > 0 ? dailyLimit.toLocaleString() : <span className="text-xs text-gray-400">غير محدد</span>} ARS
             </p>
             <p className="text-sm text-muted-foreground">
               ≈ {(dailyLimit / financeData.exchange_rate).toFixed(2)} USD
@@ -1228,6 +1229,15 @@ const FinancialController = () => {
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <div className="space-y-2">
+              <Label className="text-xs">تاريخ المعاملة</Label>
+              <Input
+                type="date"
+                value={newTransaction.date}
+                onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
+                className="text-right"
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setEditingTransaction(null)} className="flex-1">
@@ -1242,7 +1252,10 @@ const FinancialController = () => {
                   type: newTransaction.type,
                   category: newTransaction.category,
                   description: newTransaction.description,
-                  currency: newTransaction.currency
+                  currency: newTransaction.currency,
+                  timestamp: newTransaction.date ?
+                    (editingTransaction.timestamp.includes('T') ? `${newTransaction.date}T${editingTransaction.timestamp.split('T')[1]}` : new Date(newTransaction.date).toISOString())
+                    : editingTransaction.timestamp
                 });
                 setEditingTransaction(null);
                 setUpdating(false);
@@ -1376,7 +1389,8 @@ const FinancialController = () => {
                               type: t.type,
                               category: t.category,
                               description: t.description || '',
-                              currency: t.currency
+                              currency: t.currency,
+                              date: t.timestamp ? t.timestamp.split('T')[0] : new Date().toISOString().split('T')[0]
                             });
                           }}
                         >

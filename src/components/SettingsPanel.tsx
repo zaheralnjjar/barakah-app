@@ -15,15 +15,20 @@ import {
     LogOut,
     FileSpreadsheet,
     X,
-    Bot,
     Circle,
     Plus,
     DollarSign,
     FileText,
-    Sparkles,
     ShoppingCart,
     Pill,
+    Bell,
+    CheckSquare,
+    Volume2,
+    Vibrate,
+    Clock,
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,8 +37,6 @@ import { supabase } from '@/integrations/supabase/client';
 import DataBackup from '@/components/DataBackup';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useMultiGoogleSheetsSync } from '@/hooks/useMultiGoogleSheetsSync';
-import { useGemini } from '@/hooks/useGemini';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
 import CategoryManager from '@/components/CategoryManager';
@@ -46,7 +49,6 @@ const SettingsPanel = () => {
     const { t } = useTranslation();
     const { syncNow, pullData, isSyncing } = useCloudSync();
     const { sheets, isSyncing: isSyncingSheets, currentSyncSheet, addSheet, removeSheet, toggleSheet, syncSheet, syncAllSheets } = useMultiGoogleSheetsSync();
-    const { apiKey, setApiKey, clearApiKey, isConfigured } = useGemini();
     const lastSync = useAppStore(s => s.lastSync);
     const quickActions = useAppStore(s => s.quickActions);
 
@@ -58,9 +60,6 @@ const SettingsPanel = () => {
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [newSheetName, setNewSheetName] = useState('');
     const [newSheetUrl, setNewSheetUrl] = useState('');
-
-    // Gemini API State
-    const [geminiApiInput, setGeminiApiInput] = useState('');
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -117,6 +116,133 @@ const SettingsPanel = () => {
 
 
             {/* Reminder Customizations - Enhanced */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Bell className="w-5 h-5 text-orange-500" />
+                        تخصيص التنبيهات
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        تحكم في الإشعارات لكل قسم في التطبيق
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Granular Toggles */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                    <Calendar className="w-4 h-4 text-green-600" />
+                                </div>
+                                <div>
+                                    <Label className="text-sm">تنبيهات الصلاة والمواعيد</Label>
+                                    <p className="text-[10px] text-gray-500">الأذان، الإقامة، ومواعيدك في التقويم</p>
+                                </div>
+                            </div>
+                            <Switch
+                                checked={reminders.prayer && reminders.appointments}
+                                onCheckedChange={() => {
+                                    toggleReminder('prayer');
+                                    toggleReminder('appointments');
+                                }}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div>
+                                    <Label className="text-sm">تنبيهات المهام</Label>
+                                    <p className="text-[10px] text-gray-500">تذكير بموعد استحقاق المهام</p>
+                                </div>
+                            </div>
+                            <Switch
+                                checked={reminders.tasks}
+                                onCheckedChange={() => toggleReminder('tasks')}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-yellow-100 rounded-lg">
+                                    <DollarSign className="w-4 h-4 text-yellow-600" />
+                                </div>
+                                <div>
+                                    <Label className="text-sm">تنبيهات مالية</Label>
+                                    <p className="text-[10px] text-gray-500">تجاوز الحد اليومي، استحقاق الفواتير</p>
+                                </div>
+                            </div>
+                            <Switch
+                                checked={reminders.financial}
+                                onCheckedChange={() => toggleReminder('financial')}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-purple-100 rounded-lg">
+                                    <FileText className="w-4 h-4 text-purple-600" />
+                                </div>
+                                <div>
+                                    <Label className="text-sm">الملخص اليومي</Label>
+                                    <p className="text-[10px] text-gray-500">إشعار صباحي بملخص يومك</p>
+                                </div>
+                            </div>
+                            <Switch
+                                checked={reminders.dailySummary}
+                                onCheckedChange={() => toggleReminder('dailySummary')}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-gray-100" />
+
+                    {/* Global Settings */}
+                    <div className="space-y-4">
+                        <Label className="text-sm font-semibold text-gray-700">إعدادات عامة</Label>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Volume2 className="w-4 h-4 text-gray-500" />
+                                <Label className="text-xs">الأصوات</Label>
+                            </div>
+                            <Switch
+                                checked={reminders.sound}
+                                onCheckedChange={() => toggleReminder('sound')}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Vibrate className="w-4 h-4 text-gray-500" />
+                                <Label className="text-xs">الاهتزاز</Label>
+                            </div>
+                            <Switch
+                                checked={reminders.vibration}
+                                onCheckedChange={() => toggleReminder('vibration')}
+                            />
+                        </div>
+
+                        <div className="space-y-3 pt-2">
+                            <div className="flex justify-between">
+                                <Label className="text-xs">وقت التذكير المسبق</Label>
+                                <span className="text-xs font-bold text-blue-600">{reminders.reminderMinutes} دقيقة</span>
+                            </div>
+                            <Slider
+                                defaultValue={[reminders.reminderMinutes || 15]}
+                                max={60}
+                                min={5}
+                                step={5}
+                                onValueChange={(vals) => setReminderMinutes(vals[0])}
+                                className="w-full"
+                            />
+                            <p className="text-[10px] text-gray-400 text-center">كم دقيقة قبل الموعد تريد التنبيه؟</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
 
 
@@ -306,66 +432,6 @@ const SettingsPanel = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-
-            {/* Gemini AI Settings */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <Bot className="w-5 h-5 text-purple-600" />
-                        المساعد الذكي (Gemini AI)
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">
-                        تحليل مالي ذكي وتقارير تلقائية
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {isConfigured ? (
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-green-600">
-                                <Sparkles className="w-4 h-4" />
-                                <span className="text-sm">المساعد الذكي مفعّل ✓</span>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={clearApiKey}
-                                className="text-red-500 border-red-200"
-                            >
-                                حذف مفتاح API
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            <div>
-                                <Label className="text-xs">مفتاح Gemini API</Label>
-                                <Input
-                                    type="password"
-                                    placeholder="AI..."
-                                    value={geminiApiInput}
-                                    onChange={(e) => setGeminiApiInput(e.target.value)}
-                                    className="mt-1 text-left dir-ltr"
-                                />
-                            </div>
-                            <Button
-                                onClick={() => {
-                                    if (geminiApiInput) {
-                                        setApiKey(geminiApiInput);
-                                        setGeminiApiInput('');
-                                    }
-                                }}
-                                disabled={!geminiApiInput}
-                                className="w-full bg-purple-600 hover:bg-purple-700"
-                            >
-                                <Bot className="w-4 h-4 ml-2" />
-                                تفعيل المساعد الذكي
-                            </Button>
-                            <p className="text-[10px] text-gray-400">
-                                احصل على المفتاح من: makersuite.google.com
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
 
 
             {/* Financial Categories */}
