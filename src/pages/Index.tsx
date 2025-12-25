@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Plus, Settings, DollarSign } from 'lucide-react';
+import { Loader2, Calendar, Plus, Settings, DollarSign, Bot } from 'lucide-react';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -328,7 +328,14 @@ const Index = () => {
           </Tabs>
         </div>
 
-        {/* Floating Action Button (Optional, can be added here) */}
+        {/* Floating AI Assistant Button */}
+        <button
+          onClick={() => setShowAIAssistant(true)}
+          className="fixed bottom-24 right-4 z-50 w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform active:scale-95"
+          style={{ boxShadow: '0 4px 15px rgba(147, 51, 234, 0.4)' }}
+        >
+          <Bot className="w-7 h-7" />
+        </button>
 
         {/* Bottom Navigation */}
         <BottomNavBar
