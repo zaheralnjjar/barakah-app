@@ -52,30 +52,30 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Welcome message
+    // Welcome message and auto-start recording
     useEffect(() => {
         if (isOpen && messages.length === 0 && isConfigured) {
             setMessages([{
                 id: 'welcome',
                 role: 'assistant',
-                text: 'مرحباً! أنا مساعدك الذكي في نظام بركة 🌟\n\nيمكنني مساعدتك في:\n• تحليل مصاريفك\n• اقتراحات للتوفير\n• إنشاء تقارير مالية\n\nاسألني أي سؤال!',
+                text: 'مرحباً! أنا مساعدك الذكي في نظام بركة 🌟\n\nتحدث الآن أو اكتب سؤالك!',
                 timestamp: new Date(),
             }]);
+            // Auto-start voice recording after a short delay
+            setTimeout(() => {
+                if (!isListening && !isLoading) {
+                    startListening();
+                }
+            }, 500);
         }
-    }, [isOpen, isConfigured, messages.length]);
+    }, [isOpen, isConfigured]);
 
-    // Voice recognition handler
-    const toggleListening = () => {
+    // Start listening function (extracted for reuse)
+    const startListening = () => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert('متصفحك لا يدعم التعرف على الصوت');
             return;
         }
-
-        if (isListening) {
-            recognitionRef.current?.stop();
-            setIsListening(false);
-            return;
-        }
+        if (isListening) return;
 
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -90,16 +90,26 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
         recognition.onresult = (event: any) => {
             const transcript = event.results[0][0].transcript;
             setInput(transcript);
-            // Auto-send after voice input
-            setTimeout(() => {
-                if (transcript) {
-                    setInput(transcript);
-                }
-            }, 100);
         };
 
         recognitionRef.current = recognition;
         recognition.start();
+    };
+
+    // Voice recognition toggle handler
+    const toggleListening = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('متصفحك لا يدعم التعرف على الصوت');
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+
+        startListening();
     };
 
     const handleSend = async () => {

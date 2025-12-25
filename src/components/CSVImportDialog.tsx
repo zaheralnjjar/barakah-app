@@ -160,14 +160,25 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({ isOpen, onClose, onSu
 
             const updatedExpenses = [...existingExpenses, ...newTransactions];
 
-            // Update in database
-            await supabase
+            // Update in database - use update first, then insert as fallback
+            const { error: updateError } = await supabase
                 .from('finance_data_2025_12_18_18_42')
-                .upsert({
-                    user_id: user.id,
+                .update({
                     pending_expenses: updatedExpenses,
                     last_modified: new Date().toISOString(),
-                });
+                })
+                .eq('user_id', user.id);
+
+            if (updateError) {
+                // If update fails (no existing record), try insert
+                await supabase
+                    .from('finance_data_2025_12_18_18_42')
+                    .insert({
+                        user_id: user.id,
+                        pending_expenses: updatedExpenses,
+                        last_modified: new Date().toISOString(),
+                    });
+            }
 
             toast({
                 title: 'تم الاستيراد بنجاح ✅',
