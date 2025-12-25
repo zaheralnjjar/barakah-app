@@ -282,9 +282,6 @@ const Index = () => {
               };
 
               performSync();
-            } else if (id === 'settings_quick_menu') {
-              // Show Quick Actions Menu (Focus Timer / Voice Recording)
-              setActiveSummary('settings_quick_menu');
             } else {
               // Ignore 'settings' to prevent opening empty dialog (handled by sync above)
               if (id !== 'settings') {

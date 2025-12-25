@@ -74,23 +74,11 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
             const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
             const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
             const startPos = (window as any).startPos;
-            const currentItem = (window as any).currentNavItem;
 
             if (startPos) {
                 const moveX = Math.abs(clientX - startPos.x);
-                const moveY = startPos.y - clientY; // Positive = swipe up
-
-                // Detect upward swipe (>50px) specifically for Settings
-                if (currentItem === 'settings' && moveY > 50 && Math.abs(clientX - startPos.x) < 30) {
-                    clearTimeout(pressTimer.current);
-                    isLongPress.current = true;
-                    isScrolling.current = true; // Prevent normal navigation
-                    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-                    if (onLongPress) onLongPress('settings_quick_menu');
-                    return;
-                }
-
-                if (moveX > 20 || Math.abs(moveY) > 20) {
+                const moveY = Math.abs(clientY - startPos.y);
+                if (moveX > 20 || moveY > 20) {
                     isScrolling.current = true;
                     clearTimeout(pressTimer.current);
                 }

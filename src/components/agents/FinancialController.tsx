@@ -35,7 +35,7 @@ import { Share } from '@capacitor/share';
 import { useRecurringExpenses, RecurringExpense } from '@/hooks/useRecurringExpenses';
 import { Badge } from '@/components/ui/badge';
 import CSVImportDialog from '@/components/CSVImportDialog';
-
+import CategoryExpenseChart from '@/components/CategoryExpenseChart';
 
 const FinancialController = () => {
   const [financeData, setFinanceData] = useState<any>(null);
@@ -596,6 +596,12 @@ const FinancialController = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Category Expense Chart */}
+      <CategoryExpenseChart
+        transactions={financeData.pending_expenses || []}
+        exchangeRate={financeData.exchange_rate}
+      />
 
       {/* Add Transaction */}
       <Card>

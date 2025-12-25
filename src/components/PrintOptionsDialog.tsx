@@ -237,6 +237,74 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                                 {isGenerating ? 'جاري التجهيز...' : 'طباعة / تنزيل PDF'}
                             </Button>
                             <Button
+                                onClick={async () => {
+                                    // Generate PDF and Share on Mobile
+                                    setIsGenerating(true);
+                                    toast({ title: "جاري تحضير الملف للمشاركة..." });
+                                    try {
+                                        // Wait for render
+                                        await new Promise(r => setTimeout(r, 300));
+                                        if (!reportRef.current) throw new Error("Report not ready");
+
+                                        const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, logging: false } as any);
+                                        const imgData = canvas.toDataURL('image/png');
+                                        const pdf = new jsPDF('p', 'mm', 'a4');
+                                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                                        const imgProps = pdf.getImageProperties(imgData);
+                                        const pdfNewHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                                        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfNewHeight);
+
+                                        // Convert to base64 for sharing
+                                        const pdfBase64 = pdf.output('datauristring');
+
+                                        // Try Capacitor Share
+                                        try {
+                                            const { Share } = await import('@capacitor/share');
+                                            const { Filesystem, Directory } = await import('@capacitor/filesystem');
+
+                                            // Save temporarily
+                                            const fileName = `barakah-report-${startDate}.pdf`;
+                                            const base64Data = pdfBase64.split(',')[1];
+
+                                            await Filesystem.writeFile({
+                                                path: fileName,
+                                                data: base64Data,
+                                                directory: Directory.Cache
+                                            });
+
+                                            const fileUri = await Filesystem.getUri({
+                                                path: fileName,
+                                                directory: Directory.Cache
+                                            });
+
+                                            await Share.share({
+                                                title: 'تقرير بركة',
+                                                text: `تقرير ${startDate} - ${endDate}`,
+                                                url: fileUri.uri,
+                                                dialogTitle: 'مشاركة التقرير'
+                                            });
+
+                                            toast({ title: "تم إعداد الملف للمشاركة" });
+                                        } catch (shareErr) {
+                                            // Fallback for web - download instead
+                                            console.log("Share not available, downloading instead");
+                                            pdf.save(`barakah-report-${startDate}.pdf`);
+                                            toast({ title: "تم تنزيل الملف", description: "الاستخدم المشاركة على الجوال" });
+                                        }
+                                    } catch (err) {
+                                        console.error("Share error:", err);
+                                        toast({ title: "خطأ", description: "حدث خطأ أثناء التحضير", variant: "destructive" });
+                                    } finally {
+                                        setIsGenerating(false);
+                                    }
+                                }}
+                                disabled={isGenerating}
+                                className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90 text-white flex-1"
+                            >
+                                <Printer className="w-4 h-4 ml-2" />
+                                مشاركة PDF
+                            </Button>
+                            <Button
                                 onClick={() => handleGenerate(true)}
                                 disabled={isGenerating}
                                 variant="outline"
