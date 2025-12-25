@@ -62,39 +62,6 @@ const SettingsPanel = () => {
     // Gemini API State
     const [geminiApiInput, setGeminiApiInput] = useState('');
 
-    // Radial Menu Customization State
-    const [radialMenuActions, setRadialMenuActions] = useState<any>(() => {
-        const saved = localStorage.getItem('baraka_radial_menu_actions');
-        if (saved) {
-            try { return JSON.parse(saved); } catch { }
-        }
-        return {
-            top: 'calendar',
-            right: 'add_transaction',
-            bottom: 'finance',
-            left: 'settings',
-        };
-    });
-
-    const saveRadialMenuActions = (newActions: any) => {
-        setRadialMenuActions(newActions);
-        localStorage.setItem('baraka_radial_menu_actions', JSON.stringify(newActions));
-        toast({ title: 'تم الحفظ', description: 'تم حفظ إعدادات القائمة الدائرية' });
-    };
-
-    // Available actions for radial menu
-    const availableActions = [
-        { value: 'calendar', label: 'التقويم', icon: 'Calendar' },
-        { value: 'add_transaction', label: 'إضافة معاملة', icon: 'Plus' },
-        { value: 'finance', label: 'المالية', icon: 'DollarSign' },
-        { value: 'settings', label: 'الإعدادات', icon: 'Settings' },
-        { value: 'dashboard', label: 'الرئيسية', icon: 'Home' },
-        { value: 'shopping', label: 'قائمة التسوق', icon: 'ShoppingCart' },
-        { value: 'ai_report', label: 'تقرير ذكي (AI)', icon: 'Sparkles' },
-        { value: 'sync_sheets', label: 'مزامنة الجداول', icon: 'FileSpreadsheet' },
-        { value: 'ai_chat', label: 'المساعد الذكي', icon: 'Bot' },
-    ];
-
     const handleLogout = async () => {
         await supabase.auth.signOut();
     };
@@ -397,50 +364,6 @@ const SettingsPanel = () => {
                             </p>
                         </div>
                     )}
-                </CardContent>
-            </Card>
-
-            {/* Radial Menu Customization */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <Circle className="w-5 h-5 text-green-600" />
-                        تخصيص القائمة الدائرية
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">
-                        اضغط مطولاً على الشاشة لفتح القائمة
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {(['top', 'right', 'bottom', 'left'] as const).map((position) => (
-                        <div key={position} className="flex items-center justify-between">
-                            <Label className="text-sm">
-                                {position === 'top' ? '⬆️ الأعلى' :
-                                    position === 'right' ? '➡️ اليمين' :
-                                        position === 'bottom' ? '⬇️ الأسفل' : '⬅️ اليسار'}
-                            </Label>
-                            <Select
-                                value={radialMenuActions[position]}
-                                onValueChange={(value) => {
-                                    saveRadialMenuActions({
-                                        ...radialMenuActions,
-                                        [position]: value,
-                                    });
-                                }}
-                            >
-                                <SelectTrigger className="w-40">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableActions.map((action) => (
-                                        <SelectItem key={action.value} value={action.value}>
-                                            {action.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    ))}
                 </CardContent>
             </Card>
 

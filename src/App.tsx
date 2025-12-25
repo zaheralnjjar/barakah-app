@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import Index from "./pages/Index";
-import RadialMenuTest from "./pages/RadialMenuTest";
 import NotFound from "./pages/NotFound";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -83,7 +82,6 @@ const App = () => {
         <HashRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/radial-test" element={<RadialMenuTest />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

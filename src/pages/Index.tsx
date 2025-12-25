@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar, Plus, Settings, DollarSign, Bot } from 'lucide-react';
+import { Loader2, Bot } from 'lucide-react';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -18,7 +18,6 @@ import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 import CalendarSection from '@/components/CalendarSection';
-import RadialMenu from '@/components/RadialMenu';
 import AIAssistant from '@/components/AIAssistant';
 
 import BottomNavBar from '@/components/BottomNavBar';
@@ -47,84 +46,8 @@ const Index = () => {
   // PIN Lock
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
 
-  // Radial Menu State
-  const [showRadialMenu, setShowRadialMenu] = useState(false);
-  const [radialMenuPosition, setRadialMenuPosition] = useState({ x: 0, y: 0 });
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-
-  // Long press handler for radial menu
-  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    longPressTimer.current = setTimeout(() => {
-      setRadialMenuPosition({ x: clientX, y: clientY });
-      setShowRadialMenu(true);
-    }, 500); // 500ms long press
-  };
-
-  const handleLongPressEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
   // AI Assistant state
   const [showAIAssistant, setShowAIAssistant] = useState(false);
-
-  // Get saved radial menu actions
-  const getRadialMenuActions = () => {
-    try {
-      const saved = localStorage.getItem('baraka_radial_menu_actions');
-      return saved ? JSON.parse(saved) : {
-        top: 'calendar',
-        right: 'add_transaction',
-        bottom: 'finance',
-        left: 'settings',
-      };
-    } catch {
-      return { top: 'calendar', right: 'add_transaction', bottom: 'finance', left: 'settings' };
-    }
-  };
-
-  const handleRadialAction = (action: string) => {
-    setShowRadialMenu(false);
-    switch (action) {
-      case 'calendar':
-        setActiveTab('calendar');
-        break;
-      case 'add':
-      case 'add_transaction':
-        setActiveTab('finance');
-        // Could open add transaction dialog directly
-        break;
-      case 'finance':
-        setActiveTab('finance');
-        break;
-      case 'settings':
-        setActiveTab('settings');
-        break;
-      case 'dashboard':
-      case 'home':
-        setActiveTab('dashboard');
-        break;
-      case 'shopping':
-        setActiveTab('productivity');
-        break;
-      case 'ai_chat':
-      case 'ai_report':
-        setShowAIAssistant(true);
-        break;
-      case 'sync_sheets':
-        toast({
-          title: 'جاري المزامنة',
-          description: 'يتم مزامنة الجداول...',
-        });
-        syncNow();
-        break;
-    }
-  };
 
   // Swipe gestures removed - were interfering with checkbox clicks
 
@@ -272,12 +195,6 @@ const Index = () => {
 
       <div
         className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative"
-        onTouchStart={handleLongPressStart}
-        onTouchEnd={handleLongPressEnd}
-        onTouchCancel={handleLongPressEnd}
-        onMouseDown={handleLongPressStart}
-        onMouseUp={handleLongPressEnd}
-        onMouseLeave={handleLongPressEnd}
       >        {/* Content Area - No Padding Container for full width */}
         <div className="w-full">
 
@@ -384,19 +301,6 @@ const Index = () => {
           onClose={() => setActiveSummary(null)}
         />
 
-        {/* Radial Menu - Triggered by long press */}
-        <RadialMenu
-          isOpen={showRadialMenu}
-          onClose={() => setShowRadialMenu(false)}
-          position={radialMenuPosition}
-          actions={{
-            top: { icon: <Calendar className="w-5 h-5" />, label: 'التقويم', action: 'calendar' },
-            right: { icon: <Plus className="w-5 h-5" />, label: 'إضافة', action: 'add' },
-            bottom: { icon: <DollarSign className="w-5 h-5" />, label: 'المالية', action: 'finance' },
-            left: { icon: <Settings className="w-5 h-5" />, label: 'الإعدادات', action: 'settings' },
-          }}
-          onAction={handleRadialAction}
-        />
 
         {/* AI Assistant Dialog */}
         <AIAssistant

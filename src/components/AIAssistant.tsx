@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useGemini } from '@/hooks/useGemini';
-import { Bot, Send, Loader2, Sparkles, TrendingDown, FileText, X } from 'lucide-react';
+import { Bot, Send, Loader2, Sparkles, TrendingDown, FileText, X, Mic, MicOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AIAssistantProps {
@@ -24,7 +24,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [expenses, setExpenses] = useState<any[]>([]);
+    const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const recognitionRef = useRef<any>(null);
 
     // Load expenses for context
     useEffect(() => {
@@ -61,6 +63,44 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
             }]);
         }
     }, [isOpen, isConfigured, messages.length]);
+
+    // Voice recognition handler
+    const toggleListening = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('متصفحك لا يدعم التعرف على الصوت');
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ar-SA';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setInput(transcript);
+            // Auto-send after voice input
+            setTimeout(() => {
+                if (transcript) {
+                    setInput(transcript);
+                }
+            }, 100);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+    };
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -161,8 +201,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
                             className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}
                         >
                             <Card className={`max-w-[85%] p-3 ${msg.role === 'user'
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-white'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-white'
                                 }`}>
                                 <p className="text-sm whitespace-pre-wrap arabic-body">{msg.text}</p>
                             </Card>
@@ -205,11 +245,25 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => {
                         <Input
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="اكتب سؤالك..."
+                            placeholder={isListening ? "🎤 أتحدث الآن..." : "اكتب سؤالك..."}
                             className="flex-1"
                             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            disabled={isLoading}
+                            disabled={isLoading || isListening}
                         />
+                        {/* Mic Button */}
+                        <Button
+                            onClick={toggleListening}
+                            variant={isListening ? "destructive" : "outline"}
+                            className={isListening ? "animate-pulse" : ""}
+                            disabled={isLoading}
+                        >
+                            {isListening ? (
+                                <MicOff className="w-5 h-5" />
+                            ) : (
+                                <Mic className="w-5 h-5" />
+                            )}
+                        </Button>
+                        {/* Send Button */}
                         <Button
                             onClick={handleSend}
                             disabled={isLoading || !input.trim()}
