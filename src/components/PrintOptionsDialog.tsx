@@ -10,6 +10,10 @@ import { useHabits } from '@/hooks/useHabits';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { useToast } from '@/hooks/use-toast';
+import PrintableReport from './PrintableReport';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { useRef } from 'react';
 
 interface PrintOptionsDialogProps {
     isOpen: boolean;
@@ -35,32 +39,68 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
     const { habits } = useHabits();
     const { prayerTimes } = usePrayerTimes();
     const { toast } = useToast();
+    const reportRef = useRef<HTMLDivElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
-    const handlePrint = () => {
+    const handlePrint = async () => {
+        setIsGenerating(true);
         toast({ title: "جاري تحضير التقرير...", description: "يرجى الانتظار قليلاً" });
 
         // Filter Data based on selection (Mocking items not in hooks yet)
         const printData = {
-            tasks: selectedTypes.tasks ? tasks.filter(t => t.progress < 100) : [], // Only pending? Or all? Let's show all pending
+            tasks: selectedTypes.tasks ? tasks.filter(t => t.progress < 100) : [],
             appointments: selectedTypes.appointments ? appointments : [],
-            habits: selectedTypes.habits ? habits : [], // habits logic usually per day, here listing titles
+            habits: selectedTypes.habits ? habits : [],
             prayerTimes: selectedTypes.prayerTimes ? prayerTimes : [],
-            // Mock Data for missing hooks
             medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
             shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
             expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
         };
 
-        const dateStr = currentDate.toLocaleDateString('ar-EG');
+        // Give React a moment to render the hidden report with usage of new data
+        setTimeout(async () => {
+            if (!reportRef.current) {
+                console.error("Report ref is null");
+                setIsGenerating(false);
+                return;
+            }
 
-        try {
-            generatePDF(viewMode, printData, dateStr);
-            toast({ title: "تم التوليد بنجاح", description: "تم تنزيل ملف PDF" });
-            onClose();
-        } catch (error) {
-            console.error(error);
-            toast({ title: "خطأ", description: "حدث خطأ أثناء توليد التقرير", variant: "destructive" });
-        }
+            try {
+                const canvas = await html2canvas(reportRef.current, {
+                    scale: 2, // Improve quality
+                    useCORS: true,
+                    logging: false
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                const imgY = 0; // Top align primarily
+
+                // If content is long, we might need auto-paging, but let's stick to single page fit-width for now 
+                // or just standard fit. Real multi-page HTML2PDF is harder. 
+                // Given the tasks/activities usually fit in 1-2 pages, scaling to fit width is best.
+
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfNewHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfNewHeight);
+                pdf.save(`barakah-report-${currentDate.toISOString().split('T')[0]}.pdf`);
+
+                toast({ title: "تم التوليد بنجاح", description: "تم تنزيل ملف PDF" });
+                onClose();
+            } catch (error) {
+                console.error(error);
+                toast({ title: "خطأ", description: "حدث خطأ أثناء توليد التقرير", variant: "destructive" });
+            } finally {
+                setIsGenerating(false);
+            }
+        }, 500);
     };
 
     return (
@@ -125,12 +165,32 @@ const PrintOptionsDialog: React.FC<PrintOptionsDialogProps> = ({ isOpen, onClose
                 </div>
 
                 <DialogFooter className="sm:justify-center">
-                    <Button onClick={handlePrint} className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90">
+                    <Button
+                        onClick={handlePrint}
+                        disabled={isGenerating}
+                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90"
+                    >
                         <FileText className="w-4 h-4 ml-2" />
-                        تجهيز وطباعة
+                        {isGenerating ? 'جاري التجهيز...' : 'تجهيز وطباعة'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
+
+            {/* Hidden Report Container */}
+            <PrintableReport
+                ref={reportRef}
+                viewType={viewMode}
+                dateRange={currentDate.toLocaleDateString('ar-EG')}
+                data={{
+                    tasks: selectedTypes.tasks ? tasks.filter(t => t.progress < 100) : [],
+                    appointments: selectedTypes.appointments ? appointments : [],
+                    habits: selectedTypes.habits ? habits : [],
+                    prayerTimes: selectedTypes.prayerTimes ? prayerTimes : [],
+                    medications: selectedTypes.medications ? [{ name: 'Panadol', quantity: '1 tablet' }] : [],
+                    shopping: selectedTypes.shopping ? [{ name: 'خبز', quantity: '2' }, { name: 'حليب', quantity: '1L' }] : [],
+                    expenses: selectedTypes.expenses ? [{ category: 'طعام', amount: '5000' }] : []
+                }}
+            />
         </Dialog>
     );
 };
