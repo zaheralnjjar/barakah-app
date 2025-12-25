@@ -4,7 +4,7 @@ import { useTasks } from './useTasks';
 import { useAppointments } from './useAppointments';
 import { useHabits } from './useHabits';
 import { usePrayerTimes } from './usePrayerTimes';
-import { useLocations } from './useLocations'; // Not used in widget but good for completeness if needed later
+import { useMedications } from './useMedications';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useWidgetSync = () => {
@@ -12,16 +12,11 @@ export const useWidgetSync = () => {
     const { appointments } = useAppointments();
     const { habits } = useHabits();
     const { prayerTimes } = usePrayerTimes();
-    // Finance data is fetched directly as it's not in a global context hook commonly expose data, 
-    // but we can fetch it here or accept it as a prop. 
-    // For now, we will try to fetch it if possible, or use a simplified approach if it's too expensive.
-    // Actually, let's fetch it once on mount or periodically.
+    const { medications } = useMedications();
 
     const syncToPreferences = async () => {
         try {
             // 1. Prayers
-            // Widget expects JSON Array: [{ name: "Fajr", time: "05:00" }]
-            // We want to show the Arabic name if possible.
             const formattedPrayers = prayerTimes.map(p => ({
                 name: p.nameAr || p.name,
                 time: p.time.replace(' (WT)', '')
@@ -29,8 +24,6 @@ export const useWidgetSync = () => {
             await Preferences.set({ key: 'widget_prayers', value: JSON.stringify(formattedPrayers) });
 
             // 2. Tasks
-            // Widget uses length. We can store the whole array or just what's needed.
-            // Storing IDs and Titles is safe.
             const formattedTasks = tasks.map(t => ({ id: t.id, title: t.title }));
             await Preferences.set({ key: 'widget_tasks', value: JSON.stringify(formattedTasks) });
 
@@ -39,21 +32,23 @@ export const useWidgetSync = () => {
             await Preferences.set({ key: 'widget_habits', value: JSON.stringify(formattedHabits) });
 
             // 4. Appointments
-            // Widget uses 'title'
             const formattedAppointments = appointments.map(a => ({ title: a.title, date: a.date, time: a.time }));
             await Preferences.set({ key: 'widget_appointments', value: JSON.stringify(formattedAppointments) });
 
-            // 5. Shopping (We need a hook for this or fetch from localStorage if it uses that)
-            // Assuming shopping list is simple, currently we might not have a global hook easily accessible 
-            // without refactoring ShoppingList component. 
-            // Let's check if ShoppingList uses a hook. If not, we skip or read from localStorage if it writes there.
-            // Checking ShoppingList code would be good, but let's assume it might store in 'shopping-list'
-            // We'll try to read from localStorage 'shopping_items' or similar if known.
-            // For now, let's skip shopping or leave empty to avoid errors.
-            await Preferences.set({ key: 'widget_shopping', value: "[]" });
+            // 5. Shopping
+            // Read from localStorage primarily
+            try {
+                const savedShopping = localStorage.getItem('baraka_shopping_list');
+                const shoppingList = savedShopping ? JSON.parse(savedShopping) : [];
+                // Filter only uncompleted items for the widget
+                const activeShopping = shoppingList.filter((i: any) => !i.completed).map((i: any) => ({ name: i.text, quantity: i.quantity }));
+                await Preferences.set({ key: 'widget_shopping', value: JSON.stringify(activeShopping) });
+            } catch (e) {
+                await Preferences.set({ key: 'widget_shopping', value: "[]" });
+            }
 
             // 6. Finance
-            // We need to fetch the latest balance. 
+            // Fetch from Supabase if user is logged in
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: financeData } = await supabase
@@ -69,21 +64,17 @@ export const useWidgetSync = () => {
                     };
                     await Preferences.set({ key: 'widget_finance', value: JSON.stringify(financeObj) });
                 }
+            } else {
+                // Fallback to simpler local check if available, or 0
+                // Maybe use recurring expenses hook data? For now 0 is safe.
             }
 
             // 7. Meds
-            // Not implemented in main app yet? Leaving empty.
-            await Preferences.set({ key: 'widget_meds', value: "[]" });
+            const activeMeds = medications.filter(m => m.isPermanent || new Date(m.endDate) >= new Date())
+                .map(m => ({ name: m.name, time: m.time }));
+            await Preferences.set({ key: 'widget_meds', value: JSON.stringify(activeMeds) });
 
-            console.log('Widget data synced successfully');
-
-            // Trigger an update intent if possible? 
-            // Capacitor doesn't support sending broadcast intents out of the box to update widgets immediately.
-            // The widget usually updates on its own schedule (30 mins) or when the app is opened/closed if configured.
-            // However, simply writing to SharedPreferences is what the Native code reads from (onUpdate). 
-            // To force update, we'd need a native plugin method. 
-            // For now, passive sync is enough.
-
+            console.log('Widget data synced details successfully');
         } catch (error) {
             console.error('Error syncing widget data:', error);
         }
@@ -91,9 +82,9 @@ export const useWidgetSync = () => {
 
     useEffect(() => {
         // Sync on change of key data
-        const timeout = setTimeout(syncToPreferences, 2000); // Debounce 2s
+        const timeout = setTimeout(syncToPreferences, 3000); // Debounce 3s
         return () => clearTimeout(timeout);
-    }, [tasks, appointments, habits, prayerTimes]);
+    }, [tasks, appointments, habits, prayerTimes, medications]);
 
     return { syncToPreferences };
 };

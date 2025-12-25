@@ -12,6 +12,7 @@ import {
     Download,
     Calendar,
     LogOut,
+    FileSpreadsheet,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import DataBackup from '@/components/DataBackup';
 import { useCloudSync } from '@/hooks/useCloudSync';
+import { useGoogleSheetsSync } from '@/hooks/useGoogleSheetsSync';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/useAppStore';
@@ -32,6 +34,7 @@ const SettingsPanel = () => {
     const { toast } = useToast();
     const { t } = useTranslation();
     const { syncNow, pullData, isSyncing } = useCloudSync();
+    const { syncFromSheets, isSyncing: isSyncingSheets, lastSync: lastSheetSync } = useGoogleSheetsSync();
     const lastSync = useAppStore(s => s.lastSync);
     const quickActions = useAppStore(s => s.quickActions);
 
@@ -145,6 +148,46 @@ const SettingsPanel = () => {
                             {t('sync.pullData')}
                         </Button>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Google Sheets Sync */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                        مزامنة Google Sheets
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        استيراد المصاريف تلقائياً من جدول Google Sheets
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {lastSheetSync && (
+                        <p className="text-sm text-gray-500">
+                            آخر مزامنة: {new Date(lastSheetSync).toLocaleString('ar-EG')}
+                        </p>
+                    )}
+                    <p className="text-xs text-gray-400">
+                        المزامنة التلقائية: كل 24 ساعة
+                    </p>
+                    <Button
+                        onClick={() => syncFromSheets()}
+                        disabled={isSyncingSheets}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                        {isSyncingSheets ? (
+                            <>
+                                <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                                جاري المزامنة...
+                            </>
+                        ) : (
+                            <>
+                                <FileSpreadsheet className="w-4 h-4 ml-2" />
+                                مزامنة الآن
+                            </>
+                        )}
+                    </Button>
                 </CardContent>
             </Card>
 

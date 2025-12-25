@@ -23,7 +23,9 @@ import {
   RotateCw,
   Power,
   MoreVertical,
-  Pencil
+  Pencil,
+  FileSpreadsheet,
+  Upload
 } from 'lucide-react';
 import { fetchBNARate } from '@/lib/currency';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +34,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { Share } from '@capacitor/share';
 import { useRecurringExpenses, RecurringExpense } from '@/hooks/useRecurringExpenses';
 import { Badge } from '@/components/ui/badge';
+import CSVImportDialog from '@/components/CSVImportDialog';
 
 
 const FinancialController = () => {
@@ -75,6 +78,9 @@ const FinancialController = () => {
   // Date Range Filter State
   const [dateRangeFilter, setDateRangeFilter] = useState('all');
   const [filterEndDate, setFilterEndDate] = useState('');
+
+  // CSV Import Dialog State
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Get Filtered Transactions Helper
   const getFilteredTransactions = () => {
@@ -592,8 +598,17 @@ const FinancialController = () => {
 
       {/* Add Transaction */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="arabic-title">إضافة معاملة جديدة</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImportDialog(true)}
+            className="flex items-center gap-1"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="text-xs">استيراد</span>
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1323,7 +1338,15 @@ const FinancialController = () => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">{t.category || 'أخرى'}</p>
-                      <p className="font-bold text-gray-800 text-base">{t.description}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-800 text-base">{t.description}</p>
+                        {t.source === 'imported' && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-50 text-blue-600 border-blue-200">
+                            <Upload className="w-2 h-2 mr-0.5" />
+                            مستورد
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-400">
                         {new Date(t.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                       </p>
@@ -1380,6 +1403,13 @@ const FinancialController = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* CSV/Excel Import Dialog */}
+      <CSVImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onSuccess={loadFinanceData}
+      />
     </div>
   );
 };

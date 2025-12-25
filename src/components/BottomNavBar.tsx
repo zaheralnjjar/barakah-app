@@ -86,8 +86,8 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg z-[9999] safe-area-bottom">
-            <div className="flex items-center justify-around h-14 max-w-xl mx-auto">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-lg z-[9999] safe-area-bottom pb-2">
+            <div className="flex items-center justify-around h-16 max-w-xl mx-auto">
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id || (item.isHome && activeTab === 'dashboard');

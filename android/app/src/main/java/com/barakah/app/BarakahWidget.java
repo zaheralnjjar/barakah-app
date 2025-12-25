@@ -66,14 +66,20 @@ public class BarakahWidget extends AppWidgetProvider {
 
     private static void updateFullWidget(Context context, RemoteViews views) {
         try {
+            // Capacitor stores preferences in app's default SharedPreferences
             SharedPreferences prefs = context.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE);
+            // Fallback: try app's default prefs if CapacitorStorage is empty
+            String prayersJson = prefs.getString("widget_prayers", null);
+            if (prayersJson == null) {
+                prefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
+                prayersJson = prefs.getString("widget_prayers", "[]");
+            }
 
             // Date
             SimpleDateFormat sdf = new SimpleDateFormat("EEEE، d MMMM", java.util.Locale.forLanguageTag("ar"));
             views.setTextViewText(R.id.tvDate, sdf.format(new Date()));
 
             // Next Prayer
-            String prayersJson = prefs.getString("widget_prayers", "[]");
             JSONArray prayers = new JSONArray(prayersJson);
             String nextPrayer = "الصلاة القادمة";
             if (prayers.length() > 0) {

@@ -140,27 +140,27 @@ const FinancialTrendChart: React.FC<FinancialTrendChartProps> = ({ financeData }
                 </ResponsiveContainer>
 
                 {/* Summary Stats */}
-                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-                    <div className="p-3 bg-red-50 rounded-lg">
-                        <p className="text-xs text-gray-600 mb-1">إجمالي المصروفات</p>
-                        <p className="text-lg font-bold text-red-600">
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 bg-red-50 rounded-lg overflow-hidden">
+                        <p className="text-[10px] text-gray-600 mb-0.5 truncate">إجمالي المصروفات</p>
+                        <p className="text-sm font-bold text-red-600 truncate">
                             {totals.expenses.toLocaleString()}
                         </p>
-                        <p className="text-xs text-gray-500">ARS</p>
+                        <p className="text-[9px] text-gray-500">ARS</p>
                     </div>
-                    <div className="p-3 bg-green-50 rounded-lg">
-                        <p className="text-xs text-gray-600 mb-1">إجمالي الدخل</p>
-                        <p className="text-lg font-bold text-green-600">
+                    <div className="p-2 bg-green-50 rounded-lg overflow-hidden">
+                        <p className="text-[10px] text-gray-600 mb-0.5 truncate">إجمالي الدخل</p>
+                        <p className="text-sm font-bold text-green-600 truncate">
                             {totals.income.toLocaleString()}
                         </p>
-                        <p className="text-xs text-gray-500">ARS</p>
+                        <p className="text-[9px] text-gray-500">ARS</p>
                     </div>
-                    <div className={`p-3 rounded-lg ${totals.net >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                        <p className="text-xs text-gray-600 mb-1">الصافي</p>
-                        <p className={`text-lg font-bold ${totals.net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                    <div className={`p-2 rounded-lg overflow-hidden ${totals.net >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                        <p className="text-[10px] text-gray-600 mb-0.5 truncate">الصافي</p>
+                        <p className={`text-sm font-bold truncate ${totals.net >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
                             {totals.net > 0 ? '+' : ''}{totals.net.toLocaleString()}
                         </p>
-                        <p className="text-xs text-gray-500">ARS</p>
+                        <p className="text-[9px] text-gray-500">ARS</p>
                     </div>
                 </div>
             </CardContent>
