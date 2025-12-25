@@ -112,30 +112,32 @@ const CalendarSection: React.FC = () => {
             </div>
 
             {/* Prayer Times Row */}
-            <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
-                <CardContent className="py-3">
-                    <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap gap-2">
-                        {prayerTimes.map((prayer) => {
-                            const Icon = getPrayerIcon(prayer.name);
-                            const isNext = nextPrayer?.name === prayer.name;
-                            return (
-                                <div
-                                    key={prayer.name}
-                                    className={`flex flex-col items-center px-3 py-2 rounded-lg min-w-[65px] transition-all ${isNext ? 'bg-emerald-100 border-2 border-emerald-400 scale-105' : 'bg-white/50'
-                                        }`}
-                                >
-                                    <span className="text-xs text-gray-600 font-medium">{prayer.nameAr}</span>
-                                    <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'}`}>
-                                        {prayer.time}
-                                    </span>
+            <div className="w-full flex justify-center">
+                <Card className="w-[80%] border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                    <CardContent className="py-3">
+                        <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap gap-2">
+                            {prayerTimes.map((prayer) => {
+                                const Icon = getPrayerIcon(prayer.name);
+                                const isNext = nextPrayer?.name === prayer.name;
+                                return (
+                                    <div
+                                        key={prayer.name}
+                                        className={`flex flex-col items-center px-3 py-2 rounded-lg min-w-[65px] transition-all ${isNext ? 'bg-emerald-100 border-2 border-emerald-400 scale-105' : 'bg-white/50'
+                                            }`}
+                                    >
+                                        <span className="text-xs text-gray-600 font-medium">{prayer.nameAr}</span>
+                                        <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'}`} />
+                                        <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                            {prayer.time}
+                                        </span>
 
-                                </div>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* View Toggle */}
             <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm">
