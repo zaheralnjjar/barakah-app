@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from '@/components/ui/card';
 
 interface PrintableReportProps {
     data: any;
@@ -7,245 +8,245 @@ interface PrintableReportProps {
 }
 
 const PrintableReport = React.forwardRef<HTMLDivElement, PrintableReportProps>(({ data, viewType, dateRange }, ref) => {
-    // Parse date range to get all days
-    const getDaysInRange = () => {
-        const [startStr, endStr] = dateRange.split(' - ');
-        const start = new Date(startStr);
-        const end = new Date(endStr);
-        const days: Date[] = [];
-
-        const current = new Date(start);
-        while (current <= end) {
-            days.push(new Date(current));
-            current.setDate(current.getDate() + 1);
-        }
-        return days;
-    };
-
-    const days = getDaysInRange();
-    const DAYS_AR: Record<number, string> = {
-        0: 'الأحد', 1: 'الاثنين', 2: 'الثلاثاء', 3: 'الأربعاء',
-        4: 'الخميس', 5: 'الجمعة', 6: 'السبت'
-    };
-
-    // Group prayer times by date
-    const prayersByDate: Record<string, Record<string, string>> = {};
-    (data.prayerTimes || []).forEach((p: any) => {
-        const dateKey = p.date || dateRange.split(' - ')[0];
-        if (!prayersByDate[dateKey]) prayersByDate[dateKey] = {};
-        const prayerName = p.nameAr || p.name;
-        prayersByDate[dateKey][prayerName] = p.time;
-    });
-
-    // Prayer names in order
-    const PRAYER_NAMES = ['الفجر', 'الشروق', 'الظهر', 'العصر', 'المغرب', 'العشاء'];
-
-    // Common cell styles
-    const cellStyle = "border border-black p-1 text-center text-xs";
-    const headerCellStyle = "border border-black p-1 text-center text-xs font-bold bg-[#92D050]";
-
     return (
-        <div
-            ref={ref}
-            className="bg-white p-4 w-[210mm] min-h-[297mm] mx-auto"
-            dir="rtl"
-            style={{ position: 'absolute', top: '-10000px', left: '-10000px', fontFamily: 'Arial, sans-serif', fontSize: '11px' }}
-            id="printable-report-content"
-        >
+        <div ref={ref} className="bg-white p-8 w-[210mm] min-h-[297mm] mx-auto text-right" dir="rtl" style={{ position: 'absolute', top: '-10000px', left: '-10000px' }} id="printable-report-content">
             {/* Header */}
-            <table className="w-full border-collapse mb-4">
-                <tbody>
-                    <tr>
-                        <td className="text-center p-2">
-                            <span className="bg-[#92D050] px-6 py-1 font-bold text-sm inline-block">
-                                التقرير المفصل
-                            </span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            {/* Prayer Times Section */}
-            {Object.keys(prayersByDate).length > 0 && (
-                <table className="w-full border-collapse mb-4">
-                    <tbody>
-                        {/* Section Header */}
-                        <tr>
-                            <td colSpan={days.length + 1} className="border border-black text-center p-1 bg-gray-100 font-bold">
-                                مواقيت الصلاة
-                            </td>
-                        </tr>
-                        {/* Days Header Row */}
-                        <tr>
-                            <td className={cellStyle}></td>
-                            {days.map((day, i) => (
-                                <td key={i} className={cellStyle}>
-                                    <div>{DAYS_AR[day.getDay()]}</div>
-                                    <div>{day.getDate()} {day.getMonth() + 1}</div>
-                                </td>
-                            ))}
-                        </tr>
-                        {/* Prayer Rows */}
-                        {PRAYER_NAMES.map((prayerName, pi) => (
-                            <tr key={pi}>
-                                <td className={`${cellStyle} font-bold text-right pr-2`}>{prayerName}</td>
-                                {days.map((day, di) => {
-                                    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-                                    const timeValue = prayersByDate[dateStr]?.[prayerName] || '';
-                                    return (
-                                        <td key={di} className={cellStyle}>
-                                            {timeValue}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-
-            {/* Appointments and Tasks Combined */}
-            {(data.appointments?.length > 0 || data.tasks?.length > 0) && (
-                <table className="w-full border-collapse mb-4">
-                    <tbody>
-                        {/* Section Header */}
-                        <tr>
-                            <td colSpan={4} className={headerCellStyle}>
-                                المواعيد والمهام
-                            </td>
-                        </tr>
-                        {/* Column Headers */}
-                        <tr>
-                            <td className={`${cellStyle} bg-gray-100`}>الموعد والمواعيد</td>
-                            <td className={`${cellStyle} bg-gray-100`}>التاريخ</td>
-                            <td className={`${cellStyle} bg-gray-100`}>الساعة</td>
-                            <td className={`${cellStyle} bg-gray-100`}>تفاصيل</td>
-                        </tr>
-                        {/* Appointments */}
-                        {(data.appointments || []).map((a: any, i: number) => (
-                            <tr key={`apt-${i}`}>
-                                <td className={cellStyle}>{a.title}</td>
-                                <td className={cellStyle}>
-                                    {a.date ? `${DAYS_AR[new Date(a.date).getDay()]} ${new Date(a.date).getDate()} ${new Date(a.date).getMonth() + 1}` : ''}
-                                </td>
-                                <td className={cellStyle}>{a.time || ''}</td>
-                                <td className={cellStyle}>{a.notes || a.location || ''}</td>
-                            </tr>
-                        ))}
-                        {/* Tasks */}
-                        {(data.tasks || []).map((t: any, i: number) => (
-                            <tr key={`task-${i}`}>
-                                <td className={cellStyle}>{t.title}</td>
-                                <td className={cellStyle}>
-                                    {t.deadline ? `${DAYS_AR[new Date(t.deadline).getDay()]} ${new Date(t.deadline).getDate()} ${new Date(t.deadline).getMonth() + 1}` : ''}
-                                </td>
-                                <td className={cellStyle}>{t.deadline?.includes('T') ? t.deadline.split('T')[1]?.substring(0, 5) : ''}</td>
-                                <td className={cellStyle}>{t.description || ''}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-
-            {/* Two Column Layout: Medications & Shopping */}
-            <div className="flex gap-4 mb-4">
-                {/* Medications */}
-                <div className="flex-1">
-                    {data.medications?.length > 0 && (
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr>
-                                    <td colSpan={3} className={headerCellStyle}>الأدوية</td>
-                                </tr>
-                                <tr>
-                                    <td className={`${cellStyle} bg-gray-100`}>الدواء</td>
-                                    <td className={`${cellStyle} bg-gray-100`}>الجرعة</td>
-                                    <td className={`${cellStyle} bg-gray-100`}>اليوم</td>
-                                </tr>
-                                {data.medications.map((m: any, i: number) => (
-                                    <tr key={i}>
-                                        <td className={cellStyle}>{m.name}</td>
-                                        <td className={cellStyle}>{m.dosage || m.time || ''}</td>
-                                        <td className={cellStyle}>{m.days?.join(' ') || m.frequency || ''}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                    {/* Empty placeholder */}
-                    {!data.medications?.length && (
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr><td className={headerCellStyle}>الأدوية</td></tr>
-                                <tr><td className={cellStyle}>-</td></tr>
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-
-                {/* Shopping List */}
-                <div className="flex-1">
-                    {data.shopping?.length > 0 && (
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr>
-                                    <td colSpan={2} className={headerCellStyle}>قائمة التسوق</td>
-                                </tr>
-                                <tr>
-                                    <td className={`${cellStyle} bg-gray-100`}>النوع</td>
-                                    <td className={`${cellStyle} bg-gray-100`}>الكمية</td>
-                                </tr>
-                                {data.shopping.map((item: any, i: number) => (
-                                    <tr key={i}>
-                                        <td className={cellStyle}>{item.text || item.name}</td>
-                                        <td className={cellStyle}>{item.quantity || ''}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                    {!data.shopping?.length && (
-                        <table className="w-full border-collapse">
-                            <tbody>
-                                <tr><td colSpan={2} className={headerCellStyle}>قائمة التسوق</td></tr>
-                                <tr>
-                                    <td className={cellStyle}>-</td>
-                                    <td className={cellStyle}>-</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    )}
+            <div className="text-center mb-8 border-b pb-4">
+                <h1 className="text-4xl font-bold text-blue-700 mb-2">تقرير بركة</h1>
+                <p className="text-gray-500 text-lg">الفترة: {dateRange}</p>
+                <div className="flex justify-center gap-4 mt-2 text-sm text-gray-400">
+                    <span>{new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
             </div>
 
-            {/* Expenses */}
-            {data.expenses?.length > 0 && (
-                <table className="w-full border-collapse mb-4">
-                    <tbody>
-                        <tr>
-                            <td colSpan={3} className={headerCellStyle}>المصاريف</td>
-                        </tr>
-                        <tr>
-                            <td className={`${cellStyle} bg-gray-100`}>التاريخ</td>
-                            <td className={`${cellStyle} bg-gray-100`}>المبلغ</td>
-                            <td className={`${cellStyle} bg-gray-100`}>البيان</td>
-                        </tr>
-                        {data.expenses.map((e: any, i: number) => (
-                            <tr key={i}>
-                                <td className={cellStyle}>
-                                    {e.date ? `${DAYS_AR[new Date(e.date).getDay()]} ${new Date(e.date).getDate()} ${new Date(e.date).getMonth() + 1}` : ''}
-                                </td>
-                                <td className={cellStyle}>{e.amount}</td>
-                                <td className={cellStyle}>{e.description || e.category || ''}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {viewType === 'table' ? (
+                <div className="space-y-8">
+                    {/* Prayer Times */}
+                    {data.prayerTimes?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-emerald-700 mb-4 flex items-center gap-2">
+                                🕌 مواقيت الصلاة
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-emerald-50">
+                                        <tr>
+                                            <th className="p-3 text-emerald-900">اليوم</th>
+                                            <th className="p-3 text-emerald-900 border-r">الصلاة</th>
+                                            <th className="p-3 text-emerald-900 border-r">الوقت</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.prayerTimes.map((p: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium text-gray-600">{p.date ? new Date(p.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'numeric' }) : '-'}</td>
+                                                <td className="p-3 border-r font-medium">{p.name}</td>
+                                                <td className="p-3 border-r font-mono dir-ltr text-right">{p.time}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Appointments */}
+                    {data.appointments?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                                📅 المواعيد
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-purple-50">
+                                        <tr>
+                                            <th className="p-3 text-purple-900">اليوم</th>
+                                            <th className="p-3 text-purple-900 border-r">العنوان</th>
+                                            <th className="p-3 text-purple-900 border-r">الوقت</th>
+                                            <th className="p-3 text-purple-900 border-r">المكان</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.appointments.map((a: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium text-gray-600">{a.date ? new Date(a.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric', month: 'numeric' }) : '-'}</td>
+                                                <td className="p-3 border-r font-medium">{a.title}</td>
+                                                <td className="p-3 border-r font-mono">{a.time}</td>
+                                                <td className="p-3 border-r text-gray-500">{a.location || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Tasks */}
+                    {data.tasks?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-blue-700 mb-4 flex items-center gap-2">
+                                ✅ المهام
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-blue-50">
+                                        <tr>
+                                            <th className="p-3 text-blue-900">المهمة</th>
+                                            <th className="p-3 text-blue-900 border-r">التاريخ</th>
+                                            <th className="p-3 text-blue-900 border-r">الأولوية</th>
+                                            <th className="p-3 text-blue-900 border-r">الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.tasks.map((t: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium">{t.title}</td>
+                                                <td className="p-3 border-r text-gray-600 text-sm">
+                                                    {t.deadline ? new Date(t.deadline).toLocaleDateString('ar-EG') : '-'}
+                                                </td>
+                                                <td className="p-3 border-r">
+                                                    <span className={`px-2 py-1 rounded text-xs ${t.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                        t.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                                        }`}>
+                                                        {t.priority === 'high' ? 'عالية' : t.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-3 border-r text-gray-500">{t.completed ? 'منجزة' : 'معلقة'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Medications */}
+                    {data.medications?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                                💊 الأدوية
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-red-50">
+                                        <tr>
+                                            <th className="p-3 text-red-900">الدواء</th>
+                                            <th className="p-3 text-red-900 border-r">الوقت/التكرار</th>
+                                            <th className="p-3 text-red-900 border-r">تعليمات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.medications.map((m: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium">{m.name}</td>
+                                                <td className="p-3 border-r dir-ltr text-right">{m.time || m.frequency}</td>
+                                                <td className="p-3 border-r text-gray-500">{m.instructions || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Shopping List */}
+                    {data.shopping?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-pink-700 mb-4 flex items-center gap-2">
+                                🛒 قائمة التسوق
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm bg-white p-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    {data.shopping.map((item: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-2 p-2 border rounded-lg bg-pink-50/30">
+                                            <div className="w-4 h-4 border-2 border-pink-400 rounded"></div>
+                                            <span className="font-medium">{item.text || item.name}</span>
+                                            {item.quantity && <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full mr-auto">{item.quantity}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Finance / Expenses */}
+                    {data.expenses?.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold text-emerald-700 mb-4 flex items-center gap-2">
+                                💰 المصاريف والمالية
+                            </h2>
+                            <div className="border rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-right">
+                                    <thead className="bg-emerald-50">
+                                        <tr>
+                                            <th className="p-3 text-emerald-900">البند</th>
+                                            <th className="p-3 text-emerald-900 border-r">المبلغ</th>
+                                            <th className="p-3 text-emerald-900 border-r">التاريخ</th>
+                                            <th className="p-3 text-emerald-900 border-r">التصنيف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.expenses.map((e: any, i: number) => (
+                                            <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                <td className="p-3 font-medium">{e.description || e.category}</td>
+                                                <td className="p-3 border-r font-bold text-emerald-600 dir-ltr text-right">{e.amount} {e.currency}</td>
+                                                <td className="p-3 border-r text-gray-500">{e.date ? new Date(e.date).toLocaleDateString('ar-EG') : '-'}</td>
+                                                <td className="p-3 border-r">{e.category}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+                </div>
+            ) : (
+                // Timeline View
+                <section>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">الجدول الزمني</h2>
+                    <div className="border-l-4 border-gray-200 mr-4 space-y-8 relative">
+                        {(() => {
+                            const items = [
+                                ...(data.prayerTimes || []).map((p: any) => ({ ...p, type: 'prayer', sortTime: p.time.split(' ')[0] })),
+                                ...(data.appointments || []).map((a: any) => ({ ...a, type: 'appointment', sortTime: a.time })),
+                                ...(data.tasks || []).filter((t: any) => t.date /* assume tasks have date/time for timeline */).map((t: any) => ({ ...t, type: 'task', sortTime: '00:00' }))
+                            ].sort((a, b) => a.sortTime.localeCompare(b.sortTime));
+
+                            return items.map((item, i) => (
+                                <div key={i} className="relative pr-8">
+                                    <div className={`absolute -right-3 top-0 w-6 h-6 rounded-full border-4 border-white shadow-sm ${item.type === 'prayer' ? 'bg-emerald-500' :
+                                        item.type === 'appointment' ? 'bg-purple-500' : 'bg-blue-500'
+                                        }`} />
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-lg">{item.name || item.title}</h3>
+                                                    {item.date && (
+                                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                                            {new Date(item.date).toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className={`text-xs px-2 rounded ${item.type === 'prayer' ? 'bg-emerald-100 text-emerald-700' :
+                                                    item.type === 'appointment' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {item.type === 'prayer' ? 'صلاة' : item.type === 'appointment' ? 'موعد' : 'مهمة'}
+                                                </span>
+                                            </div>
+                                            <span className="font-mono font-bold text-xl text-gray-400">{item.time || item.sortTime}</span>
+                                        </div>
+                                        {item.location && <p className="text-sm text-gray-500 mt-2">📍 {item.location}</p>}
+                                    </div>
+                                </div>
+                            ));
+                        })()}
+                    </div>
+                </section>
             )}
 
-            {/* Footer */}
-            <div className="mt-4 text-center text-gray-500 text-[9px]">
-                تطبيق بركة • {new Date().toLocaleDateString('ar-EG')}
+            <div className="mt-12 text-center text-gray-400 text-sm border-t pt-4">
+                تم التوليد بواسطة تطبيق بركة الإسلامي
             </div>
         </div>
     );
