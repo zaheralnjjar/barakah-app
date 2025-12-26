@@ -485,19 +485,20 @@ const CalendarSection: React.FC = () => {
 
             {/* Add Appointment Form */}
             <Dialog open={addType === 'appointment'} onOpenChange={() => { setAddType(null); setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' }); }}>
-                <DialogContent>
+                <DialogContent className="max-h-[85vh] overflow-y-auto max-w-[90vw] sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CalendarIcon className="w-5 h-5 text-orange-500" />
                             إضافة موعد جديد
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 mt-2">
+                    <div className="space-y-4 mt-2" onKeyDown={(e) => { if (e.key === 'Enter' && formData.title) { e.preventDefault(); document.getElementById('save-appointment-btn')?.click(); } }}>
                         <Input
                             placeholder="عنوان الموعد"
                             value={formData.title}
                             onChange={e => setFormData({ ...formData, title: e.target.value })}
                             className="text-right"
+                            autoFocus
                         />
                         <div className="grid grid-cols-2 gap-2">
                             <div className="relative">
@@ -526,6 +527,7 @@ const CalendarSection: React.FC = () => {
                             className="text-right"
                         />
                         <Button
+                            id="save-appointment-btn"
                             className="w-full bg-orange-500 hover:bg-orange-600"
                             onClick={async () => {
                                 if (!formData.title || !quickAddDate) {
@@ -545,7 +547,7 @@ const CalendarSection: React.FC = () => {
                                 setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
                             }}
                         >
-                            <Plus className="w-4 h-4 ml-2" /> حفظ الموعد
+                            <Plus className="w-4 h-4 ml-2" /> حفظ الموعد (Enter)
                         </Button>
                     </div>
                 </DialogContent>
@@ -553,19 +555,20 @@ const CalendarSection: React.FC = () => {
 
             {/* Add Task Form */}
             <Dialog open={addType === 'task'} onOpenChange={() => { setAddType(null); setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' }); }}>
-                <DialogContent>
+                <DialogContent className="max-h-[85vh] overflow-y-auto max-w-[90vw] sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <ClipboardList className="w-5 h-5 text-blue-500" />
                             إضافة مهمة جديدة
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 mt-2">
+                    <div className="space-y-4 mt-2" onKeyDown={(e) => { if (e.key === 'Enter' && formData.title) { e.preventDefault(); document.getElementById('save-task-btn')?.click(); } }}>
                         <Input
                             placeholder="عنوان المهمة"
                             value={formData.title}
                             onChange={e => setFormData({ ...formData, title: e.target.value })}
                             className="text-right"
+                            autoFocus
                         />
                         <Input
                             placeholder="وصف المهمة"
@@ -589,6 +592,7 @@ const CalendarSection: React.FC = () => {
                             ))}
                         </div>
                         <Button
+                            id="save-task-btn"
                             className="w-full bg-blue-500 hover:bg-blue-600"
                             onClick={async () => {
                                 if (!formData.title || !quickAddDate) {
@@ -608,7 +612,7 @@ const CalendarSection: React.FC = () => {
                                 setFormData({ title: '', time: '', location: '', description: '', priority: 'medium' });
                             }}
                         >
-                            <Plus className="w-4 h-4 ml-2" /> حفظ المهمة
+                            <Plus className="w-4 h-4 ml-2" /> حفظ المهمة (Enter)
                         </Button>
                     </div>
                 </DialogContent>
