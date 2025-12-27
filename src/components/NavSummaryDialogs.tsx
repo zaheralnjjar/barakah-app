@@ -424,13 +424,20 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                         <Button
                             className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white"
                             onClick={async () => {
+                                const reportText = `📊 تقرير ${today}\n✅ مهام: ${completedTodayTasks.length}/${todayTasks.length}\n📅 مواعيد: ${todayAppointments.length}\n🎯 عادات: ${habits.filter(h => h.history?.[todayStr]).length}/${habits.length}\n💰 الرصيد: ${currentBalance}`;
                                 if (navigator.share) {
                                     try {
                                         await navigator.share({
                                             title: 'تقريري اليومي - تطبيق البركة',
-                                            text: `📊 تقرير ${today}\n✅ مهام: ${completedTodayTasks.length}/${todayTasks.length}\n📅 مواعيد: ${todayAppointments.length}\n🎯 عادات: ${habits.filter(h => h.history?.[todayStr]).length}/${habits.length}\n💰 الرصيد: ${currentBalance}`,
+                                            text: reportText,
                                         });
                                     } catch (e) { console.log('Share cancelled'); }
+                                } else {
+                                    // Fallback: copy to clipboard
+                                    try {
+                                        await navigator.clipboard.writeText(reportText);
+                                        alert('✅ تم نسخ التقرير للحافظة');
+                                    } catch (e) { console.log('Copy failed'); }
                                 }
                             }}
                         >

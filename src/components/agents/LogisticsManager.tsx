@@ -220,49 +220,8 @@ const LogisticsManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl arabic-title text-primary font-bold">الإنتاجية والمهام</h1>
-          <div className="flex items-center gap-2">
-            <p className="arabic-body text-sm text-muted-foreground">مساحتك لإدارة الوقت والمشاريع</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-primary hover:bg-primary/10"
-              onClick={async () => {
-                const activeTasks = taskHook.tasks.filter((t: any) => t.progress < 100).length;
-                const activeAppts = apptHook.appointments.length;
-                const text = `ملخص المهام:\nالمهام النشطة: ${activeTasks}\nالمواعيد القادمة: ${activeAppts}`;
-                if (navigator.share) await navigator.share({ title: 'ملخص المهام', text });
-                else { await navigator.clipboard.writeText(text); toast({ title: 'تم النسخ' }); }
-              }}
-            >
-              <Share2 className="w-3 h-3" />
-            </Button>
-          </div>
+          <p className="arabic-body text-sm text-muted-foreground">مساحتك لإدارة الوقت والمشاريع</p>
         </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button className="gap-2 bg-primary hover:bg-primary/90">
-              <Plus className="w-5 h-5" />
-              <span className="hidden md:inline">إضافة جديد</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-right">ماذا تريد أن تضيف؟</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { setActiveTab('task'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-              <span>مهمة جديدة</span>
-              <CheckSquare className="w-4 h-4 ml-2" />
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setActiveTab('project'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-              <span>مشروع</span>
-              <Layers className="w-4 h-4 ml-2" />
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setActiveTab('appointment'); setIsAddDialogOpen(true); }} className="cursor-pointer flex flex-row-reverse justify-between">
-              <span>موعد / حدث</span>
-              <CalendarIcon className="w-4 h-4 ml-2" />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
 
         {/* Main Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
