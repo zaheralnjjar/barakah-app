@@ -334,51 +334,48 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
                 return (
                     <div className="space-y-4 max-h-[80vh] overflow-y-auto">
                         {/* رأس التقرير */}
-                        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 p-4 rounded-xl text-white text-center shadow-lg">
-                            <h3 className="font-bold text-xl">📊 التقرير الاحترافي الشامل</h3>
-                            <p className="opacity-90 text-sm mt-1">{today}</p>
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 p-3 rounded-xl text-white text-center shadow-lg">
+                            <h3 className="font-bold text-base whitespace-nowrap">📊 التقرير الاحترافي الشامل</h3>
+                            <p className="opacity-90 text-xs mt-1">{today}</p>
                         </div>
 
                         {/* ملخص اليوم */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-center">
-                                <span className="text-2xl font-bold text-blue-600">{todayTasks.length}</span>
-                                <p className="text-xs text-gray-600 mt-1">مهام اليوم</p>
-                                <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
-                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${todayTasks.length > 0 ? (completedTodayTasks.length / todayTasks.length) * 100 : 0}%` }}></div>
-                                </div>
+                            <div className="p-2 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                                <span className="text-lg font-bold text-blue-600">{todayTasks.length}</span>
+                                <p className="text-[10px] text-gray-600">مهام اليوم</p>
                             </div>
-                            <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 text-center">
-                                <span className="text-2xl font-bold text-purple-600">{todayAppointments.length}</span>
-                                <p className="text-xs text-gray-600 mt-1">مواعيد اليوم</p>
+                            <div className="p-2 bg-purple-50 rounded-lg border border-purple-100 text-center">
+                                <span className="text-lg font-bold text-purple-600">{todayAppointments.length}</span>
+                                <p className="text-[10px] text-gray-600">مواعيد اليوم</p>
                             </div>
-                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-center">
-                                <span className="text-2xl font-bold text-amber-600">{habits.filter(h => h.history?.[todayStr]).length}/{habits.length}</span>
-                                <p className="text-xs text-gray-600 mt-1">العادات المنجزة</p>
+                            <div className="p-2 bg-amber-50 rounded-lg border border-amber-100 text-center">
+                                <span className="text-lg font-bold text-amber-600">{habits.filter(h => h.history?.[todayStr]).length}/{habits.length}</span>
+                                <p className="text-[10px] text-gray-600">العادات المنجزة</p>
                             </div>
-                            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
-                                <span className="text-2xl font-bold text-emerald-600">{currentBalance}</span>
-                                <p className="text-xs text-gray-600 mt-1">الرصيد الحالي</p>
+                            <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                                <span className="text-lg font-bold text-emerald-600">{currentBalance}</span>
+                                <p className="text-[10px] text-gray-600">الرصيد الحالي</p>
                             </div>
                         </div>
 
                         {/* قسم المالية */}
                         <div className="bg-white rounded-xl border p-3">
-                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">💰 الملخص المالي</h4>
-                            {financeData && <FinancialTrendChart financeData={financeData} />}
+                            <h4 className="font-bold text-sm text-gray-700 mb-2">💰 الملخص المالي</h4>
+                            {financeData ? <FinancialTrendChart financeData={financeData} /> : <p className="text-xs text-gray-400 text-center">لا توجد بيانات مالية</p>}
                         </div>
 
                         {/* قسم الإنتاجية */}
                         <div className="bg-white rounded-xl border p-3">
-                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">📈 الإنتاجية</h4>
-                            <div className="h-[200px] w-full">
+                            <h4 className="font-bold text-sm text-gray-700 mb-2">📈 الإنتاجية</h4>
+                            <div className="h-[180px] w-full">
                                 <ResponsiveContainer>
                                     <PieChart>
-                                        <Pie data={productivityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={(entry) => entry.name}>
+                                        <Pie data={productivityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} innerRadius={20}>
                                             {productivityData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                                         </Pie>
                                         <Tooltip />
-                                        <Legend />
+                                        <Legend wrapperStyle={{ fontSize: '10px' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
@@ -386,8 +383,8 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
 
                         {/* الخط الزمني */}
                         <div className="bg-white rounded-xl border p-3">
-                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">📅 الجدول الزمني (أمس + اليوم + أسبوعين)</h4>
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            <h4 className="font-bold text-sm text-gray-700 mb-2">📅 الجدول الزمني</h4>
+                            <div className="space-y-2 max-h-[250px] overflow-y-auto">
                                 {timeline.map((day, idx) => (
                                     <div key={idx} className={`p-2 rounded-lg ${day.date === todayStr ? 'bg-emerald-100 border-2 border-emerald-400' : idx === 0 ? 'bg-gray-100' : 'bg-gray-50'}`}>
                                         <div className="flex items-center justify-between mb-1">
