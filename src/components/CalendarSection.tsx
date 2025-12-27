@@ -287,7 +287,7 @@ const CalendarSection: React.FC = () => {
                         </div>
 
                         {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-1 select-none">
+                        <div className="grid grid-cols-7 gap-1 select-none" style={{ touchAction: 'pan-y' }}>
                             {calendarDays.map((day, idx) => {
                                 // Use manual string construction to avoid timezone shifts
                                 const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;

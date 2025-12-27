@@ -309,62 +309,133 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
 
             case 'dashboard': // Home Summary
             case 'home_summary':
-                const nextApptSummary = appointments
-                    .filter(a => {
-                        const apptDate = new Date(`${a.date}T${a.time}`);
-                        return apptDate > new Date();
-                    })
-                    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())[0];
-                const financeBal = financeData?.current_balance || '---';
+                // حساب البيانات للتقرير الشامل
+                const todayTasks = tasks.filter(t => t.deadline?.startsWith(todayStr));
+                const completedTodayTasks = todayTasks.filter(t => t.progress === 100);
+                const todayAppointments = appointments.filter(a => a.date === todayStr);
+                const todayExpenses = financeData?.today_expenses || 0;
+                const monthlyBudget = financeData?.monthly_budget || 0;
+                const currentBalance = financeData?.current_balance || 0;
+
+                // بناء الخط الزمني للأسبوعين القادمين
+                const timeline: { date: string; day: string; events: any[] }[] = [];
+                for (let i = -1; i <= 14; i++) {
+                    const d = new Date();
+                    d.setDate(d.getDate() + i);
+                    const dateKey = d.toISOString().split('T')[0];
+                    const dayName = d.toLocaleDateString('ar', { weekday: 'short' });
+                    const dayEvents = [
+                        ...appointments.filter(a => a.date === dateKey).map(a => ({ ...a, type: 'appointment' })),
+                        ...tasks.filter(t => t.deadline?.startsWith(dateKey)).map(t => ({ ...t, type: 'task' }))
+                    ];
+                    timeline.push({ date: dateKey, day: dayName, events: dayEvents });
+                }
 
                 return (
-                    <div className="space-y-4 text-center">
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl text-white text-center shadow-lg">
-                            <h3 className="font-bold text-lg">{today}</h3>
-                            <p className="opacity-90 text-sm mt-1">تقرير شامل</p>
+                    <div className="space-y-4 max-h-[80vh] overflow-y-auto">
+                        {/* رأس التقرير */}
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-500 p-4 rounded-xl text-white text-center shadow-lg">
+                            <h3 className="font-bold text-xl">📊 التقرير الاحترافي الشامل</h3>
+                            <p className="opacity-90 text-sm mt-1">{today}</p>
                         </div>
-                        <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div
-                                    className="p-3 bg-blue-50 rounded-lg flex flex-col items-center cursor-pointer hover:bg-blue-100 transition-colors"
-                                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'productivity' })); }}
-                                >
-                                    <span className="text-xl font-bold text-blue-600">{tasks.filter(t => t.progress < 100).length}</span>
-                                    <span className="text-xs text-gray-500">مهام متبقية</span>
-                                </div>
-                                <div
-                                    className="p-3 bg-purple-50 rounded-lg flex flex-col items-center cursor-pointer hover:bg-purple-100 transition-colors"
-                                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'appointments' })); }}
-                                >
-                                    <span className="text-xl font-bold text-purple-600">{appointments.filter(a => a.date === todayStr).length}</span>
-                                    <span className="text-xs text-gray-500">مواعيد اليوم</span>
+
+                        {/* ملخص اليوم */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                                <span className="text-2xl font-bold text-blue-600">{todayTasks.length}</span>
+                                <p className="text-xs text-gray-600 mt-1">مهام اليوم</p>
+                                <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
+                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${todayTasks.length > 0 ? (completedTodayTasks.length / todayTasks.length) * 100 : 0}%` }}></div>
                                 </div>
                             </div>
-
-                            {/* Goals Summary */}
-                            <div
-                                className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100 cursor-pointer hover:bg-amber-100 transition-colors"
-                                onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'productivity' })); }}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Target className="w-4 h-4 text-amber-500" />
-                                    <span>الأهداف اليومية</span>
-                                </div>
-                                <span className="font-bold text-amber-700">{habits.filter(h => h.history && h.history[todayStr]).length} / {habits.length}</span>
+                            <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 text-center">
+                                <span className="text-2xl font-bold text-purple-600">{todayAppointments.length}</span>
+                                <p className="text-xs text-gray-600 mt-1">مواعيد اليوم</p>
                             </div>
-
-                            {/* Next Prayer or Event */}
-                            <div
-                                className="bg-emerald-50 p-3 rounded-lg text-right cursor-pointer hover:bg-emerald-100 transition-colors"
-                                onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'prayer' })); }}
-                            >
-                                <p className="text-xs text-emerald-600 mb-1">الصلاة القادمة</p>
-                                <div className="flex justify-between items-end">
-                                    <p className="font-bold text-emerald-800">{nextPrayer ? nextPrayer.nameAr : '...'}</p>
-                                    <p className="text-sm text-emerald-700 dir-ltr font-mono">{timeUntilNext}</p>
-                                </div>
+                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-center">
+                                <span className="text-2xl font-bold text-amber-600">{habits.filter(h => h.history?.[todayStr]).length}/{habits.length}</span>
+                                <p className="text-xs text-gray-600 mt-1">العادات المنجزة</p>
+                            </div>
+                            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                                <span className="text-2xl font-bold text-emerald-600">{currentBalance}</span>
+                                <p className="text-xs text-gray-600 mt-1">الرصيد الحالي</p>
                             </div>
                         </div>
+
+                        {/* قسم المالية */}
+                        <div className="bg-white rounded-xl border p-3">
+                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">💰 الملخص المالي</h4>
+                            {financeData && <FinancialTrendChart financeData={financeData} />}
+                        </div>
+
+                        {/* قسم الإنتاجية */}
+                        <div className="bg-white rounded-xl border p-3">
+                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">📈 الإنتاجية</h4>
+                            <div className="h-[200px] w-full">
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie data={productivityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={(entry) => entry.name}>
+                                            {productivityData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* الخط الزمني */}
+                        <div className="bg-white rounded-xl border p-3">
+                            <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">📅 الجدول الزمني (أمس + اليوم + أسبوعين)</h4>
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                                {timeline.map((day, idx) => (
+                                    <div key={idx} className={`p-2 rounded-lg ${day.date === todayStr ? 'bg-emerald-100 border-2 border-emerald-400' : idx === 0 ? 'bg-gray-100' : 'bg-gray-50'}`}>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="font-bold text-sm">{day.day} {new Date(day.date).getDate()}/{new Date(day.date).getMonth() + 1}</span>
+                                            <span className="text-xs bg-white px-2 py-0.5 rounded">{day.events.length} حدث</span>
+                                        </div>
+                                        {day.events.length > 0 ? (
+                                            <div className="space-y-1">
+                                                {day.events.slice(0, 3).map((ev: any, i: number) => (
+                                                    <div key={i} className={`text-xs p-1 rounded ${ev.type === 'appointment' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                        {ev.type === 'appointment' ? '📍' : '✅'} {ev.title}
+                                                    </div>
+                                                ))}
+                                                {day.events.length > 3 && <p className="text-xs text-gray-400">+{day.events.length - 3} أخرى</p>}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-gray-400">لا أحداث</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* الصلاة القادمة */}
+                        <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
+                            <p className="text-xs text-emerald-600 mb-1">🕌 الصلاة القادمة</p>
+                            <div className="flex justify-between items-center">
+                                <p className="font-bold text-emerald-800 text-lg">{nextPrayer ? nextPrayer.nameAr : '...'}</p>
+                                <p className="text-sm text-emerald-700 font-mono">{timeUntilNext}</p>
+                            </div>
+                        </div>
+
+                        {/* زر المشاركة */}
+                        <Button
+                            className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white"
+                            onClick={async () => {
+                                if (navigator.share) {
+                                    try {
+                                        await navigator.share({
+                                            title: 'تقريري اليومي - تطبيق البركة',
+                                            text: `📊 تقرير ${today}\n✅ مهام: ${completedTodayTasks.length}/${todayTasks.length}\n📅 مواعيد: ${todayAppointments.length}\n🎯 عادات: ${habits.filter(h => h.history?.[todayStr]).length}/${habits.length}\n💰 الرصيد: ${currentBalance}`,
+                                        });
+                                    } catch (e) { console.log('Share cancelled'); }
+                                }
+                            }}
+                        >
+                            📤 مشاركة التقرير
+                        </Button>
                     </div>
                 );
 
