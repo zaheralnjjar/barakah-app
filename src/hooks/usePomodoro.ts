@@ -7,6 +7,26 @@ export const usePomodoro = () => {
     const [pomodoroTaskId, setPomodoroTaskId] = useState<string | null>(null);
     const { toast } = useToast();
 
+    // Play alarm sound
+    const playAlarmSound = () => {
+        try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.5;
+            oscillator.start();
+            // Beep pattern: 3 beeps
+            setTimeout(() => { oscillator.frequency.value = 1000; }, 200);
+            setTimeout(() => { oscillator.frequency.value = 800; }, 400);
+            setTimeout(() => { oscillator.frequency.value = 1200; }, 600);
+            setTimeout(() => { oscillator.stop(); audioContext.close(); }, 1000);
+        } catch (e) { console.log('Audio not supported'); }
+    };
+
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (pomodoroActive && pomodoroTime > 0) {
@@ -15,7 +35,14 @@ export const usePomodoro = () => {
             }, 1000);
         } else if (pomodoroTime === 0 && pomodoroActive) {
             setPomodoroActive(false);
-            toast({ title: 'انتهى الوقت!', description: 'أحسنت! خذ استراحة 5 دقائق' });
+            // Play alarm sound
+            playAlarmSound();
+            // Show toast
+            toast({ title: '⏰ انتهى الوقت!', description: 'أحسنت! خذ استراحة 5 دقائق' });
+            // Send system notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('⏰ انتهى مؤقت التركيز!', { body: 'أحسنت! خذ استراحة 5 دقائق', icon: '/favicon.ico' });
+            }
         }
         return () => { if (interval) clearInterval(interval); };
     }, [pomodoroActive, pomodoroTime]);

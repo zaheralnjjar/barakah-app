@@ -30,7 +30,7 @@ const NavSummaryDialogs: React.FC<NavSummaryDialogsProps> = ({ type, onClose }) 
 
     // Fetch Finance Data
     useEffect(() => {
-        if (type === 'mohamed') {
+        if (type === 'mohamed' || type === 'home_summary') {
             const fetchFinance = async () => {
                 setLoadingFinance(true);
                 try {
