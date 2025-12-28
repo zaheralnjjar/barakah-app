@@ -9,6 +9,7 @@ import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
+import { playAlertSound } from '@/utils/alertSound';
 
 
 
@@ -773,7 +774,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-purple-600" onClick={() => onShareTask(task)}>
                                             <Share2 className="w-3 h-3" />
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => onDeleteTask(task.id)}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-300 hover:text-red-500 hover:bg-red-50" onClick={() => { onDeleteTask(task.id); playAlertSound(); }}>
                                             <Trash2 className="w-3 h-3" />
                                         </Button>
                                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExpandedTaskId(expandedTaskId === task.id ? null : task.id)}>
@@ -792,7 +793,10 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                                     <input
                                                         type="checkbox"
                                                         checked={sub.completed}
-                                                        onChange={() => onToggleSubtask(task.id, sub.id)}
+                                                        onChange={() => {
+                                                            onToggleSubtask(task.id, sub.id);
+                                                            if (!sub.completed) playAlertSound();
+                                                        }}
                                                         className="accent-purple-600 w-3 h-3"
                                                     />
                                                     <span className={`text-xs flex-1 ${sub.completed ? 'line-through text-gray-400' : ''}`}>{sub.title}</span>
@@ -813,13 +817,14 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="mt-2 flex gap-2">
                                             <Input
-                                                placeholder="مهمة فرعية جديدة..."
-                                                className="h-7 text-xs bg-white"
+                                                placeholder="إضافة مهمة فرعية..."
+                                                className="h-7 text-xs"
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
+                                                    if (e.key === 'Enter' && e.currentTarget.value) {
                                                         onAddSubtask(task.id, e.currentTarget.value);
+                                                        playAlertSound();
                                                         e.currentTarget.value = '';
                                                     }
                                                 }}

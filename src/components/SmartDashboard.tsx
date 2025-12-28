@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,8 +10,12 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, GripVertical
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -27,6 +31,8 @@ import QuickActionsGrid from './dashboard/QuickActionsGrid';
 import DailyReportCard from './dashboard/DailyReportCard';
 import DashboardCalendar from './dashboard/DashboardCalendar';
 
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
 }
@@ -34,16 +40,16 @@ interface SmartDashboardProps {
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { toast } = useToast();
     const {
-        financeData, loading, shoppingListSummary,
+        financeData, loading: dataLoading, shoppingListSummary,
         prayerTimes = [], refetch
     } = useDashboardData();
 
     const { habits } = useHabits();
     const { medications } = useMedications();
     const { tasks, addTask, refreshTasks } = useTasks();
-
     const { appointments, refreshAppointments } = useAppointments();
     const { saveParking, getParkingOnly, deleteLocation } = useLocations();
+    const { dashboardOrder, saveDashboardOrder, isLoading: settingsLoading } = useUserSettings();
 
     const [parkingDuration, setParkingDuration] = useState<string | null>(null);
     const [latestParking, setLatestParking] = useState<any>(null);
@@ -58,12 +64,34 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         return new Date(today.setDate(diff));
     });
 
+    // Default Layout Definitions
+    const defaultLayout = useMemo(() => [
+        { i: 'stats', x: 0, y: 0, w: 12, h: 4 },
+        { i: 'actions', x: 0, y: 4, w: 12, h: 4 },
+        { i: 'prayers', x: 0, y: 8, w: 12, h: 2 },
+        { i: 'pomodoro', x: 0, y: 10, w: 12, h: 3 },
+        { i: 'daily', x: 0, y: 13, w: 12, h: 6 },
+        { i: 'calendar', x: 0, y: 19, w: 12, h: 10 },
+    ], []);
+
+    const [currentLayout, setCurrentLayout] = useState(defaultLayout);
+
+    useEffect(() => {
+        if (dashboardOrder && dashboardOrder.length > 0) {
+            setCurrentLayout(dashboardOrder as any);
+        }
+    }, [dashboardOrder]);
+
+    const handleLayoutChange = (layout: any) => {
+        setCurrentLayout(layout);
+        saveDashboardOrder(layout);
+    };
+
     // Parking Timer Logic
     useEffect(() => {
         const updateTimer = () => {
             const spots = getParkingOnly();
             if (spots.length > 0) {
-                // Sort by createdAt descending
                 const latest = spots.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
                 setLatestParking(latest);
 
@@ -115,8 +143,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 });
             } catch (e) { console.error("Widget sync error", e); }
         };
-        if (!loading) syncToWidget();
-    }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, loading]);
+        if (!dataLoading) syncToWidget();
+    }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingListSummary, dataLoading]);
 
     // Pull-to-refresh state
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -126,15 +154,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         setTimeout(() => setIsRefreshing(false), 1000);
     };
 
-    // Auto-sync every 5 minutes
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (refetch) refetch();
-        }, 5 * 60 * 1000); // 5 minutes
-        return () => clearInterval(interval);
-    }, [refetch]);
-
-    // Save expense function
     const saveExpense = async (amount: number, description: string, category: string) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -178,7 +197,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     };
 
-    // Save shopping item function
     const saveShoppingItem = async (itemName: string, quantity: number, category: string) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -215,7 +233,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     };
 
-    // Save note function
     const saveNote = async (title: string, content: string) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -250,73 +267,131 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     };
 
-    // Derived Financial Data
-    const todayExpense = financeData?.pending_expenses?.filter((e: any) =>
-        e.timestamp?.startsWith(new Date().toISOString().split('T')[0]) && e.type === 'expense'
-    ).reduce((acc: number, curr: any) => acc + curr.amount, 0) || 0;
-
-    // Calculate Dynamic Daily Limit (Unified with FinancialController)
     const calculateDailyLimit = () => {
         if (!financeData) return 0;
-
-        // 1. Check if explicit limit is set in config
         const explicitLimit = financeData?.financial_config?.daily_limit_ars || 0;
         if (explicitLimit > 0) return explicitLimit;
-
-        // 2. Auto-calculate based on Available Balance
         const balance = financeData.current_balance_ars || 0;
         const buffer = financeData.emergency_buffer || 0;
         const debt = financeData.total_debt || 0;
-
-        // Available = Balance - (Buffer + Debt)
         const available = balance - buffer - debt;
         if (available <= 0) return 0;
-
-        // Remaining Days in Month
         const now = new Date();
         const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         const remainingDays = daysInMonth - now.getDate();
-
-        // Safe division (remaining + padding)
         return Math.floor(available / (remainingDays + 3));
     };
 
     const dailyLimitARS = calculateDailyLimit();
-    const totalBalanceARS = financeData?.current_balance_ars || 0;
+    const todayExpense = financeData?.pending_expenses?.filter((e: any) =>
+        e.timestamp?.startsWith(new Date().toISOString().split('T')[0]) && e.type === 'expense'
+    ).reduce((acc: number, curr: any) => acc + curr.amount, 0) || 0;
 
-    if (loading) return <div className="p-8 text-center text-emerald-600">جاري تحميل البيانات...</div>;
+    if (dataLoading || settingsLoading) return <div className="p-8 text-center text-emerald-600">جاري تحميل البيانات...</div>;
+
+    const sections = {
+        stats: (
+            <div key="stats" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <DashboardStats
+                    onNavigateToFinance={() => onNavigateToTab('finance')}
+                    financeData={financeData}
+                    todayExpense={todayExpense}
+                    dailyLimitARS={dailyLimitARS}
+                />
+            </div>
+        ),
+        actions: (
+            <div key="actions" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
+            </div>
+        ),
+        prayers: (
+            <div key="prayers" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                    <CardContent className="p-4">
+                        <PrayerTimesRow showTimeUntilNext={true} />
+                    </CardContent>
+                </Card>
+            </div>
+        ),
+        pomodoro: (
+            <div key="pomodoro" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <PomodoroTimer />
+            </div>
+        ),
+        daily: (
+            <div key="daily" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <DailyReportCard
+                    tasks={tasks}
+                    appointments={appointments}
+                    habits={habits}
+                    medications={medications}
+                    onNavigateToTab={onNavigateToTab}
+                    refetch={refetch}
+                />
+            </div>
+        ),
+        calendar: (
+            <div key="calendar" className="h-full">
+                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                </div>
+                <DashboardCalendar
+                    tasks={tasks}
+                    appointments={appointments}
+                    habits={habits}
+                    medications={medications}
+                    prayerTimes={prayerTimes}
+                    onNavigateToTab={onNavigateToTab}
+                    refetch={refetch}
+                    weekStartDate={weekStartDate}
+                    setWeekStartDate={setWeekStartDate}
+                />
+            </div>
+        )
+    };
 
     return (
         <div
             className="space-y-4 p-2 md:p-4 max-w-6xl mx-auto"
             onTouchStart={(e) => {
-                const startY = e.touches[0].clientY;
-                const handleTouchEnd = (endEvent: TouchEvent) => {
-                    const endY = endEvent.changedTouches[0].clientY;
-                    if (startY < 50 && endY - startY > 100) {
-                        handlePullRefresh();
-                    }
-                    document.removeEventListener('touchend', handleTouchEnd);
-                };
-                document.addEventListener('touchend', handleTouchEnd as EventListener);
+                if (e.touches[0].clientY < 50) {
+                    const startY = e.touches[0].clientY;
+                    const handleTouchEnd = (endEvent: TouchEvent) => {
+                        const endY = endEvent.changedTouches[0].clientY;
+                        if (endY - startY > 100) handlePullRefresh();
+                        document.removeEventListener('touchend', handleTouchEnd);
+                    };
+                    document.addEventListener('touchend', handleTouchEnd as EventListener);
+                }
             }}
         >
-            {/* Pull-to-refresh indicator */}
             {isRefreshing && (
                 <div className="fixed top-0 left-0 right-0 z-50 bg-emerald-500 text-white text-center py-2 text-sm animate-pulse">
                     🔄 جاري التحديث...
                 </div>
             )}
 
-            {/* ===== 1. HEADER ===== */}
             <DashboardHeader currentDate={currentDate} />
 
-            {/* ===== PARKING TIMER (Enhanced with 3 Buttons) ===== */}
             {parkingDuration && latestParking && (
                 <div className="mx-2 mb-4 bg-orange-50 border border-orange-200 rounded-xl p-4 shadow-md animate-fade-in relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-orange-400 to-orange-600"></div>
-
-                    {/* Header Row */}
                     <div className="flex items-center gap-3 mb-3">
                         <div className="bg-orange-100 p-2.5 rounded-full animate-pulse shadow-inner">
                             <Clock className="w-5 h-5 text-orange-600" />
@@ -326,96 +401,32 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             <p className="text-2xl font-mono font-bold text-orange-700 dir-ltr tracking-wider leading-none">{parkingDuration}</p>
                         </div>
                     </div>
-
-                    {/* Location Title */}
                     <p className="text-xs text-orange-600/80 truncate mb-3 pr-2 border-b border-orange-200 pb-2">{latestParking.title}</p>
-
-                    {/* Action Buttons Row */}
                     <div className="flex gap-2 justify-end flex-wrap">
-                        {/* Save Button - Keeps location, stops timer display */}
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-9 px-3 text-xs border-green-400 text-green-700 hover:bg-green-50 gap-1"
-                            onClick={() => {
-                                setParkingDuration(null);
-                                setLatestParking(null);
-                                toast({ title: '✅ تم حفظ الموقف', description: 'يمكنك العثور عليه في المواقع المحفوظة' });
-                            }}
-                        >
+                        <Button size="sm" variant="outline" className="h-9 px-3 text-xs border-green-400 text-green-700 hover:bg-green-50 gap-1" onClick={() => { setParkingDuration(null); setLatestParking(null); toast({ title: '✅ تم حفظ الموقف' }); }}>
                             حفظ 💾
                         </Button>
-
-                        {/* Delete Button - Deletes location entirely */}
-                        <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={stopParking}
-                            className="h-9 px-3 text-xs"
-                        >
-                            حذف 🗑️
-                        </Button>
-
-                        {/* Navigate Button */}
-                        <Button
-                            size="sm"
-                            className="h-9 px-3 bg-blue-500 hover:bg-blue-600 text-xs gap-1"
-                            onClick={() => {
-                                const url = latestParking.url || `https://www.google.com/maps/search/?api=1&query=${latestParking.lat},${latestParking.lng}`;
-                                window.open(url, '_blank');
-                            }}
-                        >
+                        <Button size="sm" variant="destructive" onClick={stopParking} className="h-9 px-3 text-xs">حذف 🗑️</Button>
+                        <Button size="sm" className="h-9 px-3 bg-blue-500 hover:bg-blue-600 text-xs gap-1" onClick={() => window.open(latestParking.url || `https://www.google.com/maps/search/?api=1&query=${latestParking.lat},${latestParking.lng}`, '_blank')}>
                             ملاحة 🧭
                         </Button>
                     </div>
                 </div>
             )}
 
-            {/* ===== 2. FINANCIAL SUMMARY ===== */}
-            <DashboardStats
-                onNavigateToFinance={() => onNavigateToTab('finance')}
-                financeData={financeData}
-                todayExpense={todayExpense}
-                dailyLimitARS={dailyLimitARS}
-            />
+            <ResponsiveGridLayout
+                className="layout"
+                layouts={{ lg: currentLayout, md: currentLayout, sm: currentLayout, xs: currentLayout, xxs: currentLayout }}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+                rowHeight={30}
+                draggableHandle=".cursor-move"
+                onLayoutChange={handleLayoutChange}
+                margin={[10, 10]}
+            >
+                {currentLayout.map(item => sections[item.i as keyof typeof sections])}
+            </ResponsiveGridLayout>
 
-            {/* ===== 3. QUICK ACTIONS ===== */}
-            <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
-
-            {/* ===== PRAYER TIMES (TODAY) ===== */}
-            <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white mb-6">
-                <CardContent className="p-4">
-                    <PrayerTimesRow showTimeUntilNext={true} />
-                </CardContent>
-            </Card>
-
-            {/* ===== POMODORO TIMER ===== */}
-            <PomodoroTimer />
-
-            {/* ===== 4. DAILY REPORT ===== */}
-            <DailyReportCard
-                tasks={tasks}
-                appointments={appointments}
-                habits={habits}
-                medications={medications}
-                onNavigateToTab={onNavigateToTab}
-                refetch={refetch}
-            />
-
-            {/* ===== 5. WEEKLY CALENDAR ===== */}
-            <DashboardCalendar
-                tasks={tasks}
-                appointments={appointments}
-                habits={habits}
-                medications={medications}
-                prayerTimes={prayerTimes}
-                onNavigateToTab={onNavigateToTab}
-                refetch={refetch}
-                weekStartDate={weekStartDate}
-                setWeekStartDate={setWeekStartDate}
-            />
-
-            {/* ===== QUICK ADD DIALOGS ===== */}
             <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
                 if (!open) {
                     if (showAddDialog === 'appointment') refreshAppointments();
@@ -432,6 +443,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             {showAddDialog === 'shopping' && <><ShoppingCart className="w-5 h-5 text-pink-500" /> إضافة للتسوق</>}
                             {showAddDialog === 'note' && <><FileText className="w-5 h-5 text-yellow-500" /> ملاحظة سريعة</>}
                             {showAddDialog === 'expense' && <><DollarSign className="w-5 h-5 text-red-500" /> إضافة مصروف</>}
+                            {showAddDialog === 'goal' && <><Target className="w-5 h-5 text-purple-500" /> إضافة هدف</>}
                         </DialogTitle>
                     </DialogHeader>
 
@@ -476,22 +488,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                             <Input placeholder="عنوان المهمة" className="text-right" id="task-title" />
                             <textarea placeholder="وصف المهمة (اختياري)" className="w-full h-20 p-3 border rounded-lg text-right resize-none" id="task-desc" />
                             <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label className="text-xs text-gray-500">التاريخ</label>
-                                    <Input type="date" defaultValue={new Date().toISOString().split('T')[0]} id="task-date" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500">الوقت</label>
-                                    <Input type="time" defaultValue="09:00" id="task-time" />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-gray-500">الأولوية</label>
-                                    <select className="w-full h-10 border rounded-md px-3" id="task-priority">
-                                        <option value="low">منخفضة</option>
-                                        <option value="medium">متوسطة</option>
-                                        <option value="high">عالية</option>
-                                    </select>
-                                </div>
+                                <div><label className="text-xs text-gray-500">التاريخ</label><Input type="date" defaultValue={new Date().toISOString().split('T')[0]} id="task-date" /></div>
+                                <div><label className="text-xs text-gray-500">الوقت</label><Input type="time" defaultValue="09:00" id="task-time" /></div>
+                                <div><label className="text-xs text-gray-500">الأولوية</label><select className="w-full h-10 border rounded-md px-3" id="task-priority"><option value="low">منخفضة</option><option value="medium">متوسطة</option><option value="high">عالية</option></select></div>
                             </div>
                             <Button className="w-full" onClick={async () => {
                                 const title = (document.getElementById('task-title') as HTMLInputElement)?.value;
@@ -590,7 +589,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     </div>
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 };

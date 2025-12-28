@@ -101,7 +101,7 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                 {/* Day Header */}
                 <div className={`text-center py-2 border-b ${isToday ? 'border-purple-200 bg-purple-50' : 'border-gray-200'} rounded-t-xl`}>
                     <span className="text-xs font-medium text-gray-600 block">{DAYS_AR[idx]}</span>
-                    <span className={`text-lg font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
+                    <span className={`text-base font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>{day.getDate()}</span>
                 </div>
 
                 {/* Horizontal Prayers Row */}
@@ -148,8 +148,8 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                                             item.type === 'task' ? 'tasks' : 'logistics'
                                     )}
                                 >
-                                    <div className="font-medium truncate">{item.name}</div>
-                                    <div className="text-[10px] opacity-70">{item.time}</div>
+                                    <div className="font-medium truncate text-[10px]">{item.name}</div>
+                                    <div className="text-[8px] opacity-70">{item.time}</div>
                                 </div>
                             </div>
                         );

@@ -15,12 +15,13 @@ interface SwipeConfig {
 
 export const useSwipeGestures = (
     handlers: SwipeHandlers,
-    config: SwipeConfig = {}
+    config: SwipeConfig & { targetRef?: React.RefObject<HTMLElement> } = {}
 ) => {
     const {
         threshold = 80,
         timeout = 300,
-        enabled = true
+        enabled = true,
+        targetRef
     } = config;
 
     const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -43,7 +44,6 @@ export const useSwipeGestures = (
         const deltaY = touch.clientY - touchStart.current.y;
         const deltaTime = Date.now() - touchStart.current.time;
 
-        // Check if gesture was too slow
         if (deltaTime > timeout) {
             touchStart.current = null;
             return;
@@ -52,16 +52,13 @@ export const useSwipeGestures = (
         const absX = Math.abs(deltaX);
         const absY = Math.abs(deltaY);
 
-        // Determine swipe direction (prefer the axis with more movement)
         if (absX > absY && absX > threshold) {
-            // Horizontal swipe
             if (deltaX > 0) {
                 handlers.onSwipeRight?.();
             } else {
                 handlers.onSwipeLeft?.();
             }
         } else if (absY > absX && absY > threshold) {
-            // Vertical swipe
             if (deltaY > 0) {
                 handlers.onSwipeDown?.();
             } else {
@@ -75,14 +72,15 @@ export const useSwipeGestures = (
     useEffect(() => {
         if (!enabled) return;
 
-        document.addEventListener('touchstart', handleTouchStart, { passive: true });
-        document.addEventListener('touchend', handleTouchEnd, { passive: true });
+        const element = targetRef?.current || document;
+        element.addEventListener('touchstart', handleTouchStart as any, { passive: true });
+        element.addEventListener('touchend', handleTouchEnd as any, { passive: true });
 
         return () => {
-            document.removeEventListener('touchstart', handleTouchStart);
-            document.removeEventListener('touchend', handleTouchEnd);
+            element.removeEventListener('touchstart', handleTouchStart as any);
+            element.removeEventListener('touchend', handleTouchEnd as any);
         };
-    }, [enabled, handleTouchStart, handleTouchEnd]);
+    }, [enabled, handleTouchStart, handleTouchEnd, targetRef]);
 };
 
 export default useSwipeGestures;

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3 } from 'lucide-react';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3, Bell, Pill, DollarSign, CheckCircle, AlertTriangle } from 'lucide-react';
 import PrintOptionsDialog from '@/components/PrintOptionsDialog';
 import DailyCalendar from '@/components/DailyCalendar';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
@@ -13,6 +13,8 @@ import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useToast } from '@/hooks/use-toast';
+import { useAppStore } from '@/stores/useAppStore';
+import { playAlertSound } from '@/utils/alertSound';
 
 const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -108,7 +110,7 @@ const CalendarSection: React.FC = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-lg arabic-title text-primary font-bold">📅 التقويم</h1>
+                <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>
             </div>
 
             {/* Prayer Times Row */}
@@ -123,11 +125,11 @@ const CalendarSection: React.FC = () => {
                                     <div
                                         key={prayer.name}
                                         className={`flex flex-col items-center px-3 py-2 rounded-lg min-w-[65px] transition-all ${isNext ? 'bg-emerald-100 border-2 border-emerald-400 scale-105' : 'bg-white/50'
-                                            }`}
+                                            } `}
                                     >
                                         <span className="text-xs text-gray-600 font-medium">{prayer.nameAr}</span>
-                                        <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'}`} />
-                                        <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'}`}>
+                                        <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'} `} />
+                                        <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'} `}>
                                             {prayer.time}
                                         </span>
 
@@ -367,15 +369,14 @@ const CalendarSection: React.FC = () => {
                                         onMouseLeave={() => {
                                             if (pressTimer.current) clearTimeout(pressTimer.current);
                                         }}
-                                        className={`
-                                            p-2 min-h-[60px] rounded-lg cursor-pointer transition-all relative select-none
+                                        className={`p-2 min-h-[60px] rounded-lg cursor-pointer transition-all relative select-none
                                             ${!day.isCurrentMonth ? 'opacity-40' : ''}
                                             ${isToday ? 'bg-purple-100 border-2 border-purple-400' : 'bg-gray-50 hover:bg-gray-100'}
                                             ${selectedDate === dateStr ? 'ring-2 ring-purple-500' : ''}
                                             active:scale-95 duration-200
                                         `}
                                     >
-                                        <div className={`text-sm font-bold ${isToday ? 'text-purple-700' : 'text-gray-700'}`}>
+                                        <div className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                                             {day.date.getDate()}
                                         </div>
                                         {hasItems && (
@@ -401,48 +402,52 @@ const CalendarSection: React.FC = () => {
                         </div>
 
                         {/* Selected Date Details */}
-                        {selectedDate && (
-                            <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                                <h3 className="font-bold text-purple-700 mb-3">
-                                    📅 {(() => {
-                                        const [y, m, d] = selectedDate.split('-').map(Number);
-                                        return new Date(y, m - 1, d).toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                        {
+                            selectedDate && (
+                                <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                                    <h3 className="font-bold text-purple-700 mb-3">
+                                        📅 {(() => {
+                                            const [y, m, d] = selectedDate.split('-').map(Number);
+                                            const currentDate = new Date(y, m - 1, d);
+                                            return currentDate.toLocaleDateString('ar', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                                        })()}
+                                    </h3>
+                                    {(() => {
+                                        const data = getDateData(selectedDate);
+                                        if (data.tasks.length === 0 && data.appointments.length === 0) {
+                                            return <p className="text-sm text-gray-500">لا توجد أحداث في هذا اليوم</p>;
+                                        }
+                                        return (
+                                            <div className="space-y-2">
+                                                {data.appointments.map(apt => (
+                                                    <div key={apt.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
+                                                        <span className="text-orange-500">📍</span>
+                                                        <span className="font-medium">{apt.title}</span>
+                                                        {apt.time && <span className="text-gray-500 mr-auto">{apt.time}</span>}
+                                                    </div>
+                                                ))}
+                                                {data.tasks.map(task => (
+                                                    <div key={task.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
+                                                        <span className="text-blue-500">✅</span>
+                                                        <span className="font-medium">{task.title}</span>
+                                                        <span className={`text-xs px-2 py-0.5 rounded mr-auto ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                                            task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-green-100 text-green-700'
+                                                            } `}>
+                                                            {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
                                     })()}
-                                </h3>
-                                {(() => {
-                                    const data = getDateData(selectedDate);
-                                    if (data.tasks.length === 0 && data.appointments.length === 0) {
-                                        return <p className="text-sm text-gray-500">لا توجد أحداث في هذا اليوم</p>;
-                                    }
-                                    return (
-                                        <div className="space-y-2">
-                                            {data.appointments.map(apt => (
-                                                <div key={apt.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
-                                                    <span className="text-orange-500">📍</span>
-                                                    <span className="font-medium">{apt.title}</span>
-                                                    {apt.time && <span className="text-gray-500 mr-auto">{apt.time}</span>}
-                                                </div>
-                                            ))}
-                                            {data.tasks.map(task => (
-                                                <div key={task.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
-                                                    <span className="text-blue-500">✅</span>
-                                                    <span className="font-medium">{task.title}</span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded mr-auto ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                                                        task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                            'bg-green-100 text-green-700'
-                                                        }`}>
-                                                        {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    );
-                                })()}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            )}
+                                </div>
+                            )
+                        }
+                    </CardContent >
+                </Card >
+            )
+            }
             {/* Quick Add Type Selection Popup */}
             <Dialog open={!!quickAddDate && !addType} onOpenChange={() => { setQuickAddDate(null); setAddType(null); }}>
                 <DialogContent className="max-w-xs">
@@ -585,7 +590,7 @@ const CalendarSection: React.FC = () => {
                                     className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${formData.priority === p
                                         ? p === 'high' ? 'bg-red-500 text-white' : p === 'medium' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                        } `}
                                 >
                                     {p === 'high' ? 'عالية' : p === 'medium' ? 'متوسطة' : 'منخفضة'}
                                 </button>
@@ -678,7 +683,7 @@ const CalendarSection: React.FC = () => {
                                                         <span className={`text-[10px] px-2 py-0.5 rounded ${task.priority === 'high' ? 'bg-red-100 text-red-700' :
                                                             task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                                                                 'bg-green-100 text-green-700'
-                                                            }`}>
+                                                            } `}>
                                                             {task.priority === 'high' ? 'عالية' : task.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
                                                         </span>
                                                     </div>
@@ -695,7 +700,7 @@ const CalendarSection: React.FC = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

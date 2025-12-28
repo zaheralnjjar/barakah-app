@@ -3,47 +3,71 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TABLES } from '@/lib/tableNames';
 
+export interface NoteData {
+    content: string;
+    isSecure?: boolean;
+    createdAt?: string;
+}
+
 export const useQuickNotes = () => {
     const { toast } = useToast();
-    const [notesHistory, setNotesHistory] = useState<string[]>(() => {
-        try { return JSON.parse(localStorage.getItem('baraka_notes_history') || '[]'); } catch { return []; }
+    const [notesHistory, setNotesHistory] = useState<NoteData[]>(() => {
+        try {
+            const raw = localStorage.getItem('baraka_notes_history') || '[]';
+            const parsed = JSON.parse(raw);
+            return parsed.map((item: any) => {
+                if (typeof item === 'string') return { content: item, isSecure: false };
+                return item;
+            });
+        } catch { return []; }
     });
+
+    const saveNoteToStorage = (notes: NoteData[]) => {
+        setNotesHistory(notes);
+        localStorage.setItem('baraka_notes_history', JSON.stringify(notes));
+    };
 
     const saveNote = async (note: string) => {
         localStorage.setItem('baraka_quick_notes', note);
-        // Sync to Supabase
         const user = (await supabase.auth.getUser()).data.user;
         if (user) {
             await supabase.from(TABLES.logistics).update({ quick_notes: note, updated_at: new Date().toISOString() }).eq('user_id', user.id);
         }
-        toast({ title: 'تم الحفظ ✅' });
+        toast({ title: 'تم الحفط ✅' });
     };
 
-    const archiveNote = (note: string) => {
+    const archiveNote = (note: string, isSecure = false) => {
         if (!note.trim()) return;
-        const updated = [note, ...notesHistory];
-        setNotesHistory(updated);
-        localStorage.setItem('baraka_notes_history', JSON.stringify(updated));
+        const newNote: NoteData = { content: note, isSecure, createdAt: new Date().toISOString() };
+        const updated = [newNote, ...notesHistory];
+        saveNoteToStorage(updated);
         localStorage.removeItem('baraka_quick_notes');
         toast({ title: 'تمت الأرشفة' });
     };
 
+    const toggleSecure = (index: number) => {
+        const updated = [...notesHistory];
+        if (updated[index]) {
+            updated[index].isSecure = !updated[index].isSecure;
+            saveNoteToStorage(updated);
+            toast({ title: updated[index].isSecure ? 'تم القفل 🔒' : 'تم إلغاء القفل 🔓' });
+        }
+    };
+
     const deleteHistoryItem = (index: number) => {
         const updated = notesHistory.filter((_, i) => i !== index);
-        setNotesHistory(updated);
-        localStorage.setItem('baraka_notes_history', JSON.stringify(updated));
+        saveNoteToStorage(updated);
     };
 
     const restoreHistoryItem = (note: string) => {
         localStorage.setItem('baraka_quick_notes', note);
-        // In UI, we need to update the textarea value manually or via state. 
-        // Hook consumer should handle the textarea ref/state update.
     };
 
     return {
         notesHistory,
         saveNote,
         archiveNote,
+        toggleSecure,
         deleteHistoryItem,
         restoreHistoryItem
     };

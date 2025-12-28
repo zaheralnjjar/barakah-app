@@ -182,20 +182,20 @@ export const DailyCalendar: React.FC<DailyCalendarProps> = ({ compact = false })
                 <CardContent className="pt-0">
                     <div className="grid grid-cols-4 gap-2 text-center text-xs">
                         <div className="bg-emerald-50 p-2 rounded">
-                            <span className="block text-lg font-bold text-emerald-600">{todayPrayers.length}</span>
-                            <span className="text-gray-500">صلاة</span>
+                            <span className="block text-base font-bold text-emerald-600">{todayPrayers.length}</span>
+                            <span className="text-[10px] text-gray-500">صلاة</span>
                         </div>
                         <div className="bg-blue-50 p-2 rounded">
-                            <span className="block text-lg font-bold text-blue-600">{dayAppointments.length}</span>
-                            <span className="text-gray-500">موعد</span>
+                            <span className="block text-base font-bold text-blue-600">{dayAppointments.length}</span>
+                            <span className="text-[10px] text-gray-500">موعد</span>
                         </div>
                         <div className="bg-orange-50 p-2 rounded">
-                            <span className="block text-lg font-bold text-orange-600">{dayTasks.length}</span>
-                            <span className="text-gray-500">مهمة</span>
+                            <span className="block text-base font-bold text-orange-600">{dayTasks.length}</span>
+                            <span className="text-[10px] text-gray-500">مهمة</span>
                         </div>
                         <div className="bg-purple-50 p-2 rounded">
-                            <span className="block text-lg font-bold text-purple-600">{dayMedications.length}</span>
-                            <span className="text-gray-500">دواء</span>
+                            <span className="block text-base font-bold text-purple-600">{dayMedications.length}</span>
+                            <span className="text-[10px] text-gray-500">دواء</span>
                         </div>
                     </div>
                 </CardContent>
