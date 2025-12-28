@@ -14,9 +14,10 @@ interface Preset {
 
 interface PomodoroTimerProps {
     compact?: boolean;
+    hideTrigger?: boolean;
 }
 
-const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true }) => {
+const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true, hideTrigger = false }) => {
     // Mode: 'timer' (countdown) or 'stopwatch' (countup)
     const [mode, setMode] = useState<'timer' | 'stopwatch'>('timer');
     const [isRunning, setIsRunning] = useState(false);
@@ -28,6 +29,10 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true }) => {
 
     // Stopwatch state
     const [elapsedTime, setElapsedTime] = useState(0);
+
+    // Session stats
+    const [completedSessions, setCompletedSessions] = useState(0);
+    const [totalFocusTime, setTotalFocusTime] = useState(0); // in minutes
 
     // Presets
     const [presets, setPresets] = useState<Preset[]>([
@@ -53,6 +58,31 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true }) => {
         localStorage.setItem('pomodoro_presets', JSON.stringify(presets));
     }, [presets]);
 
+    // Listener for remote open
+    useEffect(() => {
+        const handleOpen = () => setShowDialog(true);
+        window.addEventListener('openPomodoroDialog', handleOpen);
+        return () => window.removeEventListener('openPomodoroDialog', handleOpen);
+    }, []);
+
+    // Load session stats
+    useEffect(() => {
+        const stats = localStorage.getItem('pomodoro_stats');
+        if (stats) {
+            const parsed = JSON.parse(stats);
+            setCompletedSessions(parsed.sessions || 0);
+            setTotalFocusTime(parsed.time || 0);
+        }
+    }, []);
+
+    // Save session stats
+    useEffect(() => {
+        localStorage.setItem('pomodoro_stats', JSON.stringify({
+            sessions: completedSessions,
+            time: totalFocusTime
+        }));
+    }, [completedSessions, totalFocusTime]);
+
     // Timer Logic
     useEffect(() => {
         if (isRunning) {
@@ -62,10 +92,19 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true }) => {
                         if (prev <= 0) {
                             clearInterval(intervalRef.current!);
                             setIsRunning(false);
+
+                            // Update sessions
+                            setCompletedSessions(s => s + 1);
+                            setTotalFocusTime(t => t + targetMinutes);
+
+                            // Sound & Notification
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                            audio.play().catch(e => console.log('Audio play failed', e));
+
                             if ('Notification' in window && Notification.permission === 'granted') {
                                 new Notification('انتهى الوقت!', { body: 'أحسنت! خذ قسطاً من الراحة.' });
                             }
-                            toast({ title: '⏰ انتهى الوقت!', description: 'أحسنت!' });
+                            toast({ title: '⏰ انتهى الوقت!', description: 'أحسنت! أتممت جلسة تركيز بنجاح.' });
                             return 0;
                         }
                         return prev - 1;
@@ -143,26 +182,28 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({ compact = true }) => {
     if (compact && !isRunning) {
         return (
             <>
-                {/* Compact Shortcut Button */}
-                <div
-                    className="mx-2 mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-                    onClick={() => setShowDialog(true)}
-                >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-indigo-100 p-2 rounded-full">
-                                <Timer className="w-5 h-5 text-indigo-600" />
+                {/* Compact Shortcut Button - Hide if hideTrigger is true */}
+                {!hideTrigger && (
+                    <div
+                        className="mx-2 mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-3 shadow-sm cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                        onClick={() => setShowDialog(true)}
+                    >
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-indigo-100 p-2 rounded-full">
+                                    <Timer className="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-indigo-800">مؤقت التركيز</p>
+                                    <p className="text-xs text-indigo-500">اضغط لبدء جلسة تركيز</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm font-bold text-indigo-800">مؤقت التركيز</p>
-                                <p className="text-xs text-indigo-500">اضغط لبدء جلسة تركيز</p>
+                            <div className="text-2xl font-mono font-bold text-indigo-600/50">
+                                {formatTime(targetMinutes * 60)}
                             </div>
-                        </div>
-                        <div className="text-2xl font-mono font-bold text-indigo-600/50">
-                            {formatTime(targetMinutes * 60)}
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Timer Setup Dialog */}
                 <Dialog open={showDialog} onOpenChange={setShowDialog}>

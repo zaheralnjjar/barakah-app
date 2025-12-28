@@ -214,6 +214,7 @@ const FinancialController = () => {
   }, []);
 
   useEffect(() => {
+    console.log("Financial Controller Mounted");
     loadFinanceData();
   }, []);
 
@@ -554,59 +555,16 @@ const FinancialController = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-primary arabic-title">
-          المالية
-        </h1>
-      </div>
-
-      {/* Financial Overview - Moved to Top */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center">
-              <DollarSign className="w-4 h-4 ml-2" />
-              الرصيد الإجمالي
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-primary">
-              {totalBalanceARS.toLocaleString()} ARS
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ≈ {(totalBalanceARS / financeData.exchange_rate).toFixed(2)} USD
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="arabic-title text-sm flex items-center">
-              <TrendingUp className="w-4 h-4 ml-2" />
-              الحد اليومي
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-green-600">
-              {dailyLimit > 0 ? dailyLimit.toLocaleString() : <span className="text-xs text-gray-400">غير محدد</span>} ARS
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ≈ {(dailyLimit / financeData.exchange_rate).toFixed(2)} USD
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Category Expense Chart */}
-      <CategoryExpenseChart
-        transactions={financeData.pending_expenses || []}
-        exchangeRate={financeData.exchange_rate}
-      />
-
-      {/* Add Transaction */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="arabic-title">إضافة معاملة جديدة</CardTitle>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-bold text-primary arabic-title">
+            الإدارة المالية
+          </h1>
+          <p className="arabic-body text-sm text-muted-foreground">
+            تتبع ميزانيتك ومصروفاتك بكل سهولة
+          </p>
+        </div>
+        <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -616,821 +574,382 @@ const FinancialController = () => {
             <FileSpreadsheet className="w-4 h-4" />
             <span className="text-xs">استيراد</span>
           </Button>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="arabic-body">المبلغ</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                value={newTransaction.amount}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="arabic-body">العملة</Label>
-              <select
-                value={newTransaction.currency}
-                onChange={(e) => setNewTransaction(prev => ({ ...prev, currency: e.target.value }))}
-                className="w-full p-2 border rounded-lg"
-              >
-                <option value="ARS">البيزو الأرجنتيني (ARS)</option>
-                <option value="USD">الدولار الأمريكي (USD)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="arabic-body">نوع المعاملة</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="expense"
-                  checked={newTransaction.type === 'expense'}
-                  onChange={(e) => setNewTransaction(prev => ({ ...prev, type: e.target.value }))}
-                  className="ml-2"
-                />
-                <MinusCircle className="w-4 h-4 text-red-500 ml-1" />
-                <span className="arabic-body">مصروف</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="income"
-                  checked={newTransaction.type === 'income'}
-                  onChange={(e) => setNewTransaction(prev => ({ ...prev, type: e.target.value }))}
-                  className="ml-2"
-                />
-                <PlusCircle className="w-4 h-4 text-green-500 ml-1" />
-                <span className="arabic-body">دخل</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="arabic-body">الوصف</Label>
-            <Input
-              placeholder="وصف المعاملة..."
-              value={newTransaction.description}
-              onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="arabic-body">الفئة</Label>
-            <Select
-              value={newTransaction.category}
-              onValueChange={(v) => setNewTransaction(prev => ({ ...prev, category: v }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            onClick={addTransaction}
-            disabled={updating}
-            className="w-full btn-islamic arabic-body"
-          >
-            {updating ? 'جاري الحفظ...' : 'إضافة المعاملة'}
+          <Button onClick={generateReport} size="sm" variant="outline">
+            <Share2 className="w-4 h-4 ml-1" />
+            <span className="text-xs">تقرير</span>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="arabic-title text-sm flex items-center">
-            <TrendingDown className="w-4 h-4 ml-2" />
-            إجمالي الديون
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold text-red-600">
-            {financeData.total_debt.toLocaleString()} ARS
-          </p>
-          <p className="text-sm text-muted-foreground">
-            ≈ {(financeData.total_debt / financeData.exchange_rate).toFixed(2)} USD
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Financial Tools Section */}
-      <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        {/* Weekly Report */}
-        <Card>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-none">
           <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center gap-2">
-              📄 تقارير
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col justify-center items-center h-[140px] gap-2">
-            <Button onClick={generateReport} className="w-full" variant="outline">
-              <Share2 className="w-4 h-4 ml-2" /> طباعة تقرير أسبوعي
-            </Button>
-            <p className="text-xs text-gray-400 text-center">يقوم بإنشاء تقرير مفصل للطباعة أو الحفظ كـ PDF</p>
-          </CardContent>
-        </Card>
-
-        {/* Savings Goals */}
-        <Card className="col-span-full">
-          <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" /> أهداف الادخار
-              </div>
-              <div className="flex gap-2">
-                <Input placeholder="الهدف" className="h-8 w-24 text-xs" value={newGoal.name} onChange={e => setNewGoal({ ...newGoal, name: e.target.value })} />
-                <Input placeholder="المبلغ" className="h-8 w-20 text-xs" value={newGoal.target} onChange={e => setNewGoal({ ...newGoal, target: e.target.value })} />
-                <Button size="sm" className="h-8" onClick={saveGoal}><PlusCircle className="w-4 h-4" /></Button>
-              </div>
+            <CardTitle className="arabic-title text-sm flex items-center opacity-90">
+              <DollarSign className="w-4 h-4 ml-2" />
+              الرصيد الإجمالي
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-[250px] overflow-y-auto">
-              {savingsGoals.map(goal => (
-                <div key={goal.id} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>{goal.name}</span>
-                    <span>{goal.current} / {goal.target}</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }}
+            <div className="text-2xl font-bold">
+              {totalBalanceARS.toLocaleString()} <span className="text-sm font-normal">ARS</span>
+            </div>
+            <p className="text-sm opacity-80">
+              ≈ {(totalBalanceARS / financeData.exchange_rate).toFixed(2)} USD
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-emerald-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="arabic-title text-sm flex items-center text-emerald-600">
+              <TrendingUp className="w-4 h-4 ml-2" />
+              الحد اليومي المتاح
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-700">
+              {dailyLimit > 0 ? dailyLimit.toLocaleString() : '0'} <span className="text-xs font-normal">ARS</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              بناءً على الرصيد المتاح حالياً
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white border-red-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="arabic-title text-sm flex items-center text-red-600">
+              <TrendingDown className="w-4 h-4 ml-2" />
+              إجمالي الديون
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-700">
+              {financeData.total_debt.toLocaleString()} <span className="text-xs font-normal">ARS</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              يجب تسديدها قريباً
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Column: Entry and Charts */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Add Transaction */}
+          <Card className="border-emerald-100 shadow-sm overflow-hidden">
+            <div className="bg-emerald-50/50 px-4 py-2 border-b border-emerald-100">
+              <span className="arabic-title text-emerald-800 text-sm font-bold flex items-center gap-2">
+                <PlusCircle className="w-4 h-4" /> إضافة معاملة
+              </span>
+            </div>
+            <CardContent className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="arabic-body text-xs">المبلغ</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={newTransaction.amount}
+                      onChange={(e) => setNewTransaction(prev => ({ ...prev, amount: e.target.value }))}
+                      className="pr-12"
                     />
-                  </div>
-                  <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => {
-                      const added = parseFloat(prompt('أضف مبلغ:') || '0');
-                      if (added) {
-                        const updated = savingsGoals.map(g => g.id === goal.id ? { ...g, current: g.current + added } : g);
-                        setSavingsGoals(updated);
-                        localStorage.setItem('baraka_savings', JSON.stringify(updated));
-                      }
-                    }}>+ إيداع</Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-red-400" onClick={() => {
-                      const updated = savingsGoals.filter(g => g.id !== goal.id);
-                      setSavingsGoals(updated);
-                      localStorage.setItem('baraka_savings', JSON.stringify(updated));
-                    }}>حذف</Button>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-3 bg-gray-50 border-r text-xs text-gray-500 rounded-r-md">
+                      {newTransaction.currency}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Monthly Budget */}
-        <Card className="col-span-full">
-          <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" /> الميزانية الشهرية
-              </div>
-              <div className="flex gap-2">
-                <Input placeholder="الفئة" className="h-8 w-24 text-xs" value={newBudget.category} onChange={e => setNewBudget({ ...newBudget, category: e.target.value })} />
-                <Input placeholder="الحد" className="h-8 w-20 text-xs" value={newBudget.limit} onChange={e => setNewBudget({ ...newBudget, limit: e.target.value })} />
-                <Button size="sm" className="h-8" onClick={saveBudget}><PlusCircle className="w-4 h-4" /></Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-[250px] overflow-y-auto">
-              {budgets.map((budget, idx) => {
-                // Calculate spent for this category (mock calculation for now or needs transaction filtering)
-                // For real implementation we filter transactions for current month & category
-                const spent = 0; // Placeholder, would need detailed transaction logic
-                return (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>{budget.category}</span>
-                      <span>{spent} / {budget.limit}</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      {/* Mock progress 0% since we don't have live spent data hooked up yet */}
-                      <div className="h-full bg-blue-500" style={{ width: '0%' }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* Hidden Report Container */}
-      <div id="finance-report" className="hidden">
-        <h2>الوضع المالي الحالي</h2>
-        <p>الرصيد: {financeData?.current_balance_ars} ARS</p>
-        <h3>المعاملات الأخيرة</h3>
-        {/* Add table here later if needed */}
-      </div>
-      <Card className="col-span-full">
-        <CardHeader className="pb-3">
-          <CardTitle className="arabic-title text-sm flex items-center justify-between">
-            <div className="flex items-center">
-              <RefreshCw className="w-4 h-4 ml-2" />
-              الاشتراكات الشهرية
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setShowSubscriptionDialog(true)}>
-              <PlusCircle className="w-4 h-4 ml-1" /> إضافة
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {subscriptions.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">لا توجد اشتراكات مسجلة</p>
-          ) : (
-            <div className="space-y-2 max-h-[250px] overflow-y-auto">
-              {subscriptions.map(sub => (
-                <div key={sub.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 text-purple-500" />
-                    <div>
-                      <p className="font-medium text-sm">{sub.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {sub.cycle === 'monthly' ? 'شهري' : 'سنوي'}
-                        {sub.renewalDate && ` - يوم ${sub.renewalDate}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-purple-600">{sub.amount} {sub.currency}</span>
-                    <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400" onClick={() => deleteSubscription(sub.id)}>
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="arabic-body text-xs">العملة</Label>
+                  <Select
+                    value={newTransaction.currency}
+                    onValueChange={(v) => setNewTransaction(prev => ({ ...prev, currency: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ARS">البيزو الأرجنتيني (ARS)</SelectItem>
+                      <SelectItem value="USD">الدولار الأمريكي (USD)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
-                <span className="font-bold text-purple-700">
-                  {subscriptions.filter(s => s.cycle === 'monthly').reduce((sum, s) => sum + s.amount, 0).toLocaleString()} ARS
-                </span>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Recurring Expenses Section */}
-      <Card className="col-span-full border-2 border-amber-200">
-        <CardHeader className="pb-3 bg-gradient-to-r from-amber-50 to-orange-50">
-          <CardTitle className="arabic-title text-sm flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <RotateCw className="w-4 h-4 text-amber-600" />
-              المصروفات المتكررة
-              {getUpcomingReminders().length > 0 && (
-                <Badge className="bg-amber-500 text-white text-[10px]">
-                  {getUpcomingReminders().length} قادمة
-                </Badge>
-              )}
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setShowRecurringDialog(true)} className="border-amber-300">
-              <PlusCircle className="w-4 h-4 ml-1" /> إضافة
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {/* Upcoming Reminders */}
-          {getUpcomingReminders().length > 0 && (
-            <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <h4 className="font-bold text-amber-700 mb-2 flex items-center gap-2 text-sm">
-                <Bell className="w-4 h-4" /> تذكيرات قادمة
-              </h4>
               <div className="space-y-2">
-                {getUpcomingReminders().map(reminder => (
-                  <div key={reminder.id} className="flex items-center justify-between text-sm">
-                    <span>{reminder.name}</span>
-                    <span className="text-amber-600 font-bold">
-                      بعد {reminder.daysUntil} {reminder.daysUntil === 1 ? 'يوم' : 'أيام'} - {reminder.amount} {reminder.currency}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Due Expenses */}
-          {getDueExpenses().length > 0 && (
-            <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
-              <h4 className="font-bold text-red-700 mb-2 flex items-center gap-2 text-sm">
-                <AlertTriangle className="w-4 h-4" /> مستحقة اليوم!
-              </h4>
-              <div className="space-y-2">
-                {getDueExpenses().map(expense => (
-                  <div key={expense.id} className="flex items-center justify-between">
-                    <span className="font-medium">{expense.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-600 font-bold">{expense.amount} {expense.currency}</span>
-                      <Button
-                        size="sm"
-                        className="h-7 bg-green-600 hover:bg-green-700"
-                        onClick={() => {
-                          markAsProcessed(expense.id);
-                          toast({ title: 'تم', description: `تم تسجيل دفع ${expense.name}` });
-                        }}
-                      >
-                        تم الدفع ✓
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recurring Expenses List */}
-          {recurringExpenses.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">لا توجد مصروفات متكررة</p>
-          ) : (
-            <div className="space-y-2 max-h-[250px] overflow-y-auto">
-              {recurringExpenses.map(expense => (
-                <div
-                  key={expense.id}
-                  className={`flex items-center justify-between p-2 rounded-lg border ${expense.isActive ? 'bg-white' : 'bg-gray-100 opacity-60'
-                    }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className={`h-6 w-6 p-0 ${expense.isActive ? 'text-green-600' : 'text-gray-400'}`}
-                      onClick={() => toggleActive(expense.id)}
+                <Label className="arabic-body text-xs">النوع والفئة</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex p-1 bg-gray-50 rounded-lg border">
+                    <button
+                      onClick={() => setNewTransaction(prev => ({ ...prev, type: 'expense' }))}
+                      className={`flex-1 py-1 px-3 rounded-md text-xs transition-all flex items-center justify-center gap-1 ${newTransaction.type === 'expense' ? 'bg-white shadow text-red-600 font-bold' : 'text-gray-500'}`}
                     >
-                      <Power className="w-4 h-4" />
-                    </Button>
-                    <div>
-                      <p className="font-medium text-sm">{expense.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {expense.cycle === 'monthly' ? 'شهري' : 'سنوي'} - يوم {expense.dayOfMonth}
-                        {expense.cycle === 'yearly' && ` / شهر ${expense.monthOfYear}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-amber-600">{expense.amount} {expense.currency}</span>
-                    <Badge className="text-[9px]">{expense.category}</Badge>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 text-red-400"
-                      onClick={() => deleteRecurringExpense(expense.id)}
+                      <MinusCircle className="w-3 h-3" /> مصروف
+                    </button>
+                    <button
+                      onClick={() => setNewTransaction(prev => ({ ...prev, type: 'income' }))}
+                      className={`flex-1 py-1 px-3 rounded-md text-xs transition-all flex items-center justify-center gap-1 ${newTransaction.type === 'income' ? 'bg-white shadow text-emerald-600 font-bold' : 'text-gray-500'}`}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                      <PlusCircle className="w-3 h-3" /> دخل
+                    </button>
                   </div>
+                  <Select
+                    value={newTransaction.category}
+                    onValueChange={(v) => setNewTransaction(prev => ({ ...prev, category: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الفئة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                      <div className="h-px bg-gray-200 my-1" />
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full text-xs text-primary">
+                            + إضافة فئة جديدة
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle className="arabic-title text-right">إدارة الفئات</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="flex gap-2">
+                              <Input id="new-cat-input" placeholder="اسم الفئة الجديدة" className="text-right" />
+                              <Button onClick={() => {
+                                const input = document.getElementById('new-cat-input') as HTMLInputElement;
+                                if (input.value) {
+                                  if (newTransaction.type === 'expense') {
+                                    useAppStore.getState().addExpenseCategory(input.value);
+                                  } else {
+                                    useAppStore.getState().addIncomeCategory(input.value);
+                                  }
+                                  input.value = '';
+                                  toast({ title: "تمت الإضافة" });
+                                }
+                              }}>إضافة</Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map(cat => (
+                                <Badge key={cat} variant="secondary" className="gap-1 px-2 py-1">
+                                  {cat}
+                                  <X className="w-3 h-3 cursor-pointer hover:text-red-500" onClick={() => {
+                                    if (newTransaction.type === 'expense') {
+                                      useAppStore.getState().deleteExpenseCategory(cat);
+                                    } else {
+                                      useAppStore.getState().deleteIncomeCategory(cat);
+                                    }
+                                  }} />
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
-              <div className="flex justify-between pt-2 border-t mt-2">
-                <span className="text-sm text-gray-500">الإجمالي الشهري:</span>
-                <span className="font-bold text-amber-700">
-                  {getMonthlyTotal().ars.toLocaleString()} ARS + ${getMonthlyTotal().usd}
-                </span>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Add Recurring Expense Dialog */}
-      <Dialog open={showRecurringDialog} onOpenChange={setShowRecurringDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-right">إضافة مصروف متكرر</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="اسم المصروف (مثل: فاتورة الكهرباء)"
-              value={newRecurring.name}
-              onChange={e => setNewRecurring({ ...newRecurring, name: e.target.value })}
-              className="text-right"
-            />
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="المبلغ"
-                value={newRecurring.amount}
-                onChange={e => setNewRecurring({ ...newRecurring, amount: e.target.value })}
-              />
-              <select
-                value={newRecurring.currency}
-                onChange={e => setNewRecurring({ ...newRecurring, currency: e.target.value as 'ARS' | 'USD' })}
-                className="border rounded px-2"
-              >
-                <option value="ARS">ARS</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-            <Select
-              value={newRecurring.category}
-              onValueChange={v => setNewRecurring({ ...newRecurring, category: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="الفئة" />
-              </SelectTrigger>
-              <SelectContent>
-                {expenseCategories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2">
-              <select
-                value={newRecurring.cycle}
-                onChange={e => setNewRecurring({ ...newRecurring, cycle: e.target.value as 'monthly' | 'yearly' })}
-                className="flex-1 border rounded p-2"
-              >
-                <option value="monthly">شهري</option>
-                <option value="yearly">سنوي</option>
-              </select>
-              <Input
-                type="number"
-                placeholder="يوم الشهر (1-31)"
-                min={1}
-                max={31}
-                value={newRecurring.dayOfMonth}
-                onChange={e => setNewRecurring({ ...newRecurring, dayOfMonth: parseInt(e.target.value) || 1 })}
-                className="w-24"
-              />
-              {newRecurring.cycle === 'yearly' && (
+              <div className="space-y-2">
+                <Label className="arabic-body text-xs">وصف المعاملة</Label>
                 <Input
-                  type="number"
-                  placeholder="الشهر (1-12)"
-                  min={1}
-                  max={12}
-                  value={newRecurring.monthOfYear}
-                  onChange={e => setNewRecurring({ ...newRecurring, monthOfYear: parseInt(e.target.value) || 1 })}
-                  className="w-24"
+                  placeholder="مثال: شراء بقالة، إيجار المنزل..."
+                  value={newTransaction.description}
+                  onChange={(e) => setNewTransaction(prev => ({ ...prev, description: e.target.value }))}
                 />
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-sm">تذكير قبل</Label>
-              <Input
-                type="number"
-                min={1}
-                max={30}
-                value={newRecurring.reminderDays}
-                onChange={e => setNewRecurring({ ...newRecurring, reminderDays: parseInt(e.target.value) || 3 })}
-                className="w-16"
-              />
-              <span className="text-sm text-gray-500">أيام</span>
-            </div>
+              </div>
+
+              <Button
+                onClick={addTransaction}
+                disabled={updating}
+                className="w-full btn-islamic arabic-body"
+              >
+                {updating ? 'جاري الحفظ...' : 'حفظ المعاملة'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Charts */}
+          <div className="space-y-4">
+            <CategoryExpenseChart
+              transactions={financeData.pending_expenses || []}
+              exchangeRate={financeData.exchange_rate}
+            />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowRecurringDialog(false)}>إلغاء</Button>
-            <Button
-              className="bg-amber-600 hover:bg-amber-700"
-              onClick={() => {
-                if (!newRecurring.name || !newRecurring.amount) {
-                  toast({ title: 'خطأ', description: 'يرجى إدخال جميع البيانات', variant: 'destructive' });
-                  return;
+
+        </div>
+
+        {/* Sidebar Column: Budget, Goals, Settings, History */}
+        <div className="space-y-6">
+          {/* Exchange Rate Card */}
+          <Card className="border-emerald-100 shadow-sm bg-gray-50">
+            <CardHeader className="p-3 border-b border-emerald-100 flex flex-row items-center justify-between">
+              <CardTitle className="arabic-title text-xs font-bold text-emerald-800">سعر الصرف (ARS/USD)</CardTitle>
+              <Badge variant="outline" className="text-[10px] bg-white">BNA الرسمي</Badge>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="text-2xl font-bold">{financeData.exchange_rate}</div>
+                <Button size="sm" variant="ghost" className="h-8 w-8" onClick={() => {
+                  const val = prompt('تحديث سعر الصرف يدوياً:', financeData.exchange_rate.toString());
+                  if (val) updateExchangeRate(val);
+                }}>
+                  <Pencil className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="p-2 bg-white rounded border border-emerald-50 text-[10px] text-gray-500 flex items-center gap-2">
+                <RotateCw className="w-3 h-3 animate-spin" />
+                يتم التحديث تلقائياً من البنك المركزي
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Savings Goals */}
+          <Card className="border-emerald-100 shadow-sm">
+            <CardHeader className="p-3 border-b border-emerald-100 flex flex-row items-center justify-between">
+              <CardTitle className="arabic-title text-xs font-bold text-emerald-800">أهداف الادخار</CardTitle>
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                const name = prompt('اسم الهدف:');
+                const target = prompt('المبلغ المطلوب (ARS):');
+                if (name && target) {
+                  const updated = [...savingsGoals, { id: Date.now(), name, target: parseFloat(target), current: 0 }];
+                  setSavingsGoals(updated);
+                  localStorage.setItem('baraka_savings', JSON.stringify(updated));
                 }
-                addRecurringExpense({
-                  ...newRecurring,
-                  amount: parseFloat(newRecurring.amount),
-                });
-                setNewRecurring({
-                  name: '',
-                  amount: '',
-                  currency: 'ARS',
-                  category: 'فواتير',
-                  cycle: 'monthly',
-                  dayOfMonth: 1,
-                  monthOfYear: 1,
-                  reminderDays: 3,
-                });
-                setShowRecurringDialog(false);
-              }}
-            >
-              إضافة
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Subscription Dialog */}
-      <Dialog open={showSubscriptionDialog} onOpenChange={setShowSubscriptionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-right">إضافة اشتراك جديد</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              placeholder="اسم الاشتراك (مثل: Netflix, Spotify)"
-              value={newSubscription.name}
-              onChange={e => setNewSubscription({ ...newSubscription, name: e.target.value })}
-              className="text-right"
-            />
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="المبلغ"
-                value={newSubscription.amount}
-                onChange={e => setNewSubscription({ ...newSubscription, amount: e.target.value })}
-              />
-              <select
-                value={newSubscription.currency}
-                onChange={e => setNewSubscription({ ...newSubscription, currency: e.target.value })}
-                className="border rounded px-2"
-              >
-                <option value="ARS">ARS</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-            <div className="flex gap-2 items-center">
-              <select
-                value={newSubscription.cycle}
-                onChange={e => setNewSubscription({ ...newSubscription, cycle: e.target.value })}
-                className="flex-1 border rounded p-2"
-              >
-                <option value="monthly">شهري</option>
-                <option value="yearly">سنوي</option>
-              </select>
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-gray-500">يوم</span>
-                <Input
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="1"
-                  value={newSubscription.renewalDate}
-                  onChange={e => setNewSubscription({ ...newSubscription, renewalDate: e.target.value })}
-                  className="w-16 text-center"
-                />
-              </div>
-            </div>
-            <Button onClick={saveSubscription} className="w-full">حفظ الاشتراك</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Transaction Dialog */}
-      <Dialog open={!!editingTransaction} onOpenChange={(open) => !open && setEditingTransaction(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="text-right flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-orange-500" />
-              تعديل المعاملة
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex gap-2">
-              <Button
-                variant={newTransaction.type === 'expense' ? 'default' : 'outline'}
-                onClick={() => setNewTransaction({ ...newTransaction, type: 'expense' })}
-                className={`flex-1 ${newTransaction.type === 'expense' ? 'bg-rose-500 hover:bg-rose-600' : ''}`}
-              >
-                مصروف
+              }}>
+                <PlusCircle className="w-4 h-4" />
               </Button>
-              <Button
-                variant={newTransaction.type === 'income' ? 'default' : 'outline'}
-                onClick={() => setNewTransaction({ ...newTransaction, type: 'income' })}
-                className={`flex-1 ${newTransaction.type === 'income' ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}
-              >
-                دخل
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="المبلغ"
-                value={newTransaction.amount}
-                onChange={e => setNewTransaction({ ...newTransaction, amount: e.target.value })}
-                className="flex-1"
-              />
-              <select
-                value={newTransaction.currency}
-                onChange={e => setNewTransaction({ ...newTransaction, currency: e.target.value })}
-                className="border rounded px-3"
-              >
-                <option value="ARS">ARS</option>
-                <option value="USD">USD</option>
-              </select>
-            </div>
-            <Input
-              placeholder="الوصف"
-              value={newTransaction.description}
-              onChange={e => setNewTransaction({ ...newTransaction, description: e.target.value })}
-              className="text-right"
-            />
-            <select
-              value={newTransaction.category}
-              onChange={e => setNewTransaction({ ...newTransaction, category: e.target.value })}
-              className="w-full border rounded p-2 text-right"
-            >
-              {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map((cat: string) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-            <div className="space-y-2">
-              <Label className="text-xs">تاريخ المعاملة</Label>
-              <Input
-                type="date"
-                value={newTransaction.date}
-                onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
-                className="text-right"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setEditingTransaction(null)} className="flex-1">
-              إلغاء
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!editingTransaction) return;
-                setUpdating(true);
-                await updateTransaction(editingTransaction.id, {
-                  amount: newTransaction.amount,
-                  type: newTransaction.type,
-                  category: newTransaction.category,
-                  description: newTransaction.description,
-                  currency: newTransaction.currency,
-                  timestamp: newTransaction.date ?
-                    (editingTransaction.timestamp.includes('T') ? `${newTransaction.date}T${editingTransaction.timestamp.split('T')[1]}` : new Date(newTransaction.date).toISOString())
-                    : editingTransaction.timestamp
-                });
-                setEditingTransaction(null);
-                setUpdating(false);
-                toast({ title: 'تم تحديث المعاملة' });
-              }}
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
-              disabled={updating}
-            >
-              {updating ? 'جاري الحفظ...' : 'حفظ التعديلات'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Exchange Rate - Automated */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="arabic-title flex items-center justify-between">
-            <span>سعر الصرف (الدولار الأزرق)</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadFinanceData()}
-              disabled={updating}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <div className="flex-1">
-              <p className="text-3xl font-bold text-primary">
-                {financeData.exchange_rate.toLocaleString()} ARS/USD
-              </p>
-              <p className="text-sm text-muted-foreground">
-                المصدر: {exchangeRateSource}
-              </p>
-            </div>
-            {/* Manual Update Override (Hidden but available if needed, actually kept for quick fixes) */}
-            <div className="flex gap-2 items-center">
-              <Label className="text-xs text-muted-foreground">تعديل يدوي:</Label>
-              <Input
-                type="number"
-                placeholder="0.00"
-                className="w-24 h-8 text-xs"
-                onKeyPress={(e: any) => {
-                  if (e.key === 'Enter') {
-                    updateExchangeRate(e.target.value);
-                    e.target.value = '';
-                  }
-                }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Transactions - Modern Minimalist Design */}
-      <Card className="col-span-full shadow-lg border-0">
-        <CardHeader className="pb-3">
-          <CardTitle className="arabic-title text-sm flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calculator className="w-4 h-4 ml-2" />
-              أحدث المعاملات
-            </div>
-            <div className="flex gap-2">
-              {/* Filters */}
-              <select className="text-xs border rounded-lg p-1 h-8 bg-gray-50" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-                <option value="all">كل الفئات</option>
-                {expenseCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <Input type="date" className="h-8 w-32 text-xs rounded-lg" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 max-h-[350px] overflow-y-auto">
-            {getFilteredTransactions().length === 0 ? (
-              <p className="text-center text-gray-400 py-4">لا توجد معاملات</p>
-            ) : (
-              getFilteredTransactions().map((t: any) => (
-                <div
-                  key={t.id}
-                  className={`flex justify-between items-center p-4 rounded-2xl shadow-sm hover:shadow-md transition-all ${t.type === 'expense' ? 'bg-gradient-to-r from-white to-red-50/30' : 'bg-gradient-to-r from-white to-green-50/30'
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Icon with pastel background */}
-                    <div className={`p-2.5 rounded-xl ${t.type === 'expense' ? 'bg-rose-100 text-rose-500' : 'bg-emerald-100 text-emerald-500'
-                      }`}>
-                      {t.type === 'expense' ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">{t.category || 'أخرى'}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-gray-800 text-base">{t.description}</p>
-                        {t.source === 'imported' && (
-                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-50 text-blue-600 border-blue-200">
-                            <Upload className="w-2 h-2 mr-0.5" />
-                            مستورد
-                          </Badge>
-                        )}
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {savingsGoals.length === 0 ? (
+                <p className="text-center text-xs text-gray-400 py-4">لا توجد أهداف حالياً</p>
+              ) : (
+                <div className="space-y-4">
+                  {savingsGoals.map(goal => (
+                    <div key={goal.id} className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-bold">{goal.name}</span>
+                        <span className="text-gray-500">{Math.round((goal.current / goal.target) * 100)}%</span>
                       </div>
-                      <p className="text-xs text-gray-400">
-                        {new Date(t.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {/* Amount - larger and bold */}
-                    <div className="text-left">
-                      <span className={`font-bold text-lg dir-ltr block ${t.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
-                        }`}>
-                        {t.type === 'expense' ? '-' : '+'}{parseFloat(t.amount).toLocaleString()}
-                      </span>
-                      <span className="text-xs text-gray-400">{t.currency}</span>
-                    </div>
-                    {/* Three-dot menu */}
-                    <div className="relative group">
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                      <div className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg border py-1 hidden group-hover:block z-50 min-w-[120px]">
-                        <button
-                          className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
-                          onClick={() => {
-                            setEditingTransaction(t);
-                            setNewTransaction({
-                              amount: t.amount,
-                              type: t.type,
-                              category: t.category,
-                              description: t.description || '',
-                              currency: t.currency,
-                              date: t.timestamp ? t.timestamp.split('T')[0] : new Date().toISOString().split('T')[0]
-                            });
-                          }}
-                        >
-                          <Pencil className="w-3 h-3 text-orange-500" /> تعديل
-                        </button>
-                        <button
-                          className="w-full px-3 py-2 text-right text-sm hover:bg-gray-50 flex items-center gap-2"
-                          onClick={() => handleShare(t)}
-                        >
-                          <Share2 className="w-3 h-3 text-blue-500" /> مشاركة
-                        </button>
-                        <button
-                          className="w-full px-3 py-2 text-right text-sm hover:bg-red-50 text-red-500 flex items-center gap-2"
-                          onClick={() => deleteTransaction(t.id)}
-                        >
-                          <Trash2 className="w-3 h-3" /> حذف
-                        </button>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-500"
+                          style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-emerald-600 font-bold">{goal.current.toLocaleString()} / {goal.target.toLocaleString()} ARS</span>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => {
+                            const added = parseFloat(prompt('أضف مبلغ للإيداع:') || '0');
+                            if (added) {
+                              const updated = savingsGoals.map(g => g.id === goal.id ? { ...g, current: g.current + added } : g);
+                              setSavingsGoals(updated);
+                              localStorage.setItem('baraka_savings', JSON.stringify(updated));
+                            }
+                          }}>+ إيداع</Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* CSV/Excel Import Dialog */}
+          {/* Monthly Budget */}
+          <Card className="border-emerald-100 shadow-sm">
+            <CardHeader className="p-3 border-b border-emerald-100">
+              <CardTitle className="arabic-title text-xs font-bold text-emerald-800">الميزانية الشهرية</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {budgets.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-xs text-gray-400 mb-2">خصص ميزانية لكل فئة لتتبع إنفاقك</p>
+                  <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => {
+                    const cat = prompt('اختر الفئة:');
+                    const limit = prompt('الحد الأقصى (ARS):');
+                    if (cat && limit) {
+                      const updated = [...budgets, { category: cat, limit: parseFloat(limit) }];
+                      setBudgets(updated);
+                      localStorage.setItem('baraka_budgets', JSON.stringify(updated));
+                    }
+                  }}>إعداد ميزانية</Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {budgets.map(b => (
+                    <div key={b.category} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>{b.category}</span>
+                        <span className="text-gray-400">{b.limit.toLocaleString()} ARS</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+
+          {/* Transaction History (Small Version) */}
+          <Card className="border-emerald-100 shadow-sm">
+            <div className="bg-emerald-50/50 px-3 py-2 border-b border-emerald-100 flex justify-between items-center">
+              <span className="arabic-title text-emerald-800 text-xs font-bold flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" /> آخر المعاملات
+              </span>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setFilterDate(''); setFilterCategory('all'); }}>
+                <RefreshCw className="w-3 h-3" />
+              </Button>
+            </div>
+            <CardContent className="p-0">
+              <div className="max-h-[300px] overflow-y-auto">
+                <table className="w-full text-right text-[10px]">
+                  <thead className="bg-gray-50 border-b sticky top-0">
+                    <tr>
+                      <th className="p-2 font-bold">الوصف</th>
+                      <th className="p-2 font-bold">المبلغ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {getFilteredTransactions().slice(0, 10).map((t: any) => (
+                      <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="p-2">
+                          <div className="font-medium truncate max-w-[100px]">{t.description}</div>
+                          <div className="text-[9px] text-gray-400">{new Date(t.timestamp).toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric' })}</div>
+                        </td>
+                        <td className={`p-2 font-bold ${t.type === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {t.amount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Import/Export Dialogs */}
       <CSVImportDialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}
-        onSuccess={loadFinanceData}
+        onSuccess={() => {
+          // Handle import success
+          toast({ title: "تم استيراد البيانات" });
+          loadFinanceData();
+        }}
       />
-    </div>
+    </div >
   );
 };
 

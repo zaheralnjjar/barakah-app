@@ -7,7 +7,8 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, Tooltip
 } from 'recharts';
-import { Target, TrendingUp, CheckCircle2, Flame, CalendarCheck } from 'lucide-react';
+import { Target, TrendingUp, CheckCircle2, Flame, CalendarCheck, ShoppingCart } from 'lucide-react';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899'];
 const HABIT_COLORS = ['#8b5cf6', '#06b6d4', '#f97316', '#84cc16', '#f43f5e'];
@@ -16,6 +17,11 @@ const DashboardProgressCharts: React.FC = () => {
     const { tasks: storeTasks } = useAppStore();
     const { tasks: hookTasks } = useTasks();
     const { habits } = useHabits();
+    const { shoppingListSummary } = useDashboardData() as any;
+
+    const shoppingCompletionRate = shoppingListSummary?.totalItems > 0
+        ? Math.round((shoppingListSummary.completedItems / shoppingListSummary.totalItems) * 100)
+        : 0;
 
     const tasks = hookTasks || storeTasks || [];
     const todayStr = new Date().toISOString().split('T')[0];
@@ -58,17 +64,7 @@ const DashboardProgressCharts: React.FC = () => {
     ).length || 0;
     const habitCompletionRate = habits?.length > 0 ? Math.round((todayHabitsCompleted / habits.length) * 100) : 0;
 
-    // If no data, show placeholder
-    if (totalTasks === 0 && (!habits || habits.length === 0)) {
-        return (
-            <Card className="border-purple-100 shadow-sm">
-                <CardContent className="p-4 text-center text-gray-500">
-                    <Target className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm">أضف مهام وعادات لرؤية التقدم</p>
-                </CardContent>
-            </Card>
-        );
-    }
+
 
     return (
         <Card className="border-indigo-100 shadow-sm bg-gradient-to-br from-indigo-50/30 to-purple-50/30">
@@ -93,7 +89,7 @@ const DashboardProgressCharts: React.FC = () => {
                             <ResponsiveContainer width="100%" height={80}>
                                 <PieChart>
                                     <Pie
-                                        data={taskData.length > 0 ? taskData : [{ name: 'فارغ', value: 1, color: '#e5e7eb' }]}
+                                        data={totalTasks > 0 ? taskData : [{ name: 'فارغ', value: 1, color: '#e5e7eb' }]}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={25}
@@ -101,9 +97,9 @@ const DashboardProgressCharts: React.FC = () => {
                                         dataKey="value"
                                         strokeWidth={0}
                                     >
-                                        {taskData.map((entry, index) => (
+                                        {totalTasks > 0 ? taskData.map((entry, index) => (
                                             <Cell key={index} fill={entry.color} />
-                                        ))}
+                                        )) : <Cell fill="#e5e7eb" />}
                                     </Pie>
                                 </PieChart>
                             </ResponsiveContainer>
@@ -150,6 +146,26 @@ const DashboardProgressCharts: React.FC = () => {
                             {todayHabitsCompleted}/{habits?.length || 0} منجز
                         </p>
                     </div>
+                </div>
+
+                {/* Second Row: Shopping Progress (Full Width) */}
+                <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4 text-blue-500" />
+                            <span className="text-xs text-gray-600 font-medium">قائمة التسوق</span>
+                        </div>
+                        <span className="text-xs font-bold text-blue-600">{shoppingCompletionRate}%</span>
+                    </div>
+                    <div className="w-full bg-blue-50 h-2 rounded-full overflow-hidden">
+                        <div
+                            className="bg-blue-500 h-full transition-all duration-1000"
+                            style={{ width: `${shoppingCompletionRate}%` }}
+                        ></div>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                        {shoppingListSummary?.completedItems || 0} من {shoppingListSummary?.totalItems || 0} أغراض في السلة
+                    </p>
                 </div>
 
                 {/* Weekly Habit Bar Chart */}
@@ -199,6 +215,10 @@ const DashboardProgressCharts: React.FC = () => {
                     <div className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-orange-500"></span>
                         <span>العادات</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <span>التسوق</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-purple-500"></span>

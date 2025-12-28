@@ -170,7 +170,10 @@ const Index = () => {
   // 'dashboard' -> dashboard
   // 'settings' -> settings
   const handleNavChange = (id: string) => {
-    if (id === 'mohamed') setActiveTab('finance');
+    // console.log("Navigating to:", id);
+    if (id === 'mohamed') {
+      setActiveTab('finance');
+    }
     else if (id === 'fatima') setActiveTab('productivity');
     else setActiveTab(id);
   };

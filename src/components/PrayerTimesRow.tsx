@@ -93,97 +93,67 @@ const PrayerTimesRow: React.FC<PrayerTimesRowProps> = ({ className = "grid grid-
     }));
 
     return (
-        <div className="w-full">
-            {showTimeUntilNext && nextPrayer && (
-                <div
-                    className="text-center mb-3 cursor-pointer select-none transition-all"
-                    onClick={handleCountdownClick}
-                    title="اضغط لرؤية الوقت منذ الصلاة الماضية"
-                >
-                    {showPreviousPrayer && previousPrayerInfo ? (
-                        // Show previous prayer elapsed time
-                        <>
-                            <span className="text-sm font-bold text-amber-600">الصلاة الماضية: {previousPrayerInfo.name}</span>
-                            <span className="text-gray-300 mx-1">|</span>
-                            <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-bold animate-pulse">
-                                منذ {previousPrayerInfo.elapsed}
-                            </span>
-                        </>
-                    ) : (
-                        // Show next prayer countdown
-                        <>
-                            <span className="text-sm font-bold text-gray-500">الصلاة القادمة: {nextPrayer.nameAr}</span>
-                            <span className="text-gray-300 mx-1">|</span>
-                            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-bold">{timeUntilNext}</span>
-                        </>
-                    )}
-                </div>
-            )}
+        <div className="w-full h-full flex flex-col">
+            {/* Header Row - Same as DashboardStats */}
+            <div className="grid grid-cols-6 bg-gradient-to-l from-emerald-500 to-teal-500 text-center">
+                {PRAYER_ORDER.map((prayerKey, idx) => (
+                    <div key={prayerKey} className={`py-1.5 px-0.5 ${idx < 5 ? 'border-l border-white/20' : ''}`}>
+                        <span className="text-[10px] font-bold text-white whitespace-nowrap">
+                            {prayerNameMap[prayerKey]}
+                        </span>
+                    </div>
+                ))}
+            </div>
 
-            {/* Row 1: Prayer times (attached together, no gaps) */}
-            <div className="flex items-stretch">
+            {/* Values Row - Matching DashboardStats style */}
+            <div className="grid grid-cols-6 bg-emerald-50 text-center flex-1">
                 {PRAYER_ORDER.map((prayerKey, idx) => {
                     const nextPrayerName = nextPrayer?.name?.toLowerCase() || '';
                     const isNext = nextPrayerName === prayerKey;
-
                     const pData = prayerTimes.find(p => p.name.toLowerCase() === prayerKey);
                     const pTime = pData?.time || '--:--';
 
                     return (
                         <div
                             key={prayerKey}
-                            className={`flex-1 flex flex-col items-center justify-center py-2 px-1 transition-all ${isNext
-                                ? 'bg-emerald-200 ring-2 ring-emerald-500 shadow-md z-10'
-                                : 'bg-white hover:bg-gray-50'
-                                } ${idx === 0 ? 'rounded-r-lg' : ''} ${idx === 4 ? 'rounded-l-lg' : ''} border-y border-gray-200 ${idx > 0 ? '' : 'border-r'} ${idx < 4 ? 'border-l border-l-gray-100' : 'border-l'}`}
+                            className={`py-2 px-0.5 flex flex-col items-center justify-center transition-all ${isNext ? 'bg-emerald-100/80 ring-1 ring-inset ring-emerald-400/50 z-10' : ''
+                                } ${idx < 5 ? 'border-l border-emerald-100' : ''}`}
                         >
-                            <span className={`text-[9px] block ${isNext ? 'text-emerald-800 font-bold' : 'text-gray-500'}`}>{prayerNameMap[prayerKey]}</span>
-                            <span className={`text-xs font-bold ${isNext ? 'text-emerald-900' : 'text-gray-800'}`} dir="ltr">{pTime}</span>
+                            <span className={`text-xs font-bold ${isNext ? 'text-emerald-900 scale-110' : 'text-emerald-700'}`} dir="ltr">
+                                {pTime}
+                            </span>
+                            {isNext && showTimeUntilNext && (
+                                <span className="text-[8px] text-emerald-600 font-medium mt-0.5 animate-pulse">
+                                    {timeUntilNext}
+                                </span>
+                            )}
                         </div>
                     );
                 })}
             </div>
 
-            {/* Row 2: Interval icons (centered between each pair of prayers) */}
+            {/* Interval Footer (Optional / Compact) */}
             {prayerTimes.length > 0 && (
-                <div className="relative h-6 mt-1">
+                <div className="grid grid-cols-5 bg-white/50 border-t border-emerald-100/50 py-1">
                     {[0, 1, 2, 3, 4].map((idx) => {
                         const currentPrayer = prayerTimes.find(p => p.name.toLowerCase() === PRAYER_ORDER[idx]);
                         const nextPrayerData = prayerTimes.find(p => p.name.toLowerCase() === PRAYER_ORDER[idx + 1]);
-
                         if (!currentPrayer || !nextPrayerData) return null;
 
                         const [h1, m1] = currentPrayer.time.split(':').map(Number);
                         const [h2, m2] = nextPrayerData.time.split(':').map(Number);
                         const mins1 = h1 * 60 + m1;
-                        const mins2 = h2 * 60 + m2;
+                        let mins2 = h2 * 60 + m2;
+                        if (mins2 < mins1) mins2 += 24 * 60; // Handle next day (Isha-Fajr)
+
                         const diffMins = mins2 - mins1;
                         const hours = Math.floor(diffMins / 60);
                         const mins = diffMins % 60;
-
-                        let intervalText = '';
-                        if (hours > 0 && mins > 0) {
-                            intervalText = `${hours}س${mins}د`;
-                        } else if (hours > 0) {
-                            intervalText = `${hours}س`;
-                        } else {
-                            intervalText = `${mins}د`;
-                        }
-
-                        // Position: centered between prayer idx and idx+1
-                        // With 6 prayers, each takes ~16.67% width
-                        const leftPercent = (idx + 0.5) * (100 / 6) + (100 / 12);
+                        const text = hours > 0 ? `${hours}س${mins > 0 ? mins + 'د' : ''}` : `${mins}د`;
 
                         return (
-                            <div
-                                key={idx}
-                                className="absolute top-0 transform -translate-x-1/2"
-                                style={{ left: `${leftPercent}%` }}
-                                title={`المدة بين ${prayerNameMap[PRAYER_ORDER[idx]]} و ${prayerNameMap[PRAYER_ORDER[idx + 1]]}`}
-                            >
-                                <div className="flex flex-col items-center bg-gray-50 border border-gray-200 rounded-full px-1.5 py-0.5">
-                                    <span className="text-[7px] text-gray-500 font-medium">{intervalText}</span>
-                                </div>
+                            <div key={idx} className="flex flex-col items-center border-l last:border-l-0 border-emerald-100/30">
+                                <span className="text-[8px] text-gray-400 font-mono">{text}</span>
                             </div>
                         );
                     })}

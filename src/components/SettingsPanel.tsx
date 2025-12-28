@@ -81,10 +81,11 @@ const SettingsPanel = () => {
                 vibration: true,
                 reminderMinutes: 15,
                 soundType: 'default',
+                tickerSpeed: 5,
                 ...parsed
             };
         } catch {
-            return { prayer: true, tasks: true, appointments: true, financial: true, dailySummary: false, sound: true, vibration: true, reminderMinutes: 15, soundType: 'default' };
+            return { prayer: true, tasks: true, appointments: true, financial: true, dailySummary: false, sound: true, vibration: true, reminderMinutes: 15, soundType: 'default', tickerSpeed: 5 };
         }
     });
 
@@ -101,7 +102,14 @@ const SettingsPanel = () => {
         localStorage.setItem('baraka_reminders_settings', JSON.stringify(newSettings));
         toast({ title: "تم حفظ وقت التذكير" });
     };
-
+    const setTickerSpeed = (speed: number) => {
+        const newSettings = { ...reminders, tickerSpeed: speed };
+        setReminders(newSettings);
+        localStorage.setItem('baraka_reminders_settings', JSON.stringify(newSettings));
+        // Dispatch custom event for same-tab updates
+        window.dispatchEvent(new Event('tickerSpeedChanged'));
+        toast({ title: "تم تحديث سرعة الشريط" });
+    };
 
 
     return (
@@ -240,152 +248,176 @@ const SettingsPanel = () => {
                             />
                             <p className="text-[10px] text-gray-400 text-center">كم دقيقة قبل الموعد تريد التنبيه؟</p>
                         </div>
-                    </div>
-                </CardContent>
-            </Card>
 
+                        <div className="h-px bg-gray-100" />
 
-
-
-
-            {/* Cloud Sync Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <RefreshCw className="w-5 h-5 text-green-600" />
-                        {t('sync.syncNow')}
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">
-                        مزامنة البيانات مع السحابة
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {lastSync && (
-                        <p className="text-sm text-gray-500">
-                            {t('sync.lastSync')}: {new Date(lastSync).toLocaleString('ar-EG')}
-                        </p>
-                    )}
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => syncNow()}
-                            disabled={isSyncing}
-                            className="flex-1"
-                            data-action="sync-now"
-                        >
-                            {isSyncing ? (
-                                <>
-                                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
-                                    {t('sync.syncing')}
-                                </>
-                            ) : (
-                                <>
-                                    <RefreshCw className="w-4 h-4 ml-2" />
-                                    {t('sync.syncNow')}
-                                </>
-                            )}
-                        </Button>
-                        <Button
-                            onClick={() => pullData()}
-                            disabled={isSyncing}
-                            variant="outline"
-                            className="flex-1"
-                        >
-                            <Download className="w-4 h-4 ml-2" />
-                            {t('sync.pullData')}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Google Sheets Sync - Multi-Sheet Support */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between text-lg arabic-title">
-                        <div className="flex items-center gap-2">
-                            <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                            جداول Google Sheets
+                        {/* Ticker Settings */}
+                        <div className="space-y-4">
+                            <Label className="text-sm font-semibold text-gray-700">إعدادات شريط المعلومات</Label>
+                            <div className="space-y-3 pt-2">
+                                <div className="flex justify-between">
+                                    <Label className="text-xs">سرعة حركة الشريط</Label>
+                                    <span className="text-xs font-bold text-emerald-600">{reminders.tickerSpeed || 5}</span>
+                                </div>
+                                <Slider
+                                    defaultValue={[reminders.tickerSpeed || 5]}
+                                    max={10}
+                                    min={1}
+                                    step={1}
+                                    onValueChange={(vals) => setTickerSpeed(vals[0])}
+                                    className="w-full"
+                                />
+                                <p className="text-[10px] text-gray-400 text-center">كلما زاد الرقم زادت سرعة الشريط</p>
+                            </div>
                         </div>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setShowAddSheet(true)}
-                            className="text-xs"
-                        >
-                            + إضافة جدول
-                        </Button>
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">
-                        إدارة جداول Google Sheets المتعددة للاستيراد
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {/* Sheet List */}
-                    {sheets.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-4">لا توجد جداول مضافة</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {sheets.map((sheet) => (
-                                <div key={sheet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            checked={sheet.enabled}
-                                            onCheckedChange={() => toggleSheet(sheet.id)}
-                                        />
-                                        <div>
-                                            <p className="text-sm font-medium">{sheet.name}</p>
-                                            {sheet.lastSync && (
-                                                <p className="text-[10px] text-gray-400">
-                                                    آخر مزامنة: {new Date(sheet.lastSync).toLocaleDateString('ar-EG')}
-                                                </p>
-                                            )}
+                    </div>
+                </CardContent>
+            </Card>
+
+
+
+
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cloud Sync Section */}
+                <Card className="h-full">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                            <RefreshCw className="w-5 h-5 text-green-600" />
+                            {t('sync.syncNow')}
+                        </CardTitle>
+                        <CardDescription className="arabic-body text-xs">
+                            مزامنة البيانات مع السحابة
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {lastSync && (
+                            <p className="text-sm text-gray-500">
+                                {t('sync.lastSync')}: {new Date(lastSync).toLocaleString('ar-EG')}
+                            </p>
+                        )}
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => syncNow()}
+                                disabled={isSyncing}
+                                className="flex-1"
+                                data-action="sync-now"
+                            >
+                                {isSyncing ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                                        {t('sync.syncing')}
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 ml-2" />
+                                        {t('sync.syncNow')}
+                                    </>
+                                )}
+                            </Button>
+                            <Button
+                                onClick={() => pullData()}
+                                disabled={isSyncing}
+                                variant="outline"
+                                className="flex-1"
+                            >
+                                <Download className="w-4 h-4 ml-2" />
+                                {t('sync.pullData')}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Google Sheets Sync - Multi-Sheet Support */}
+                <Card className="h-full">
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between text-lg arabic-title">
+                            <div className="flex items-center gap-2">
+                                <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                                جداول Google Sheets
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowAddSheet(true)}
+                                className="text-xs"
+                            >
+                                + إضافة جدول
+                            </Button>
+                        </CardTitle>
+                        <CardDescription className="arabic-body text-xs">
+                            إدارة جداول Google Sheets المتعددة للاستيراد
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {/* Sheet List */}
+                        {sheets.length === 0 ? (
+                            <p className="text-sm text-gray-400 text-center py-4">لا توجد جداول مضافة</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {sheets.map((sheet) => (
+                                    <div key={sheet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                checked={sheet.enabled}
+                                                onCheckedChange={() => toggleSheet(sheet.id)}
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium">{sheet.name}</p>
+                                                {sheet.lastSync && (
+                                                    <p className="text-[10px] text-gray-400">
+                                                        آخر مزامنة: {new Date(sheet.lastSync).toLocaleDateString('ar-EG')}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-7 w-7"
-                                            onClick={() => syncSheet(sheet.id)}
-                                            disabled={isSyncingSheets}
-                                        >
-                                            <RefreshCw className={`w-3 h-3 ${currentSyncSheet === sheet.id ? 'animate-spin' : ''}`} />
-                                        </Button>
-                                        {sheet.id !== 'default' && (
+                                        <div className="flex items-center gap-1">
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                className="h-7 w-7 text-red-500 hover:text-red-600"
-                                                onClick={() => removeSheet(sheet.id)}
+                                                className="h-7 w-7"
+                                                onClick={() => syncSheet(sheet.id)}
+                                                disabled={isSyncingSheets}
                                             >
-                                                <X className="w-3 h-3" />
+                                                <RefreshCw className={`w-3 h-3 ${currentSyncSheet === sheet.id ? 'animate-spin' : ''}`} />
                                             </Button>
-                                        )}
+                                            {sheet.id !== 'default' && (
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-7 w-7 text-red-500 hover:text-red-600"
+                                                    onClick={() => removeSheet(sheet.id)}
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Sync All Button */}
-                    <Button
-                        onClick={() => syncAllSheets()}
-                        disabled={isSyncingSheets}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                        {isSyncingSheets ? (
-                            <>
-                                <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
-                                جاري المزامنة...
-                            </>
-                        ) : (
-                            <>
-                                <FileSpreadsheet className="w-4 h-4 ml-2" />
-                                مزامنة جميع الجداول
-                            </>
+                                ))}
+                            </div>
                         )}
-                    </Button>
-                </CardContent>
-            </Card>
+
+                        {/* Sync All Button */}
+                        <Button
+                            onClick={() => syncAllSheets()}
+                            disabled={isSyncingSheets}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                        >
+                            {isSyncingSheets ? (
+                                <>
+                                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                                    جاري المزامنة...
+                                </>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet className="w-4 h-4 ml-2" />
+                                    مزامنة جميع الجداول
+                                </>
+                            )}
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Add Sheet Dialog */}
             <Dialog open={showAddSheet} onOpenChange={setShowAddSheet}>

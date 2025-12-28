@@ -14,7 +14,7 @@ export const useDashboardData = () => {
         nextPrayer: ''
     });
     const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
-    const [shoppingListSummary, setShoppingListSummary] = useState<any[]>([]);
+    const [shoppingListSummary, setShoppingListSummary] = useState<any>({ totalItems: 0, completedItems: 0, recentItems: [] });
     const [savedLocations, setSavedLocations] = useState<any[]>([]);
 
     // Exchange Rate State (Auto Sync)
@@ -87,7 +87,12 @@ export const useDashboardData = () => {
             setFinanceData(financeResult.data || {});
 
             if (logisticsResult.data?.shopping_list) {
-                setShoppingListSummary(logisticsResult.data.shopping_list.filter((i: any) => !i.completed).slice(0, 10));
+                const list = logisticsResult.data.shopping_list || [];
+                setShoppingListSummary({
+                    totalItems: list.length,
+                    completedItems: list.filter((i: any) => i.completed).length,
+                    recentItems: list.filter((i: any) => !i.completed).slice(0, 10)
+                } as any);
             }
             if (logisticsResult.data?.locations) {
                 const locs = Array.isArray(logisticsResult.data.locations) ? logisticsResult.data.locations as any[] : [];
