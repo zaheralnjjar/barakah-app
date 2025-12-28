@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,12 +10,8 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
-import { useUserSettings } from '@/hooks/useUserSettings';
-import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, GripVertical
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -31,7 +27,7 @@ import QuickActionsGrid from './dashboard/QuickActionsGrid';
 import DailyReportCard from './dashboard/DailyReportCard';
 import DashboardCalendar from './dashboard/DashboardCalendar';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+// Dashboard sections are now rendered in fixed order (no drag-and-drop)
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
@@ -49,7 +45,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { tasks, addTask, refreshTasks } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
     const { saveParking, getParkingOnly, deleteLocation } = useLocations();
-    const { dashboardOrder, saveDashboardOrder, isLoading: settingsLoading } = useUserSettings();
 
     const [parkingDuration, setParkingDuration] = useState<string | null>(null);
     const [latestParking, setLatestParking] = useState<any>(null);
@@ -63,29 +58,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         const diff = today.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(today.setDate(diff));
     });
-
-    // Default Layout Definitions
-    const defaultLayout = useMemo(() => [
-        { i: 'stats', x: 0, y: 0, w: 12, h: 4 },
-        { i: 'actions', x: 0, y: 4, w: 12, h: 4 },
-        { i: 'prayers', x: 0, y: 8, w: 12, h: 2 },
-        { i: 'pomodoro', x: 0, y: 10, w: 12, h: 3 },
-        { i: 'daily', x: 0, y: 13, w: 12, h: 6 },
-        { i: 'calendar', x: 0, y: 19, w: 12, h: 10 },
-    ], []);
-
-    const [currentLayout, setCurrentLayout] = useState(defaultLayout);
-
-    useEffect(() => {
-        if (dashboardOrder && dashboardOrder.length > 0) {
-            setCurrentLayout(dashboardOrder as any);
-        }
-    }, [dashboardOrder]);
-
-    const handleLayoutChange = (layout: any) => {
-        setCurrentLayout(layout);
-        saveDashboardOrder(layout);
-    };
 
     // Parking Timer Logic
     useEffect(() => {
@@ -287,84 +259,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         e.timestamp?.startsWith(new Date().toISOString().split('T')[0]) && e.type === 'expense'
     ).reduce((acc: number, curr: any) => acc + curr.amount, 0) || 0;
 
-    if (dataLoading || settingsLoading) return <div className="p-8 text-center text-emerald-600">جاري تحميل البيانات...</div>;
-
-    const sections = {
-        stats: (
-            <div key="stats" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <DashboardStats
-                    onNavigateToFinance={() => onNavigateToTab('finance')}
-                    financeData={financeData}
-                    todayExpense={todayExpense}
-                    dailyLimitARS={dailyLimitARS}
-                />
-            </div>
-        ),
-        actions: (
-            <div key="actions" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
-            </div>
-        ),
-        prayers: (
-            <div key="prayers" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
-                    <CardContent className="p-4">
-                        <PrayerTimesRow showTimeUntilNext={true} />
-                    </CardContent>
-                </Card>
-            </div>
-        ),
-        pomodoro: (
-            <div key="pomodoro" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <PomodoroTimer />
-            </div>
-        ),
-        daily: (
-            <div key="daily" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <DailyReportCard
-                    tasks={tasks}
-                    appointments={appointments}
-                    habits={habits}
-                    medications={medications}
-                    onNavigateToTab={onNavigateToTab}
-                    refetch={refetch}
-                />
-            </div>
-        ),
-        calendar: (
-            <div key="calendar" className="h-full">
-                <div className="flex justify-end p-1 cursor-move absolute top-0 right-0 z-10 opacity-30 hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </div>
-                <DashboardCalendar
-                    tasks={tasks}
-                    appointments={appointments}
-                    habits={habits}
-                    medications={medications}
-                    prayerTimes={prayerTimes}
-                    onNavigateToTab={onNavigateToTab}
-                    refetch={refetch}
-                    weekStartDate={weekStartDate}
-                    setWeekStartDate={setWeekStartDate}
-                />
-            </div>
-        )
-    };
+    if (dataLoading) return <div className="p-8 text-center text-emerald-600">جاري تحميل البيانات...</div>;
 
     return (
         <div
@@ -414,18 +309,60 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </div>
             )}
 
-            <ResponsiveGridLayout
-                className="layout"
-                layouts={{ lg: currentLayout, md: currentLayout, sm: currentLayout, xs: currentLayout, xxs: currentLayout }}
-                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-                rowHeight={30}
-                draggableHandle=".cursor-move"
-                onLayoutChange={handleLayoutChange}
-                margin={[10, 10]}
-            >
-                {currentLayout.map(item => sections[item.i as keyof typeof sections])}
-            </ResponsiveGridLayout>
+            {/* Dashboard Sections - Responsive Grid Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Left Column / Top Section */}
+                <div className="space-y-4">
+                    {/* Stats Section */}
+                    <DashboardStats
+                        onNavigateToFinance={() => onNavigateToTab('finance')}
+                        financeData={financeData}
+                        todayExpense={todayExpense}
+                        dailyLimitARS={dailyLimitARS}
+                    />
+
+                    {/* Quick Actions */}
+                    <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
+
+                    {/* Prayer Times */}
+                    <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                        <CardContent className="p-4">
+                            <PrayerTimesRow showTimeUntilNext={true} />
+                        </CardContent>
+                    </Card>
+
+                    {/* Pomodoro Timer */}
+                    <PomodoroTimer />
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                    {/* Daily Report */}
+                    <DailyReportCard
+                        tasks={tasks}
+                        appointments={appointments}
+                        habits={habits}
+                        medications={medications}
+                        onNavigateToTab={onNavigateToTab}
+                        refetch={refetch}
+                    />
+
+                    {/* Calendar - Compact with scrollable content */}
+                    <div className="max-h-[400px] overflow-y-auto rounded-lg">
+                        <DashboardCalendar
+                            tasks={tasks}
+                            appointments={appointments}
+                            habits={habits}
+                            medications={medications}
+                            prayerTimes={prayerTimes}
+                            onNavigateToTab={onNavigateToTab}
+                            refetch={refetch}
+                            weekStartDate={weekStartDate}
+                            setWeekStartDate={setWeekStartDate}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
                 if (!open) {

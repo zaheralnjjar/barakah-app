@@ -45,8 +45,8 @@ const DailyReportCard: React.FC<DailyReportCardProps> = ({
         // ===== 4. DAILY REPORT =====
         <Card className="border-blue-100 shadow-sm mb-6">
             <CardContent className="p-4">
-                <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-blue-500" />
+                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-500" />
                     التقرير اليومي
                 </h3>
                 <div className="overflow-y-auto max-h-[280px]">
@@ -74,7 +74,9 @@ const DailyReportCard: React.FC<DailyReportCardProps> = ({
                                         />
                                     </td>
                                     <td className="py-2 px-2"><Badge variant="outline" className="bg-red-50 text-red-600 text-[10px]"><Pill className="w-3 h-3 ml-1" />أدوية</Badge></td>
-                                    <td className="py-2 px-2 font-medium">{med.name} - {med.time}</td>
+                                    <td className="py-2 px-2">
+                                        <span className="text-xs truncate block max-w-[150px]">{med.name} - {med.time}</span>
+                                    </td>
                                 </tr>
                             ))}
                             {/* Appointments */}
@@ -94,7 +96,9 @@ const DailyReportCard: React.FC<DailyReportCardProps> = ({
                                         />
                                     </td>
                                     <td className="py-2 px-2"><Badge variant="outline" className="bg-orange-50 text-orange-600 text-[10px]"><CalendarPlus className="w-3 h-3 ml-1" />موعد</Badge></td>
-                                    <td className="py-2 px-2 font-medium">{apt.title} - {apt.time || '--'}</td>
+                                    <td className="py-2 px-2">
+                                        <span className="text-xs truncate block max-w-[150px]">{apt.title} - {apt.time || '--'}</span>
+                                    </td>
                                 </tr>
                             ))}
                             {/* Tasks */}
@@ -115,7 +119,9 @@ const DailyReportCard: React.FC<DailyReportCardProps> = ({
                                         />
                                     </td>
                                     <td className="py-2 px-2"><Badge variant="outline" className="bg-blue-50 text-blue-600 text-[10px]"><CheckSquare className="w-3 h-3 ml-1" />مهمة</Badge></td>
-                                    <td className="py-2 px-2 font-medium">{task.title}</td>
+                                    <td className="py-2 px-2">
+                                        <span className="text-xs truncate block max-w-[150px]">{task.title}</span>
+                                    </td>
                                 </tr>
                             ))}
                             {/* Habits */}
@@ -125,7 +131,9 @@ const DailyReportCard: React.FC<DailyReportCardProps> = ({
                                         <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-green-600 cursor-pointer" />
                                     </td>
                                     <td className="py-2 px-2"><Badge variant="outline" className="bg-yellow-50 text-yellow-600 text-[10px]"><Flame className="w-3 h-3 ml-1" />عادة</Badge></td>
-                                    <td className="py-2 px-2 font-medium">{habit.name} - 🔥 {habit.streak || 0}</td>
+                                    <td className="py-2 px-2">
+                                        <span className="text-xs truncate block max-w-[150px]">{habit.name} - 🔥 {habit.streak || 0}</span>
+                                    </td>
                                 </tr>
                             ))}
                             {(todayMedications.length + todayAppointments.length + todayTasks.length + todayHabits.length) === 0 && (
