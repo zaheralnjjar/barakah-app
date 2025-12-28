@@ -268,16 +268,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
     return (
         <div className="min-h-screen bg-slate-50/30">
-            {/* 1. Ticker at the very top */}
-            <DashboardTicker externalBalance={financeData?.current_balance_ars} />
-
-            {/* 2. Main Header (Site Name & Notifications) */}
+            {/* 1. Main Header (Site Name & Notifications) */}
             <div className="px-4 pt-2 max-w-7xl mx-auto">
                 <DashboardHeader currentDate={currentDate} />
             </div>
 
-            {/* 3. Finance & Prayer Header Strip */}
-            <div className="p-2 md:p-4 max-w-7xl mx-auto pb-0">
+            {/* 2. Finance & Prayer Header Strip */}
+            <div className="px-2 pt-2 max-w-7xl mx-auto">
                 <DashboardHeaderStrip
                     financeData={financeData}
                     todayExpense={todayExpense}
@@ -289,7 +286,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </div>
 
             <div
-                className="space-y-2 p-2 max-w-6xl mx-auto"
+                className="space-y-3 px-2 py-3 max-w-6xl mx-auto"
                 onTouchStart={(e) => {
                     if (e.touches[0].clientY < 50) {
                         const startY = e.touches[0].clientY;
@@ -335,51 +332,43 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
 
                 {/* Quick Actions */}
-                <div className="mb-4">
-                    <QuickActionsGrid
-                        onOpenAddDialog={setShowAddDialog}
-                        onQuickParking={saveParking}
-                        onOpenTimer={() => window.dispatchEvent(new CustomEvent('openPomodoroDialog'))}
+                <QuickActionsGrid
+                    onOpenAddDialog={setShowAddDialog}
+                    onQuickParking={saveParking}
+                    onOpenTimer={() => window.dispatchEvent(new CustomEvent('openPomodoroDialog'))}
+                />
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {/* Left Column: Daily Report */}
+                    <DailyReportCard
+                        tasks={tasks}
+                        appointments={appointments}
+                        habits={habits}
+                        medications={medications}
+                        onNavigateToTab={onNavigateToTab}
+                        refetch={refetch}
+                    />
+
+                    {/* Right Column: Calendar */}
+                    <DashboardCalendar
+                        tasks={tasks}
+                        appointments={appointments}
+                        habits={habits}
+                        medications={medications}
+                        prayerTimes={prayerTimes}
+                        onNavigateToTab={onNavigateToTab}
+                        refetch={refetch}
+                        weekStartDate={weekStartDate}
+                        setWeekStartDate={setWeekStartDate}
                     />
                 </div>
 
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Left Column: Daily Report + Pomodoro */}
-                    <div className="space-y-4">
-                        {/* Daily Report */}
-                        <DailyReportCard
-                            tasks={tasks}
-                            appointments={appointments}
-                            habits={habits}
-                            medications={medications}
-                            onNavigateToTab={onNavigateToTab}
-                            refetch={refetch}
-                        />
+                {/* Progress Charts at the Bottom */}
+                <DashboardProgressCharts />
 
-
-                        {/* Pomodoro Timer (Hidden Trigger, accessible via Top Icon) */}
-                        <PomodoroTimer hideTrigger={true} />
-
-                        {/* Progress Charts */}
-                        <DashboardProgressCharts />
-                    </div>
-
-                    {/* Right Column: Calendar (no max-height constraint) */}
-                    <div>
-                        <DashboardCalendar
-                            tasks={tasks}
-                            appointments={appointments}
-                            habits={habits}
-                            medications={medications}
-                            prayerTimes={prayerTimes}
-                            onNavigateToTab={onNavigateToTab}
-                            refetch={refetch}
-                            weekStartDate={weekStartDate}
-                            setWeekStartDate={setWeekStartDate}
-                        />
-                    </div>
-                </div>
+                {/* Pomodoro Timer (Hidden Trigger, accessible via Top Icon) */}
+                <PomodoroTimer hideTrigger={true} />
 
 
 
