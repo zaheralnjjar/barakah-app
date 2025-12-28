@@ -31,7 +31,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                 {/* Header Row - Compact */}
                 <div className="grid grid-cols-4 bg-gradient-to-l from-emerald-500 to-teal-500 text-center">
                     <div className="py-1.5 px-1 border-l border-white/20">
-                        <span className="text-xs font-bold text-white">دولار (Blue)</span>
+                        <span className="text-xs font-bold text-white">دولار (رسمي)</span>
                     </div>
                     <div className="py-1.5 px-1 border-l border-white/20">
                         <span className="text-xs font-bold text-white">مصروف اليوم</span>
@@ -54,11 +54,11 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                             <>
                                 <div className="text-[10px] text-gray-500 flex items-center gap-1">
                                     <span>بيع:</span>
-                                    <span className="font-bold text-red-600">{rates.blue.value_sell}</span>
+                                    <span className="font-bold text-red-600">{rates.oficial.value_sell}</span>
                                 </div>
                                 <div className="text-[10px] text-gray-500 flex items-center gap-1">
                                     <span>شراء:</span>
-                                    <span className="font-bold text-green-600">{rates.blue.value_buy}</span>
+                                    <span className="font-bold text-green-600">{rates.oficial.value_buy}</span>
                                 </div>
                             </>
                         ) : (

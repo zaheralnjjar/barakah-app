@@ -309,33 +309,34 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 </div>
             )}
 
-            {/* Dashboard Sections - Responsive Grid Layout */}
+            {/* Dashboard Sections - Reorganized Layout */}
+
+            {/* Top Row: Stats + Prayer Times side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                {/* Stats Section */}
+                <DashboardStats
+                    onNavigateToFinance={() => onNavigateToTab('finance')}
+                    financeData={financeData}
+                    todayExpense={todayExpense}
+                    dailyLimitARS={dailyLimitARS}
+                />
+
+                {/* Prayer Times - next to financial section */}
+                <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                    <CardContent className="p-4">
+                        <PrayerTimesRow showTimeUntilNext={true} />
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mb-4">
+                <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
+            </div>
+
+            {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Left Column / Top Section */}
-                <div className="space-y-4">
-                    {/* Stats Section */}
-                    <DashboardStats
-                        onNavigateToFinance={() => onNavigateToTab('finance')}
-                        financeData={financeData}
-                        todayExpense={todayExpense}
-                        dailyLimitARS={dailyLimitARS}
-                    />
-
-                    {/* Quick Actions */}
-                    <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
-
-                    {/* Prayer Times */}
-                    <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
-                        <CardContent className="p-4">
-                            <PrayerTimesRow showTimeUntilNext={true} />
-                        </CardContent>
-                    </Card>
-
-                    {/* Pomodoro Timer */}
-                    <PomodoroTimer />
-                </div>
-
-                {/* Right Column */}
+                {/* Left Column: Daily Report + Pomodoro */}
                 <div className="space-y-4">
                     {/* Daily Report */}
                     <DailyReportCard
@@ -347,20 +348,23 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         refetch={refetch}
                     />
 
-                    {/* Calendar - Compact with scrollable content */}
-                    <div className="max-h-[400px] overflow-y-auto rounded-lg">
-                        <DashboardCalendar
-                            tasks={tasks}
-                            appointments={appointments}
-                            habits={habits}
-                            medications={medications}
-                            prayerTimes={prayerTimes}
-                            onNavigateToTab={onNavigateToTab}
-                            refetch={refetch}
-                            weekStartDate={weekStartDate}
-                            setWeekStartDate={setWeekStartDate}
-                        />
-                    </div>
+                    {/* Pomodoro Timer */}
+                    <PomodoroTimer />
+                </div>
+
+                {/* Right Column: Calendar (no max-height constraint) */}
+                <div>
+                    <DashboardCalendar
+                        tasks={tasks}
+                        appointments={appointments}
+                        habits={habits}
+                        medications={medications}
+                        prayerTimes={prayerTimes}
+                        onNavigateToTab={onNavigateToTab}
+                        refetch={refetch}
+                        weekStartDate={weekStartDate}
+                        setWeekStartDate={setWeekStartDate}
+                    />
                 </div>
             </div>
 

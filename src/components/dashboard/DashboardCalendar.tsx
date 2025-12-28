@@ -118,8 +118,8 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                         })}
                     </div>
                 )}
-                {/* Items inside day - scrollable */}
-                <div className={`${fullWidth ? 'h-[60px]' : 'h-[100px]'} overflow-y-auto p-2 space-y-1.5`}>
+                {/* Items inside day - scrollable with more height for visibility */}
+                <div className={`${fullWidth ? 'h-[80px]' : 'h-[150px]'} overflow-y-auto p-2 space-y-1.5`}>
                     {allItems.slice(0, 10).map((item, i) => {
                         const isTaken = item.type === 'med' && medications.find(m => m.id === item.id)?.takenHistory?.[dateStr];
                         const isCompleted = item.type === 'apt' ? (item as any).isCompleted : (item.type === 'task' ? (item as any).isCompleted : isTaken);
@@ -133,7 +133,11 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                             >
                                 <button
                                     type="button"
-                                    onClick={() => handleToggle(item, isCompleted, isTaken)}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleToggle(item, isCompleted, isTaken);
+                                    }}
                                     className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${isCompleted
                                         ? 'bg-green-500 border-green-500 text-white'
                                         : 'bg-white border-gray-400 hover:border-green-500'
@@ -196,9 +200,20 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                     </div>
                 </div>
 
-                {/* Desktop: 7-column grid */}
-                <div className="hidden md:grid grid-cols-7 gap-1">
-                    {weekDays.map((day, idx) => renderDayCard(day, idx))}
+                {/* Desktop: 3-row grid layout (same as mobile for consistency) */}
+                <div className="hidden md:block space-y-2">
+                    {/* Row 1: Mon, Tue, Wed */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {weekDays.slice(0, 3).map((day, idx) => renderDayCard(day, idx))}
+                    </div>
+                    {/* Row 2: Thu, Fri, Sat */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {weekDays.slice(3, 6).map((day, idx) => renderDayCard(day, idx + 3))}
+                    </div>
+                    {/* Row 3: Sunday (full width) */}
+                    <div className="grid grid-cols-1 gap-3">
+                        {weekDays.slice(6, 7).map((day, idx) => renderDayCard(day, idx + 6, true))}
+                    </div>
                 </div>
 
                 {/* Legend */}
