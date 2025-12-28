@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/NotificationBell';
 import HolidaysDialog from '@/components/HolidaysDialog';
 import { useAppStore } from '@/stores/useAppStore';
+import { Timer, Play } from 'lucide-react';
 
 interface DashboardHeaderProps {
     currentDate?: Date;
@@ -20,6 +24,15 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
     const [showBarakahPopup, setShowBarakahPopup] = useState(false);
     const [upcomingEvent, setUpcomingEvent] = useState<UpcomingEvent | null>(null);
     const [showEventBanner, setShowEventBanner] = useState(false);
+
+    // Focus Timer state
+    const [showTimerDialog, setShowTimerDialog] = useState(false);
+    const [timerMinutes, setTimerMinutes] = useState(25);
+    const timerPresets = [
+        { name: 'تركيز', minutes: 25 },
+        { name: 'راحة قصيرة', minutes: 5 },
+        { name: 'راحة طويلة', minutes: 15 },
+    ];
 
     const { appointments, tasks, habits } = useAppStore();
 
@@ -157,8 +170,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                             <span className="text-xs text-gray-400">Barakah Life</span>
                         </div>
 
-                        {/* Notification Bell - Left Side (Last in RTL) */}
-                        <div className="flex items-center">
+                        {/* Timer Icon + Notification Bell - Left Side (Last in RTL) */}
+                        <div className="flex items-center gap-2">
+                            {/* Focus Timer Icon */}
+                            <button
+                                onClick={() => setShowTimerDialog(true)}
+                                className="p-2 rounded-full bg-indigo-100 hover:bg-indigo-200 transition-colors"
+                                title="مؤقت التركيز"
+                            >
+                                <Timer className="w-5 h-5 text-indigo-600" />
+                            </button>
                             <NotificationBell />
                         </div>
                     </div>
@@ -183,6 +204,64 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                             <p>فكرة وتنفيذ</p>
                             <p className="font-bold text-emerald-600 mt-1">محمد زاهر</p>
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Focus Timer Dialog */}
+            <Dialog open={showTimerDialog} onOpenChange={setShowTimerDialog}>
+                <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <Timer className="w-5 h-5 text-indigo-500" /> مؤقت التركيز
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Duration Input */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">المدة (دقيقة):</span>
+                            <Input
+                                type="number"
+                                value={timerMinutes}
+                                onChange={(e) => setTimerMinutes(Number(e.target.value))}
+                                className="h-10 text-center font-mono text-lg"
+                                min={1}
+                                max={180}
+                            />
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {timerPresets.map(preset => (
+                                <Badge
+                                    key={preset.name}
+                                    variant={timerMinutes === preset.minutes ? 'default' : 'outline'}
+                                    className="cursor-pointer hover:bg-indigo-100 hover:text-indigo-800 transition-colors py-1.5 px-3"
+                                    onClick={() => setTimerMinutes(preset.minutes)}
+                                >
+                                    {preset.name} ({preset.minutes}د)
+                                </Badge>
+                            ))}
+                        </div>
+
+                        {/* Start Button */}
+                        <Button
+                            className="w-full h-12 text-lg bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                            onClick={() => {
+                                // Store timer settings in localStorage for PomodoroTimer to pick up
+                                localStorage.setItem('pomodoro_quick_start', JSON.stringify({
+                                    minutes: timerMinutes,
+                                    startNow: true,
+                                    timestamp: Date.now()
+                                }));
+                                setShowTimerDialog(false);
+                                // Dispatch event for PomodoroTimer to listen
+                                window.dispatchEvent(new CustomEvent('startPomodoro', { detail: { minutes: timerMinutes } }));
+                            }}
+                        >
+                            <Play className="w-5 h-5 ml-2 fill-white" /> بدء
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
