@@ -168,14 +168,18 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                 </div>
                             </div>
 
-                            {/* Daily Limit */}
+                            {/* Daily Limit & Remaining */}
                             <div className="bg-white/60 rounded-lg p-2 border border-emerald-100 hover:bg-white/80 transition-colors shadow-sm">
-                                <div className="flex items-center gap-1 mb-1 text-blue-600">
+                                <div className="flex items-center gap-1 mb-1 text-emerald-600">
                                     <Activity className="w-3 h-3" />
                                     <span className="text-[9px] font-bold">الحد اليومي</span>
                                 </div>
-                                <div className="text-sm font-bold truncate text-emerald-900">
-                                    {dailyLimitARS.toLocaleString()}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-sm font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
+                                    <span className="text-[10px] text-gray-400">/</span>
+                                    <span className={`text-sm font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-red-500'}`}>
+                                        {(dailyLimitARS - todayExpense).toLocaleString()}
+                                    </span>
                                 </div>
                             </div>
 
