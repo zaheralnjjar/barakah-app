@@ -26,6 +26,7 @@ import DashboardStats from './dashboard/DashboardStats';
 import QuickActionsGrid from './dashboard/QuickActionsGrid';
 import DailyReportCard from './dashboard/DailyReportCard';
 import DashboardCalendar from './dashboard/DashboardCalendar';
+import DashboardProgressCharts from './dashboard/DashboardProgressCharts';
 
 // Dashboard sections are now rendered in fixed order (no drag-and-drop)
 
@@ -350,6 +351,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
                     {/* Pomodoro Timer */}
                     <PomodoroTimer />
+
+                    {/* Progress Charts */}
+                    <DashboardProgressCharts />
                 </div>
 
                 {/* Right Column: Calendar (no max-height constraint) */}
