@@ -20,7 +20,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     return (
         <>
             {/* ===== 3. QUICK ACTIONS ===== */}
-            <div className="grid grid-cols-6 gap-2 mb-6">
+            <div className="grid grid-cols-6 gap-2 mb-2">
                 {[
                     { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
                     { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },

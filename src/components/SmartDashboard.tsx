@@ -274,7 +274,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </div>
 
             {/* 2. Finance & Prayer Header Strip */}
-            <div className="px-2 pt-2 max-w-7xl mx-auto">
+            <div className="px-2 pt-1 max-w-7xl mx-auto">
                 <DashboardHeaderStrip
                     financeData={financeData}
                     todayExpense={todayExpense}
@@ -286,7 +286,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </div>
 
             <div
-                className="space-y-3 px-2 py-3 max-w-6xl mx-auto"
+                className="space-y-2 px-2 pt-1 max-w-6xl mx-auto"
                 onTouchStart={(e) => {
                     if (e.touches[0].clientY < 50) {
                         const startY = e.touches[0].clientY;
