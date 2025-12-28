@@ -274,7 +274,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </div>
 
             {/* 2. Finance & Prayer Header Strip */}
-            <div className="px-2 pt-1 max-w-7xl mx-auto">
+            <div className="px-2 pt-1 pb-2 max-w-7xl mx-auto">
                 <DashboardHeaderStrip
                     financeData={financeData}
                     todayExpense={todayExpense}
