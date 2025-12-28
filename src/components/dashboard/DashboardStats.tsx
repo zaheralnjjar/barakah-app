@@ -26,7 +26,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
     const formatCurrency = (val: number) => Math.round(val).toLocaleString();
 
     return (
-        <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden mb-6" onClick={onNavigateToFinance}>
+        <Card className="border-emerald-100 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden h-full" onClick={onNavigateToFinance}>
             <CardContent className="p-0">
                 {/* Header Row - Compact */}
                 <div className="grid grid-cols-4 bg-gradient-to-l from-emerald-500 to-teal-500 text-center">

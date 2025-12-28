@@ -312,7 +312,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* Dashboard Sections - Reorganized Layout */}
 
             {/* Top Row: Stats + Prayer Times side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 items-stretch">
                 {/* Stats Section */}
                 <DashboardStats
                     onNavigateToFinance={() => onNavigateToTab('finance')}
@@ -322,7 +322,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 />
 
                 {/* Prayer Times - next to financial section */}
-                <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white">
+                <Card className="border-teal-100 shadow-sm bg-gradient-to-br from-teal-50/50 to-white h-full">
                     <CardContent className="p-4">
                         <PrayerTimesRow showTimeUntilNext={true} />
                     </CardContent>
