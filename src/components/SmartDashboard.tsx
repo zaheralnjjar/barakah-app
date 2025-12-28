@@ -289,7 +289,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             </div>
 
             <div
-                className="space-y-4 p-2 md:p-4 max-w-6xl mx-auto"
+                className="space-y-2 p-2 max-w-6xl mx-auto"
                 onTouchStart={(e) => {
                     if (e.touches[0].clientY < 50) {
                         const startY = e.touches[0].clientY;
