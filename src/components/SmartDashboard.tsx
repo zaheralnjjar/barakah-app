@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from "@/components/ui/use-toast";
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -11,7 +12,7 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -53,6 +54,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const [currentDate] = useState(new Date());
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [showFinancialReport, setShowFinancialReport] = useState(false);
+    const [showTimerDialog, setShowTimerDialog] = useState(false);
+    const [timerMinutes, setTimerMinutes] = useState(25);
+    const timerPresets = [
+        { name: 'تركيز', minutes: 25 },
+        { name: 'راحة قصيرة', minutes: 5 },
+        { name: 'راحة طويلة', minutes: 15 },
+    ];
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
         const day = today.getDay();
@@ -332,7 +340,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
             {/* Quick Actions */}
             <div className="mb-4">
-                <QuickActionsGrid onOpenAddDialog={setShowAddDialog} onQuickParking={saveParking} />
+                <QuickActionsGrid
+                    onOpenAddDialog={setShowAddDialog}
+                    onQuickParking={saveParking}
+                    onOpenTimer={() => setShowTimerDialog(true)}
+                />
             </div>
 
             {/* Main Content Grid */}
@@ -371,6 +383,64 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                     />
                 </div>
             </div>
+
+            {/* Timer Dialog */}
+            <Dialog open={showTimerDialog} onOpenChange={setShowTimerDialog}>
+                <DialogContent className="sm:max-w-[350px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-right flex items-center gap-2">
+                            <Timer className="w-5 h-5 text-indigo-500" /> مؤقت التركيز
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Duration Input */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">المدة (دقيقة):</span>
+                            <Input
+                                type="number"
+                                value={timerMinutes}
+                                onChange={(e) => setTimerMinutes(Number(e.target.value))}
+                                className="h-10 text-center font-mono text-lg"
+                                min={1}
+                                max={180}
+                            />
+                        </div>
+
+                        {/* Presets */}
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {timerPresets.map(preset => (
+                                <Badge
+                                    key={preset.name}
+                                    variant={timerMinutes === preset.minutes ? 'default' : 'outline'}
+                                    className="cursor-pointer hover:bg-indigo-100 hover:text-indigo-800 transition-colors py-1.5 px-3"
+                                    onClick={() => setTimerMinutes(preset.minutes)}
+                                >
+                                    {preset.name} ({preset.minutes}د)
+                                </Badge>
+                            ))}
+                        </div>
+
+                        {/* Start Button */}
+                        <Button
+                            className="w-full h-12 text-lg bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                            onClick={() => {
+                                // Store timer settings for PomodoroTimer to pick up
+                                localStorage.setItem('pomodoro_quick_start', JSON.stringify({
+                                    minutes: timerMinutes,
+                                    startNow: true,
+                                    timestamp: Date.now()
+                                }));
+                                setShowTimerDialog(false);
+                                // Dispatch event for PomodoroTimer to listen
+                                window.dispatchEvent(new CustomEvent('startPomodoro', { detail: { minutes: timerMinutes } }));
+                            }}
+                        >
+                            <Play className="w-5 h-5 ml-2 fill-white" /> بدء
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
                 if (!open) {

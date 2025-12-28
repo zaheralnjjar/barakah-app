@@ -3,15 +3,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
-    CalendarPlus, CheckSquare, Target, Navigation
+    CalendarPlus, CheckSquare, Target, Navigation, Timer
 } from 'lucide-react';
 
 interface QuickActionsGridProps {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal') => void;
     onQuickParking?: () => void;
+    onOpenTimer?: () => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer }) => {
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
@@ -19,13 +20,14 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     return (
         <>
             {/* ===== 3. QUICK ACTIONS ===== */}
-            <div className="grid grid-cols-5 gap-2 mb-6">
+            <div className="grid grid-cols-6 gap-2 mb-6">
                 {[
                     { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
                     { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
                     { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
                     { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
+                    { icon: Timer, label: 'مؤقت', color: 'bg-indigo-100 text-indigo-600', action: () => onOpenTimer?.() },
                 ].map((item, idx) => (
                     <button
                         key={idx}
