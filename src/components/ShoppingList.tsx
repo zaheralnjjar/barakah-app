@@ -163,167 +163,168 @@ const ShoppingList = () => {
     const completedCount = items.filter(i => i.completed).length;
 
     return (
-        <Card className="w-full">
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-xl">
-                            <ShoppingCart className="w-6 h-6 text-green-600" />
+        <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
+            <Card className="w-full">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-green-100 p-2 rounded-xl">
+                                <ShoppingCart className="w-6 h-6 text-green-600" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl arabic-title">قائمة التسوق</CardTitle>
+                                <p className="text-sm text-gray-500">
+                                    {completedCount} من {items.length} مكتمل
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <CardTitle className="text-xl arabic-title">قائمة التسوق</CardTitle>
-                            <p className="text-sm text-gray-500">
-                                {completedCount} من {items.length} مكتمل
-                            </p>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => {
+                                    const listText = items
+                                        .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}`)
+                                        .join('\n');
+                                    const url = `https://wa.me/?text=${encodeURIComponent('📝 قائمة التسوق - بركة:\n\n' + listText)}`;
+                                    window.open(url, '_blank');
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                            >
+                                <span className="ml-2 text-lg">📱</span> واتساب
+                            </Button>
+                            <Button onClick={shareList} variant="outline" size="sm">
+                                <Share2 className="w-4 h-4 ml-2" />
+                                مشاركة
+                            </Button>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => {
-                                const listText = items
-                                    .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}`)
-                                    .join('\n');
-                                const url = `https://wa.me/?text=${encodeURIComponent('📝 قائمة التسوق - بركة:\n\n' + listText)}`;
-                                window.open(url, '_blank');
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-200 hover:bg-green-50"
-                        >
-                            <span className="ml-2 text-lg">📱</span> واتساب
-                        </Button>
-                        <Button onClick={shareList} variant="outline" size="sm">
-                            <Share2 className="w-4 h-4 ml-2" />
-                            مشاركة
+                </CardHeader>
+                <CardContent>
+                    {/* Add Item Form */}
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                        <Input
+                            placeholder="أضف عنصر جديد..."
+                            value={newItem}
+                            onChange={(e) => setNewItem(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                            className="flex-1 min-w-[150px]"
+                        />
+                        <Input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={newQuantity}
+                            onChange={(e) => setNewQuantity(parseFloat(e.target.value) || 1)}
+                            className="w-24"
+                            placeholder="الكمية"
+                        />
+                        <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
+                            <SelectTrigger className="w-28">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="unit">وحدة</SelectItem>
+                                <SelectItem value="kg">كيلو</SelectItem>
+                                <SelectItem value="gram">جرام</SelectItem>
+                                <SelectItem value="liter">لتر</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button onClick={addItem} className="bg-green-600 hover:bg-green-700">
+                            <Plus className="w-4 h-4" />
                         </Button>
                     </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                {/* Add Item Form */}
-                <div className="flex gap-2 mb-4 flex-wrap">
-                    <Input
-                        placeholder="أضف عنصر جديد..."
-                        value={newItem}
-                        onChange={(e) => setNewItem(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && addItem()}
-                        className="flex-1 min-w-[150px]"
-                    />
-                    <Input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={newQuantity}
-                        onChange={(e) => setNewQuantity(parseFloat(e.target.value) || 1)}
-                        className="w-24"
-                        placeholder="الكمية"
-                    />
-                    <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
-                        <SelectTrigger className="w-28">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="unit">وحدة</SelectItem>
-                            <SelectItem value="kg">كيلو</SelectItem>
-                            <SelectItem value="gram">جرام</SelectItem>
-                            <SelectItem value="liter">لتر</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={addItem} className="bg-green-600 hover:bg-green-700">
-                        <Plus className="w-4 h-4" />
-                    </Button>
-                </div>
 
-                {/* Items List */}
-                <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                    {items.map((item) => (
-                        <div
-                            key={item.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg border ${item.completed ? 'bg-gray-50' : 'bg-white'
-                                }`}
-                        >
-                            <Checkbox
-                                checked={item.completed}
-                                onCheckedChange={() => toggleItem(item.id)}
-                            />
-                            <div className="flex-1">
-                                <p className={`${item.completed ? 'line-through text-gray-400' : ''}`}>
-                                    {item.text}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    {item.quantity} {getUnitLabel(item.unit)}
-                                </p>
+                    {/* Items List */}
+                    <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                        {items.map((item) => (
+                            <div
+                                key={item.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border ${item.completed ? 'bg-gray-50' : 'bg-white'
+                                    }`}
+                            >
+                                <Checkbox
+                                    checked={item.completed}
+                                    onCheckedChange={() => toggleItem(item.id)}
+                                />
+                                <div className="flex-1">
+                                    <p className={`${item.completed ? 'line-through text-gray-400' : ''}`}>
+                                        {item.text}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {item.quantity} {getUnitLabel(item.unit)}
+                                    </p>
+                                </div>
+                                <div className="flex gap-1">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => startEdit(item)}
+                                                className="h-8 w-8"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>تعديل العنصر</DialogTitle>
+                                            </DialogHeader>
+                                            {editingItem && editingItem.id === item.id && (
+                                                <div className="space-y-4">
+                                                    <Input
+                                                        value={editingItem.text}
+                                                        onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
+                                                        placeholder="اسم العنصر"
+                                                    />
+                                                    <Input
+                                                        type="number"
+                                                        min="0.1"
+                                                        step="0.1"
+                                                        value={editingItem.quantity}
+                                                        onChange={(e) => setEditingItem({ ...editingItem, quantity: parseFloat(e.target.value) })}
+                                                        placeholder="الكمية"
+                                                    />
+                                                    <Select
+                                                        value={editingItem.unit}
+                                                        onValueChange={(v: any) => setEditingItem({ ...editingItem, unit: v })}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="unit">وحدة</SelectItem>
+                                                            <SelectItem value="kg">كيلو</SelectItem>
+                                                            <SelectItem value="gram">جرام</SelectItem>
+                                                            <SelectItem value="liter">لتر</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Button onClick={saveEdit} className="w-full">
+                                                        حفظ
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => deleteItem(item.id)}
+                                        className="h-8 w-8 text-red-500 hover:text-red-700"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="flex gap-1">
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => startEdit(item)}
-                                            className="h-8 w-8"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>تعديل العنصر</DialogTitle>
-                                        </DialogHeader>
-                                        {editingItem && editingItem.id === item.id && (
-                                            <div className="space-y-4">
-                                                <Input
-                                                    value={editingItem.text}
-                                                    onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
-                                                    placeholder="اسم العنصر"
-                                                />
-                                                <Input
-                                                    type="number"
-                                                    min="0.1"
-                                                    step="0.1"
-                                                    value={editingItem.quantity}
-                                                    onChange={(e) => setEditingItem({ ...editingItem, quantity: parseFloat(e.target.value) })}
-                                                    placeholder="الكمية"
-                                                />
-                                                <Select
-                                                    value={editingItem.unit}
-                                                    onValueChange={(v: any) => setEditingItem({ ...editingItem, unit: v })}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="unit">وحدة</SelectItem>
-                                                        <SelectItem value="kg">كيلو</SelectItem>
-                                                        <SelectItem value="gram">جرام</SelectItem>
-                                                        <SelectItem value="liter">لتر</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <Button onClick={saveEdit} className="w-full">
-                                                    حفظ
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </DialogContent>
-                                </Dialog>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => deleteItem(item.id)}
-                                    className="h-8 w-8 text-red-500 hover:text-red-700"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                    {items.length === 0 && (
-                        <p className="text-center text-gray-400 py-8">لا توجد عناصر في القائمة</p>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
-    );
+                        ))}
+                        {items.length === 0 && (
+                            <p className="text-center text-gray-400 py-8">لا توجد عناصر في القائمة</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+            );
 };
 
-export default ShoppingList;
+            export default ShoppingList;

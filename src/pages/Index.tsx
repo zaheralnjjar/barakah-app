@@ -205,7 +205,7 @@ const Index = () => {
 
             {/* Note: We removed TabsList from here. Controlled by BottomNavBar */}
 
-            <div className="px-2 pt-2 md:container md:mx-auto md:px-4 md:pt-6">
+            <div className="w-full">
               <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
                 <SmartDashboard onNavigateToTab={setActiveTab} />
               </TabsContent>

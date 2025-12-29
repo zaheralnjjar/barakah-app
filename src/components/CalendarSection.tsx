@@ -107,7 +107,7 @@ const CalendarSection: React.FC = () => {
     const today = new Date().toISOString().split('T')[0];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>

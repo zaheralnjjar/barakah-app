@@ -416,217 +416,218 @@ END:VCALENDAR`;
     };
 
     return (
-        <Card>
-            <CardHeader className="pb-3">
-                <CardTitle className="arabic-title text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-500" />
-                    المواعيد والتذكيرات
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Add New Appointment */}
-                <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
-                    <Input
-                        value={newTitle}
-                        onChange={e => setNewTitle(e.target.value)}
-                        placeholder="عنوان الموعد..."
-                        className="arabic-body"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="arabic-title text-lg flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-500" />
+                        المواعيد والتذكيرات
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Add New Appointment */}
+                    <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
                         <Input
-                            type="date"
-                            value={newDate}
-                            onChange={e => setNewDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
+                            value={newTitle}
+                            onChange={e => setNewTitle(e.target.value)}
+                            placeholder="عنوان الموعد..."
+                            className="arabic-body"
                         />
-                        <Input
-                            type="time"
-                            value={newTime}
-                            onChange={e => setNewTime(e.target.value)}
-                        />
-                    </div>
-                    <div className="relative">
-                        <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-gray-400" />
+                        <div className="grid grid-cols-2 gap-2">
                             <Input
-                                value={newLocation}
-                                onChange={e => handleLocationChange(e.target.value)}
-                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                                placeholder="العنوان (اختياري - سيحفظ في المواقع)"
-                                className="flex-1 arabic-body"
+                                type="date"
+                                value={newDate}
+                                onChange={e => setNewDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                            />
+                            <Input
+                                type="time"
+                                value={newTime}
+                                onChange={e => setNewTime(e.target.value)}
                             />
                         </div>
-                        {showSuggestions && locationSuggestions.length > 0 && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                {locationSuggestions.map((s, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="p-2 hover:bg-blue-50 cursor-pointer text-sm text-right border-b last:border-0"
-                                        onClick={() => selectSuggestion(s)}
-                                    >
-                                        📍 {s.display_name}
-                                    </div>
-                                ))}
+                        <div className="relative">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <Input
+                                    value={newLocation}
+                                    onChange={e => handleLocationChange(e.target.value)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                                    placeholder="العنوان (اختياري - سيحفظ في المواقع)"
+                                    className="flex-1 arabic-body"
+                                />
                             </div>
+                            {showSuggestions && locationSuggestions.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                    {locationSuggestions.map((s, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="p-2 hover:bg-blue-50 cursor-pointer text-sm text-right border-b last:border-0"
+                                            onClick={() => selectSuggestion(s)}
+                                        >
+                                            📍 {s.display_name}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <select
+                                value={reminderMinutes}
+                                onChange={e => setReminderMinutes(Number(e.target.value))}
+                                className="flex-1 h-10 rounded-md border px-3 arabic-body text-sm"
+                            >
+                                <option value={5}>تذكير قبل 5 دقائق</option>
+                                <option value={15}>تذكير قبل 15 دقيقة</option>
+                                <option value={30}>تذكير قبل 30 دقيقة</option>
+                                <option value={60}>تذكير قبل ساعة</option>
+                            </select>
+                            <Button onClick={addAppointment} size="sm">
+                                <Plus className="w-4 h-4 ml-1" /> إضافة
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Pending Appointments */}
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                        {pendingApts.length === 0 ? (
+                            <p className="text-center text-muted-foreground arabic-body text-sm py-4">
+                                لا توجد مواعيد قادمة
+                            </p>
+                        ) : (
+                            pendingApts.map(apt => (
+                                <div key={apt.id} className="flex items-center gap-2 p-2 bg-white rounded border">
+                                    <button onClick={() => toggleComplete(apt.id)} className="text-gray-400 hover:text-green-500">
+                                        <Check className="w-5 h-5" />
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>{formatDate(apt.date)}</span>
+                                            <span>{apt.time}</span>
+                                            <Badge variant="outline" className="text-[10px]">
+                                                <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                    <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
+                                        <Edit2 className="w-4 h-4 text-gray-500" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={() => exportToCalendar(apt)} className="h-8 w-8">
+                                        <Calendar className="w-4 h-4 text-blue-500" />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" onClick={() => deleteAppointment(apt.id)} className="h-8 w-8">
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                </div>
+                            ))
                         )}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <select
-                            value={reminderMinutes}
-                            onChange={e => setReminderMinutes(Number(e.target.value))}
-                            className="flex-1 h-10 rounded-md border px-3 arabic-body text-sm"
+
+                    {/* Completed Toggle */}
+                    {completedApts.length > 0 && (
+                        <button
+                            onClick={() => setShowCompleted(!showCompleted)}
+                            className="flex items-center gap-1 text-sm text-muted-foreground arabic-body"
                         >
-                            <option value={5}>تذكير قبل 5 دقائق</option>
-                            <option value={15}>تذكير قبل 15 دقيقة</option>
-                            <option value={30}>تذكير قبل 30 دقيقة</option>
-                            <option value={60}>تذكير قبل ساعة</option>
-                        </select>
-                        <Button onClick={addAppointment} size="sm">
-                            <Plus className="w-4 h-4 ml-1" /> إضافة
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Pending Appointments */}
-                <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                    {pendingApts.length === 0 ? (
-                        <p className="text-center text-muted-foreground arabic-body text-sm py-4">
-                            لا توجد مواعيد قادمة
-                        </p>
-                    ) : (
-                        pendingApts.map(apt => (
-                            <div key={apt.id} className="flex items-center gap-2 p-2 bg-white rounded border">
-                                <button onClick={() => toggleComplete(apt.id)} className="text-gray-400 hover:text-green-500">
-                                    <Check className="w-5 h-5" />
-                                </button>
-                                <div className="flex-1 min-w-0">
-                                    <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{formatDate(apt.date)}</span>
-                                        <span>{apt.time}</span>
-                                        <Badge variant="outline" className="text-[10px]">
-                                            <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
-                                    <Edit2 className="w-4 h-4 text-gray-500" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => exportToCalendar(apt)} className="h-8 w-8">
-                                    <Calendar className="w-4 h-4 text-blue-500" />
-                                </Button>
-                                <Button size="icon" variant="ghost" onClick={() => deleteAppointment(apt.id)} className="h-8 w-8">
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
-                            </div>
-                        ))
+                            {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            {completedApts.length} في السجل (سابق)
+                        </button>
                     )}
-                </div>
 
-                {/* Completed Toggle */}
-                {completedApts.length > 0 && (
-                    <button
-                        onClick={() => setShowCompleted(!showCompleted)}
-                        className="flex items-center gap-1 text-sm text-muted-foreground arabic-body"
-                    >
-                        {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        {completedApts.length} في السجل (سابق)
-                    </button>
-                )}
-
-                {showCompleted && (
-                    <div className="space-y-1 opacity-60">
-                        {completedApts.map(apt => (
-                            <div key={apt.id} className="flex items-center gap-2 p-2 rounded line-through">
-                                <Check className="w-4 h-4 text-green-500" />
-                                <span className="arabic-body text-sm">{apt.title}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-
-            {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="arabic-title text-right">تعديل الموعد</DialogTitle>
-                    </DialogHeader>
-                    {editingApt && (
-                        <div className="space-y-4 py-4">
-                            <Input
-                                value={editingApt.title}
-                                onChange={e => setEditingApt({ ...editingApt, title: e.target.value })}
-                                placeholder="العنوان"
-                                className="text-right"
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                                <Input
-                                    type="date"
-                                    value={editingApt.date}
-                                    onChange={e => setEditingApt({ ...editingApt, date: e.target.value })}
-                                />
-                                <Input
-                                    type="time"
-                                    value={editingApt.time}
-                                    onChange={e => setEditingApt({ ...editingApt, time: e.target.value })}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm arabic-body">وقت التذكير (دقيقة)</label>
-                                <select
-                                    value={editingApt.reminderMinutes}
-                                    onChange={e => setEditingApt({ ...editingApt, reminderMinutes: Number(e.target.value) })}
-                                    className="w-full h-10 rounded-md border px-3"
-                                >
-                                    <option value={5}>5 دقائق</option>
-                                    <option value={15}>15 دقيقة</option>
-                                    <option value={30}>30 دقيقة</option>
-                                    <option value={60}>ساعة</option>
-                                </select>
-                            </div>
-                            <DialogFooter>
-                                <Button onClick={saveEdit} className="w-full">حفظ التعديلات</Button>
-                            </DialogFooter>
+                    {showCompleted && (
+                        <div className="space-y-1 opacity-60">
+                            {completedApts.map(apt => (
+                                <div key={apt.id} className="flex items-center gap-2 p-2 rounded line-through">
+                                    <Check className="w-4 h-4 text-green-500" />
+                                    <span className="arabic-body text-sm">{apt.title}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
-                </DialogContent>
-            </Dialog>
-        </Card>
-    );
+                </CardContent>
+
+                {/* Edit Dialog */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="arabic-title text-right">تعديل الموعد</DialogTitle>
+                        </DialogHeader>
+                        {editingApt && (
+                            <div className="space-y-4 py-4">
+                                <Input
+                                    value={editingApt.title}
+                                    onChange={e => setEditingApt({ ...editingApt, title: e.target.value })}
+                                    placeholder="العنوان"
+                                    className="text-right"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Input
+                                        type="date"
+                                        value={editingApt.date}
+                                        onChange={e => setEditingApt({ ...editingApt, date: e.target.value })}
+                                    />
+                                    <Input
+                                        type="time"
+                                        value={editingApt.time}
+                                        onChange={e => setEditingApt({ ...editingApt, time: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm arabic-body">وقت التذكير (دقيقة)</label>
+                                    <select
+                                        value={editingApt.reminderMinutes}
+                                        onChange={e => setEditingApt({ ...editingApt, reminderMinutes: Number(e.target.value) })}
+                                        className="w-full h-10 rounded-md border px-3"
+                                    >
+                                        <option value={5}>5 دقائق</option>
+                                        <option value={15}>15 دقيقة</option>
+                                        <option value={30}>30 دقيقة</option>
+                                        <option value={60}>ساعة</option>
+                                    </select>
+                                </div>
+                                <DialogFooter>
+                                    <Button onClick={saveEdit} className="w-full">حفظ التعديلات</Button>
+                                </DialogFooter>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+            </Card>
+            );
 };
 
-export default AppointmentManager;
+            export default AppointmentManager;
 
-// Export function for AI assistant
-// Export function for AI assistant
-export const addAppointmentFromAI = async (title: string, date?: string, time?: string, reminderMinutes = 15): Promise<boolean> => {
+            // Export function for AI assistant
+            // Export function for AI assistant
+            export const addAppointmentFromAI = async (title: string, date?: string, time?: string, reminderMinutes = 15): Promise<boolean> => {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return false;
+        const {data: {user} } = await supabase.auth.getUser();
+                if (!user) return false;
 
-        // Default to tomorrow if no date
-        const aptDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
-        const aptTime = time || '09:00';
+                // Default to tomorrow if no date
+                const aptDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                const aptTime = time || '09:00';
 
-        const newApt = {
-            id: crypto.randomUUID(),
-            user_id: user.id,
-            title,
-            date: aptDate,
-            time: aptTime,
-            reminder_minutes: reminderMinutes,
-            is_completed: false,
+                const newApt = {
+                    id: crypto.randomUUID(),
+                user_id: user.id,
+                title,
+                date: aptDate,
+                time: aptTime,
+                reminder_minutes: reminderMinutes,
+                is_completed: false,
         };
 
-        const { error } = await supabase
-            .from('appointments')
-            .insert(newApt);
+                const {error} = await supabase
+                .from('appointments')
+                .insert(newApt);
 
-        if (error) throw error;
-        return true;
+                if (error) throw error;
+                return true;
     } catch (e) {
-        console.error('Error adding appointment from AI:', e);
-        return false;
+                    console.error('Error adding appointment from AI:', e);
+                return false;
     }
 };

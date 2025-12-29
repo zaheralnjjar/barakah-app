@@ -553,7 +553,7 @@ const FinancialController = () => {
   const totalBalanceARS = financeData.current_balance_ars + (financeData.current_balance_usd * financeData.exchange_rate);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>

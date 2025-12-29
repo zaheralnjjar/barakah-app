@@ -486,7 +486,7 @@ const PrayerManager = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
             {/* Header */}
             <div className="text-center">
                 <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-fade-in">

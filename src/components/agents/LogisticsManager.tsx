@@ -199,7 +199,7 @@ const LogisticsManager = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
       {/* Floating Pomodoro Timer */}
       {pomodoro.pomodoroActive && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 animate-pulse">
