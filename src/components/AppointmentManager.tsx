@@ -594,40 +594,41 @@ END:VCALENDAR`;
                     </DialogContent>
                 </Dialog>
             </Card>
-            );
+        </div>
+    );
 };
 
-            export default AppointmentManager;
+export default AppointmentManager;
 
-            // Export function for AI assistant
-            // Export function for AI assistant
-            export const addAppointmentFromAI = async (title: string, date?: string, time?: string, reminderMinutes = 15): Promise<boolean> => {
+// Export function for AI assistant
+// Export function for AI assistant
+export const addAppointmentFromAI = async (title: string, date?: string, time?: string, reminderMinutes = 15): Promise<boolean> => {
     try {
-        const {data: {user} } = await supabase.auth.getUser();
-                if (!user) return false;
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
 
-                // Default to tomorrow if no date
-                const aptDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
-                const aptTime = time || '09:00';
+        // Default to tomorrow if no date
+        const aptDate = date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        const aptTime = time || '09:00';
 
-                const newApt = {
-                    id: crypto.randomUUID(),
-                user_id: user.id,
-                title,
-                date: aptDate,
-                time: aptTime,
-                reminder_minutes: reminderMinutes,
-                is_completed: false,
+        const newApt = {
+            id: crypto.randomUUID(),
+            user_id: user.id,
+            title,
+            date: aptDate,
+            time: aptTime,
+            reminder_minutes: reminderMinutes,
+            is_completed: false,
         };
 
-                const {error} = await supabase
-                .from('appointments')
-                .insert(newApt);
+        const { error } = await supabase
+            .from('appointments')
+            .insert(newApt);
 
-                if (error) throw error;
-                return true;
+        if (error) throw error;
+        return true;
     } catch (e) {
-                    console.error('Error adding appointment from AI:', e);
-                return false;
+        console.error('Error adding appointment from AI:', e);
+        return false;
     }
 };

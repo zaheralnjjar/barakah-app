@@ -324,7 +324,8 @@ const ShoppingList = () => {
                     </div>
                 </CardContent>
             </Card>
-            );
+        </div>
+    );
 };
 
-            export default ShoppingList;
+export default ShoppingList;
