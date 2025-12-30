@@ -285,7 +285,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 <DashboardHeaderStrip
                     financeData={{
                         ...financeData,
-                        exchange_rate: dollarRates?.blue?.value_sell,
+                        exchange_rate: dollarRates?.real_blue?.value_sell ?? dollarRates?.blue?.value_sell, // Use Real Blue for display, fallback to Blue (which is Official now)
                         oficial_rate: dollarRates?.oficial?.value_sell,
                         prev_exchange_rate: dollarRates?.previous_blue?.value_avg,
                         dollar_change: dollarRates?.change,
@@ -424,23 +424,125 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
 
                         {showAddDialog === 'expense' && (
                             <div className="space-y-4 mt-2">
-                                <Input placeholder="المبلغ" type="number" className="text-right" id="expense-amount" />
-                                <Input placeholder="الوصف" className="text-right" id="expense-desc" />
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'أخرى'].map(cat => (
-                                        <Button key={cat} variant="outline" size="sm" className="text-xs">{cat}</Button>
-                                    ))}
+                                {/* Transaction Type Toggle */}
+                                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                                    <button
+                                        onClick={() => (document.getElementById('expense-type') as HTMLInputElement).value = 'expense'}
+                                        className="flex-1 py-2.5 px-4 rounded-md flex items-center justify-center gap-2 transition-all bg-red-500 text-white shadow-md transaction-type-btn"
+                                        data-type="expense"
+                                        id="expense-type-expense-btn"
+                                    >
+                                        <span className="font-medium">مصروف</span>
+                                    </button>
+                                    <button
+                                        onClick={() => (document.getElementById('expense-type') as HTMLInputElement).value = 'income'}
+                                        className="flex-1 py-2.5 px-4 rounded-md flex items-center justify-center gap-2 transition-all bg-transparent text-gray-600 hover:bg-gray-200 transaction-type-btn"
+                                        data-type="income"
+                                        id="expense-type-income-btn"
+                                    >
+                                        <span className="font-medium">دخل</span>
+                                    </button>
                                 </div>
-                                <Button className="w-full" onClick={async () => {
+                                <input type="hidden" id="expense-type" defaultValue="expense" />
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs text-gray-500 block mb-1">المبلغ</label>
+                                        <Input placeholder="0.00" type="number" className="text-right" id="expense-amount" />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 block mb-1">العملة</label>
+                                        <select className="w-full h-10 border rounded-md px-3 text-sm" id="expense-currency">
+                                            <option value="ARS">ARS - بيزو</option>
+                                            <option value="USD">USD - دولار</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500 block mb-1">الفئة</label>
+                                    <select className="w-full h-10 border rounded-md px-3 text-sm" id="expense-category">
+                                        <option value="طعام">طعام</option>
+                                        <option value="مواصلات">مواصلات</option>
+                                        <option value="فواتير">فواتير</option>
+                                        <option value="تسوق">تسوق</option>
+                                        <option value="صحة">صحة</option>
+                                        <option value="ترفيه">ترفيه</option>
+                                        <option value="راتب">راتب</option>
+                                        <option value="مكافأة">مكافأة</option>
+                                        <option value="أخرى">أخرى</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-500 block mb-1">الوصف</label>
+                                    <Input placeholder="وصف المعاملة..." className="text-right" id="expense-desc" />
+                                </div>
+
+                                <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={async () => {
                                     const amount = parseFloat((document.getElementById('expense-amount') as HTMLInputElement)?.value || '0');
                                     const desc = (document.getElementById('expense-desc') as HTMLInputElement)?.value || '';
+                                    const category = (document.getElementById('expense-category') as HTMLSelectElement)?.value || 'أخرى';
+                                    const currency = (document.getElementById('expense-currency') as HTMLSelectElement)?.value || 'ARS';
+                                    const type = (document.getElementById('expense-type') as HTMLInputElement)?.value || 'expense';
+
                                     if (!amount || amount <= 0) { toast({ title: 'أدخل المبلغ' }); return; }
-                                    const success = await saveExpense(amount, desc, 'أخرى');
-                                    if (success) toast({ title: 'تم حفظ المصروف', description: `${amount} ARS` });
-                                    else toast({ title: 'فشل حفظ المصروف', variant: 'destructive' });
+
+                                    try {
+                                        const { data: { user } } = await supabase.auth.getUser();
+                                        if (!user) { toast({ title: 'يجب تسجيل الدخول', variant: 'destructive' }); return; }
+
+                                        const { data: currentData } = await supabase
+                                            .from('finance_data_2025_12_18_18_42')
+                                            .select('*')
+                                            .eq('user_id', user.id)
+                                            .single();
+
+                                        if (!currentData) { toast({ title: 'لا توجد بيانات مالية', variant: 'destructive' }); return; }
+
+                                        const isExpense = type === 'expense';
+                                        let balanceARS = currentData.current_balance_ars || 0;
+                                        let balanceUSD = currentData.current_balance_usd || 0;
+
+                                        if (currency === 'ARS') {
+                                            balanceARS += isExpense ? -amount : amount;
+                                        } else {
+                                            balanceUSD += isExpense ? -amount : amount;
+                                        }
+
+                                        const updatedPendingExpenses = [...(currentData.pending_expenses || []), {
+                                            id: Date.now(),
+                                            amount,
+                                            currency,
+                                            type,
+                                            category,
+                                            description: desc || (isExpense ? 'مصروف سريع' : 'دخل'),
+                                            timestamp: new Date().toISOString(),
+                                            source: 'dashboard_quick_add'
+                                        }];
+
+                                        await supabase
+                                            .from('finance_data_2025_12_18_18_42')
+                                            .update({
+                                                current_balance_ars: balanceARS,
+                                                current_balance_usd: balanceUSD,
+                                                pending_expenses: updatedPendingExpenses,
+                                                updated_at: new Date().toISOString()
+                                            })
+                                            .eq('user_id', user.id);
+
+                                        if (refetch) refetch();
+                                        toast({
+                                            title: isExpense ? 'تم تسجيل المصروف' : 'تم تسجيل الدخل',
+                                            description: `${isExpense ? '-' : '+'}${amount} ${currency}`
+                                        });
+                                    } catch (e) {
+                                        console.error('Error saving transaction:', e);
+                                        toast({ title: 'فشل حفظ المعاملة', variant: 'destructive' });
+                                    }
                                     setShowAddDialog(null);
                                 }}>
-                                    <Plus className="w-4 h-4 ml-2" /> حفظ المصروف
+                                    <Plus className="w-4 h-4 ml-2" /> حفظ المعاملة
                                 </Button>
                             </div>
                         )}

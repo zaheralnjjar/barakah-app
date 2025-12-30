@@ -8,8 +8,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { AutomationProvider } from '@/providers/AutomationProvider';
-
 
 const queryClient = new QueryClient();
 
@@ -78,18 +76,16 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AutomationProvider>
-          <PermissionRequester />
-          <Toaster />
-          <Sonner />
-          <HashRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </HashRouter>
-        </AutomationProvider>
+        <PermissionRequester />
+        <Toaster />
+        <Sonner />
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </HashRouter>
       </TooltipProvider>
 
     </QueryClientProvider>

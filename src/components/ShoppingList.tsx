@@ -178,7 +178,7 @@ const ShoppingList = () => {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Button
                                 onClick={() => {
                                     const listText = items
@@ -191,10 +191,10 @@ const ShoppingList = () => {
                                 size="sm"
                                 className="text-green-600 border-green-200 hover:bg-green-50"
                             >
-                                <span className="ml-2 text-lg">📱</span> واتساب
+                                <span className="ml-1 text-lg">📱</span> واتساب
                             </Button>
                             <Button onClick={shareList} variant="outline" size="sm">
-                                <Share2 className="w-4 h-4 ml-2" />
+                                <Share2 className="w-4 h-4 ml-1" />
                                 مشاركة
                             </Button>
                         </div>

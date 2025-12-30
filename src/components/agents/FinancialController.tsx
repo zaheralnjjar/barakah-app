@@ -214,6 +214,96 @@ const FinancialController = () => {
     }
   };
 
+  const deleteTransaction = async (transactionId: number) => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const transaction = financeData.pending_expenses.find((t: any) => t.id === transactionId);
+      if (!transaction) return;
+
+      // Reverse the balance impact
+      let balanceARS = financeData.current_balance_ars;
+      let balanceUSD = financeData.current_balance_usd;
+      const isExpense = transaction.type === 'expense';
+
+      if (transaction.currency === 'ARS') {
+        balanceARS += isExpense ? transaction.amount : -transaction.amount;
+      } else {
+        balanceUSD += isExpense ? transaction.amount : -transaction.amount;
+      }
+
+      const updatedExpenses = financeData.pending_expenses.filter((t: any) => t.id !== transactionId);
+
+      await supabase.from('finance_data_2025_12_18_18_42')
+        .update({
+          current_balance_ars: balanceARS,
+          current_balance_usd: balanceUSD,
+          pending_expenses: updatedExpenses,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      toast({ title: 'تم الحذف', description: 'تم حذف المعاملة بنجاح' });
+      loadFinanceData();
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'خطأ', description: 'فشل في حذف المعاملة', variant: 'destructive' });
+    }
+  };
+
+  const saveEditedTransaction = async () => {
+    if (!editingTransaction) return;
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return;
+
+      const oldTransaction = financeData.pending_expenses.find((t: any) => t.id === editingTransaction.id);
+      if (!oldTransaction) return;
+
+      // Calculate balance changes
+      let balanceARS = financeData.current_balance_ars;
+      let balanceUSD = financeData.current_balance_usd;
+
+      // Reverse old transaction
+      if (oldTransaction.currency === 'ARS') {
+        balanceARS += oldTransaction.type === 'expense' ? oldTransaction.amount : -oldTransaction.amount;
+      } else {
+        balanceUSD += oldTransaction.type === 'expense' ? oldTransaction.amount : -oldTransaction.amount;
+      }
+
+      // Apply new transaction
+      const newAmount = parseFloat(editingTransaction.amount);
+      if (editingTransaction.currency === 'ARS') {
+        balanceARS += editingTransaction.type === 'expense' ? -newAmount : newAmount;
+      } else {
+        balanceUSD += editingTransaction.type === 'expense' ? -newAmount : newAmount;
+      }
+
+      const updatedExpenses = financeData.pending_expenses.map((t: any) =>
+        t.id === editingTransaction.id
+          ? { ...t, ...editingTransaction, amount: newAmount }
+          : t
+      );
+
+      await supabase.from('finance_data_2025_12_18_18_42')
+        .update({
+          current_balance_ars: balanceARS,
+          current_balance_usd: balanceUSD,
+          pending_expenses: updatedExpenses,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      toast({ title: 'تم التحديث', description: 'تم تحديث المعاملة بنجاح' });
+      setEditingTransaction(null);
+      loadFinanceData();
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'خطأ', description: 'فشل في تحديث المعاملة', variant: 'destructive' });
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!financeData) return <div className="p-8 text-center">No data</div>;
 
@@ -274,27 +364,69 @@ const FinancialController = () => {
               <span className="arabic-title text-emerald-800 text-sm font-bold flex items-center gap-2"><PlusCircle className="w-4 h-4" /> إضافة معاملة</span>
             </div>
             <CardContent className="p-4 space-y-4">
+              {/* Transaction Type Selector */}
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => setNewTransaction(p => ({ ...p, type: 'expense', category: 'أخرى' }))}
+                  className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${newTransaction.type === 'expense'
+                    ? 'bg-red-500 text-white shadow-md'
+                    : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  <MinusCircle className="w-4 h-4" />
+                  <span className="font-medium">مصروف</span>
+                </button>
+                <button
+                  onClick={() => setNewTransaction(p => ({ ...p, type: 'income', category: 'راتب' }))}
+                  className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${newTransaction.type === 'income'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span className="font-medium">دخل</span>
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs">المبلغ</Label>
-                  <Input type="number" value={newTransaction.amount} onChange={(e) => setNewTransaction(p => ({ ...p, amount: e.target.value }))} />
+                  <Input type="number" placeholder="0.00" value={newTransaction.amount} onChange={(e) => setNewTransaction(p => ({ ...p, amount: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">العملة</Label>
                   <Select value={newTransaction.currency} onValueChange={(v) => setNewTransaction(p => ({ ...p, currency: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ARS">ARS</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="ARS">ARS - بيزو أرجنتيني</SelectItem>
+                      <SelectItem value="USD">USD - دولار أمريكي</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs">الوصف</Label>
-                <Input value={newTransaction.description} onChange={(e) => setNewTransaction(p => ({ ...p, description: e.target.value }))} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">الفئة</Label>
+                  <Select value={newTransaction.category} onValueChange={(v) => setNewTransaction(p => ({ ...p, category: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(newTransaction.type === 'expense' ? expenseCategories : incomeCategories).map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">الوصف</Label>
+                  <Input placeholder="وصف المعاملة..." value={newTransaction.description} onChange={(e) => setNewTransaction(p => ({ ...p, description: e.target.value }))} />
+                </div>
               </div>
-              <Button onClick={addTransaction} className="w-full bg-emerald-600 hover:bg-emerald-700">حفظ المعاملة</Button>
+
+              <Button onClick={addTransaction} disabled={updating} className={`w-full ${newTransaction.type === 'expense' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                {updating ? <RefreshCw className="w-4 h-4 animate-spin ml-2" /> : null}
+                {newTransaction.type === 'expense' ? 'تسجيل مصروف' : 'تسجيل دخل'}
+              </Button>
             </CardContent>
           </Card>
 
@@ -345,14 +477,57 @@ const FinancialController = () => {
               <table className="w-full text-right text-[10px]">
                 <tbody className="divide-y">
                   {getFilteredTransactions().slice(0, 10).map((t: any) => (
-                    <tr key={t.id} className="hover:bg-gray-50/50">
+                    <tr key={t.id} className="hover:bg-gray-50/50 group">
                       <td className="p-2">
-                        <div className="font-medium">{t.description}</div>
-                        <div className="text-[9px] text-gray-400">{new Date(t.timestamp).toLocaleDateString('ar')}</div>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${t.type === 'expense' ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                          <div>
+                            <div className="font-medium">{t.description}</div>
+                            <div className="text-[9px] text-gray-400 flex items-center gap-1">
+                              <span>{new Date(t.timestamp).toLocaleDateString('ar')}</span>
+                              <span className="text-gray-300">•</span>
+                              <span className={t.type === 'expense' ? 'text-red-400' : 'text-emerald-400'}>
+                                {t.type === 'expense' ? 'مصروف' : 'دخل'}
+                              </span>
+                              {t.category && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <span>{t.category}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-2 text-left">
-                        <div className={`font-bold ${t.type === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>{t.amount.toLocaleString()} {t.currency}</div>
-                        <div className="text-[9px] text-gray-400">≈ {t.currency === 'USD' ? (t.amount * currentRate).toLocaleString() + ' ARS' : '$' + (t.amount / currentRate).toFixed(2)}</div>
+                        <div className={`font-bold ${t.type === 'expense' ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {t.type === 'expense' ? '-' : '+'}{t.amount.toLocaleString()} {t.currency}
+                        </div>
+                        <div className="text-[9px] text-gray-400">
+                          ≈ {t.currency === 'USD' ? (t.amount * currentRate).toLocaleString() + ' ARS' : '$' + (t.amount / currentRate).toFixed(2)}
+                        </div>
+                      </td>
+                      <td className="p-2 w-16">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditingTransaction({ ...t, amount: t.amount.toString() })}
+                            className="p-1.5 rounded-full hover:bg-blue-100 text-blue-600 transition-colors"
+                            title="تعديل"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('هل تريد حذف هذه المعاملة؟')) {
+                                deleteTransaction(t.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-full hover:bg-red-100 text-red-600 transition-colors"
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -362,6 +537,97 @@ const FinancialController = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={!!editingTransaction} onOpenChange={(open) => !open && setEditingTransaction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="arabic-title">تعديل المعاملة</DialogTitle>
+          </DialogHeader>
+          {editingTransaction && (
+            <div className="space-y-4">
+              <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                <button
+                  onClick={() => setEditingTransaction((p: any) => ({ ...p, type: 'expense' }))}
+                  className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${editingTransaction.type === 'expense'
+                      ? 'bg-red-500 text-white shadow-md'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  <MinusCircle className="w-4 h-4" />
+                  <span className="font-medium text-sm">مصروف</span>
+                </button>
+                <button
+                  onClick={() => setEditingTransaction((p: any) => ({ ...p, type: 'income' }))}
+                  className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${editingTransaction.type === 'income'
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span className="font-medium text-sm">دخل</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">المبلغ</Label>
+                  <Input
+                    type="number"
+                    value={editingTransaction.amount}
+                    onChange={(e) => setEditingTransaction((p: any) => ({ ...p, amount: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">العملة</Label>
+                  <Select
+                    value={editingTransaction.currency}
+                    onValueChange={(v) => setEditingTransaction((p: any) => ({ ...p, currency: v }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ARS">ARS</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">الفئة</Label>
+                <Select
+                  value={editingTransaction.category || 'أخرى'}
+                  onValueChange={(v) => setEditingTransaction((p: any) => ({ ...p, category: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(editingTransaction.type === 'expense' ? expenseCategories : incomeCategories).map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">الوصف</Label>
+                <Input
+                  value={editingTransaction.description}
+                  onChange={(e) => setEditingTransaction((p: any) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button onClick={saveEditedTransaction} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                  حفظ التغييرات
+                </Button>
+                <Button variant="outline" onClick={() => setEditingTransaction(null)}>
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <CSVImportDialog isOpen={showImportDialog} onClose={() => setShowImportDialog(false)} onSuccess={loadFinanceData} />
     </div>

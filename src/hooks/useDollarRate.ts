@@ -11,13 +11,16 @@ export interface BluelyticsResponse {
     oficial: DollarRate;
     blue: DollarRate;
     last_update: string;
+    real_blue?: DollarRate; // For display only
 }
 
 export interface ExtendedDollarRate extends BluelyticsResponse {
     previous_blue?: DollarRate;
     change?: number;
     sources_checked?: string[];
+    real_blue?: DollarRate; // For display only
 }
+
 
 export const useDollarRate = () => {
     const [rates, setRates] = useState<ExtendedDollarRate | null>(null);
@@ -87,14 +90,23 @@ export const useDollarRate = () => {
 
             if (sources.length === 0) throw new Error('All sources failed');
 
-            // Consensus Logic: Take the most conservative (highest sell) value among verified sources
+            // Consensus Logic: Prioritize Official Rate as per user request
+            // If explicit official rate is found, use it. Otherwise fallback to BNA reference.
+
             const bestBlue = sources.reduce((prev, current) =>
                 (current.value_sell > prev.value_sell) ? current : prev
             );
 
+            // Per user request: All local calculations ($) should use Official Rate, not Blue.
+            // We will swap the 'blue' field in the response to return the Official rate
+            // ensuring the app logic (which uses .blue) now gets the Official value.
+
+            const effectiveRate = oficialRate.value_sell > 0 ? oficialRate : { value_avg: 1100, value_sell: 1100, value_buy: 1100, source: 'Fallback' };
+
             const consensusData: BluelyticsResponse = {
                 oficial: oficialRate,
-                blue: bestBlue,
+                blue: effectiveRate, // Used for calculations (Official)
+                real_blue: bestBlue, // Used for display (Blue)
                 last_update: new Date().toISOString()
             };
 

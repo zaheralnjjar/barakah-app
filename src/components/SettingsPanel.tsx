@@ -45,7 +45,7 @@ import CategoryManager from '@/components/CategoryManager';
 import DataArchiver from '@/components/DataArchiver';
 import { BatteryOptimizationGuide } from '@/components/BatteryOptimizationGuide';
 import { PWAInstallButton } from '@/components/PWAInstallButton';
-import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
+// import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
 
 
 
@@ -128,21 +128,7 @@ const SettingsPanel = () => {
 
 
 
-            {/* Automation Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
-                        <Zap className="w-5 h-5 text-yellow-500" />
-                        الأتمتة والقواعد الذكية
-                    </CardTitle>
-                    <CardDescription className="arabic-body text-xs">
-                        أنشئ قواعد "إذا حدث هذا... افعل ذاك" لتسهيل حياتك (مثل: تذكيري بالصلاة، إضافة مهمة تلقائياً)
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AutomationBuilder />
-                </CardContent>
-            </Card>
+            {/* Automation Section Removed */}
 
             {/* Reminder Customizations - Enhanced */}
             <Card>
@@ -272,25 +258,7 @@ const SettingsPanel = () => {
 
                         <div className="h-px bg-gray-100" />
 
-                        {/* Ticker Settings */}
-                        <div className="space-y-4">
-                            <Label className="text-sm font-semibold text-gray-700">إعدادات شريط المعلومات</Label>
-                            <div className="space-y-3 pt-2">
-                                <div className="flex justify-between">
-                                    <Label className="text-xs">سرعة حركة الشريط</Label>
-                                    <span className="text-xs font-bold text-emerald-600">{reminders.tickerSpeed || 5}</span>
-                                </div>
-                                <Slider
-                                    defaultValue={[reminders.tickerSpeed || 5]}
-                                    max={10}
-                                    min={1}
-                                    step={1}
-                                    onValueChange={(vals) => setTickerSpeed(vals[0])}
-                                    className="w-full"
-                                />
-                                <p className="text-[10px] text-gray-400 text-center">كلما زاد الرقم زادت سرعة الشريط</p>
-                            </div>
-                        </div>
+                        {/* Ticker Settings Removed */}
                     </div>
                 </CardContent>
             </Card>
