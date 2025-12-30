@@ -454,6 +454,79 @@ const SettingsPanel = () => {
                 </DialogContent>
             </Dialog>
 
+            {/* Financial Cycle Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <DollarSign className="w-5 h-5 text-emerald-600" />
+                        إعدادات الدورة المالية
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        ضبط يوم الراتب وحساب الحد اليومي
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label className="text-sm">يوم نزول الراتب (للتجديد التلقائي)</Label>
+                            <p className="text-[10px] text-gray-500">سيتم تجديد الدورة تلقائياً في هذا اليوم</p>
+                        </div>
+                        <Select
+                            defaultValue={localStorage.getItem('baraka_salary_day') || '1'}
+                            onValueChange={(val) => {
+                                localStorage.setItem('baraka_salary_day', val);
+                                window.dispatchEvent(new Event('financialSettingsChanged'));
+                                toast({ title: "تم حفظ يوم الراتب" });
+                            }}
+                        >
+                            <SelectTrigger className="w-[80px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[...Array(31)].map((_, i) => (
+                                    <SelectItem key={i + 1} value={(i + 1).toString()}>{i + 1}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div>
+                            <Label className="text-sm">تاريخ نهاية الدورة الحالية</Label>
+                            <p className="text-[10px] text-gray-500">سيتم حساب الحد اليومي حتى هذا التاريخ</p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Input
+                                type="date"
+                                className="w-40 text-center"
+                                defaultValue={localStorage.getItem('baraka_cycle_end_date') || ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val) {
+                                        localStorage.setItem('baraka_cycle_end_date', val);
+                                    } else {
+                                        localStorage.removeItem('baraka_cycle_end_date');
+                                    }
+                                    window.dispatchEvent(new Event('financialSettingsChanged'));
+                                }}
+                            />
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-blue-600 h-6"
+                                onClick={() => {
+                                    localStorage.removeItem('baraka_cycle_end_date');
+                                    (document.querySelector('input[type="date"]') as HTMLInputElement).value = '';
+                                    window.dispatchEvent(new Event('financialSettingsChanged'));
+                                    toast({ title: "تم التحويل للحساب التلقائي (يوم الراتب)" });
+                                }}
+                            >
+                                استخدام يوم الراتب فقط
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Financial Categories */}
             <Card>

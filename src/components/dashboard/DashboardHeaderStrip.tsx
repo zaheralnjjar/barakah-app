@@ -206,14 +206,14 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <span className="text-[9px] font-bold">الحد اليومي</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-sm font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
-                                        <span className="text-[10px] text-gray-400">/</span>
-                                        <span className={`text-sm font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-700 font-black' : 'text-emerald-500'}`}>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-xs font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
+                                        <div className="h-px bg-emerald-100 my-0.5 w-[80%] opacity-50"></div>
+                                        <span className={`text-xs font-bold leading-none ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-500'}`}>
                                             {(dailyLimitARS - todayExpense).toLocaleString()}
                                         </span>
                                     </div>
-                                    <div className="text-[10px] text-emerald-600/70 font-mono">
+                                    <div className="text-[9px] text-emerald-600/70 font-mono mt-1">
                                         ≈ {(dailyLimitARS / (financeData?.exchange_rate || 1)).toFixed(1)} <span className="text-[8px]">$</span>
                                     </div>
                                 </div>

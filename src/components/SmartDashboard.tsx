@@ -251,19 +251,59 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     // Dollar Rate Logic
     const { rates: dollarRates } = useDollarRate();
 
+    // Force re-render on settings change
+    const [settingsVersion, setSettingsVersion] = useState(0);
+    useEffect(() => {
+        const handleSettingsChange = () => setSettingsVersion(v => v + 1);
+        window.addEventListener('financialSettingsChanged', handleSettingsChange);
+        return () => window.removeEventListener('financialSettingsChanged', handleSettingsChange);
+    }, []);
+
     const calculateDailyLimit = () => {
         if (!financeData) return 0;
         const explicitLimit = financeData?.financial_config?.daily_limit_ars || 0;
         if (explicitLimit > 0) return explicitLimit;
+
         const balance = financeData.current_balance_ars || 0;
         const buffer = financeData.emergency_buffer || 0;
         const debt = financeData.total_debt || 0;
         const available = balance - buffer - debt;
         if (available <= 0) return 0;
+
         const now = new Date();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const remainingDays = daysInMonth - now.getDate();
-        return Math.floor(available / (remainingDays + 3));
+
+        // Check for Specific Cycle End Date
+        const cycleEndDateStr = localStorage.getItem('baraka_cycle_end_date');
+        if (cycleEndDateStr) {
+            const endDate = new Date(cycleEndDateStr);
+            // End date should be end of day
+            endDate.setHours(23, 59, 59, 999);
+            const diffTime = endDate.getTime() - now.getTime();
+            // If date is in past, default to 1 to avoid division by zero/negative, effectively 0 limit
+            if (diffTime < 0) return 0;
+            const remaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return Math.floor(available / remaining);
+        }
+
+        // Check for Manual Override
+        const manualDays = parseInt(localStorage.getItem('baraka_manual_remaining_days') || '0');
+        if (manualDays > 0) {
+            return Math.floor(available / manualDays);
+        }
+
+        // Calculate based on Salary Day (Auto Renewal)
+        const salaryDay = parseInt(localStorage.getItem('baraka_salary_day') || '1');
+        let nextSalaryDate = new Date(now.getFullYear(), now.getMonth(), salaryDay);
+
+        // If today is past the salary day (or is the salary day), aim for next month's salary day
+        if (now.getDate() >= salaryDay) {
+            nextSalaryDate = new Date(now.getFullYear(), now.getMonth() + 1, salaryDay);
+        }
+
+        const diffTime = nextSalaryDate.getTime() - now.getTime();
+        const remainingDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+        return Math.floor(available / remainingDays);
     };
 
     const dailyLimitARS = calculateDailyLimit();
