@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from "react-router-dom";
+
 import { useToast } from "@/components/ui/use-toast";
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useHabits } from '@/hooks/useHabits';
@@ -11,6 +13,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
+import { useDollarRate } from '@/hooks/useDollarRate';
 import {
     Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play
 } from 'lucide-react';
@@ -39,6 +42,7 @@ interface SmartDashboardProps {
 
 const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const {
         financeData, loading: dataLoading, shoppingListSummary,
         prayerTimes = [], refetch, nextPrayer, timeUntilNext
@@ -244,6 +248,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
         }
     };
 
+    // Dollar Rate Logic
+    const { rates: dollarRates } = useDollarRate();
+
     const calculateDailyLimit = () => {
         if (!financeData) return 0;
         const explicitLimit = financeData?.financial_config?.daily_limit_ars || 0;
@@ -276,7 +283,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
             {/* 2. Finance & Prayer Header Strip */}
             <div className="px-2 pt-1 pb-2 max-w-7xl mx-auto">
                 <DashboardHeaderStrip
-                    financeData={financeData}
+                    financeData={{
+                        ...financeData,
+                        exchange_rate: dollarRates?.blue?.value_sell,
+                        oficial_rate: dollarRates?.oficial?.value_sell,
+                        prev_exchange_rate: dollarRates?.previous_blue?.value_avg,
+                        dollar_change: dollarRates?.change,
+                        last_update: dollarRates?.last_update,
+                    }}
                     todayExpense={todayExpense}
                     dailyLimitARS={dailyLimitARS}
                     prayerTimes={prayerTimes}
@@ -293,7 +307,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         const handleTouchEnd = (endEvent: TouchEvent) => {
                             const endY = endEvent.changedTouches[0].clientY;
                             if (endY - startY > 100) handlePullRefresh();
-                            document.removeEventListener('touchend', handleTouchEnd);
+                            document.removeEventListener('touchend', handleTouchEnd as EventListener);
                         };
                         document.addEventListener('touchend', handleTouchEnd as EventListener);
                     }
@@ -395,10 +409,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                         {showAddDialog === 'appointment' && <div className="mt-2"><AppointmentManager /></div>}
 
                         {showAddDialog === 'location' && (
-                            <div className="mt-2 space-y-4">
+                            <div className="pb-24 space-y-4 md:space-y-6">
+
+                                {/* Header Strip */}
                                 <div className="h-[500px] rounded-lg overflow-hidden border-2 border-green-200">
                                     <InteractiveMap />
                                 </div>
+
                                 <p className="text-sm text-center text-gray-500 bg-green-50 p-2 rounded-lg">
                                     💡 اضغط على الخريطة لحفظ الموقع أو استخدم البحث
                                 </p>

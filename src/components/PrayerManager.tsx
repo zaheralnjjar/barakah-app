@@ -51,7 +51,10 @@ const PrayerManager = () => {
     const [sharePeriod, setSharePeriod] = useState<'today' | 'week' | 'month' | 'custom'>('today');
 
     // Automated Source - Fixed to Online
-    const prayerSource = 'aladhan';
+    const [lastUpdated, setLastUpdated] = useState<string | null>(() => {
+        const saved = localStorage.getItem('baraka_prayer_schedule_updated');
+        return saved;
+    });
 
     const { toast } = useToast();
 
@@ -210,14 +213,16 @@ const PrayerManager = () => {
                     scheduleMap[day.date] = day;
                 });
                 localStorage.setItem('baraka_prayer_schedule', JSON.stringify(scheduleMap));
+                const nowStr = new Date().toISOString();
+                localStorage.setItem('baraka_prayer_schedule_updated', nowStr);
+                setLastUpdated(nowStr);
 
-                // Sync with Cloud if user exists
                 if (userId) {
                     await supabase.from('prayer_settings').upsert({
                         user_id: userId,
                         source: 'aladhan_auto',
                         schedule: formattedData,
-                        updated_at: new Date().toISOString()
+                        updated_at: nowStr
                     });
                 }
             } else {
@@ -493,9 +498,16 @@ const PrayerManager = () => {
                     <Moon className="w-10 h-10 text-white" />
                 </div>
                 <h1 className="text-3xl arabic-title text-primary mb-2">مواقيت الصلاة</h1>
-                <div className="flex items-center justify-center gap-2 text-muted-foreground arabic-body">
-                    <MapPin className="w-4 h-4" />
-                    <span>تحديث تلقائي (حسب الموقع)</span>
+                <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground arabic-body">
+                    <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>تحديث تلقائي (حسب الموقع)</span>
+                    </div>
+                    {lastUpdated && (
+                        <div className="text-[10px] opacity-70 flex flex-col items-center">
+                            <span>آخر تحديث: {new Date(lastUpdated).toLocaleDateString('ar-EG')} - {new Date(lastUpdated).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

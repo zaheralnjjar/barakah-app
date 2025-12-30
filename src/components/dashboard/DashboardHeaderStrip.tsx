@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingDown, TrendingUp, DollarSign, Wallet, Activity, Clock, Moon, Sun, Sunrise, Sunset } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 interface DashboardHeaderStripProps {
@@ -136,22 +136,48 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-100/40 rounded-full blur-2xl translate-y-8 -translate-x-8 pointer-events-none" />
 
                     <CardContent className="p-4 flex flex-col justify-center h-full relative z-10">
-                        {/* Dollar Rate Row */}
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-emerald-200/50">
-                            <div className="flex items-center gap-2">
+                        {/* Dollar Rate Row - Enhanced with Oficial & Blue */}
+                        <div className="flex justify-between items-start mb-4 pb-4 border-b border-emerald-200/50">
+                            <div className="flex items-start gap-2">
                                 <div className="p-2 bg-white rounded-lg shadow-sm">
                                     <DollarSign className="w-5 h-5 text-emerald-600" />
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] text-emerald-600 font-bold">سعر الدولار</span>
-                                    <span className="text-xl font-bold font-mono tracking-tight flex items-baseline gap-1 text-emerald-800">
-                                        {financeData?.exchange_rate || '---'}
-                                        <span className="text-[10px] font-normal text-emerald-600">ARS</span>
-                                    </span>
+                                <div className="flex flex-col gap-1">
+                                    {/* Oficial Rate */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] text-gray-500 font-medium">رسمي (BNA)</span>
+                                        <span className="text-sm font-bold font-mono text-gray-700">
+                                            {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
+                                        </span>
+                                    </div>
+                                    {/* Blue Rate */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] text-blue-600 font-bold">بلو</span>
+                                        <span className="text-xl font-bold font-mono tracking-tight text-blue-700">
+                                            {financeData?.exchange_rate || '---'}
+                                        </span>
+                                        {financeData?.dollar_change !== 0 && (
+                                            <Badge variant="outline" className={cn(
+                                                "text-[8px] py-0 px-1 border-0 h-4",
+                                                (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                            )}>
+                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2 h-2 ml-0.5" /> : <TrendingDown className="w-2 h-2 ml-0.5" />}
+                                                {Math.abs(financeData?.dollar_change || 0).toFixed(1)}
+                                            </Badge>
+                                        )}
+                                        {financeData?.prev_exchange_rate && (
+                                            <span className="text-[9px] text-gray-400 line-through">
+                                                {financeData.prev_exchange_rate}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-[10px] text-emerald-600 bg-white/50 px-2 py-1 rounded-full border border-emerald-100">
-                                تحديث {format(new Date(), 'HH:mm')}
+                            <div className="text-[9px] text-emerald-600 bg-white/50 px-2 py-1 rounded-full border border-emerald-100 flex flex-col items-end">
+                                <span>تحديث {format(new Date(), 'HH:mm')}</span>
+                                {financeData?.last_update && (
+                                    <span className="opacity-60 text-[7px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar, addSuffix: true })}</span>
+                                )}
                             </div>
                         </div>
 
@@ -163,8 +189,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <Wallet className="w-3 h-3" />
                                     <span className="text-[9px] font-bold">الرصيد</span>
                                 </div>
-                                <div className="text-sm font-bold truncate text-emerald-900">
-                                    {(financeData?.current_balance_ars || 0).toLocaleString()}
+                                <div className="flex flex-col">
+                                    <div className="text-sm font-bold truncate text-emerald-900">
+                                        {(financeData?.current_balance_ars || 0).toLocaleString()} <span className="text-[8px]">ARS</span>
+                                    </div>
+                                    <div className="text-[10px] text-emerald-600/70 font-mono">
+                                        ≈ {((financeData?.current_balance_ars || 0) / (financeData?.exchange_rate || 1)).toFixed(2)} <span className="text-[8px]">$</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -174,12 +205,17 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <Activity className="w-3 h-3" />
                                     <span className="text-[9px] font-bold">الحد اليومي</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-sm font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
-                                    <span className="text-[10px] text-gray-400">/</span>
-                                    <span className={`text-sm font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-red-500'}`}>
-                                        {(dailyLimitARS - todayExpense).toLocaleString()}
-                                    </span>
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-sm font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
+                                        <span className="text-[10px] text-gray-400">/</span>
+                                        <span className={`text-sm font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-700 font-black' : 'text-emerald-500'}`}>
+                                            {(dailyLimitARS - todayExpense).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] text-emerald-600/70 font-mono">
+                                        ≈ {(dailyLimitARS / (financeData?.exchange_rate || 1)).toFixed(1)} <span className="text-[8px]">$</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -189,8 +225,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <TrendingDown className="w-3 h-3" />
                                     <span className="text-[9px] font-bold">مصروف اليوم</span>
                                 </div>
-                                <div className="text-sm font-bold truncate text-red-700">
-                                    {todayExpense.toLocaleString()}
+                                <div className="flex flex-col">
+                                    <div className="text-sm font-bold truncate text-red-700">
+                                        {todayExpense.toLocaleString()}
+                                    </div>
+                                    <div className="text-[10px] text-red-600/70 font-mono">
+                                        ≈ {(todayExpense / (financeData?.exchange_rate || 1)).toFixed(1)} <span className="text-[8px]">$</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

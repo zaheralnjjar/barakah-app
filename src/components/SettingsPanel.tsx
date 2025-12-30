@@ -26,6 +26,8 @@ import {
     Volume2,
     Vibrate,
     Clock,
+    Zap, // Added icon
+
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -43,6 +45,9 @@ import CategoryManager from '@/components/CategoryManager';
 import DataArchiver from '@/components/DataArchiver';
 import { BatteryOptimizationGuide } from '@/components/BatteryOptimizationGuide';
 import { PWAInstallButton } from '@/components/PWAInstallButton';
+import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
+
+
 
 const SettingsPanel = () => {
     const { toast } = useToast();
@@ -122,6 +127,22 @@ const SettingsPanel = () => {
             </div>
 
 
+
+            {/* Automation Section */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg arabic-title">
+                        <Zap className="w-5 h-5 text-yellow-500" />
+                        الأتمتة والقواعد الذكية
+                    </CardTitle>
+                    <CardDescription className="arabic-body text-xs">
+                        أنشئ قواعد "إذا حدث هذا... افعل ذاك" لتسهيل حياتك (مثل: تذكيري بالصلاة، إضافة مهمة تلقائياً)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AutomationBuilder />
+                </CardContent>
+            </Card>
 
             {/* Reminder Customizations - Enhanced */}
             <Card>

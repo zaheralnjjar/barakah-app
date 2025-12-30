@@ -27,6 +27,7 @@ interface UsePrayerTimesReturn {
     isLoading: boolean;
     error: string | null;
     source: PrayerSource;
+    lastUpdated: string | null;
     refetch: () => void;
     setManualTimes: (times: Partial<PrayerTimesData>) => void;
     parseUploadedFile: (file: File) => Promise<void>;
@@ -45,41 +46,37 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [source, setSource] = useState<PrayerSource>('api');
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
     // Load saved times from localStorage
     useEffect(() => {
         // First check for the full monthly schedule from PrayerManager
-        const monthlySchedule = localStorage.getItem('baraka_monthly_schedule');
+        const monthlySchedule = localStorage.getItem('baraka_prayer_schedule');
 
         if (monthlySchedule) {
             try {
                 const schedule = JSON.parse(monthlySchedule);
-                if (Array.isArray(schedule) && schedule.length > 0) {
-                    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                // schedule in PrayerManager is an object/map: { 'YYYY-MM-DD': { fajr, ... } }
+                const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const todaySchedule = schedule[todayStr];
 
-                    // Find today's schedule
-                    // We need to handle potential date format differences. 
-                    // PrayerManager saves as YYYY-MM-DD
-                    const todaySchedule = schedule.find((day: any) => day.date === todayStr);
+                if (todaySchedule) {
+                    const times: PrayerTimesData = {
+                        fajr: todaySchedule.fajr,
+                        sunrise: todaySchedule.sunrise,
+                        dhuhr: todaySchedule.dhuhr,
+                        asr: todaySchedule.asr,
+                        maghrib: todaySchedule.maghrib,
+                        isha: todaySchedule.isha,
+                        date: todayStr
+                    };
 
-                    if (todaySchedule) {
-                        const times: PrayerTimesData = {
-                            fajr: todaySchedule.fajr,
-                            sunrise: todaySchedule.sunrise,
-                            dhuhr: todaySchedule.dhuhr,
-                            asr: todaySchedule.asr,
-                            maghrib: todaySchedule.maghrib,
-                            isha: todaySchedule.isha,
-                            date: todayStr
-                        };
-
-                        const prayers = convertToPrayerTimes(times);
-                        setPrayerTimes(prayers);
-                        setSource('file'); // Treat as 'file' or 'manual' source since it's from the manager
-                        updateNextPrayer(prayers);
-                        setIsLoading(false);
-                        return;
-                    }
+                    const prayers = convertToPrayerTimes(times);
+                    setPrayerTimes(prayers);
+                    setSource('file');
+                    updateNextPrayer(prayers);
+                    setIsLoading(false);
+                    return;
                 }
             } catch (e) {
                 console.error("Failed to parse monthly schedule in usePrayerTimes", e);
@@ -95,6 +92,7 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
                     const prayers = convertToPrayerTimes(parsed.times);
                     setPrayerTimes(prayers);
                     setSource(parsed.source);
+                    setLastUpdated(parsed.timestamp || null);
                     updateNextPrayer(prayers);
                     setIsLoading(false);
                     return;
@@ -193,11 +191,14 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
             const prayers = convertToPrayerTimes(times);
             setPrayerTimes(prayers);
             setSource('api');
+            const now = new Date().toISOString();
+            setLastUpdated(now);
             updateNextPrayer(prayers);
 
 
             // Save to localStorage
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ times, source: 'api', coords }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ times, source: 'api', coords, timestamp: now }));
+            localStorage.setItem('baraka_prayer_schedule_updated', now);
 
             // Sync to Native Widget
             Preferences.set({
@@ -349,6 +350,7 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
         isLoading,
         error,
         source,
+        lastUpdated,
         refetch: fetchPrayerTimes,
         setManualTimes,
         parseUploadedFile,

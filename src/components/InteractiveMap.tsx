@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,6 +19,7 @@ import {
     Navigation,
     Save
 } from 'lucide-react';
+
 import {
     Dialog,
     DialogContent,
@@ -26,10 +28,13 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
 import { Share } from '@capacitor/share';
+
+
 
 // Fix Leaflet icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -186,11 +191,14 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
                             size="icon"
                             className="h-9 w-9 border-blue-200 hover:bg-blue-50"
                             onClick={handleNavigate}
-                            title="ملاحة"
+                            title="ملاحة خارجية"
                         >
                             <Navigation className="w-4 h-4" />
                         </Button>
+                        {/* Route Here (New) */}
+
                     </div>
+
                 </div>
             </Popup>
         </Marker>
@@ -233,6 +241,10 @@ const InteractiveMap = () => {
     const [currentMarkerPosition, setCurrentMarkerPosition] = useState<{ lat: number, lng: number } | null>(null);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+
+    // Routing State
+
+
 
     const { toast } = useToast();
 
@@ -499,6 +511,10 @@ const InteractiveMap = () => {
         toast({ title: "تم الحذف" });
     };
 
+
+
+
+
     const toggleSelectLocation = (id: string) => {
         const newSet = new Set(selectedLocations);
         if (newSet.has(id)) {
@@ -625,7 +641,10 @@ const InteractiveMap = () => {
                                     });
                                 }}
                             />
+
+
                             {/* Saved locations markers */}
+
                             {savedLocations.map((loc: any) => {
                                 let lat = typeof loc.lat === 'number' ? loc.lat : parseFloat(loc.lat);
                                 let lng = typeof loc.lng === 'number' ? loc.lng : parseFloat(loc.lng);
@@ -773,6 +792,8 @@ const InteractiveMap = () => {
                                                         >
                                                             <Navigation className="w-4 h-4" />
                                                         </Button>
+
+
                                                         {/* Share */}
                                                         <Button
                                                             variant="ghost"
