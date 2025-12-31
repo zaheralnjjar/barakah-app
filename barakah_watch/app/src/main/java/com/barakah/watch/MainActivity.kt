@@ -35,6 +35,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             BarakahWatchApp()
         }
+        
+        // Request full sync on launch
+        val syncManager = com.barakah.watch.data.SyncManager(this)
+        lifecycleScope.launchWhenStarted {
+            syncManager.requestFullSync()
+        }
     }
 
     private fun handleTileAction(action: String) {
