@@ -10,9 +10,10 @@ interface QuickActionsGridProps {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal') => void;
     onQuickParking?: () => void;
     onOpenTimer?: () => void;
+    onOpenVoiceRecorder?: () => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder }) => {
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
@@ -22,7 +23,18 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             {/* ===== 3. QUICK ACTIONS ===== */}
             <div className="grid grid-cols-6 gap-2 mb-2">
                 {[
-                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
+                    {
+                        icon: FileText,
+                        label: 'ملاحظة',
+                        color: 'bg-yellow-100 text-yellow-600',
+                        action: () => {
+                            if (onOpenVoiceRecorder) {
+                                onOpenVoiceRecorder();
+                            } else {
+                                onOpenAddDialog('note');
+                            }
+                        }
+                    },
                     { icon: ShoppingCart, label: 'للتسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
                     { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },

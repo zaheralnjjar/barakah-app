@@ -49,6 +49,9 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
     const [addType, setAddType] = useState<'appointment' | 'task' | null>(null);
     const [formData, setFormData] = useState({ title: '', time: '', location: '', description: '', priority: 'medium' });
 
+    // Selected day for column highlighting (helps track which day when scrolling)
+    const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+
     useEffect(() => {
         try {
             const schedule = localStorage.getItem('baraka_prayer_schedule');
@@ -319,121 +322,145 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ onPrint }) => {
                 </div>
             </CardHeader>
 
-            <CardContent className="p-0 overflow-x-auto">
-                <div className="min-w-[800px]">
-                    {/* Days Header */}
-                    <div className="grid grid-cols-8 bg-gray-100 sticky top-0 z-10">
-                        <div className="p-2 text-center text-xs font-bold text-gray-600 border-b border-r">
-                            الساعة
-                        </div>
-                        {weekDates.map((date, idx) => {
-                            const dateStr = getDateStr(date);
-                            const isToday = dateStr === today;
-                            return (
-                                <div
-                                    key={idx}
-                                    className={`p-2 text-center border-b border-r ${isToday ? 'bg-blue-100 text-blue-700' : ''
-                                        }`}
-                                >
-                                    <div className="text-xs font-bold">{DAYS_AR[date.getDay()]}</div>
-                                    <div className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                                        {date.getDate()}
-                                    </div>
+            <CardContent className="p-0 overflow-hidden">
+                {/* Wrapper for synchronized scrolling */}
+                <div className="relative" style={{ maxHeight: '500px' }}>
+                    {/* Scrollable container */}
+                    <div className="overflow-auto" style={{ maxHeight: '500px' }}>
+                        <div className="min-w-[800px]">
+                            {/* Days Header - Sticky at top */}
+                            <div className="grid grid-cols-8 bg-gray-100 sticky top-0 z-20">
+                                {/* Empty corner cell - sticky both */}
+                                <div className="p-2 text-center text-xs font-bold text-gray-600 border-b border-r bg-gray-100 sticky left-0 z-30">
+                                    الساعة
                                 </div>
-                            );
-                        })}
-                    </div>
-
-
-
-                    {/* Hours Grid */}
-                    <div className="max-h-[500px] overflow-y-auto">
-                        {HOURS.map(hour => (
-                            <div key={hour} className="grid grid-cols-8 border-b">
-                                {/* Hour Column */}
-                                <div className="p-2 text-center text-xs font-bold text-gray-500 bg-gray-50 border-r">
-                                    {hour.toString().padStart(2, '0')}:00
-                                </div>
-
-                                {/* Day Columns */}
-                                {weekDates.map((date, dayIdx) => {
+                                {weekDates.map((date, idx) => {
                                     const dateStr = getDateStr(date);
                                     const isToday = dateStr === today;
-                                    const data = getDayData(dateStr);
-
+                                    const isSelected = selectedDayIndex === idx;
                                     return (
                                         <div
-                                            key={dayIdx}
-                                            className={`min-h-[50px] p-1 border-r text-[10px] transition-colors cursor-pointer ${isToday ? 'bg-blue-50/50' : 'bg-white'
-                                                } ${draggedItem ? 'hover:bg-blue-100' : 'hover:bg-gray-50'}`}
-                                            onDragOver={handleDragOver}
-                                            onDrop={(e) => handleDrop(e, dateStr)}
-                                            onClick={() => {
-                                                setQuickAddDate(dateStr);
-                                                setQuickAddHour(hour);
-                                                setFormData({ ...formData, time: `${hour.toString().padStart(2, '0')}:00` });
-                                            }}
+                                            key={idx}
+                                            onClick={() => setSelectedDayIndex(isSelected ? null : idx)}
+                                            className={`p-2 text-center border-b border-r cursor-pointer transition-all ${isSelected ? 'bg-purple-200 text-purple-800 ring-2 ring-purple-400' :
+                                                isToday ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-200'
+                                                }`}
                                         >
-                                            {/* Show appointments at this hour */}
-                                            {data.appointments
-                                                .filter(a => a.time.startsWith(hour.toString().padStart(2, '0')))
-                                                .map(a => (
-                                                    <div
-                                                        key={a.id}
-                                                        className="bg-orange-100 text-orange-700 p-1 rounded mb-1 truncate"
-                                                    >
-                                                        📅 {a.title}
-                                                    </div>
-                                                ))
-                                            }
-
-                                            {/* Show tasks (draggable, show at task time or 9:00 default) */}
-                                            {data.tasks
-                                                .filter(task => {
-                                                    const taskHour = task.time ? parseInt(task.time.split(':')[0]) : 9;
-                                                    return taskHour === hour;
-                                                })
-                                                .map(task => (
-                                                    <div
-                                                        key={task.id}
-                                                        draggable
-                                                        onDragStart={(e) => handleDragStart(e, 'task', task.id)}
-                                                        onDragEnd={handleDragEnd}
-                                                        className={`bg-blue-100 text-blue-700 p-1 rounded mb-1 truncate cursor-move flex items-center gap-1 ${draggedItem?.id === task.id ? 'opacity-50' : ''
-                                                            }`}
-                                                    >
-                                                        <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                                        <span className="truncate">{task.title}</span>
-                                                    </div>
-                                                ))}
-
-                                            {/* Show habits in morning */}
-                                            {(hour === 7 || hour === 8) && data.habits.slice(0, 1).map(h => (
-                                                <div
-                                                    key={h.id}
-                                                    className="bg-amber-100 text-amber-700 p-1 rounded mb-1 truncate"
-                                                >
-                                                    🔥 {h.name}
-                                                </div>
-                                            ))}
-
-                                            {/* Show medications */}
-                                            {data.medications
-                                                .filter(m => parseInt(m.time?.split(':')[0] || '0') === hour)
-                                                .map(m => (
-                                                    <div
-                                                        key={m.id}
-                                                        className="bg-purple-100 text-purple-700 p-1 rounded mb-1 truncate"
-                                                    >
-                                                        💊 {m.name}
-                                                    </div>
-                                                ))
-                                            }
+                                            <div className="text-xs font-bold">{DAYS_AR[date.getDay()]}</div>
+                                            <div className={`text-lg font-bold ${isSelected ? 'text-purple-800' : isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                                                {date.getDate()}
+                                            </div>
+                                            {isSelected && <div className="text-[9px] text-purple-600 mt-0.5">✓ محدد</div>}
                                         </div>
                                     );
                                 })}
                             </div>
-                        ))}
+
+                            {/* Hours Grid */}
+                            {HOURS.map(hour => {
+                                // Check if this hour has any events
+                                const hasEvents = weekDates.some(date => {
+                                    const dateStr = getDateStr(date);
+                                    const data = getDayData(dateStr);
+                                    return data.appointments.some(a => a.time.startsWith(hour.toString().padStart(2, '0'))) ||
+                                        data.tasks.some(t => (t.time ? parseInt(t.time.split(':')[0]) : 9) === hour) ||
+                                        data.medications.some(m => parseInt(m.time?.split(':')[0] || '0') === hour);
+                                });
+
+                                return (
+                                    <div key={hour} className="grid grid-cols-8 border-b">
+                                        {/* Hour Column - Sticky left */}
+                                        <div className={`p-2 text-center text-xs font-bold text-gray-500 bg-gray-50 border-r sticky left-0 z-10 ${hasEvents ? 'min-h-[60px]' : 'h-[32px]'}`}>
+                                            {hour.toString().padStart(2, '0')}:00
+                                        </div>
+
+                                        {/* Day Columns */}
+                                        {weekDates.map((date, dayIdx) => {
+                                            const dateStr = getDateStr(date);
+                                            const isToday = dateStr === today;
+                                            const isSelected = selectedDayIndex === dayIdx;
+                                            const data = getDayData(dateStr);
+
+                                            const cellHasEvents = data.appointments.some(a => a.time.startsWith(hour.toString().padStart(2, '0'))) ||
+                                                data.tasks.some(t => (t.time ? parseInt(t.time.split(':')[0]) : 9) === hour) ||
+                                                data.medications.some(m => parseInt(m.time?.split(':')[0] || '0') === hour);
+
+                                            return (
+                                                <div
+                                                    key={dayIdx}
+                                                    className={`p-1 border-r text-[10px] transition-colors cursor-pointer ${hasEvents ? 'min-h-[60px]' : 'h-[32px]'} ${isSelected ? 'bg-purple-100/80 border-l-2 border-l-purple-400' :
+                                                            isToday ? 'bg-blue-50/50' : 'bg-white'
+                                                        } ${draggedItem ? 'hover:bg-blue-100' : 'hover:bg-gray-50'}`}
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={(e) => handleDrop(e, dateStr)}
+                                                    onClick={() => {
+                                                        setQuickAddDate(dateStr);
+                                                        setQuickAddHour(hour);
+                                                        setFormData({ ...formData, time: `${hour.toString().padStart(2, '0')}:00` });
+                                                    }}
+                                                >
+                                                    {/* Show appointments at this hour */}
+                                                    {data.appointments
+                                                        .filter(a => a.time.startsWith(hour.toString().padStart(2, '0')))
+                                                        .map(a => (
+                                                            <div
+                                                                key={a.id}
+                                                                className="bg-orange-100 text-orange-700 p-1 rounded mb-1 truncate"
+                                                            >
+                                                                📅 {a.title}
+                                                            </div>
+                                                        ))
+                                                    }
+
+                                                    {/* Show tasks (draggable, show at task time or 9:00 default) */}
+                                                    {data.tasks
+                                                        .filter(task => {
+                                                            const taskHour = task.time ? parseInt(task.time.split(':')[0]) : 9;
+                                                            return taskHour === hour;
+                                                        })
+                                                        .map(task => (
+                                                            <div
+                                                                key={task.id}
+                                                                draggable
+                                                                onDragStart={(e) => handleDragStart(e, 'task', task.id)}
+                                                                onDragEnd={handleDragEnd}
+                                                                className={`bg-blue-100 text-blue-700 p-1 rounded mb-1 truncate cursor-move flex items-center gap-1 ${draggedItem?.id === task.id ? 'opacity-50' : ''
+                                                                    }`}
+                                                            >
+                                                                <GripVertical className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                                                <span className="truncate">{task.title}</span>
+                                                            </div>
+                                                        ))}
+
+                                                    {/* Show habits in morning */}
+                                                    {(hour === 7 || hour === 8) && data.habits.slice(0, 1).map(h => (
+                                                        <div
+                                                            key={h.id}
+                                                            className="bg-amber-100 text-amber-700 p-1 rounded mb-1 truncate"
+                                                        >
+                                                            🔥 {h.name}
+                                                        </div>
+                                                    ))}
+
+                                                    {/* Show medications */}
+                                                    {data.medications
+                                                        .filter(m => parseInt(m.time?.split(':')[0] || '0') === hour)
+                                                        .map(m => (
+                                                            <div
+                                                                key={m.id}
+                                                                className="bg-purple-100 text-purple-700 p-1 rounded mb-1 truncate"
+                                                            >
+                                                                💊 {m.name}
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </CardContent>

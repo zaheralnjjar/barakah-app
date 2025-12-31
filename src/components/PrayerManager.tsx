@@ -492,24 +492,6 @@ const PrayerManager = () => {
 
     return (
         <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
-            {/* Header */}
-            <div className="text-center">
-                <div className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-fade-in">
-                    <Moon className="w-10 h-10 text-white" />
-                </div>
-                <h1 className="text-3xl arabic-title text-primary mb-2">مواقيت الصلاة</h1>
-                <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground arabic-body">
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>تحديث تلقائي (حسب الموقع)</span>
-                    </div>
-                    {lastUpdated && (
-                        <div className="text-[10px] opacity-70 flex flex-col items-center">
-                            <span>آخر تحديث: {new Date(lastUpdated).toLocaleDateString('ar-EG')} - {new Date(lastUpdated).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
 
             {/* Next Prayer Card */}
             <Card className="bg-gradient-to-br from-emerald-600 to-teal-800 text-white border-none shadow-lg overflow-hidden relative">

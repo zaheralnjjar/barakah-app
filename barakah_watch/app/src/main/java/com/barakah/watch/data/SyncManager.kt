@@ -5,6 +5,10 @@ import android.util.Log
 import com.google.android.gms.wearable.*
 import com.google.gson.Gson
 import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * مدير المزامنة الفورية بين الساعة والجوال
@@ -16,6 +20,7 @@ class SyncManager(private val context: Context) {
     private val messageClient: MessageClient = Wearable.getMessageClient(context)
     private val nodeClient: NodeClient = Wearable.getNodeClient(context)
     private val gson = Gson()
+    private val scope = CoroutineScope(Dispatchers.IO)
     
     companion object {
         private const val TAG = "BarakahSync"
@@ -85,6 +90,23 @@ class SyncManager(private val context: Context) {
     
     // ===== HELPER FUNCTIONS =====
     
+    fun sendTransaction(json: String) {
+        scope.launch {
+            sendMessageToPhone(MSG_ADD_TRANSACTION, json)
+        }
+    }
+
+    fun sendLocation(lat: Double, lng: Double) {
+        val json = JSONObject().apply {
+            put("lat", lat)
+            put("lng", lng)
+        }
+        scope.launch {
+            sendMessageToPhone(MSG_SAVE_LOCATION, json.toString())
+        }
+    }
+    
+    // ... existing private methods ...
     private suspend fun sendMessageToPhone(path: String, data: String) {
         try {
             val nodes = nodeClient.connectedNodes.await()

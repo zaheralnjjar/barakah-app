@@ -3,6 +3,8 @@ package com.barakah.watch.data
 import android.util.Log
 import com.google.android.gms.wearable.*
 import com.google.gson.Gson
+import android.content.Context
+import android.content.Intent
 
 /**
  * خدمة استقبال البيانات من الجوال
@@ -55,15 +57,34 @@ class DataLayerListenerService : WearableListenerService() {
      * Called when instant message received (notifications)
      */
     override fun onMessageReceived(messageEvent: MessageEvent) {
+        super.onMessageReceived(messageEvent)
         val path = messageEvent.path
-        val data = String(messageEvent.data)
+        val dataStr = String(messageEvent.data)
         
         Log.d(TAG, "Message received: $path")
+
+        val prefs = getSharedPreferences("barakah_prefs", Context.MODE_PRIVATE)
         
         when {
+            path == "/barakah/finance" -> {
+                prefs.edit().putString("finance_data", dataStr).apply()
+                // Broadcast update
+                sendBroadcast(Intent("com.barakah.watch.FINANCE_UPDATE"))
+                Log.d(TAG, "Finance data updated")
+            }
+            path == "/barakah/prayers" -> {
+                prefs.edit().putString("prayer_data", dataStr).apply()
+                sendBroadcast(Intent("com.barakah.watch.PRAYER_UPDATE"))
+                Log.d(TAG, "Prayer data updated")
+            }
+            path == "/barakah/productivity" -> {
+                prefs.edit().putString("productivity_data", dataStr).apply()
+                sendBroadcast(Intent("com.barakah.watch.PRODUCTIVITY_UPDATE"))
+                Log.d(TAG, "Productivity data updated")
+            }
             path.startsWith("/barakah/notification/") -> {
                 // Show notification on watch
-                handleNotification(path, data)
+                handleNotification(path, dataStr)
             }
             path == "/barakah/sync/complete" -> {
                 // Sync completed from phone

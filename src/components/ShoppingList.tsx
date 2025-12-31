@@ -207,7 +207,14 @@ const ShoppingList = () => {
                             placeholder="أضف عنصر جديد..."
                             value={newItem}
                             onChange={(e) => setNewItem(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && addItem()}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addItem();
+                                    // Keep focus on input for continuous entry
+                                    (e.target as HTMLInputElement).focus();
+                                }
+                            }}
                             className="flex-1 min-w-[150px]"
                         />
                         <Input

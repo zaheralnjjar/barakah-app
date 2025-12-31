@@ -87,6 +87,7 @@ fun BarakahWatchApp() {
                     onNavigateToFinance = { navController.navigate("finance") },
                     onNavigateToPrayer = { navController.navigate("prayer") },
                     onNavigateToLocations = { navController.navigate("locations") },
+                    onNavigateToProductivity = { navController.navigate("productivity") },
                     onNavigateToSettings = { navController.navigate("settings") }
                 )
             }
@@ -98,6 +99,9 @@ fun BarakahWatchApp() {
             }
             composable("locations") {
                 LocationsScreen()
+            }
+            composable("productivity") {
+                ProductivityScreen()
             }
             composable("settings") {
                 SettingsScreen()
@@ -111,6 +115,7 @@ fun HomeScreen(
     onNavigateToFinance: () -> Unit,
     onNavigateToPrayer: () -> Unit,
     onNavigateToLocations: () -> Unit,
+    onNavigateToProductivity: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val listState = rememberScalingLazyListState()
@@ -156,6 +161,17 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(0.9f),
                     colors = ChipDefaults.chipColors(
                         backgroundColor = Color(0xFF3B82F6)
+                    )
+                )
+            }
+            
+            item {
+                Chip(
+                    onClick = onNavigateToProductivity,
+                    label = { Text("✅ المهام") },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    colors = ChipDefaults.chipColors(
+                        backgroundColor = Color(0xFF8B5CF6) // Purple
                     )
                 )
             }

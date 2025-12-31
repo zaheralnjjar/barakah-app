@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, StickyNote } from 'lucide-react';
 
 interface BottomNavBarProps {
     activeTab: string;
@@ -15,7 +15,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
         { id: 'calendar', label: 'التقويم', icon: Calendar },
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
         { id: 'prayer', label: 'الصلاة', icon: Moon },
-        { id: 'map', label: 'الخرائط', icon: MapPin },
+        { id: 'map', label: 'الخريطة', icon: MapPin },
         { id: 'settings', label: 'الإعدادات', icon: Settings },
     ];
 

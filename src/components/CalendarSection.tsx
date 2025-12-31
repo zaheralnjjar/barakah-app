@@ -113,33 +113,6 @@ const CalendarSection: React.FC = () => {
                 <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>
             </div>
 
-            {/* Prayer Times Row */}
-            <div className="w-full flex justify-center">
-                <Card className="w-[80%] border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
-                    <CardContent className="py-3">
-                        <div className="flex items-center justify-between overflow-x-auto whitespace-nowrap gap-2">
-                            {prayerTimes.map((prayer) => {
-                                const Icon = getPrayerIcon(prayer.name);
-                                const isNext = nextPrayer?.name === prayer.name;
-                                return (
-                                    <div
-                                        key={prayer.name}
-                                        className={`flex flex-col items-center px-3 py-2 rounded-lg min-w-[65px] transition-all ${isNext ? 'bg-emerald-100 border-2 border-emerald-400 scale-105' : 'bg-white/50'
-                                            } `}
-                                    >
-                                        <span className="text-xs text-gray-600 font-medium">{prayer.nameAr}</span>
-                                        <Icon className={`w-4 h-4 my-1 ${isNext ? 'text-emerald-600' : 'text-gray-400'} `} />
-                                        <span className={`text-sm font-bold tabular-nums ${isNext ? 'text-emerald-700' : 'text-gray-700'} `}>
-                                            {prayer.time}
-                                        </span>
-
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
 
             {/* View Toggle */}
             <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm">
@@ -184,15 +157,6 @@ const CalendarSection: React.FC = () => {
                     الشهري
                 </button>
 
-                <div className="mr-auto">
-                    <button
-                        onClick={() => setShowPrintDialog(true)}
-                        className="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-full transition-all"
-                        title="طباعة التقرير"
-                    >
-                        <Printer className="w-5 h-5" />
-                    </button>
-                </div>
             </div>
 
             <PrintOptionsDialog isOpen={showPrintDialog} onClose={() => setShowPrintDialog(false)} />

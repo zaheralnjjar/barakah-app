@@ -580,7 +580,7 @@ const InteractiveMap = () => {
 
     return (
         <Card className="overflow-hidden border shadow-md bg-white">
-            <CardHeader className="py-2 px-3 bg-blue-50/50 border-b">
+            <CardHeader className="py-2 px-3 bg-blue-50/50 border-b pt-[max(0.5rem,env(safe-area-inset-top))]">
                 <CardTitle className="arabic-title text-sm flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-blue-600" />
@@ -678,7 +678,7 @@ const InteractiveMap = () => {
                         </MapContainer>
 
                         {/* Search overlay on map - CENTERED */}
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] flex gap-2 w-[90%] max-w-md">
+                        <div className="absolute left-1/2 -translate-x-1/2 z-[1000] flex gap-2 w-[90%] max-w-md" style={{ top: 'max(0.5rem, env(safe-area-inset-top))' }}>
                             <Button
                                 size="icon"
                                 variant="secondary"

@@ -27,6 +27,8 @@ import NavSummaryDialogs from '@/components/NavSummaryDialogs';
 import { useWidgetSync } from '@/hooks/useWidgetSync';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
+import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
+import { useQuickNotes } from '@/hooks/useQuickNotes';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -35,7 +37,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const { toast } = useToast();
+  const { appendToActivitiesNote } = useQuickNotes();
 
   // Sync Hooks
   const { syncNow } = useCloudSync();
@@ -207,7 +211,10 @@ const Index = () => {
 
             <div className="w-full">
               <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
-                <SmartDashboard onNavigateToTab={setActiveTab} />
+                <SmartDashboard
+                  onNavigateToTab={setActiveTab}
+                  onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
+                />
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
@@ -299,6 +306,12 @@ const Index = () => {
           onClose={() => setActiveSummary(null)}
         />
 
+        {/* Voice Note Recorder */}
+        <VoiceNoteRecorder
+          isOpen={showVoiceRecorder}
+          onClose={() => setShowVoiceRecorder(false)}
+          onSaveToActivities={appendToActivitiesNote}
+        />
 
         {/* AI Assistant Dialog */}
 

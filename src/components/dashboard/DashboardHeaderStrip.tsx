@@ -135,103 +135,78 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100/50 rounded-full blur-3xl -translate-y-16 translate-x-16 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-100/40 rounded-full blur-2xl translate-y-8 -translate-x-8 pointer-events-none" />
 
-                    <CardContent className="p-4 flex flex-col justify-center h-full relative z-10">
+                    <CardContent className="p-0 flex flex-col justify-center h-full relative z-10">
                         {/* Dollar Rate Row - Enhanced with Oficial & Blue */}
-                        <div className="flex justify-between items-start mb-4 pb-4 border-b border-emerald-200/50">
-                            <div className="flex items-start gap-2">
-                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <div className="flex justify-between items-center p-4 border-b-2 border-emerald-200/70">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-white rounded-xl shadow-sm">
                                     <DollarSign className="w-5 h-5 text-emerald-600" />
                                 </div>
-                                <div className="flex flex-col gap-1">
+                                <div className="flex flex-col gap-1.5">
                                     {/* Oficial Rate */}
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-gray-500 font-medium">رسمي (BNA)</span>
-                                        <span className="text-sm font-bold font-mono text-gray-700">
+                                        <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded">رسمي (BNA)</span>
+                                        <span className="text-base font-bold font-mono text-gray-700">
                                             {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
                                         </span>
                                     </div>
                                     {/* Blue Rate */}
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-blue-600 font-bold">بلو</span>
-                                        <span className="text-xl font-bold font-mono tracking-tight text-blue-700">
+                                        <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">بلو</span>
+                                        <span className="text-2xl font-bold font-mono tracking-tight text-blue-700">
                                             {financeData?.exchange_rate || '---'}
                                         </span>
                                         {financeData?.dollar_change !== 0 && (
                                             <Badge variant="outline" className={cn(
-                                                "text-[8px] py-0 px-1 border-0 h-4",
+                                                "text-[9px] py-0.5 px-1.5 border-0 h-5",
                                                 (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                                             )}>
-                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2 h-2 ml-0.5" /> : <TrendingDown className="w-2 h-2 ml-0.5" />}
+                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-3 h-3 ml-0.5" /> : <TrendingDown className="w-3 h-3 ml-0.5" />}
                                                 {Math.abs(financeData?.dollar_change || 0).toFixed(1)}
                                             </Badge>
                                         )}
                                         {financeData?.prev_exchange_rate && (
-                                            <span className="text-[9px] text-gray-400 line-through">
+                                            <span className="text-[10px] text-gray-400 line-through">
                                                 {financeData.prev_exchange_rate}
                                             </span>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-[9px] text-emerald-600 bg-white/50 px-2 py-1 rounded-full border border-emerald-100 flex flex-col items-end">
-                                <span>تحديث {format(new Date(), 'HH:mm')}</span>
+                            <div className="text-[10px] text-emerald-600 bg-white/70 px-3 py-2 rounded-xl border border-emerald-100 flex flex-col items-end shadow-sm">
+                                <span className="font-medium">تحديث {format(new Date(), 'HH:mm')}</span>
                                 {financeData?.last_update && (
-                                    <span className="opacity-60 text-[7px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar, addSuffix: true })}</span>
+                                    <span className="opacity-60 text-[8px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar, addSuffix: true })}</span>
                                 )}
                             </div>
                         </div>
 
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-3 gap-2">
+                        {/* Stats Grid - Compact 2 Columns */}
+                        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-emerald-200/70">
                             {/* Balance */}
-                            <div className="bg-white/60 rounded-lg p-2 border border-emerald-100 hover:bg-white/80 transition-colors shadow-sm">
-                                <div className="flex items-center gap-1 mb-1 text-emerald-600">
-                                    <Wallet className="w-3 h-3" />
-                                    <span className="text-[9px] font-bold">الرصيد</span>
+                            <div className="p-2 hover:bg-white/40 transition-colors">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <Wallet className="w-3 h-3 text-emerald-600" />
+                                    <span className="text-[9px] font-bold text-emerald-700">الرصيد</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <div className="text-sm font-bold truncate text-emerald-900">
-                                        {(financeData?.current_balance_ars || 0).toLocaleString()} <span className="text-[8px]">ARS</span>
-                                    </div>
-                                    <div className="text-[10px] text-emerald-600/70 font-mono">
-                                        ≈ {((financeData?.current_balance_ars || 0) / (financeData?.exchange_rate || 1)).toFixed(2)} <span className="text-[8px]">$</span>
-                                    </div>
+                                <div className="text-sm font-bold text-emerald-900">
+                                    {(financeData?.current_balance_ars || 0).toLocaleString()}
+                                    <span className="text-[8px] text-emerald-600 mr-0.5">ARS</span>
                                 </div>
                             </div>
 
-                            {/* Daily Limit & Remaining */}
-                            <div className="bg-white/60 rounded-lg p-2 border border-emerald-100 hover:bg-white/80 transition-colors shadow-sm">
-                                <div className="flex items-center gap-1 mb-1 text-emerald-600">
-                                    <Activity className="w-3 h-3" />
-                                    <span className="text-[9px] font-bold">الحد اليومي</span>
+                            {/* Daily Limit with Remaining */}
+                            <div className="p-2 hover:bg-white/40 transition-colors">
+                                <div className="flex items-center gap-1 mb-1">
+                                    <Activity className="w-3 h-3 text-emerald-600" />
+                                    <span className="text-[9px] font-bold text-emerald-700">الحد</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className="text-xs font-bold text-emerald-700">{dailyLimitARS.toLocaleString()}</span>
-                                        <div className="h-px bg-emerald-100 my-0.5 w-[80%] opacity-50"></div>
-                                        <span className={`text-xs font-bold leading-none ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-500'}`}>
-                                            {(dailyLimitARS - todayExpense).toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="text-[9px] text-emerald-600/70 font-mono mt-1">
-                                        ≈ {(dailyLimitARS / (financeData?.exchange_rate || 1)).toFixed(1)} <span className="text-[8px]">$</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expense */}
-                            <div className="bg-red-50/50 rounded-lg p-2 border border-red-100 hover:bg-red-50 transition-colors shadow-sm">
-                                <div className="flex items-center gap-1 mb-1 text-red-500">
-                                    <TrendingDown className="w-3 h-3" />
-                                    <span className="text-[9px] font-bold">مصروف اليوم</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <div className="text-sm font-bold truncate text-red-700">
-                                        {todayExpense.toLocaleString()}
-                                    </div>
-                                    <div className="text-[10px] text-red-600/70 font-mono">
-                                        ≈ {(todayExpense / (financeData?.exchange_rate || 1)).toFixed(1)} <span className="text-[8px]">$</span>
-                                    </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-sm font-bold text-emerald-800">{dailyLimitARS.toLocaleString()}</span>
+                                    <span className="text-[8px] text-gray-400">/</span>
+                                    <span className={`text-xs font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                        {(dailyLimitARS - todayExpense).toLocaleString()}
+                                    </span>
                                 </div>
                             </div>
                         </div>

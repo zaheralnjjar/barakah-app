@@ -38,9 +38,10 @@ import DashboardTicker from './dashboard/DashboardTicker';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
+    onOpenVoiceRecorder: () => void;
 }
 
-const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
+const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpenVoiceRecorder }) => {
     const { toast } = useToast();
     const navigate = useNavigate();
     const {
@@ -389,7 +390,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab }) => {
                 <QuickActionsGrid
                     onOpenAddDialog={setShowAddDialog}
                     onQuickParking={saveParking}
-                    onOpenTimer={() => window.dispatchEvent(new CustomEvent('openPomodoroDialog'))}
+                    onOpenTimer={() => setShowAddDialog('goal')} // Placeholder for timer
+                    onOpenVoiceRecorder={onOpenVoiceRecorder}
                 />
 
                 {/* Main Content Grid */}

@@ -69,6 +69,39 @@ export const useQuickNotes = () => {
         archiveNote,
         toggleSecure,
         deleteHistoryItem,
-        restoreHistoryItem
+        restoreHistoryItem,
+        // Append text to a fixed "أنشطة" (Activities) note
+        appendToActivitiesNote: (text: string) => {
+            const timestamp = new Date().toLocaleString('ar-SA', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            });
+            const entry = `[${timestamp}] ${text}`;
+
+            // Find existing "أنشطة" note
+            const activitiesIndex = notesHistory.findIndex(
+                n => n.content.startsWith('أنشطة\n') || n.content.startsWith('أنشطة:')
+            );
+
+            if (activitiesIndex >= 0) {
+                // Append to existing note
+                const existing = notesHistory[activitiesIndex];
+                const updated = [...notesHistory];
+                updated[activitiesIndex] = {
+                    ...existing,
+                    content: existing.content + '\n' + entry,
+                    createdAt: new Date().toISOString()
+                };
+                saveNoteToStorage(updated);
+            } else {
+                // Create new "أنشطة" note
+                const newNote: NoteData = {
+                    content: `أنشطة:\n${entry}`,
+                    isSecure: false,
+                    createdAt: new Date().toISOString()
+                };
+                saveNoteToStorage([newNote, ...notesHistory]);
+            }
+        }
     };
 };
