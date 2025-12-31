@@ -16,7 +16,7 @@ const WatchPlugin = registerPlugin<WatchPlugin>('WatchPlugin');
 
 export const useWatchSync = () => {
     const { toast } = useToast();
-    const { addTransaction, financeData } = useFinance();
+    const { addTransaction, financeData, calculateDailyLimit } = useFinance();
     const { saveLocation } = useLocations();
     const { prayerTimes, nextPrayer, timeUntilNext } = usePrayerTimes();
     const { tasks } = useTasks();
@@ -100,8 +100,43 @@ export const useWatchSync = () => {
                         handleLocation(innerData);
                         break;
                     case '/barakah/action/request_sync':
-                        // TODO: Send full data back to watch
-                        console.log('Watch requested sync');
+                        console.log('Watch requested sync. Sending all data...');
+                        // Send all data types
+                        if (financeData) {
+                            sendToWatch('/barakah/finance', {
+                                balanceARS: financeData.current_balance_ars || 0,
+                                balanceUSD: financeData.current_balance_usd || 0,
+                                dailyLimit: calculateDailyLimit(financeData),
+                                exchangeRate: financeData.exchange_rate || 1200
+                            });
+                        }
+
+                        if (prayerTimes && nextPrayer) {
+                            sendToWatch('/barakah/prayers', {
+                                nextPrayerName: nextPrayer.nameAr,
+                                timeRemaining: timeUntilNext,
+                                times: prayerTimes.map(p => ({
+                                    name: p.name,
+                                    nameAr: p.nameAr,
+                                    time: p.time
+                                }))
+                            });
+                        }
+
+                        if (tasks && tasks.length > 0) {
+                            const productivityData = {
+                                tasksCount: tasks.filter(t => t.progress < 100).length,
+                                topTasks: tasks.filter(t => t.progress < 100).slice(0, 3).map(t => ({
+                                    title: t.title,
+                                    priority: t.priority
+                                })),
+                                completedToday: tasks.filter(t => t.progress === 100).length // Simplification
+                            };
+                            sendToWatch('/barakah/productivity', productivityData);
+                        }
+
+                        // Send sync complete acknowledgment
+                        sendToWatch('/barakah/sync/complete', { timestamp: Date.now() });
                         break;
                     default:
                         console.log('Unknown watch path:', path);

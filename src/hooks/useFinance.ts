@@ -158,6 +158,7 @@ export const useFinance = () => {
         loading,
         dailyLimit: financeData ? calculateDailyLimit(financeData) : 0,
         refresh: fetchFinanceData,
-        addTransaction
+        addTransaction,
+        calculateDailyLimit // Expose for useWatchSync
     };
 };
