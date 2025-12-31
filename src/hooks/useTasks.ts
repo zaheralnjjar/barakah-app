@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Preferences } from '@capacitor/preferences';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface SubTask {
     id: string;
@@ -27,35 +28,64 @@ export interface MainTask {
 
 
 export const useTasks = () => {
-    const loadTasksFromStorage = () => {
+    const [tasks, setTasks] = useState<MainTask[]>([]);
+    const { toast } = useToast();
+
+    // Fetch tasks from Supabase
+    const loadTasks = async () => {
         try {
-            const savedTasks = localStorage.getItem('baraka_tasks');
-            if (savedTasks) return JSON.parse(savedTasks);
-            return [];
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('user_id', user.id); // Assuming table has user_id
+
+            if (error) throw error;
+            if (data) setTasks(data as unknown as MainTask[]);
         } catch (e) {
             console.error("Error loading tasks", e);
-            return [];
+            // Fallback to local storage if offline or error? 
+            // For "Instant Sync" priority, we focus on cloud.
+            // But let's check local storage as backup if cloud is empty (migration)
+            const savedTasks = localStorage.getItem('baraka_tasks');
+            if (savedTasks && (!tasks || tasks.length === 0)) {
+                // Option: We could auto-migrate here if we wanted.
+            }
         }
     };
 
-    const [tasks, setTasks] = useState<MainTask[]>(loadTasksFromStorage);
-    const { toast } = useToast();
-
-    const refreshTasks = () => {
-        setTasks(loadTasksFromStorage());
-    };
-
-    // Sync to Storage & Native Widget
     useEffect(() => {
-        localStorage.setItem('baraka_tasks', JSON.stringify(tasks));
+        loadTasks();
 
-        // Sync to Capacitor Preferences for Widget usage
-        // Widget expects key 'widget_tasks'
-        Preferences.set({
-            key: 'widget_tasks',
-            value: JSON.stringify(tasks.filter(t => t.progress < 100).slice(0, 5))
-        }).catch(err => console.error("Failed to sync widget tasks", err));
+        // Realtime Subscription
+        const channel = supabase
+            .channel('tasks_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tasks' },
+                () => {
+                    loadTasks();
+                }
+            )
+            .subscribe();
 
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    // Sync to Capacitor Preferences for Widget usage (Client side cache)
+    useEffect(() => {
+        // We still sync to local preferences for purely local widgets/watch functionality compatibility
+        if (tasks.length > 0) {
+            localStorage.setItem('baraka_tasks', JSON.stringify(tasks));
+            Preferences.set({
+                key: 'widget_tasks',
+                value: JSON.stringify(tasks.filter(t => t.progress < 100).slice(0, 5))
+            }).catch(err => console.error("Failed to sync widget tasks", err));
+        }
     }, [tasks]);
 
     const calculateProgress = (subtasks: SubTask[]) => {
@@ -64,76 +94,156 @@ export const useTasks = () => {
         return Math.round((completed / subtasks.length) * 100);
     };
 
-    const addTask = (taskData: Omit<MainTask, 'id' | 'subtasks' | 'progress'>) => {
+    const addTask = async (taskData: Omit<MainTask, 'id' | 'subtasks' | 'progress'>) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            toast({ title: 'يرجى تسجيل الدخول' });
+            return;
+        }
+
         const newTask: MainTask = {
             ...taskData,
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             subtasks: [],
             progress: 0,
         };
+
+        // Optimistic update
         setTasks(prev => [...prev, newTask]);
-        toast({ title: taskData.type === 'task' ? "تم إضافة المهمة" : "تم إنشاء المشروع" });
+
+        const { error } = await supabase.from('tasks').insert({
+            ...newTask,
+            user_id: user.id
+        });
+
+        if (error) {
+            console.error(error);
+            toast({ title: 'خطأ في الحفظ', variant: 'destructive' });
+            loadTasks(); // Revert
+        } else {
+            toast({ title: taskData.type === 'task' ? "تم إضافة المهمة" : "تم إنشاء المشروع" });
+        }
     };
 
-    const updateTask = (task: MainTask) => {
+    const updateTask = async (task: MainTask) => {
+        // Optimistic
         setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+
+        const { error } = await supabase.from('tasks').update(task).eq('id', task.id);
+        if (error) {
+            console.error(error);
+            toast({ title: 'خطأ في التحديث', variant: 'destructive' });
+            loadTasks();
+        }
     };
 
-    const deleteMainTask = (id: string) => {
+    const deleteMainTask = async (id: string) => {
+        // Optimistic
         setTasks(prev => prev.filter(t => t.id !== id));
-        toast({ title: "تم حذف المهمة" });
+
+        const { error } = await supabase.from('tasks').delete().eq('id', id);
+        if (error) {
+            console.error(error);
+            toast({ title: 'خطأ في الحذف', variant: 'destructive' });
+            loadTasks();
+        } else {
+            toast({ title: "تم حذف المهمة" });
+        }
     };
 
-    const addSubtask = (taskId: string, title: string) => {
+    const addSubtask = async (taskId: string, title: string) => {
         if (!title.trim()) return;
+
+        let updatedTask: MainTask | undefined;
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
-                const newSubtasks = [...t.subtasks, { id: Date.now().toString(), title, completed: false }];
-                return { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                const newSubtasks = [...t.subtasks, { id: crypto.randomUUID(), title, completed: false }];
+                updatedTask = { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                return updatedTask;
             }
             return t;
         }));
+
+        if (updatedTask) {
+            const { error } = await supabase.from('tasks').update({
+                subtasks: updatedTask.subtasks,
+                progress: updatedTask.progress
+            }).eq('id', taskId);
+
+            if (error) {
+                console.error(error);
+                loadTasks();
+            }
+        }
     };
 
-    const toggleSubtask = (taskId: string, subtaskId: string) => {
+    const toggleSubtask = async (taskId: string, subtaskId: string) => {
+        let updatedTask: MainTask | undefined;
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
                 const newSubtasks = t.subtasks.map(s =>
                     s.id === subtaskId ? { ...s, completed: !s.completed } : s
                 );
-                return { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                updatedTask = { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                return updatedTask;
             }
             return t;
         }));
+
+        if (updatedTask) {
+            const { error } = await supabase.from('tasks').update({
+                subtasks: updatedTask.subtasks,
+                progress: updatedTask.progress
+            }).eq('id', taskId);
+
+            if (error) {
+                console.error(error);
+                loadTasks();
+            }
+        }
     };
 
-    const deleteSubtask = (taskId: string, subtaskId: string) => {
+    const deleteSubtask = async (taskId: string, subtaskId: string) => {
+        let updatedTask: MainTask | undefined;
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
                 const newSubtasks = t.subtasks.filter(s => s.id !== subtaskId);
-                return { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                updatedTask = { ...t, subtasks: newSubtasks, progress: calculateProgress(newSubtasks) };
+                return updatedTask;
             }
             return t;
         }));
+
+        if (updatedTask) {
+            const { error } = await supabase.from('tasks').update({
+                subtasks: updatedTask.subtasks,
+                progress: updatedTask.progress
+            }).eq('id', taskId);
+
+            if (error) {
+                console.error(error);
+                loadTasks();
+            }
+        }
     };
 
-    // Link a task to an appointment
-    const linkToAppointment = (taskId: string, appointmentId: string) => {
+    // Linking functions (update DB directly)
+    const linkToAppointment = async (taskId: string, appointmentId: string) => {
         setTasks(prev => prev.map(t =>
             t.id === taskId ? { ...t, linkedAppointmentId: appointmentId } : t
         ));
+        await supabase.from('tasks').update({ linkedAppointmentId: appointmentId }).eq('id', taskId);
         toast({ title: 'تم الربط', description: 'تم ربط المهمة بالموعد' });
     };
 
-    // Unlink a task from an appointment
-    const unlinkFromAppointment = (taskId: string) => {
+    const unlinkFromAppointment = async (taskId: string) => {
         setTasks(prev => prev.map(t =>
             t.id === taskId ? { ...t, linkedAppointmentId: undefined } : t
         ));
+        await supabase.from('tasks').update({ linkedAppointmentId: null }).eq('id', taskId);
     };
 
-    // Set a task as preparatory for an appointment
-    const setPreparatoryFor = (taskId: string, appointmentId: string, reminderMinutes: number = 60) => {
+    const setPreparatoryFor = async (taskId: string, appointmentId: string, reminderMinutes: number = 60) => {
         setTasks(prev => prev.map(t =>
             t.id === taskId ? {
                 ...t,
@@ -141,15 +251,18 @@ export const useTasks = () => {
                 reminderBeforeAppointment: reminderMinutes
             } : t
         ));
+        await supabase.from('tasks').update({
+            isPreparatoryFor: appointmentId,
+            reminderBeforeAppointment: reminderMinutes
+        }).eq('id', taskId);
         toast({ title: 'تم التعيين', description: 'تم تعيين المهمة كمهمة تحضيرية' });
     };
 
-    // Get all preparatory tasks for a specific appointment
+    // Getters work on local state (which is synced)
     const getPreparatoryTasks = (appointmentId: string): MainTask[] => {
         return tasks.filter(t => t.isPreparatoryFor === appointmentId);
     };
 
-    // Get all tasks linked to a specific appointment
     const getLinkedTasks = (appointmentId: string): MainTask[] => {
         return tasks.filter(t => t.linkedAppointmentId === appointmentId);
     };
@@ -163,13 +276,12 @@ export const useTasks = () => {
         addSubtask,
         toggleSubtask,
         deleteSubtask,
-        // New linking functions
         linkToAppointment,
         unlinkFromAppointment,
         setPreparatoryFor,
         getPreparatoryTasks,
         getLinkedTasks,
-        refreshTasks,
+        refreshTasks: loadTasks,
     };
 };
 

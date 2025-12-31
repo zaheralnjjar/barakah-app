@@ -68,7 +68,23 @@ export const useAppointments = () => {
     useEffect(() => {
         const handleUpdates = () => loadAppointments();
         window.addEventListener('appointments-updated', handleUpdates);
-        return () => window.removeEventListener('appointments-updated', handleUpdates);
+
+        // Realtime subscription
+        const channel = supabase
+            .channel('appointments_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'appointments' },
+                () => {
+                    loadAppointments();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            window.removeEventListener('appointments-updated', handleUpdates);
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const deleteAppointment = async (id: string) => {

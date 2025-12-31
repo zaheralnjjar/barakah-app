@@ -83,7 +83,26 @@ export const useFinance = () => {
     useEffect(() => {
         fetchFinanceData();
 
-        // Optional: Realtime subscription could go here
+        // Realtime subscription for instant updates across devices
+        const channel = supabase
+            .channel('finance_updates')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: FINANCE_TABLE,
+                },
+                (payload) => {
+                    console.log('Finance update received:', payload);
+                    fetchFinanceData();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchFinanceData]);
 
     const addTransaction = async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
