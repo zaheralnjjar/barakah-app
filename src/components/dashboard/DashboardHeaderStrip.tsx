@@ -142,31 +142,25 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                 <div className="p-2.5 bg-white rounded-xl shadow-sm">
                                     <DollarSign className="w-5 h-5 text-emerald-600" />
                                 </div>
-                                <div className="flex flex-col items-center">
-                                    {/* Oficial Rate (Top - Small) */}
-                                    <span className="text-[10px] text-gray-400 font-mono font-medium leading-none mb-0.5">
+                                <div className="flex flex-col items-center justify-center gap-2">
+                                    {/* Resmi Rate */}
+                                    <span className="text-lg font-bold font-mono text-gray-500 leading-none tracking-tight">
                                         {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
                                     </span>
 
-                                    {/* Blue Rate (Bottom - Large) */}
+                                    {/* Blue Rate */}
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-bold font-mono tracking-tight text-blue-700 leading-none">
+                                        <span className="text-lg font-bold font-mono text-blue-600 leading-none tracking-tight">
                                             {financeData?.exchange_rate || '---'}
                                         </span>
                                         {financeData?.dollar_change !== 0 && (
                                             <Badge variant="outline" className={cn(
-                                                "text-[9px] py-0.5 px-1.5 border-0 h-5",
+                                                "text-[9px] py-0 px-1 border-0 h-4 min-w-[32px] justify-center flex",
                                                 (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                                             )}>
-                                                {/* Up is bad (Red), Down is good (Green) */}
-                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-3 h-3 ml-0.5" /> : <TrendingDown className="w-3 h-3 ml-0.5" />}
-                                                {Math.abs(financeData?.dollar_change || 0).toFixed(1)}
+                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2.5 h-2.5 ml-0.5" /> : <TrendingDown className="w-2.5 h-2.5 ml-0.5" />}
+                                                {Math.abs(financeData?.dollar_change || 0).toFixed(0)}
                                             </Badge>
-                                        )}
-                                        {financeData?.prev_exchange_rate && (
-                                            <span className="text-[10px] text-gray-300 line-through">
-                                                {financeData.prev_exchange_rate}
-                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -246,8 +240,8 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                             </div>
                         </div>
 
-                        {/* Prayer Grid with Intervals */}
-                        <div className="flex-1 grid grid-cols-6 divide-x divide-x-reverse divide-emerald-50 h-full min-h-[120px]">
+                        {/* Prayer Grid with Intervals - Using Flex to ensure visibility */}
+                        <div className="flex-1 flex justify-between divide-x divide-x-reverse divide-emerald-50 h-full min-h-[120px] overflow-x-auto">
                             {prayerTimes.filter(p => p.name !== 'sunset').map((prayer, idx, arr) => {
                                 const isNext = nextPrayer?.name === prayer.name;
                                 const interval = prayerIntervals[prayer.name];
@@ -256,7 +250,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <div
                                         key={prayer.name}
                                         className={cn(
-                                            "flex flex-col items-center justify-start p-2 pt-3 pb-6 text-center transition-all duration-300 relative group",
+                                            "flex-1 flex flex-col items-center justify-start p-2 pt-3 pb-6 text-center transition-all duration-300 relative group min-w-[50px]",
                                             isNext ? "bg-emerald-50/50" : "hover:bg-slate-50"
                                         )}
                                     >
