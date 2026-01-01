@@ -14,8 +14,9 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useQuickNotes } from '@/hooks/useQuickNotes';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, LayoutGrid, Calendar, Wallet, ListChecks
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -54,6 +55,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { tasks, addTask, refreshTasks } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
     const { saveParking, getParkingOnly, deleteLocation } = useLocations();
+    const { notesHistory } = useQuickNotes();
 
     const [parkingDuration, setParkingDuration] = useState<string | null>(null);
     const [latestParking, setLatestParking] = useState<any>(null);
@@ -61,6 +63,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [currentDate] = useState(new Date());
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [showFinancialReport, setShowFinancialReport] = useState(false);
+    const [showWidgetMenu, setShowWidgetMenu] = useState(false);
 
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
@@ -419,6 +422,44 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         setWeekStartDate={setWeekStartDate}
                     />
                 </div>
+
+                {/* ===== NOTES SECTION ===== */}
+                {notesHistory && notesHistory.length > 0 && (
+                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+                                    <StickyNote className="w-3 h-3" />
+                                    الملاحظات ({notesHistory.length})
+                                </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                {notesHistory.slice(0, 8).map((note, idx) => {
+                                    const firstLine = note.content.split('\n')[0].trim();
+                                    const title = firstLine.substring(0, 25) || `ملاحظة ${idx + 1}`;
+                                    const preview = note.content.substring(0, 60).replace(/\n/g, ' ');
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-100 hover:shadow-md transition-all cursor-pointer group"
+                                            onClick={() => onNavigateToTab('logistics')}
+                                        >
+                                            <div className="flex items-start gap-2">
+                                                <div className="p-1.5 bg-amber-100 rounded-full group-hover:bg-amber-200 transition-colors">
+                                                    <StickyNote className="w-3.5 h-3.5 text-amber-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-semibold text-amber-800 truncate">{title}</p>
+                                                    <p className="text-[10px] text-amber-600/70 line-clamp-2 mt-0.5 leading-tight">{preview}...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Progress Charts at the Bottom */}
                 <DashboardProgressCharts />

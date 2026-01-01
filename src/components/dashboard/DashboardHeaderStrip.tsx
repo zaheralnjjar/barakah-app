@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingDown, TrendingUp, DollarSign, Wallet, Activity, Clock, Moon, Sun, Sunrise, Sunset } from 'lucide-react';
+import { TrendingDown, TrendingUp, DollarSign, Wallet, Activity, Clock, Moon, Sun, Sunrise, Sunset, LayoutGrid, ListChecks, Calendar, ShoppingCart, StickyNote, Heart, Pill, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -25,6 +25,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
 }) => {
     const [showElapsed, setShowElapsed] = useState(false);
     const [elapsedTimeStr, setElapsedTimeStr] = useState('');
+    const [showWidgetMenu, setShowWidgetMenu] = useState(false);
 
     // Identify Previous Prayer
     const previousPrayer = useMemo(() => {
@@ -142,25 +143,28 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                 <div className="p-2.5 bg-white rounded-xl shadow-sm">
                                     <DollarSign className="w-5 h-5 text-emerald-600" />
                                 </div>
-                                <div className="flex flex-col items-center justify-center gap-2">
+                                <div className="flex flex-col items-center justify-center min-w-[100px]">
                                     {/* Resmi Rate */}
-                                    <span className="text-lg font-bold font-mono text-gray-500 leading-none tracking-tight">
+                                    <span className="text-lg font-bold font-mono text-gray-500 leading-none tracking-tight mb-1">
                                         {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
                                     </span>
 
                                     {/* Blue Rate */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg font-bold font-mono text-blue-600 leading-none tracking-tight">
+                                    <div className="relative flex items-center justify-center w-full">
+                                        <span className="text-xl font-bold font-mono text-blue-600 leading-none tracking-tight">
                                             {financeData?.exchange_rate || '---'}
                                         </span>
+                                        {/* Badge absolute to prevent center shift */}
                                         {financeData?.dollar_change !== 0 && (
-                                            <Badge variant="outline" className={cn(
-                                                "text-[9px] py-0 px-1 border-0 h-4 min-w-[32px] justify-center flex",
-                                                (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                                            )}>
-                                                {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2.5 h-2.5 ml-0.5" /> : <TrendingDown className="w-2.5 h-2.5 ml-0.5" />}
-                                                {Math.abs(financeData?.dollar_change || 0).toFixed(0)}
-                                            </Badge>
+                                            <div className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2">
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[9px] py-0 px-1.5 border-0 h-4 min-w-[32px] justify-center flex shadow-sm",
+                                                    (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                                )}>
+                                                    {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2.5 h-2.5 ml-0.5" /> : <TrendingDown className="w-2.5 h-2.5 ml-0.5" />}
+                                                    {Math.abs(financeData?.dollar_change || 0).toFixed(0)}
+                                                </Badge>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -240,9 +244,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                             </div>
                         </div>
 
-                        {/* Prayer Grid with Intervals - Using Flex to ensure visibility */}
+                        {/* Prayer Grid with Intervals */}
                         <div className="flex-1 flex justify-between divide-x divide-x-reverse divide-emerald-50 h-full min-h-[120px] overflow-x-auto">
-                            {prayerTimes.filter(p => p.name !== 'sunset').map((prayer, idx, arr) => {
+                            {/* Explicitly Order: Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha */}
+                            {['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'].map((key) => {
+                                const prayer = prayerTimes.find(p => p.name === key);
+                                if (!prayer) return null;
+
                                 const isNext = nextPrayer?.name === prayer.name;
                                 const interval = prayerIntervals[prayer.name];
 
@@ -250,7 +258,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <div
                                         key={prayer.name}
                                         className={cn(
-                                            "flex-1 flex flex-col items-center justify-start p-2 pt-3 pb-6 text-center transition-all duration-300 relative group min-w-[50px]",
+                                            "flex-1 flex flex-col items-center justify-start p-2 pt-3 pb-6 text-center transition-all duration-300 relative group min-w-[45px]",
                                             isNext ? "bg-emerald-50/50" : "hover:bg-slate-50"
                                         )}
                                     >
@@ -279,8 +287,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                             {prayer.time}
                                         </span>
 
-                                        {/* Interval to Next Prayer (Bottom of cell - with more spacing) */}
-                                        {interval && (
+                                        {key !== 'isha' && interval && (
                                             <div className="absolute bottom-1.5 left-0 right-0 flex justify-center">
                                                 <span className="text-[8px] bg-slate-100/80 text-slate-400 px-1 py-0.5 rounded-full border border-slate-200/50 whitespace-nowrap">
                                                     ➜ {interval}

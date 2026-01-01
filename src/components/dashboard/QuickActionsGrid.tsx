@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
-    CalendarPlus, CheckSquare, Target, Navigation, Timer
+    CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill
 } from 'lucide-react';
 
 interface QuickActionsGridProps {
@@ -17,11 +17,37 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
+    const [showWidgetMenu, setShowWidgetMenu] = useState(false);
+    const [selectedWidgets, setSelectedWidgets] = useState<string[]>([]);
+    const [inlineWidgetTypes, setInlineWidgetTypes] = useState<string[]>([]);
+    const [showInlineWidget, setShowInlineWidget] = useState(false);
+
+    // Check if running on mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    const widgetOptions = [
+        { type: 'finance', label: 'المالية', icon: Wallet, color: 'blue', size: '350,400' },
+        { type: 'prayer', label: 'الصلاة', icon: Clock, color: 'amber', size: '380,300' },
+        { type: 'tasks', label: 'المهام', icon: ListChecks, color: 'purple', size: '350,500' },
+        { type: 'appointments', label: 'المواعيد', icon: Calendar, color: 'rose', size: '350,450' },
+        { type: 'shopping', label: 'التسوق', icon: ShoppingCart, color: 'orange', size: '350,450' },
+        { type: 'notes', label: 'الملاحظات', icon: StickyNote, color: 'yellow', size: '350,450' },
+        { type: 'habits', label: 'العادات', icon: Heart, color: 'pink', size: '350,400' },
+        { type: 'medications', label: 'الأدوية', icon: Pill, color: 'cyan', size: '350,400' },
+        { type: 'locations', label: 'المواقع', icon: MapPin, color: 'indigo', size: '400,500' },
+    ];
+
+    const openWidgetInline = () => {
+        setInlineWidgetTypes(selectedWidgets);
+        setShowInlineWidget(true);
+        setShowWidgetMenu(false);
+        setSelectedWidgets([]);
+    };
 
     return (
         <>
             {/* ===== 3. QUICK ACTIONS ===== */}
-            <div className="grid grid-cols-6 gap-2 mb-2">
+            <div className="grid grid-cols-7 gap-2 mb-2">
                 {[
                     {
                         icon: FileText,
@@ -40,14 +66,15 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
                     { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
                     { icon: Timer, label: 'مؤقت', color: 'bg-indigo-100 text-indigo-600', action: () => onOpenTimer?.() },
+                    { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
                 ].map((item, idx) => (
                     <button
                         key={idx}
                         onClick={item.action}
-                        className={`flex flex-col items-center justify-center p-3 rounded-xl ${item.color} hover:scale-105 transition-transform`}
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl ${item.color} hover:scale-105 transition-transform`}
                     >
                         <item.icon className="w-5 h-5 mb-1" />
-                        <span className="text-[10px] font-medium">{item.label}</span>
+                        <span className="text-[9px] font-medium">{item.label}</span>
                     </button>
                 ))}
             </div>
@@ -123,6 +150,114 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                 <span className="text-sm font-medium">المواقع</span>
                             </button>
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Widget Selection Menu */}
+            <Dialog open={showWidgetMenu} onOpenChange={(open) => { setShowWidgetMenu(open); if (!open) setSelectedWidgets([]); }}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-center flex items-center justify-center gap-2">
+                            <LayoutGrid className="w-5 h-5 text-teal-500" />
+                            أدوات سطح المكتب
+                        </DialogTitle>
+                    </DialogHeader>
+                    <p className="text-xs text-gray-500 text-center mb-2">اختر أداة واحدة أو أكثر</p>
+
+                    <div className="grid grid-cols-3 gap-2 py-2">
+                        {widgetOptions.map(item => {
+                            const isSelected = selectedWidgets.includes(item.type);
+                            return (
+                                <button
+                                    key={item.type}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedWidgets(prev => prev.filter(t => t !== item.type));
+                                        } else {
+                                            setSelectedWidgets(prev => [...prev, item.type]);
+                                        }
+                                    }}
+                                    className={`relative flex flex-col items-center p-3 rounded-xl transition-all ${isSelected
+                                        ? `bg-${item.color}-200 text-${item.color}-700 ring-2 ring-${item.color}-400 scale-105`
+                                        : `bg-${item.color}-100 text-${item.color}-600 hover:scale-105`
+                                        }`}
+                                >
+                                    {isSelected && (
+                                        <div className="absolute top-1 right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                                            <CheckSquare className="w-3 h-3 text-green-600" />
+                                        </div>
+                                    )}
+                                    <item.icon className="w-5 h-5 mb-1" />
+                                    <span className="text-[10px] font-medium">{item.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-2 mt-3 pt-3 border-t">
+                        {/* Primary Button - Show Inline (Best for Mobile) */}
+                        <Button
+                            className="w-full text-xs bg-emerald-600 hover:bg-emerald-700"
+                            disabled={selectedWidgets.length === 0}
+                            onClick={openWidgetInline}
+                        >
+                            <LayoutGrid className="w-3 h-3 ml-1" />
+                            عرض هنا ({selectedWidgets.length})
+                        </Button>
+
+                        {/* Secondary Buttons - Open in Windows (Desktop) */}
+                        {!isMobile && (
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 text-xs"
+                                    disabled={selectedWidgets.length === 0}
+                                    onClick={() => {
+                                        selectedWidgets.forEach((type, idx) => {
+                                            const item = widgetOptions.find(w => w.type === type);
+                                            if (item) {
+                                                setTimeout(() => {
+                                                    window.open(`/#/widget?type=${type}`, `Barakah${type}${idx}`, `width=${item.size.split(',')[0]},height=${item.size.split(',')[1]}`);
+                                                }, idx * 200);
+                                            }
+                                        });
+                                        setShowWidgetMenu(false);
+                                        setSelectedWidgets([]);
+                                    }}
+                                >
+                                    نوافذ منفصلة
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 text-xs"
+                                    disabled={selectedWidgets.length === 0}
+                                    onClick={() => {
+                                        const types = selectedWidgets.join(',');
+                                        const height = Math.min(800, 150 + selectedWidgets.length * 120);
+                                        window.open(`/#/widget?type=${types}`, 'BarakahCombined', `width=400,height=${height}`);
+                                        setShowWidgetMenu(false);
+                                        setSelectedWidgets([]);
+                                    }}
+                                >
+                                    نافذة واحدة
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Inline Widget Display Dialog */}
+            <Dialog open={showInlineWidget} onOpenChange={setShowInlineWidget}>
+                <DialogContent className="sm:max-w-[95vw] md:max-w-[500px] max-h-[85vh] p-0 overflow-hidden">
+                    <div className="h-full overflow-auto">
+                        <iframe
+                            src={`/#/widget?type=${inlineWidgetTypes.join(',')}`}
+                            className="w-full h-[75vh] border-0"
+                            title="Barakah Widget"
+                        />
                     </div>
                 </DialogContent>
             </Dialog>

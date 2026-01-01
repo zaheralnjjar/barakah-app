@@ -6,6 +6,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 
 import Index from "./pages/Index";
+import WidgetPage from "./pages/WidgetPage";
 import NotFound from "./pages/NotFound";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -84,6 +85,7 @@ const App = () => {
         <HashRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/widget" element={<WidgetPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

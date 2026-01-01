@@ -62,7 +62,16 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         }
     }, [isOpen]);
 
-    const startRecording = useCallback(() => {
+    const startRecording = useCallback(async () => {
+        // Explicitly request microphone permission first (Critical for Desktop/Electron)
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            console.error('Microphone permission denied:', err);
+            toast({ title: 'عذراً، يجب السماح باستخدام الميكروفون', variant: 'destructive' });
+            return;
+        }
+
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
 
@@ -77,7 +86,6 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         recognition.onstart = () => {
             setIsRecording(true);
-            // Do NOT clear transcript here is key
             setInterimTranscript('');
             finalTranscriptRef.current = '';
             processedResultsRef.current = new Set();
@@ -92,14 +100,10 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 const text = result[0].transcript;
 
                 if (result.isFinal) {
-                    // Critical check: Ensure we don't process the same index twice
                     if (!processedResultsRef.current.has(i)) {
-                        // Extra safety: Check if the text is already at the end of our transcript
-                        // This handles cases where index resets or overlaps occur
                         const currentTotal = finalTranscriptRef.current.trim();
                         const textTrimmed = text.trim();
 
-                        // Prevent duplication logic
                         if (!currentTotal.endsWith(textTrimmed)) {
                             processedResultsRef.current.add(i);
                             newFinalSegment += text + ' ';
@@ -114,17 +118,15 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 finalTranscriptRef.current += newFinalSegment;
             }
 
-            // Combine previous text (before this session) + current session text
             const separator = previousTranscriptRef.current && finalTranscriptRef.current ? ' ' : '';
             setTranscript(previousTranscriptRef.current + separator + finalTranscriptRef.current);
-
             setInterimTranscript(interimContent);
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.error('Speech recognition error:', event.error);
-            if (event.error === 'not-allowed') {
-                toast({ title: 'يرجى السماح بالوصول إلى الميكروفون', variant: 'destructive' });
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                toast({ title: 'تم رفض الوصول للميكروفون', variant: 'destructive' });
             }
             setIsRecording(false);
         };
@@ -134,8 +136,12 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         };
 
         recognitionRef.current = recognition;
-        recognition.start();
-    }, [toast]);
+        try {
+            recognition.start();
+        } catch (e) {
+            console.error("Failed to start recognition:", e);
+        }
+    }, [transcript, toast]);
 
     const stopRecording = useCallback(() => {
         if (recognitionRef.current) {
@@ -247,8 +253,12 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         <textarea
                             value={transcript + (isRecording ? interimTranscript : '')}
                             onChange={(e) => {
-                                setTranscript(e.target.value);
-                                setInterimTranscript(''); // Clear interim if user edits, to avoid confusion
+                                const val = e.target.value;
+                                setTranscript(val);
+                                // IMPORTANT: Sync manual edits to reference so resuming works
+                                previousTranscriptRef.current = val;
+                                setInterimTranscript('');
+                                finalTranscriptRef.current = '';
                             }}
                             className="w-full min-h-[120px] max-h-[200px] p-4 rounded-lg border bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-right text-lg leading-relaxed resize-none dir-rtl"
                             placeholder={isRecording ? "جاري الاستماع..." : "تحدث للتسجيل أو اكتب هنا للتعديل..."}
