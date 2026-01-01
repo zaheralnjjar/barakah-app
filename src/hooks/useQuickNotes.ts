@@ -32,17 +32,80 @@ export const useQuickNotes = () => {
         } catch { return []; }
     });
 
-    const saveNoteToStorage = (notes: NoteData[]) => {
+    // Load from Supabase on mount
+    useEffect(() => {
+        const loadFromCloud = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { data } = await supabase
+                    .from(TABLES.logistics)
+                    .select('quick_notes')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (data?.quick_notes) {
+                    try {
+                        // Try to parse as JSON array (new format)
+                        const parsed = JSON.parse(data.quick_notes);
+                        if (Array.isArray(parsed)) {
+                            setNotesHistory(parsed);
+                            localStorage.setItem('baraka_notes_history', JSON.stringify(parsed));
+                            return;
+                        }
+                    } catch (e) {
+                        // If parse fails or not array, treat as legacy single string note
+                        // Only verify if we don't have better local data? 
+                        // For now, let's append it or set it if local is empty? 
+                        // Simpler: Just convert it to a note object if local is empty
+                        if (notesHistory.length === 0) {
+                            const note = { content: data.quick_notes, isSecure: false, createdAt: new Date().toISOString() };
+                            setNotesHistory([note]);
+                            localStorage.setItem('baraka_notes_history', JSON.stringify([note]));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading notes:', error);
+            }
+        };
+        loadFromCloud();
+    }, []);
+
+    const saveNoteToStorage = async (notes: NoteData[]) => {
+        // Local Save
         setNotesHistory(notes);
         localStorage.setItem('baraka_notes_history', JSON.stringify(notes));
+
+        // Cloud Save
+        try {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (user) {
+                await supabase.from(TABLES.logistics).update({
+                    quick_notes: JSON.stringify(notes),
+                    updated_at: new Date().toISOString()
+                }).eq('user_id', user.id);
+            }
+        } catch (error) {
+            console.error('Error syncing notes:', error);
+        }
     };
 
+    // Legacy support wrapper
     const saveNote = async (note: string) => {
-        localStorage.setItem('baraka_quick_notes', note);
-        const user = (await supabase.auth.getUser()).data.user;
-        if (user) {
-            await supabase.from(TABLES.logistics).update({ quick_notes: note, updated_at: new Date().toISOString() }).eq('user_id', user.id);
+        // Treat as saving a single quick note to index 0?
+        // Or just appending? The current UI uses this for the single note view.
+        // Let's assume we update the first note or create one.
+        // Actually, let's keep it simple: If using old UI, just update index 0
+        const updated = [...notesHistory];
+        if (updated.length > 0) {
+            updated[0].content = note;
+            updated[0].createdAt = new Date().toISOString();
+        } else {
+            updated.push({ content: note, isSecure: false, createdAt: new Date().toISOString() });
         }
+        await saveNoteToStorage(updated);
         toast({ title: 'تم الحفط ✅' });
     };
 
@@ -51,7 +114,6 @@ export const useQuickNotes = () => {
         const newNote: NoteData = { content: note, isSecure, createdAt: new Date().toISOString() };
         const updated = [newNote, ...notesHistory];
         saveNoteToStorage(updated);
-        localStorage.removeItem('baraka_quick_notes');
         toast({ title: 'تمت الأرشفة' });
     };
 
@@ -70,7 +132,8 @@ export const useQuickNotes = () => {
     };
 
     const restoreHistoryItem = (note: string) => {
-        localStorage.setItem('baraka_quick_notes', note);
+        // Not really used in new logic, but kept for compatibility
+        // Maybe copy to clipboard or just do nothing
     };
 
     return {
@@ -80,7 +143,7 @@ export const useQuickNotes = () => {
         toggleSecure,
         deleteHistoryItem,
         restoreHistoryItem,
-        saveNoteToStorage, // Expose for VoiceNoteRecorder
+        saveNoteToStorage,
         // Append text to a fixed "أنشطة" (Activities) note
         appendToActivitiesNote: (text: string) => {
             const timestamp = new Date().toLocaleString('ar-SA', {
