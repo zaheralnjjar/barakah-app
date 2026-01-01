@@ -173,40 +173,36 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                             </div>
                         </div>
 
-                        {/* Stats Single Row */}
-                        <div className="flex items-center justify-between p-3 bg-emerald-50/50">
-                            {/* Balance */}
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-white rounded-full shadow-sm">
-                                    <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] font-bold text-emerald-700/70">الرصيد</span>
-                                    <span className="text-xs font-bold text-emerald-900 font-mono">
-                                        {(financeData?.current_balance_ars || 0).toLocaleString()}
-                                        <span className="text-[8px] text-emerald-600 mr-0.5">ARS</span>
+                        {/* Stats Grid - 3 Columns (One Line Titles, One Line Values) */}
+                        <div className="grid grid-cols-3 divide-x divide-x-reverse divide-emerald-100/60 bg-emerald-50/30">
+                            {/* Today's Expense */}
+                            <div className="flex flex-col items-center p-2 hover:bg-white/50 transition-colors">
+                                <span className="text-[9px] font-bold text-gray-400 mb-0.5">مصروف اليوم</span>
+                                <span className="text-xs font-bold font-mono text-red-600 tracking-tight">
+                                    {todayExpense.toLocaleString()}
+                                </span>
+                            </div>
+
+                            {/* Daily Limit */}
+                            <div className="flex flex-col items-center p-2 hover:bg-white/50 transition-colors">
+                                <span className="text-[9px] font-bold text-gray-400 mb-0.5">الحد اليومي</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-xs font-bold font-mono text-emerald-700 tracking-tight">
+                                        {dailyLimitARS.toLocaleString()}
+                                    </span>
+                                    {/* Remaining indicator small */}
+                                    <span className={`text-[8px] font-mono ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                        ({(dailyLimitARS - todayExpense).toLocaleString()})
                                     </span>
                                 </div>
                             </div>
 
-                            {/* Divider */}
-                            <div className="h-8 w-px bg-emerald-200/50 mx-2" />
-
-                            {/* Daily Limit */}
-                            <div className="flex items-center gap-2">
-                                <div className="p-1.5 bg-white rounded-full shadow-sm">
-                                    <Activity className="w-3.5 h-3.5 text-emerald-600" />
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[9px] font-bold text-emerald-700/70">الحد / المتبقي</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-xs font-bold text-emerald-800 font-mono">{dailyLimitARS.toLocaleString()}</span>
-                                        <span className="text-[9px] text-gray-400">/</span>
-                                        <span className={`text-xs font-bold font-mono ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                            {(dailyLimitARS - todayExpense).toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
+                            {/* Balance */}
+                            <div className="flex flex-col items-center p-2 hover:bg-white/50 transition-colors">
+                                <span className="text-[9px] font-bold text-gray-400 mb-0.5">الرصيد</span>
+                                <span className="text-xs font-bold font-mono text-emerald-900 tracking-tight">
+                                    {(financeData?.current_balance_ars || 0).toLocaleString()} <span className="text-[7px] text-emerald-500">ARS</span>
+                                </span>
                             </div>
                         </div>
                     </CardContent>

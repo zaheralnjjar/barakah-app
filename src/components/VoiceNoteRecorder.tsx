@@ -227,15 +227,25 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                             {isRecording ? <MicOff className="w-10 h-10 text-red-600" /> : <Mic className="w-10 h-10 text-emerald-600" />}
                         </button>
                     </div>
-
-                    <div className="min-h-[120px] max-h-[200px] overflow-y-auto bg-gray-50 rounded-lg p-4 border text-right" dir="rtl">
-                        {transcript || interimTranscript ? (
-                            <p className="text-gray-800 text-lg leading-relaxed">
-                                {transcript}
-                                <span className="text-gray-400">{interimTranscript}</span>
-                            </p>
-                        ) : (
-                            <p className="text-center text-gray-400 text-sm mt-8">تحدث الآن...</p>
+                    {/* Transcript Editable Area */}
+                    <div className="relative">
+                        <textarea
+                            value={transcript + (isRecording ? interimTranscript : '')}
+                            onChange={(e) => {
+                                setTranscript(e.target.value);
+                                setInterimTranscript(''); // Clear interim if user edits, to avoid confusion
+                            }}
+                            className="w-full min-h-[120px] max-h-[200px] p-4 rounded-lg border bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-right text-lg leading-relaxed resize-none dir-rtl"
+                            placeholder={isRecording ? "جاري الاستماع..." : "تحدث للتسجيل أو اكتب هنا للتعديل..."}
+                            dir="rtl"
+                        />
+                        {isRecording && (
+                            <div className="absolute bottom-2 left-2">
+                                <span className="flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                            </div>
                         )}
                     </div>
 

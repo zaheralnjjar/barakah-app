@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface Appointment {
     id: string;
@@ -9,12 +10,21 @@ export interface Appointment {
     time: string;
     location?: string;
     notes?: string;
-    // New fields for task linking
-    preparatoryTaskIds?: string[];  // Tasks that are preparatory for this appointment
-    linkedTaskIds?: string[];       // Tasks linked to this appointment
-    convertedFromTaskId?: string;   // If this appointment was converted from a task
+    preparatoryTaskIds?: string[];
+    linkedTaskIds?: string[];
+    convertedFromTaskId?: string;
 }
 
+// Helper to convert string ID to integer ID for LocalNotifications
+const hashCode = (str: string): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+};
 
 export const useAppointments = () => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -44,14 +54,14 @@ export const useAppointments = () => {
             return;
         }
         const { data, error } = await supabase.from('appointments').insert({
-            id: crypto.randomUUID(), // Generate ID explicitly
+            id: crypto.randomUUID(),
             user_id: user.id,
             title: apptData.title,
             date: apptData.date,
             time: apptData.time,
             location: apptData.location,
             notes: apptData.notes,
-            is_completed: false // Assuming column exists
+            is_completed: false
         }).select().single();
 
         if (error) {
@@ -59,17 +69,109 @@ export const useAppointments = () => {
             return;
         }
         if (data) {
+            // Schedule Notification
+            try {
+                const dateObj = new Date(`${data.date}T${data.time}`);
+                if (dateObj > new Date()) {
+                    const notifId = hashCode(data.id);
+                    await LocalNotifications.schedule({
+                        notifications: [{
+                            title: 'تذكير بموعد',
+                            body: data.title,
+                            id: notifId,
+                            schedule: { at: dateObj },
+                            sound: 'beep.wav',
+                            extra: { appointmentId: data.id }
+                        }]
+                    });
+                    console.log('Scheduled notification for:', dateObj, 'ID:', notifId);
+                }
+            } catch (e) {
+                console.error("Failed to schedule notification:", e);
+            }
+
             setAppointments(prev => [...prev, data]);
-            toast({ title: "تم حجز الموعد" });
+            toast({ title: "تم حجز الموعد وتفعيل التذكير" });
             window.dispatchEvent(new Event('appointments-updated'));
         }
+    };
+
+    const deleteAppointment = async (id: string) => {
+        setAppointments(prev => prev.filter(a => a.id !== id));
+
+        // Cancel Notification
+        try {
+            await LocalNotifications.cancel({ notifications: [{ id: hashCode(id) }] });
+        } catch (e) { console.error("Error cancelling notification", e); }
+
+        try {
+            const { error } = await supabase.from('appointments').delete().eq('id', id);
+            if (error) throw error;
+            window.dispatchEvent(new Event('appointments-updated'));
+        } catch (e) {
+            console.error(e);
+            toast({ title: 'خطأ في الحذف' });
+            loadAppointments(); // Revert
+        }
+    };
+
+    // Linking functions
+    const addPreparatoryTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                const existing = a.preparatoryTaskIds || [];
+                if (!existing.includes(taskId)) {
+                    return { ...a, preparatoryTaskIds: [...existing, taskId] };
+                }
+            }
+            return a;
+        }));
+    };
+
+    const removePreparatoryTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                return {
+                    ...a,
+                    preparatoryTaskIds: (a.preparatoryTaskIds || []).filter(id => id !== taskId)
+                };
+            }
+            return a;
+        }));
+    };
+
+    const linkTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                const existing = a.linkedTaskIds || [];
+                if (!existing.includes(taskId)) {
+                    return { ...a, linkedTaskIds: [...existing, taskId] };
+                }
+            }
+            return a;
+        }));
+    };
+
+    const unlinkTask = (appointmentId: string, taskId: string) => {
+        setAppointments(prev => prev.map(a => {
+            if (a.id === appointmentId) {
+                return {
+                    ...a,
+                    linkedTaskIds: (a.linkedTaskIds || []).filter(id => id !== taskId)
+                };
+            }
+            return a;
+        }));
+    };
+
+    const getAppointmentsWithPreparatoryTasks = (): Appointment[] => {
+        return appointments.filter(a => a.preparatoryTaskIds && a.preparatoryTaskIds.length > 0);
     };
 
     useEffect(() => {
         const handleUpdates = () => loadAppointments();
         window.addEventListener('appointments-updated', handleUpdates);
 
-        // Realtime subscription
         const channel = supabase
             .channel('appointments_realtime')
             .on(
@@ -87,84 +189,10 @@ export const useAppointments = () => {
         };
     }, []);
 
-    const deleteAppointment = async (id: string) => {
-        // Optimistic update? Or wait?
-        // Let's do optimistic for UI
-        setAppointments(prev => prev.filter(a => a.id !== id));
-        // Then delete from DB
-        try {
-            const { error } = await supabase.from('appointments').delete().eq('id', id);
-            if (error) throw error;
-            window.dispatchEvent(new Event('appointments-updated'));
-        } catch (e) {
-            console.error(e);
-            toast({ title: 'خطأ في الحذف' });
-            // Revert logic omitted for brevity but should exist
-        }
-    };
-
-    // Add a preparatory task to an appointment
-    const addPreparatoryTask = (appointmentId: string, taskId: string) => {
-        setAppointments(prev => prev.map(a => {
-            if (a.id === appointmentId) {
-                const existing = a.preparatoryTaskIds || [];
-                if (!existing.includes(taskId)) {
-                    return { ...a, preparatoryTaskIds: [...existing, taskId] };
-                }
-            }
-            return a;
-        }));
-    };
-
-    // Remove a preparatory task from an appointment
-    const removePreparatoryTask = (appointmentId: string, taskId: string) => {
-        setAppointments(prev => prev.map(a => {
-            if (a.id === appointmentId) {
-                return {
-                    ...a,
-                    preparatoryTaskIds: (a.preparatoryTaskIds || []).filter(id => id !== taskId)
-                };
-            }
-            return a;
-        }));
-    };
-
-    // Link a task to an appointment
-    const linkTask = (appointmentId: string, taskId: string) => {
-        setAppointments(prev => prev.map(a => {
-            if (a.id === appointmentId) {
-                const existing = a.linkedTaskIds || [];
-                if (!existing.includes(taskId)) {
-                    return { ...a, linkedTaskIds: [...existing, taskId] };
-                }
-            }
-            return a;
-        }));
-    };
-
-    // Unlink a task from an appointment
-    const unlinkTask = (appointmentId: string, taskId: string) => {
-        setAppointments(prev => prev.map(a => {
-            if (a.id === appointmentId) {
-                return {
-                    ...a,
-                    linkedTaskIds: (a.linkedTaskIds || []).filter(id => id !== taskId)
-                };
-            }
-            return a;
-        }));
-    };
-
-    // Get appointments that have preparatory tasks
-    const getAppointmentsWithPreparatoryTasks = (): Appointment[] => {
-        return appointments.filter(a => a.preparatoryTaskIds && a.preparatoryTaskIds.length > 0);
-    };
-
     return {
         appointments,
         addAppointment,
         deleteAppointment,
-        // New linking functions
         addPreparatoryTask,
         removePreparatoryTask,
         linkTask,
@@ -173,4 +201,3 @@ export const useAppointments = () => {
         refreshAppointments,
     };
 };
-
