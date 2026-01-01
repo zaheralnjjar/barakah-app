@@ -242,7 +242,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                         </div>
 
                         {/* Prayer Grid with Intervals */}
-                        <div className="flex-1 grid grid-cols-6 divide-x divide-x-reverse divide-emerald-50 h-full min-h-[100px]">
+                        <div className="flex-1 grid grid-cols-6 divide-x divide-x-reverse divide-emerald-50 h-full min-h-[120px]">
                             {prayerTimes.filter(p => p.name !== 'sunset').map((prayer, idx, arr) => {
                                 const isNext = nextPrayer?.name === prayer.name;
                                 const interval = prayerIntervals[prayer.name];
@@ -251,7 +251,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                     <div
                                         key={prayer.name}
                                         className={cn(
-                                            "flex flex-col items-center justify-center p-2 text-center transition-all duration-300 relative group",
+                                            "flex flex-col items-center justify-start p-2 pt-3 pb-6 text-center transition-all duration-300 relative group",
                                             isNext ? "bg-emerald-50/50" : "hover:bg-slate-50"
                                         )}
                                     >
@@ -274,17 +274,17 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                         </span>
 
                                         <span className={cn(
-                                            "text-xs font-mono tracking-tight mb-1",
+                                            "text-xs font-mono tracking-tight",
                                             isNext ? "text-emerald-900 font-bold" : "text-gray-700"
                                         )}>
                                             {prayer.time}
                                         </span>
 
-                                        {/* Interval to Next Prayer (Bottom of cell) */}
+                                        {/* Interval to Next Prayer (Bottom of cell - with more spacing) */}
                                         {interval && (
-                                            <div className="absolute bottom-1 left-0 right-0 flex justify-center opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 rounded-full border border-slate-200 whitespace-nowrap scale-90">
-                                                    {interval} ➜
+                                            <div className="absolute bottom-1.5 left-0 right-0 flex justify-center">
+                                                <span className="text-[8px] bg-slate-100/80 text-slate-400 px-1 py-0.5 rounded-full border border-slate-200/50 whitespace-nowrap">
+                                                    ➜ {interval}
                                                 </span>
                                             </div>
                                         )}

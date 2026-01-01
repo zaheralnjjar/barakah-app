@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Check, X, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Mic, MicOff, Check, X, Loader2, ChevronDown, Plus, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 
 interface VoiceNoteRecorderProps {
     isOpen: boolean;
@@ -23,12 +25,16 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, onSaveToActivities }) => {
     const { toast } = useToast();
+    const { notesHistory, appendToNote } = useQuickNotes();
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
     const [isSupported, setIsSupported] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [selectedNoteIndex, setSelectedNoteIndex] = useState<string>('new'); // 'new' or index as string
     const recognitionRef = useRef<any>(null);
+    const finalTranscriptRef = useRef<string>(''); // Track confirmed final text
+    const processedResultsRef = useRef<Set<number>>(new Set()); // Track which results we've processed
 
     // Check for Web Speech API support
     useEffect(() => {
@@ -37,6 +43,17 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             setIsSupported(false);
         }
     }, []);
+
+    // Reset state when dialog opens
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedNoteIndex('new');
+            setTranscript('');
+            setInterimTranscript('');
+            finalTranscriptRef.current = '';
+            processedResultsRef.current = new Set();
+        }
+    }, [isOpen]);
 
     const startRecording = useCallback(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -49,43 +66,43 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         recognition.lang = 'ar-SA'; // Arabic (Saudi Arabia)
         recognition.continuous = true;
         recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
             setIsRecording(true);
             setTranscript('');
             setInterimTranscript('');
+            finalTranscriptRef.current = '';
+            processedResultsRef.current = new Set();
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let finalTranscript = '';
+            let newFinalText = '';
             let interimResult = '';
 
-            // Process all results, using isFinal to distinguish
-            for (let i = 0; i < event.results.length; i++) {
+            // Process only new results - use resultIndex to avoid reprocessing
+            for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
-                const text = result[0].transcript;
+                const text = result[0].transcript.trim();
 
                 if (result.isFinal) {
-                    // Only add if not already in our final transcript to avoid duplication
-                    if (!finalTranscript.includes(text.trim())) {
-                        finalTranscript += text + ' ';
+                    // Only add if we haven't processed this result index yet
+                    if (!processedResultsRef.current.has(i)) {
+                        processedResultsRef.current.add(i);
+                        newFinalText += text + ' ';
                     }
                 } else {
-                    interimResult = text; // Only keep the latest interim result
+                    // Only keep the latest interim result
+                    interimResult = text;
                 }
             }
 
-            // Clean up: remove any duplicated words that might occur at boundaries
-            const words = finalTranscript.split(/\s+/).filter(w => w.trim());
-            const deduped: string[] = [];
-            for (let i = 0; i < words.length; i++) {
-                // Skip if this word is same as previous (basic dedup)
-                if (i === 0 || words[i] !== words[i - 1]) {
-                    deduped.push(words[i]);
-                }
+            // Append new final text to our accumulated transcript
+            if (newFinalText) {
+                finalTranscriptRef.current += newFinalText;
+                setTranscript(finalTranscriptRef.current);
             }
 
-            setTranscript(deduped.join(' ') + ' ');
             setInterimTranscript(interimResult);
         };
 
@@ -93,7 +110,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             console.error('Speech recognition error:', event.error);
             if (event.error === 'not-allowed') {
                 toast({ title: 'يرجى السماح بالوصول إلى الميكروفون', variant: 'destructive' });
-            } else if (event.error !== 'aborted') {
+            } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
                 toast({ title: 'حدث خطأ في التسجيل', description: event.error, variant: 'destructive' });
             }
             setIsRecording(false);
@@ -123,15 +140,30 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         setIsProcessing(true);
         try {
-            onSaveToActivities(finalText);
-            toast({ title: 'تم حفظ الملاحظة الصوتية ✓', description: 'تمت الإضافة إلى ملاحظة "أنشطة"' });
+            if (selectedNoteIndex === 'new' || selectedNoteIndex === 'activities') {
+                // Save to activities note (default behavior)
+                onSaveToActivities(finalText);
+                toast({ title: 'تم حفظ الملاحظة الصوتية ✓', description: 'تمت الإضافة إلى ملاحظة "أنشطة"' });
+            } else {
+                // Append to existing note using appendToNote (includes color)
+                const noteIndex = parseInt(selectedNoteIndex);
+                const existingNote = notesHistory[noteIndex];
+                if (existingNote) {
+                    appendToNote(noteIndex, finalText);
+                    const noteTitle = existingNote.content.split('\n')[0].substring(0, 20);
+                    toast({
+                        title: 'تم الحفظ ✓',
+                        description: `تمت الإضافة إلى "${noteTitle}..."`
+                    });
+                }
+            }
             setTranscript('');
             setInterimTranscript('');
             onClose();
         } finally {
             setIsProcessing(false);
         }
-    }, [transcript, interimTranscript, onSaveToActivities, onClose, toast]);
+    }, [transcript, interimTranscript, selectedNoteIndex, notesHistory, onSaveToActivities, onClose, toast]);
 
     const handleClose = useCallback(() => {
         if (isRecording) {
@@ -152,6 +184,15 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             return () => clearTimeout(timer);
         }
     }, [isOpen, isSupported, startRecording]);
+
+    // Get note preview title (first line, max 30 chars)
+    const getNoteTitle = (note: NoteData, index: number): string => {
+        const firstLine = note.content.split('\n')[0].trim();
+        if (firstLine.length > 30) {
+            return firstLine.substring(0, 30) + '...';
+        }
+        return firstLine || `ملاحظة ${index + 1}`;
+    };
 
     if (!isSupported) {
         return (
@@ -183,6 +224,39 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {/* Target Note Selection */}
+                    <div className="bg-gray-50 rounded-lg p-3 border">
+                        <label className="text-sm text-gray-600 mb-2 block text-right">حفظ في:</label>
+                        <Select value={selectedNoteIndex} onValueChange={setSelectedNoteIndex}>
+                            <SelectTrigger className="w-full text-right">
+                                <SelectValue placeholder="اختر الملاحظة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="new">
+                                    <div className="flex items-center gap-2">
+                                        <Plus className="w-4 h-4 text-emerald-600" />
+                                        <span>إنشاء ملاحظة جديدة (أنشطة)</span>
+                                    </div>
+                                </SelectItem>
+                                {notesHistory.length > 0 && (
+                                    <>
+                                        <div className="px-2 py-1.5 text-xs text-gray-500 border-t mt-1">الملاحظات الموجودة ({notesHistory.length}):</div>
+                                        <div className="max-h-[200px] overflow-y-auto">
+                                            {notesHistory.map((note, index) => (
+                                                <SelectItem key={index} value={index.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="w-4 h-4 text-gray-400" />
+                                                        <span className="truncate">{getNoteTitle(note, index)}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     {/* Recording Status */}
                     <div className="flex justify-center">
                         <button
@@ -238,7 +312,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                             ) : (
                                 <Check className="w-4 h-4 ml-1" />
                             )}
-                            حفظ في "أنشطة"
+                            حفظ
                         </Button>
                     </div>
                 </div>

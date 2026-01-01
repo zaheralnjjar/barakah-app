@@ -9,6 +9,16 @@ export interface NoteData {
     createdAt?: string;
 }
 
+// Rotating colors for note entries (emoji circles for visual distinction)
+const NOTE_COLORS = ['🔵', '🟢', '🟡', '🟠', '🔴', '🟣', '⚪'];
+
+// Get next color based on current content
+const getNextColor = (existingContent: string): string => {
+    // Count how many entries exist (by counting separators)
+    const separatorCount = (existingContent.match(/━━━━━━━━━━━━━━━━━━━━━━/g) || []).length;
+    return NOTE_COLORS[separatorCount % NOTE_COLORS.length];
+};
+
 export const useQuickNotes = () => {
     const { toast } = useToast();
     const [notesHistory, setNotesHistory] = useState<NoteData[]>(() => {
@@ -70,13 +80,13 @@ export const useQuickNotes = () => {
         toggleSecure,
         deleteHistoryItem,
         restoreHistoryItem,
+        saveNoteToStorage, // Expose for VoiceNoteRecorder
         // Append text to a fixed "أنشطة" (Activities) note
         appendToActivitiesNote: (text: string) => {
             const timestamp = new Date().toLocaleString('ar-SA', {
                 dateStyle: 'short',
                 timeStyle: 'short'
             });
-            const entry = `[${timestamp}] ${text}`;
 
             // Find existing "أنشطة" note
             const activitiesIndex = notesHistory.findIndex(
@@ -84,17 +94,22 @@ export const useQuickNotes = () => {
             );
 
             if (activitiesIndex >= 0) {
-                // Append to existing note
+                // Append to existing note with separator line and color
                 const existing = notesHistory[activitiesIndex];
                 const updated = [...notesHistory];
+                const color = getNextColor(existing.content);
+                const separator = '\n━━━━━━━━━━━━━━━━━━━━━━\n';
+                const entry = `${separator}${color} [${timestamp}]\n${text}`;
                 updated[activitiesIndex] = {
                     ...existing,
-                    content: existing.content + '\n' + entry,
+                    content: existing.content + entry,
                     createdAt: new Date().toISOString()
                 };
                 saveNoteToStorage(updated);
             } else {
-                // Create new "أنشطة" note
+                // Create new "أنشطة" note with first color
+                const color = NOTE_COLORS[0];
+                const entry = `${color} [${timestamp}] ${text}`;
                 const newNote: NoteData = {
                     content: `أنشطة:\n${entry}`,
                     isSecure: false,
@@ -102,6 +117,29 @@ export const useQuickNotes = () => {
                 };
                 saveNoteToStorage([newNote, ...notesHistory]);
             }
+        },
+        // Update existing note by index with separator and color
+        appendToNote: (noteIndex: number, text: string) => {
+            if (noteIndex < 0 || noteIndex >= notesHistory.length) return;
+
+            const timestamp = new Date().toLocaleString('ar-SA', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            });
+
+            const existing = notesHistory[noteIndex];
+            const updated = [...notesHistory];
+            const color = getNextColor(existing.content);
+            const separator = '\n━━━━━━━━━━━━━━━━━━━━━━\n';
+            const entry = `${separator}${color} [${timestamp}]\n${text}`;
+
+            updated[noteIndex] = {
+                ...existing,
+                content: existing.content + entry,
+                createdAt: new Date().toISOString()
+            };
+            saveNoteToStorage(updated);
         }
     };
 };
+

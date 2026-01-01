@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
-import { Clock, RefreshCw } from 'lucide-react';
+import { Clock, RefreshCw, Sunrise } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const PrayerTimesCard: React.FC = () => {
@@ -19,6 +19,9 @@ const PrayerTimesCard: React.FC = () => {
     const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { day: 'numeric', month: 'long' }).format(today);
     const gregorianDate = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long' }).format(today);
     const dayName = new Intl.DateTimeFormat('ar-EG', { weekday: 'long' }).format(today);
+
+    // Get sunrise time
+    const sunriseTime = prayerTimes.find(p => p.name === 'sunrise');
 
     return (
         <Card className="overflow-hidden shadow-sm border-0">
@@ -40,7 +43,7 @@ const PrayerTimesCard: React.FC = () => {
             <CardContent className="pt-1 px-3 pb-3">
                 {/* Next Prayer Highlight */}
                 {nextPrayer && (
-                    <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-xl p-4 mb-3 shadow-lg relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-xl p-4 mb-4 shadow-lg relative overflow-hidden">
                         {/* Background pattern opacity */}
                         <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
 
@@ -57,6 +60,14 @@ const PrayerTimesCard: React.FC = () => {
                                 </p>
                             </div>
 
+                            {/* Sunrise time indicator */}
+                            {sunriseTime && (
+                                <div className="flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-amber-500/30 backdrop-blur-sm text-xs border border-amber-300/30">
+                                    <Sunrise className="w-3.5 h-3.5 text-amber-200" />
+                                    <span className="text-amber-100">الشروق: {sunriseTime.time}</span>
+                                </div>
+                            )}
+
                             <div className="w-full h-px bg-white/20 my-3"></div>
 
                             <div className="flex items-center justify-between w-full text-xs opacity-90 px-1 font-medium arabic-body">
@@ -68,23 +79,23 @@ const PrayerTimesCard: React.FC = () => {
                     </div>
                 )}
 
-                {/* All Prayer Times */}
-                <div className="grid grid-cols-3 gap-2">
-                    {prayerTimes
-                        .filter(p => p.name !== 'sunrise')
-                        .map(prayer => (
-                            <div
-                                key={prayer.name}
-                                className={`text-center p-2 rounded-lg ${nextPrayer?.name === prayer.name
-                                    ? 'bg-primary/20 ring-2 ring-primary/30'
+                {/* All Prayer Times - Including Sunrise */}
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                    {prayerTimes.map(prayer => (
+                        <div
+                            key={prayer.name}
+                            className={`text-center p-2 rounded-lg ${nextPrayer?.name === prayer.name
+                                ? 'bg-primary/20 ring-2 ring-primary/30'
+                                : prayer.name === 'sunrise'
+                                    ? 'bg-amber-50 border border-amber-200'
                                     : 'bg-gray-50'
-                                    }`}
-                            >
-                                <p className="text-lg">{getPrayerEmoji(prayer.name)}</p>
-                                <p className="text-xs arabic-body font-medium">{prayer.nameAr}</p>
-                                <p className="text-sm font-bold">{prayer.time}</p>
-                            </div>
-                        ))}
+                                }`}
+                        >
+                            <p className="text-lg">{getPrayerEmoji(prayer.name)}</p>
+                            <p className="text-xs arabic-body font-medium">{prayer.nameAr}</p>
+                            <p className="text-sm font-bold">{prayer.time}</p>
+                        </div>
+                    ))}
                 </div>
 
 
@@ -94,3 +105,4 @@ const PrayerTimesCard: React.FC = () => {
 };
 
 export default PrayerTimesCard;
+

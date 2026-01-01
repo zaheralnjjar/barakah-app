@@ -5,55 +5,55 @@ import android.app.NotificationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.content.Context;
+import android.util.Log;
 import com.getcapacitor.BridgeActivity;
-import com.barakah.app.WatchPlugin;
 
 public class MainActivity extends BridgeActivity {
-        private android.content.BroadcastReceiver watchReceiver;
+        private static final String TAG = "BarakahApp";
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
-                registerPlugin(WatchPlugin.class);
-                super.onCreate(savedInstanceState);
-                createNotificationChannels();
-                setupWatchReceiver();
+                try {
+                        // Set up global exception handler to prevent sudden crashes
+                        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                                @Override
+                                public void uncaughtException(Thread thread, Throwable throwable) {
+                                        Log.e(TAG, "Uncaught exception: " + throwable.getMessage(), throwable);
+                                        // Allow the app to restart gracefully instead of crashing
+                                }
+                        });
+
+                        super.onCreate(savedInstanceState);
+                        createNotificationChannels();
+                        Log.d(TAG, "MainActivity created successfully");
+                } catch (Exception e) {
+                        Log.e(TAG, "Error in onCreate: " + e.getMessage(), e);
+                        super.onCreate(savedInstanceState);
+                }
         }
 
         @Override
         public void onDestroy() {
-                super.onDestroy();
-                if (watchReceiver != null) {
-                        unregisterReceiver(watchReceiver);
+                try {
+                        super.onDestroy();
+                        Log.d(TAG, "MainActivity destroyed");
+                } catch (Exception e) {
+                        Log.e(TAG, "Error in onDestroy: " + e.getMessage(), e);
                 }
         }
 
-        private void setupWatchReceiver() {
-                watchReceiver = new android.content.BroadcastReceiver() {
-                        @Override
-                        public void onReceive(android.content.Context context, android.content.Intent intent) {
-                                if ("com.barakah.app.WATCH_MESSAGE".equals(intent.getAction())) {
-                                        String path = intent.getStringExtra("path");
-                                        String data = intent.getStringExtra("data");
+        @Override
+        public void onLowMemory() {
+                super.onLowMemory();
+                Log.w(TAG, "Low memory warning received");
+                // Clear any caches if needed
+        }
 
-                                        // Create a JSON object to send to JS
-                                        String jsData = String.format("{\"path\": \"%s\", \"data\": %s}", path,
-                                                        data.isEmpty() ? "{}" : data);
-
-                                        // Trigger event in WebView
-                                        // "watch_event" will be the event name window.addEventListener('watch_event',
-                                        // ...)
-                                        if (getBridge() != null) {
-                                                getBridge().triggerWindowJSEvent("watch_event", jsData);
-                                        }
-                                }
-                        }
-                };
-
-                android.content.IntentFilter filter = new android.content.IntentFilter("com.barakah.app.WATCH_MESSAGE");
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        registerReceiver(watchReceiver, filter, Context.RECEIVER_EXPORTED);
-                } else {
-                        registerReceiver(watchReceiver, filter);
+        @Override
+        public void onTrimMemory(int level) {
+                super.onTrimMemory(level);
+                if (level >= TRIM_MEMORY_MODERATE) {
+                        Log.w(TAG, "Memory trimming at level: " + level);
                 }
         }
 

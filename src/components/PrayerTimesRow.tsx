@@ -134,7 +134,7 @@ const PrayerTimesRow: React.FC<PrayerTimesRowProps> = ({ className = "grid grid-
 
             {/* Interval Footer (Optional / Compact) */}
             {prayerTimes.length > 0 && (
-                <div className="grid grid-cols-5 bg-white/50 border-t border-emerald-100/50 py-1">
+                <div className="grid grid-cols-5 bg-white/50 border-t border-emerald-100/50 py-1.5 mt-1">
                     {[0, 1, 2, 3, 4].map((idx) => {
                         const currentPrayer = prayerTimes.find(p => p.name.toLowerCase() === PRAYER_ORDER[idx]);
                         const nextPrayerData = prayerTimes.find(p => p.name.toLowerCase() === PRAYER_ORDER[idx + 1]);
@@ -153,7 +153,7 @@ const PrayerTimesRow: React.FC<PrayerTimesRowProps> = ({ className = "grid grid-
 
                         return (
                             <div key={idx} className="flex flex-col items-center border-l last:border-l-0 border-emerald-100/30">
-                                <span className="text-[8px] text-gray-400 font-mono">{text}</span>
+                                <span className="text-[7px] text-gray-400 font-mono leading-none">{text}</span>
                             </div>
                         );
                     })}
