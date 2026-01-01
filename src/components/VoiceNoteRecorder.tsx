@@ -35,6 +35,8 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const recognitionRef = useRef<any>(null);
     const finalTranscriptRef = useRef<string>('');
     const processedResultsRef = useRef<Set<number>>(new Set());
+    // Add reference for resumption
+    const previousTranscriptRef = useRef<string>('');
 
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -46,16 +48,26 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     useEffect(() => {
         if (isOpen) {
             setSelectedNoteIndex('new');
+            // Don't clear transcript if just reopening? Usually we clear on open new.
+            // But user wants to RESUME. 
+            // If user closes dialog, we probably should clear or save draft?
+            // Current behavior: clear on open. 
+            // The request is about "resume recording" while dialog is open (stop/start mic).
+            // So clearing on open is fine.
             setTranscript('');
             setInterimTranscript('');
             finalTranscriptRef.current = '';
             processedResultsRef.current = new Set();
+            previousTranscriptRef.current = '';
         }
     }, [isOpen]);
 
     const startRecording = useCallback(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) return;
+
+        // Capture current text as the starting point for this session
+        previousTranscriptRef.current = transcript;
 
         const recognition = new SpeechRecognition();
         recognition.lang = 'ar-SA';
@@ -65,7 +77,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         recognition.onstart = () => {
             setIsRecording(true);
-            setTranscript('');
+            // Do NOT clear transcript here is key
             setInterimTranscript('');
             finalTranscriptRef.current = '';
             processedResultsRef.current = new Set();
@@ -87,7 +99,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         const currentTotal = finalTranscriptRef.current.trim();
                         const textTrimmed = text.trim();
 
-                        // Only append if it's not a direct duplicate of the suffix
+                        // Prevent duplication logic
                         if (!currentTotal.endsWith(textTrimmed)) {
                             processedResultsRef.current.add(i);
                             newFinalSegment += text + ' ';
@@ -100,8 +112,11 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
             if (newFinalSegment) {
                 finalTranscriptRef.current += newFinalSegment;
-                setTranscript(finalTranscriptRef.current);
             }
+
+            // Combine previous text (before this session) + current session text
+            const separator = previousTranscriptRef.current && finalTranscriptRef.current ? ' ' : '';
+            setTranscript(previousTranscriptRef.current + separator + finalTranscriptRef.current);
 
             setInterimTranscript(interimContent);
         };
