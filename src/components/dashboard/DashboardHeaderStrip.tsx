@@ -142,18 +142,15 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                 <div className="p-2.5 bg-white rounded-xl shadow-sm">
                                     <DollarSign className="w-5 h-5 text-emerald-600" />
                                 </div>
-                                <div className="flex flex-col gap-1.5">
-                                    {/* Oficial Rate */}
+                                <div className="flex flex-col items-center">
+                                    {/* Oficial Rate (Top - Small) */}
+                                    <span className="text-[10px] text-gray-400 font-mono font-medium leading-none mb-0.5">
+                                        {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
+                                    </span>
+
+                                    {/* Blue Rate (Bottom - Large) */}
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded">رسمي (BNA)</span>
-                                        <span className="text-base font-bold font-mono text-gray-700">
-                                            {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
-                                        </span>
-                                    </div>
-                                    {/* Blue Rate */}
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">بلو</span>
-                                        <span className="text-2xl font-bold font-mono tracking-tight text-blue-700">
+                                        <span className="text-2xl font-bold font-mono tracking-tight text-blue-700 leading-none">
                                             {financeData?.exchange_rate || '---'}
                                         </span>
                                         {financeData?.dollar_change !== 0 && (
@@ -161,12 +158,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                                                 "text-[9px] py-0.5 px-1.5 border-0 h-5",
                                                 (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                                             )}>
+                                                {/* Up is bad (Red), Down is good (Green) */}
                                                 {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-3 h-3 ml-0.5" /> : <TrendingDown className="w-3 h-3 ml-0.5" />}
                                                 {Math.abs(financeData?.dollar_change || 0).toFixed(1)}
                                             </Badge>
                                         )}
                                         {financeData?.prev_exchange_rate && (
-                                            <span className="text-[10px] text-gray-400 line-through">
+                                            <span className="text-[10px] text-gray-300 line-through">
                                                 {financeData.prev_exchange_rate}
                                             </span>
                                         )}
@@ -176,7 +174,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                             <div className="text-[10px] text-emerald-600 bg-white/70 px-3 py-2 rounded-xl border border-emerald-100 flex flex-col items-end shadow-sm">
                                 <span className="font-medium">تحديث {format(new Date(), 'HH:mm')}</span>
                                 {financeData?.last_update && (
-                                    <span className="opacity-60 text-[8px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar, addSuffix: true })}</span>
+                                    <span className="opacity-60 text-[8px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar })}</span>
                                 )}
                             </div>
                         </div>
