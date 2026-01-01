@@ -77,33 +77,31 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         };
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let newFinalText = '';
-            let interimResult = '';
+            let interimContent = '';
+            let finalSegment = '';
 
-            // Process only new results - use resultIndex to avoid reprocessing
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
-                const text = result[0].transcript.trim();
+                const transcriptText = result[0].transcript;
 
                 if (result.isFinal) {
-                    // Only add if we haven't processed this result index yet
                     if (!processedResultsRef.current.has(i)) {
                         processedResultsRef.current.add(i);
-                        newFinalText += text + ' ';
+                        // Add space only if we have previous content
+                        finalSegment += transcriptText + ' ';
                     }
                 } else {
-                    // Only keep the latest interim result
-                    interimResult = text;
+                    interimContent += transcriptText;
                 }
             }
 
-            // Append new final text to our accumulated transcript
-            if (newFinalText) {
-                finalTranscriptRef.current += newFinalText;
+            if (finalSegment) {
+                // Update specific ref directly to avoid race conditions
+                finalTranscriptRef.current = (finalTranscriptRef.current + finalSegment);
                 setTranscript(finalTranscriptRef.current);
             }
 
-            setInterimTranscript(interimResult);
+            setInterimTranscript(interimContent);
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {

@@ -181,32 +181,39 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                             </div>
                         </div>
 
-                        {/* Stats Grid - Compact 2 Columns */}
-                        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-emerald-200/70">
+                        {/* Stats Single Row */}
+                        <div className="flex items-center justify-between p-3 bg-emerald-50/50">
                             {/* Balance */}
-                            <div className="p-2 hover:bg-white/40 transition-colors">
-                                <div className="flex items-center gap-1 mb-1">
-                                    <Wallet className="w-3 h-3 text-emerald-600" />
-                                    <span className="text-[9px] font-bold text-emerald-700">الرصيد</span>
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-white rounded-full shadow-sm">
+                                    <Wallet className="w-3.5 h-3.5 text-emerald-600" />
                                 </div>
-                                <div className="text-sm font-bold text-emerald-900">
-                                    {(financeData?.current_balance_ars || 0).toLocaleString()}
-                                    <span className="text-[8px] text-emerald-600 mr-0.5">ARS</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-bold text-emerald-700/70">الرصيد</span>
+                                    <span className="text-xs font-bold text-emerald-900 font-mono">
+                                        {(financeData?.current_balance_ars || 0).toLocaleString()}
+                                        <span className="text-[8px] text-emerald-600 mr-0.5">ARS</span>
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Daily Limit with Remaining */}
-                            <div className="p-2 hover:bg-white/40 transition-colors">
-                                <div className="flex items-center gap-1 mb-1">
-                                    <Activity className="w-3 h-3 text-emerald-600" />
-                                    <span className="text-[9px] font-bold text-emerald-700">الحد</span>
+                            {/* Divider */}
+                            <div className="h-8 w-px bg-emerald-200/50 mx-2" />
+
+                            {/* Daily Limit */}
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-white rounded-full shadow-sm">
+                                    <Activity className="w-3.5 h-3.5 text-emerald-600" />
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-sm font-bold text-emerald-800">{dailyLimitARS.toLocaleString()}</span>
-                                    <span className="text-[8px] text-gray-400">/</span>
-                                    <span className={`text-xs font-bold ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                        {(dailyLimitARS - todayExpense).toLocaleString()}
-                                    </span>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[9px] font-bold text-emerald-700/70">الحد / المتبقي</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-bold text-emerald-800 font-mono">{dailyLimitARS.toLocaleString()}</span>
+                                        <span className="text-[9px] text-gray-400">/</span>
+                                        <span className={`text-xs font-bold font-mono ${(dailyLimitARS - todayExpense) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                            {(dailyLimitARS - todayExpense).toLocaleString()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
