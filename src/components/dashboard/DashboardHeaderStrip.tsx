@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
     TrendingDown, TrendingUp, Wallet,
     Clock, Moon, Sun, Sunrise,
-    BadgeDollarSign, ChevronDown, ChevronUp
+    ChevronDown, ChevronUp, BadgeDollarSign
 } from 'lucide-react';
 import { useFinance } from '@/hooks/useFinance';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
@@ -91,31 +90,7 @@ const DashboardHeaderStrip: React.FC = () => {
         <div className="w-full space-y-3 animate-fade-in font-sans">
             <div className="flex flex-col lg:flex-row gap-3">
 
-                {/* 1. Dollar Exchange Rate Card (Always visible, small) */}
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50 min-w-[150px]">
-                    <CardContent className="p-3 flex flex-col justify-center h-full">
-                        <div className="flex items-center gap-2 mb-2">
-                            <BadgeDollarSign className="w-4 h-4 text-blue-600" />
-                            <span className="text-xs font-bold text-blue-800">أسعار الصرف</span>
-                        </div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-gray-500 font-medium">الرسمي</span>
-                                <span className="text-xs font-mono font-bold text-gray-700 bg-white/50 px-1.5 py-0.5 rounded">
-                                    {dollarRates?.official || '---'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-blue-600 font-medium">بلو</span>
-                                <span className="text-xs font-mono font-bold text-blue-700 bg-white/50 px-1.5 py-0.5 rounded">
-                                    {dollarRates?.blue || financeData?.exchange_rate || '---'}
-                                </span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* 2. Financial Summary Card (Collapsible) */}
+                {/* 1. Financial Summary Card (Combined with Dollar Rates) */}
                 <Card className="border-0 shadow-sm flex-1 bg-white overflow-hidden transition-all duration-300">
                     <CardContent className="p-0">
                         {/* Header (Always Visible) */}
@@ -124,11 +99,18 @@ const DashboardHeaderStrip: React.FC = () => {
                             onClick={() => setExpandFinance(!expandFinance)}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600">
+                                <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 relative">
                                     <Wallet className="w-4 h-4" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-gray-700">الملخص المالي</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-gray-700">الملخص المالي</span>
+                                        {/* Mini Dollar Badge */}
+                                        <div className="flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                            <span className="text-[9px] text-blue-400">$</span>
+                                            <span className="text-[9px] font-mono font-bold text-blue-600">{dollarRates?.blue || '---'}</span>
+                                        </div>
+                                    </div>
                                     {!expandFinance && (
                                         <div className="flex items-center gap-1.5 mt-0.5">
                                             <span className={`text-[10px] font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
@@ -147,6 +129,19 @@ const DashboardHeaderStrip: React.FC = () => {
                         {expandFinance && (
                             <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-1">
                                 <div className="h-px w-full bg-gray-100 mb-2"></div>
+
+                                {/* Expanded Dollar Rates */}
+                                <div className="flex justify-between items-center mb-2 px-1 bg-blue-50/50 p-1.5 rounded">
+                                    <div className="flex items-center gap-1">
+                                        <BadgeDollarSign className="w-3 h-3 text-blue-500" />
+                                        <span className="text-[10px] font-bold text-blue-700">أسعار الصرف:</span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <span className="text-[10px] text-gray-600">رسمي: <b className="font-mono">{dollarRates?.official || '---'}</b></span>
+                                        <span className="text-[10px] text-blue-600">بلو: <b className="font-mono">{dollarRates?.blue || '---'}</b></span>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-3 gap-2 divide-x divide-x-reverse divide-gray-100">
                                     <div className="text-center px-1">
                                         <p className="text-[9px] text-gray-400 mb-0.5">الحد اليومي</p>
@@ -168,7 +163,7 @@ const DashboardHeaderStrip: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                {/* 3. Prayer Times Card (Collapsible) */}
+                {/* 2. Prayer Times Card (Collapsible) */}
                 <Card className="border-0 shadow-md bg-emerald-50/50 overflow-hidden flex-1 min-w-[300px] transition-all duration-300">
                     <CardContent className="p-0">
                         {/* Header (Always Visible) */}
