@@ -16,7 +16,7 @@ import { useLocations } from '@/hooks/useLocations';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, LayoutGrid, Calendar, Wallet, ListChecks
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, Pin, LayoutGrid, Calendar, Wallet, ListChecks
 } from 'lucide-react';
 
 import InteractiveMap from '@/components/InteractiveMap';
@@ -55,7 +55,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { tasks, addTask, refreshTasks } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
     const { saveParking, getParkingOnly, deleteLocation } = useLocations();
-    const { notesHistory } = useQuickNotes();
+    const { notesHistory, togglePin } = useQuickNotes();
 
     const [parkingDuration, setParkingDuration] = useState<string | null>(null);
     const [latestParking, setLatestParking] = useState<any>(null);
@@ -326,21 +326,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             {/* 2. Finance & Prayer Header Strip */}
             <div className="px-2 pt-1 pb-2 max-w-7xl mx-auto">
-                <DashboardHeaderStrip
-                    financeData={{
-                        ...financeData,
-                        exchange_rate: dollarRates?.real_blue?.value_sell ?? dollarRates?.blue?.value_sell, // Use Real Blue for display, fallback to Blue (which is Official now)
-                        oficial_rate: dollarRates?.oficial?.value_sell,
-                        prev_exchange_rate: dollarRates?.previous_blue?.value_avg,
-                        dollar_change: dollarRates?.change,
-                        last_update: dollarRates?.last_update,
-                    }}
-                    todayExpense={todayExpense}
-                    dailyLimitARS={dailyLimitARS}
-                    prayerTimes={prayerTimes}
-                    nextPrayer={nextPrayer}
-                    timeUntilNext={timeUntilNext}
-                />
+                <DashboardHeaderStrip />
             </div>
 
             <div
@@ -441,16 +427,27 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                     return (
                                         <div
                                             key={idx}
-                                            className="p-3 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg border border-amber-100 hover:shadow-md transition-all cursor-pointer group"
+                                            className={`p-3 rounded-lg border hover:shadow-md transition-all cursor-pointer group relative ${note.isPinned
+                                                ? 'bg-amber-50 border-amber-200'
+                                                : 'bg-white border-gray-100 hover:border-amber-200'}`}
                                             onClick={() => onNavigateToTab('logistics')}
                                         >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    togglePin(idx);
+                                                }}
+                                                className={`absolute top-2 left-2 p-1 rounded-full z-10 ${note.isPinned ? 'text-amber-600 bg-amber-100' : 'text-gray-300 opacity-0 group-hover:opacity-100 hover:bg-gray-100'}`}
+                                            >
+                                                <Pin className="w-3 h-3" fill={note.isPinned ? "currentColor" : "none"} />
+                                            </button>
                                             <div className="flex items-start gap-2">
-                                                <div className="p-1.5 bg-amber-100 rounded-full group-hover:bg-amber-200 transition-colors">
-                                                    <StickyNote className="w-3.5 h-3.5 text-amber-600" />
+                                                <div className={`p-1.5 rounded-full transition-colors ${note.isPinned ? 'bg-amber-200' : 'bg-gray-100 group-hover:bg-amber-100'}`}>
+                                                    <StickyNote className={`w-3.5 h-3.5 ${note.isPinned ? 'text-amber-700' : 'text-gray-500 group-hover:text-amber-600'}`} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-semibold text-amber-800 truncate">{title}</p>
-                                                    <p className="text-[10px] text-amber-600/70 line-clamp-2 mt-0.5 leading-tight">{preview}...</p>
+                                                    <p className={`text-xs font-semibold truncate ${note.isPinned ? 'text-amber-900' : 'text-gray-700'}`}>{title}</p>
+                                                    <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5 leading-tight">{preview}...</p>
                                                 </div>
                                             </div>
                                         </div>

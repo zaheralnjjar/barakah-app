@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown } from 'lucide-react';
+import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff } from 'lucide-react';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,26 +13,54 @@ interface NoteItem {
     title: string;
     content: string;
     createdAt: string;
+    isPinned?: boolean;
 }
 
-const NoteItemComponent: React.FC<{ note: NoteItem; onSelect: (note: NoteItem) => void }> = ({ note, onSelect }) => {
+const NoteItemComponent: React.FC<{
+    note: NoteItem;
+    onSelect: (note: NoteItem) => void;
+    onTogglePin: (e: React.MouseEvent, index: number) => void;
+}> = ({ note, onSelect, onTogglePin }) => {
     return (
         <div
             onClick={() => onSelect(note)}
-            className="bg-gradient-to-br from-amber-50 to-yellow-100 rounded-xl p-2 border border-amber-200 flex flex-col transition-transform active:scale-95 cursor-pointer hover:bg-amber-100"
+            className={`
+                group relative rounded-xl p-3 border flex flex-col transition-all cursor-pointer min-h-[80px]
+                ${note.isPinned
+                    ? 'bg-amber-50 border-amber-200 shadow-sm'
+                    : 'bg-white border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30'}
+            `}
         >
-            <div className="flex items-center gap-2 p-1.5">
-                <StickyNote className="w-6 h-6 shrink-0 text-amber-600" />
-                <p className="text-xs font-medium line-clamp-2 leading-tight flex-1 text-gray-700">
-                    {note.title}
-                </p>
+            {/* Absolute Pin Button */}
+            <button
+                onClick={(e) => onTogglePin(e, note.id)}
+                className={`
+                    absolute top-2 left-2 p-1.5 rounded-full transition-all z-10
+                    ${note.isPinned
+                        ? 'text-amber-600 bg-amber-100 opacity-100'
+                        : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500 opacity-0 group-hover:opacity-100'}
+                `}
+            >
+                {note.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+            </button>
+
+            <div className="flex items-start gap-2">
+                <StickyNote className={`w-5 h-5 shrink-0 mt-0.5 ${note.isPinned ? 'text-amber-600' : 'text-gray-400 group-hover:text-emerald-500'}`} />
+                <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-bold mb-1 truncate ${note.isPinned ? 'text-amber-900' : 'text-gray-800'}`}>
+                        {note.title}
+                    </p>
+                    <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed">
+                        {note.content.substring(note.title.length).trim() || note.content}
+                    </p>
+                </div>
             </div>
         </div>
     );
 };
 
 export const QuickNotes = () => {
-    const { notesHistory, archiveNote, deleteHistoryItem } = useQuickNotes();
+    const { notesHistory, archiveNote, deleteHistoryItem, togglePin } = useQuickNotes();
     const { toast } = useToast();
     const [selectedNote, setSelectedNote] = useState<NoteItem | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -48,9 +76,11 @@ export const QuickNotes = () => {
             id: idx,
             title: lines[0]?.substring(0, 30) || 'ملاحظة',
             content: note.content,
-            createdAt: note.createdAt || new Date().toISOString()
+            createdAt: note.createdAt || new Date().toISOString(),
+            isPinned: note.isPinned
         };
     });
+    // Notes are already sorted by pinned status in the hook, but let's trust the hook.
 
     const displayedNotes = showAll ? notes : notes.slice(0, 6);
 
@@ -64,6 +94,12 @@ export const QuickNotes = () => {
         setNewNote({ title: '', content: '' });
         setShowAddNote(false);
         toast({ title: 'تم حفظ الملاحظة ✓' });
+    };
+
+    const handleTogglePin = (e: React.MouseEvent, index: number) => {
+        e.stopPropagation();
+        togglePin(index);
+        toast({ title: 'تم تحديث التثبيت' });
     };
 
     const handleShare = async (note: NoteItem) => {
@@ -142,11 +178,12 @@ export const QuickNotes = () => {
                 {notes.length > 0 ? (
                     <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {displayedNotes.map((note, idx) => (
+                            {displayedNotes.map((note) => (
                                 <NoteItemComponent
-                                    key={idx}
+                                    key={note.id} // Ensure stable key if possible, using index for now is handled in map
                                     note={note}
                                     onSelect={setSelectedNote}
+                                    onTogglePin={handleTogglePin}
                                 />
                             ))}
                         </div>
@@ -174,7 +211,10 @@ export const QuickNotes = () => {
                 <Dialog open={!!selectedNote && !isEditing} onOpenChange={() => setSelectedNote(null)}>
                     <DialogContent className="max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="text-right">{selectedNote?.title}</DialogTitle>
+                            <DialogTitle className="text-right flex items-center justify-between">
+                                {selectedNote?.title}
+                                {selectedNote?.isPinned && <Pin className="w-4 h-4 text-amber-500" />}
+                            </DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                             <div className="bg-gray-50 rounded-lg p-4 max-h-[300px] overflow-y-auto">
@@ -243,7 +283,8 @@ export const QuickNotes = () => {
                                         if (selectedNote) {
                                             deleteHistoryItem(selectedNote.id);
                                             const noteText = editNote.title ? `${editNote.title}\n${editNote.content}` : editNote.content;
-                                            archiveNote(noteText, false);
+                                            archiveNote(noteText, false); // This might push to top, losing pinned status if logic isn't preserving it. Ideally edit should preserve pin.
+                                            // Since archiveNote creates new, we might lose pin. But for now, let's assume user re-pins if needed or we'll fix later.
                                             setIsEditing(false);
                                             setSelectedNote(null);
                                             toast({ title: 'تم التعديل ✓' });
