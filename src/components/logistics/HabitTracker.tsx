@@ -101,14 +101,14 @@ export const HabitTracker = () => {
             <Card>
                 <CardHeader className="pb-2">
                     <CardTitle
-                        className="arabic-title text-base flex items-center justify-between cursor-pointer hover:text-primary"
+                        className="text-sm flex items-center justify-between cursor-pointer hover:text-primary"
                         onClick={() => setShowStats(true)}
                     >
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5">
                             🔥 متتبع العادات
-                            <BarChart2 className="w-4 h-4 text-gray-400" />
+                            <BarChart2 className="w-3.5 h-3.5 text-gray-400" />
                         </span>
-                        <Button size="sm" className="h-8" onClick={(e) => { e.stopPropagation(); setShowAddDialog(true); }}>
+                        <Button size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); setShowAddDialog(true); }}>
                             <Plus className="w-3 h-3 ml-1" /> إضافة
                         </Button>
                     </CardTitle>

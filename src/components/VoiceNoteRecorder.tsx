@@ -29,19 +29,20 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
-    const [isSupported, setIsSupported] = useState(true);
+    const [speechSupported, setSpeechSupported] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedNoteIndex, setSelectedNoteIndex] = useState<string>('new');
+    const [manualMode, setManualMode] = useState(false);
     const recognitionRef = useRef<any>(null);
     const finalTranscriptRef = useRef<string>('');
     const processedResultsRef = useRef<Set<number>>(new Set());
-    // Add reference for resumption
     const previousTranscriptRef = useRef<string>('');
 
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            setIsSupported(false);
+            setSpeechSupported(false);
+            setManualMode(true);
         }
     }, []);
 
@@ -184,18 +185,18 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     }, [isRecording, stopRecording, onClose]);
 
     useEffect(() => {
-        if (isOpen && isSupported && !isRecording) {
+        if (isOpen && speechSupported && !isRecording && !manualMode) {
             const timer = setTimeout(() => startRecording(), 300);
             return () => clearTimeout(timer);
         }
-    }, [isOpen, isSupported, startRecording]);
+    }, [isOpen, speechSupported, startRecording, manualMode]);
 
     const getNoteTitle = (note: NoteData, index: number) => {
         const firstLine = note.content.split('\n')[0].trim();
         return firstLine.substring(0, 30) || `ملاحظة ${index + 1}`;
     };
 
-    if (!isSupported) return null;
+    // Always show the dialog - even without speech support, user can type
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -240,14 +241,22 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         </Select>
                     </div>
 
-                    <div className="flex justify-center">
-                        <button
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`p-6 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-100 animate-pulse' : 'bg-emerald-100'}`}
-                        >
-                            {isRecording ? <MicOff className="w-10 h-10 text-red-600" /> : <Mic className="w-10 h-10 text-emerald-600" />}
-                        </button>
-                    </div>
+                    {/* Mic Button - only show if speech is supported */}
+                    {speechSupported ? (
+                        <div className="flex justify-center">
+                            <button
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={`p-6 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-100 animate-pulse' : 'bg-emerald-100'}`}
+                            >
+                                {isRecording ? <MicOff className="w-10 h-10 text-red-600" /> : <Mic className="w-10 h-10 text-emerald-600" />}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                            <p className="text-amber-700 text-sm">التسجيل الصوتي غير مدعوم على هذا الجهاز</p>
+                            <p className="text-amber-600 text-xs mt-1">يمكنك كتابة الملاحظة يدوياً في الحقل أدناه</p>
+                        </div>
+                    )}
                     {/* Transcript Editable Area */}
                     <div className="relative">
                         <textarea

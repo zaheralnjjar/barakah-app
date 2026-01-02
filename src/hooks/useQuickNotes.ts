@@ -6,6 +6,7 @@ import { TABLES } from '@/lib/tableNames';
 export interface NoteData {
     content: string;
     isSecure?: boolean;
+    isPinned?: boolean;
     createdAt?: string;
 }
 
@@ -201,6 +202,22 @@ export const useQuickNotes = () => {
                 content: existing.content + entry,
                 createdAt: new Date().toISOString()
             };
+            saveNoteToStorage(updated);
+        },
+        // Toggle pin status for a note (pinned notes appear first)
+        togglePin: (noteIndex: number) => {
+            if (noteIndex < 0 || noteIndex >= notesHistory.length) return;
+            const updated = [...notesHistory];
+            updated[noteIndex] = {
+                ...updated[noteIndex],
+                isPinned: !updated[noteIndex].isPinned
+            };
+            // Sort: pinned first, then by date
+            updated.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return 0;
+            });
             saveNoteToStorage(updated);
         }
     };

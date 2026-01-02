@@ -325,34 +325,20 @@ const FinancialController = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-none">
-          <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center opacity-90"><DollarSign className="w-4 h-4 ml-2" />الرصيد الإجمالي</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBalanceARS.toLocaleString()} ARS</div>
-            <p className="text-sm opacity-80">≈ {(totalBalanceARS / currentRate).toFixed(2)} USD</p>
+          <CardContent className="p-3">
+            <p className="text-[10px] opacity-80 mb-1">الرصيد الإجمالي</p>
+            <div className="text-lg font-bold">{totalBalanceARS.toLocaleString()} ARS</div>
+            <p className="text-[9px] opacity-70">≈ ${(totalBalanceARS / currentRate).toFixed(0)}</p>
           </CardContent>
         </Card>
 
         <Card className="bg-white border-emerald-100">
-          <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center text-emerald-600"><TrendingUp className="w-4 h-4 ml-2" />الحد اليومي المتاح</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-700">{dailyLimit.toLocaleString()} ARS</div>
-            <p className="text-[10px] text-muted-foreground">≈ {(dailyLimit / currentRate).toFixed(1)} USD</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white border-red-100">
-          <CardHeader className="pb-2">
-            <CardTitle className="arabic-title text-sm flex items-center text-red-600"><TrendingDown className="w-4 h-4 ml-2" />إجمالي الديون</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700">{financeData.total_debt.toLocaleString()} ARS</div>
-            <p className="text-[10px] text-red-600/70">≈ {(financeData.total_debt / currentRate).toFixed(1)} USD</p>
+          <CardContent className="p-3">
+            <p className="text-[10px] text-emerald-600 mb-1">الحد اليومي</p>
+            <div className="text-lg font-bold text-emerald-700">{dailyLimit.toLocaleString()} ARS</div>
+            <p className="text-[9px] text-gray-400">≈ ${(dailyLimit / currentRate).toFixed(0)}</p>
           </CardContent>
         </Card>
       </div>
@@ -550,8 +536,8 @@ const FinancialController = () => {
                 <button
                   onClick={() => setEditingTransaction((p: any) => ({ ...p, type: 'expense' }))}
                   className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${editingTransaction.type === 'expense'
-                      ? 'bg-red-500 text-white shadow-md'
-                      : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    ? 'bg-red-500 text-white shadow-md'
+                    : 'bg-transparent text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   <MinusCircle className="w-4 h-4" />
@@ -560,8 +546,8 @@ const FinancialController = () => {
                 <button
                   onClick={() => setEditingTransaction((p: any) => ({ ...p, type: 'income' }))}
                   className={`flex-1 py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-all ${editingTransaction.type === 'income'
-                      ? 'bg-emerald-500 text-white shadow-md'
-                      : 'bg-transparent text-gray-600 hover:bg-gray-200'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-transparent text-gray-600 hover:bg-gray-200'
                     }`}
                 >
                   <PlusCircle className="w-4 h-4" />

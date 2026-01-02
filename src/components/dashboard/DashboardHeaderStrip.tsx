@@ -137,43 +137,37 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({
                     <div className="absolute bottom-0 left-0 w-24 h-24 bg-teal-100/40 rounded-full blur-2xl translate-y-8 -translate-x-8 pointer-events-none" />
 
                     <CardContent className="p-0 flex flex-col justify-center h-full relative z-10">
-                        {/* Dollar Rate Row - Enhanced with Oficial & Blue */}
-                        <div className="flex justify-between items-center p-4 border-b-2 border-emerald-200/70">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-white rounded-xl shadow-sm">
-                                    <DollarSign className="w-5 h-5 text-emerald-600" />
-                                </div>
-                                <div className="flex flex-col items-center justify-center min-w-[100px]">
-                                    {/* Resmi Rate */}
-                                    <span className="text-lg font-bold font-mono text-gray-500 leading-none tracking-tight mb-1">
+                        {/* Dollar Rate Row - Labels on Left */}
+                        <div className="flex justify-between items-center p-3 border-b-2 border-emerald-200/70">
+                            <div className="flex flex-col items-start gap-0.5">
+                                {/* Oficial Rate */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-gray-500 w-10">رسمي</span>
+                                    <span className="text-sm font-bold font-mono text-gray-600">
                                         {financeData?.oficial_rate || financeData?.exchange_rate || '---'}
                                     </span>
+                                </div>
 
-                                    {/* Blue Rate */}
-                                    <div className="relative flex items-center justify-center w-full">
-                                        <span className="text-xl font-bold font-mono text-blue-600 leading-none tracking-tight">
-                                            {financeData?.exchange_rate || '---'}
-                                        </span>
-                                        {/* Badge absolute to prevent center shift */}
-                                        {financeData?.dollar_change !== 0 && (
-                                            <div className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2">
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[9px] py-0 px-1.5 border-0 h-4 min-w-[32px] justify-center flex shadow-sm",
-                                                    (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                                                )}>
-                                                    {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2.5 h-2.5 ml-0.5" /> : <TrendingDown className="w-2.5 h-2.5 ml-0.5" />}
-                                                    {Math.abs(financeData?.dollar_change || 0).toFixed(0)}
-                                                </Badge>
-                                            </div>
-                                        )}
-                                    </div>
+                                {/* Blue Rate */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-blue-500 w-10">بلو</span>
+                                    <span className="text-base font-bold font-mono text-blue-600">
+                                        {financeData?.exchange_rate || '---'}
+                                    </span>
+                                    {/* Change Badge */}
+                                    {financeData?.dollar_change !== 0 && (
+                                        <Badge variant="outline" className={cn(
+                                            "text-[9px] py-0 px-1.5 border-0 h-4",
+                                            (financeData?.dollar_change || 0) > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                                        )}>
+                                            {(financeData?.dollar_change || 0) > 0 ? <TrendingUp className="w-2.5 h-2.5 ml-0.5" /> : <TrendingDown className="w-2.5 h-2.5 ml-0.5" />}
+                                            {Math.abs(financeData?.dollar_change || 0).toFixed(0)}
+                                        </Badge>
+                                    )}
                                 </div>
                             </div>
-                            <div className="text-[10px] text-emerald-600 bg-white/70 px-3 py-2 rounded-xl border border-emerald-100 flex flex-col items-end shadow-sm">
-                                <span className="font-medium">تحديث {format(new Date(), 'HH:mm')}</span>
-                                {financeData?.last_update && (
-                                    <span className="opacity-60 text-[8px]">منذ {formatDistanceToNow(new Date(financeData.last_update), { locale: ar })}</span>
-                                )}
+                            <div className="text-[10px] text-emerald-600 bg-white/70 px-2 py-1.5 rounded-lg border border-emerald-100">
+                                <span className="font-medium">{format(new Date(), 'HH:mm')}</span>
                             </div>
                         </div>
 

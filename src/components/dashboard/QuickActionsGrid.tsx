@@ -249,13 +249,20 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 </DialogContent>
             </Dialog>
 
-            {/* Inline Widget Display Dialog */}
+            {/* Inline Widget Display Dialog - Floating Style */}
             <Dialog open={showInlineWidget} onOpenChange={setShowInlineWidget}>
-                <DialogContent className="sm:max-w-[95vw] md:max-w-[500px] max-h-[85vh] p-0 overflow-hidden">
-                    <div className="h-full overflow-auto">
+                <DialogContent className="sm:max-w-[95vw] md:max-w-[420px] max-h-[85vh] p-0 overflow-hidden rounded-2xl border-2 border-teal-200 shadow-2xl">
+                    <DialogHeader className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white p-3 flex-row items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2 text-sm font-bold">
+                            <LayoutGrid className="w-4 h-4" />
+                            أدوات البركة
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="h-full overflow-auto bg-gradient-to-b from-gray-50 to-white">
                         <iframe
                             src={`${window.location.pathname}#/widget?type=${inlineWidgetTypes.join(',')}`}
-                            className="w-full h-[75vh] border-0"
+                            className="w-full border-0"
+                            style={{ height: `${Math.min(70, 20 + inlineWidgetTypes.length * 12)}vh` }}
                             title="Barakah Widget"
                         />
                     </div>
