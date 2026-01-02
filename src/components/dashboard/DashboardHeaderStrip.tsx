@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-    TrendingDown, TrendingUp, Wallet,
-    Clock, Moon, Sun, Sunrise,
-    ChevronDown, ChevronUp, BadgeDollarSign
+    Wallet, ChevronDown, ChevronUp, BadgeDollarSign, Clock
 } from 'lucide-react';
 import { useFinance } from '@/hooks/useFinance';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
@@ -35,26 +33,58 @@ const DashboardHeaderStrip: React.FC = () => {
 
     // 2. Fetch Prayer Times
     const { nextPrayer, prayerTimes, timeUntilNext } = usePrayerTimes();
-    const [elapsedTime, setElapsedTime] = useState(0);
-    const [showElapsed, setShowElapsed] = useState(false);
+    const PRAYER_ORDER = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'];
+    const PRAYER_NAMES = { 'fajr': 'الفجر', 'sunrise': 'الشروق', 'dhuhr': 'الظهر', 'asr': 'العصر', 'maghrib': 'المغرب', 'isha': 'العشاء' };
+
+    // 3. Header Timer Logic (Remaining vs Elapsed)
+    const [showElapsedHeader, setShowElapsedHeader] = useState(false);
+    const [elapsedSincePrev, setElapsedSincePrev] = useState('');
 
     useEffect(() => {
-        const timer = setInterval(() => setElapsedTime(prev => prev + 1), 1000);
-        return () => clearInterval(timer);
-    }, []);
+        if (!prayerTimes.length || !nextPrayer) return;
 
-    const elapsedTimeStr = useMemo(() => {
-        const hours = Math.floor(elapsedTime / 3600);
-        const minutes = Math.floor((elapsedTime % 3600) / 60);
-        const seconds = elapsedTime % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, [elapsedTime]);
+        const calcElapsed = () => {
+            const now = new Date();
+            const currentIdx = PRAYER_ORDER.indexOf(nextPrayer.name.toLowerCase());
 
-    // 3. States for Collapsibility
+            const prevIdx = currentIdx === 0 ? 5 : currentIdx - 1;
+            const prevNameKey = PRAYER_ORDER[prevIdx];
+            const prevPrayerObj = prayerTimes.find(p => p.name.toLowerCase() === prevNameKey);
+
+            if (prevPrayerObj) {
+                const [h, m] = prevPrayerObj.time.split(':').map(Number);
+                const prevTime = new Date();
+                prevTime.setHours(h, m, 0, 0);
+                if (currentIdx === 0) prevTime.setDate(prevTime.getDate() - 1); // Yesterday's Isha
+
+                const diff = now.getTime() - prevTime.getTime();
+                if (diff < 0) { setElapsedSincePrev('--'); return; }
+
+                const diffMins = Math.floor(diff / 60000);
+                const hours = Math.floor(diffMins / 60);
+                const mins = diffMins % 60;
+                const prevNameAr = PRAYER_NAMES[prevNameKey as keyof typeof PRAYER_NAMES];
+                setElapsedSincePrev(`${hours > 0 ? hours + 'س ' : ''}${mins}د منذ ${prevNameAr}`);
+            }
+        };
+        calcElapsed();
+        const interval = setInterval(calcElapsed, 60000);
+        return () => clearInterval(interval);
+    }, [nextPrayer, prayerTimes]);
+
+    const handleHeaderTimeClick = () => {
+        if (!showElapsedHeader) {
+            setShowElapsedHeader(true);
+            setTimeout(() => setShowElapsedHeader(false), 30000);
+        } else {
+            setShowElapsedHeader(false);
+        }
+    };
+
+    // 4. States for Collapsibility
     const [expandFinance, setExpandFinance] = useState(false); // Default collapsed
-    const [expandPrayer, setExpandPrayer] = useState(false);   // Default collapsed
 
-    // 4. Calculations
+    // 5. Calculations
     const dailyLimitARS = dailyLimit || 0;
 
     // Calculate Today's Expense
@@ -68,32 +98,103 @@ const DashboardHeaderStrip: React.FC = () => {
 
     const remainingDaily = dailyLimitARS - todayExpense;
 
-    // Helpers
-    const handleCountdownClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setShowElapsed(!showElapsed);
-    };
-
-    const getPrayerIcon = (name: string) => {
-        switch (name.toLowerCase()) {
-            case 'fajr': return <Sunrise className="w-4 h-4 text-orange-400" />;
-            case 'sunrise': return <Sun className="w-4 h-4 text-yellow-500" />;
-            case 'dhuhr': return <Sun className="w-4 h-4 text-orange-500" />;
-            case 'asr': return <Sun className="w-4 h-4 text-orange-600" />;
-            case 'maghrib': return <Moon className="w-4 h-4 text-indigo-400" />;
-            case 'isha': return <Moon className="w-4 h-4 text-indigo-800" />;
-            default: return <Clock className="w-4 h-4" />;
-        }
-    };
-
     return (
         <div className="w-full space-y-3 animate-fade-in font-sans">
-            <div className="flex flex-col lg:flex-row gap-3">
+            <div className="flex flex-col gap-3">
 
-                {/* 1. Financial Summary Card (Combined with Dollar Rates) */}
-                <Card className="border-0 shadow-sm flex-1 bg-white overflow-hidden transition-all duration-300">
+                {/* 1. Prayer Times Card (Fixed, Expanded) */}
+                <Card className="border-0 shadow-sm bg-white overflow-hidden">
                     <CardContent className="p-0">
-                        {/* Header (Always Visible) */}
+                        {/* Interactive Header: Next Prayer & Timer */}
+                        <div
+                            className="bg-emerald-50/50 px-3 py-2 flex justify-between items-center border-b border-emerald-100 cursor-pointer select-none transition-colors hover:bg-emerald-100/50"
+                            onClick={handleHeaderTimeClick}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold text-emerald-800 flex items-center gap-1.5`}>
+                                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                                    {nextPrayer ? `القادمة: ${nextPrayer.nameAr}` : 'الصلاة القادمة'}
+                                </span>
+                            </div>
+
+                            <div className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all shadow-sm border ${showElapsedHeader
+                                    ? 'bg-amber-100 text-amber-800 border-amber-200 animate-in fade-in zoom-in'
+                                    : 'bg-white text-emerald-700 border-emerald-200'
+                                }`}>
+                                {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--:--')}
+                            </div>
+                        </div>
+
+                        {/* Header Row (Grid Titles) */}
+                        <div className="grid grid-cols-6 bg-gradient-to-l from-emerald-600 to-teal-600 text-center">
+                            {PRAYER_ORDER.map((prayerKey, idx) => (
+                                <div key={prayerKey} className={`py-1.5 px-0.5 ${idx < 5 ? 'border-l border-white/20' : ''}`}>
+                                    <span className="text-[10px] font-bold text-white whitespace-nowrap">
+                                        {PRAYER_NAMES[prayerKey as keyof typeof PRAYER_NAMES]}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Times Row with Intervals Inside */}
+                        <div className="grid grid-cols-6 bg-emerald-50 text-center pb-2">
+                            {PRAYER_ORDER.map((prayerKey, idx) => {
+                                const isNext = nextPrayer?.name?.toLowerCase() === prayerKey;
+                                const pData = prayerTimes.find(p => p.name.toLowerCase() === prayerKey);
+                                const pTime = pData?.time || '--:--';
+
+                                // Calculate interval to next prayer
+                                let intervalText = '';
+                                const nextKey = PRAYER_ORDER[(idx + 1) % 6]; // Circular for Isha->Fajr
+                                const nextPData = prayerTimes.find(p => p.name.toLowerCase() === nextKey);
+
+                                if (pData && nextPData) {
+                                    const [h1, m1] = pData.time.split(':').map(Number);
+                                    const [h2, m2] = nextPData.time.split(':').map(Number);
+                                    const mins1 = h1 * 60 + m1;
+                                    let mins2 = h2 * 60 + m2;
+
+                                    // Handle overflow (Isha -> Fajr)
+                                    if (mins2 < mins1) mins2 += 24 * 60;
+
+                                    const diff = mins2 - mins1;
+                                    const h = Math.floor(diff / 60);
+                                    const m = diff % 60;
+                                    intervalText = h > 0 ? `${h}س ${m}د` : `${m}د`;
+                                }
+
+                                return (
+                                    <div
+                                        key={prayerKey}
+                                        className={`py-2 px-0.5 flex flex-col items-center justify-center transition-all ${isNext ? 'bg-emerald-100/80 ring-1 ring-inset ring-emerald-400/50 z-10' : ''
+                                            } ${idx < 5 ? 'border-l border-emerald-100' : ''}`}
+                                    >
+                                        <span className={`text-xs font-bold ${isNext ? 'text-emerald-900 scale-110' : 'text-emerald-700'} font-mono mb-0.5`}>
+                                            {pTime}
+                                        </span>
+
+                                        {/* Divider */}
+                                        {intervalText && (
+                                            <div className={`w-8 h-px my-1 ${isNext ? 'bg-emerald-300' : 'bg-emerald-200/50'}`}></div>
+                                        )}
+
+                                        {/* Interval Text (Darker) */}
+                                        {intervalText && (
+                                            <span className={`text-[9px] font-bold font-mono ${isNext ? 'text-emerald-800' : 'text-gray-500'}`}>
+                                                {intervalText}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 2. Financial Summary Card (Collapsible) */}
+                <Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300">
+                    <CardContent className="p-0">
+                        {/* Header (Collapsible Trigger) */}
                         <div
                             className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
                             onClick={() => setExpandFinance(!expandFinance)}
@@ -105,19 +206,24 @@ const DashboardHeaderStrip: React.FC = () => {
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-bold text-gray-700">الملخص المالي</span>
-                                        {/* Mini Dollar Badge */}
-                                        <div className="flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                                            <span className="text-[9px] text-blue-400">$</span>
-                                            <span className="text-[9px] font-mono font-bold text-blue-600">{dollarRates?.blue || '---'}</span>
+                                        {/* Official Rate Badge */}
+                                        <div className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                                            <span className="text-[9px] text-gray-400">$</span>
+                                            <span className="text-[9px] font-mono font-bold text-gray-600">{dollarRates?.official || '---'}</span>
                                         </div>
                                     </div>
                                     {!expandFinance && (
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className={`text-[10px] font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                {remainingDaily < 0 ? 'تجاوزت الحد' : 'ضمن الحد'}
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[9px] text-gray-400">الرصيد:</span>
+                                                <span className="text-[10px] font-mono font-bold text-gray-700">
+                                                    {financeData?.current_balance_ars?.toLocaleString() || '0'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[9px] text-gray-300">|</span>
+                                            <span className={`text-[10px] font-mono font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                {remainingDaily.toLocaleString()}
                                             </span>
-                                            <span className="text-[10px] text-gray-400">|</span>
-                                            <span className="text-[10px] font-mono text-gray-500">المتبقي: {remainingDaily.toLocaleString()}</span>
                                         </div>
                                     )}
                                 </div>
@@ -125,12 +231,12 @@ const DashboardHeaderStrip: React.FC = () => {
                             {expandFinance ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                         </div>
 
-                        {/* Details (Collapsible) */}
+                        {/* Expanded Details */}
                         {expandFinance && (
                             <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-1">
                                 <div className="h-px w-full bg-gray-100 mb-2"></div>
 
-                                {/* Expanded Dollar Rates */}
+                                {/* Full Rates */}
                                 <div className="flex justify-between items-center mb-2 px-1 bg-blue-50/50 p-1.5 rounded">
                                     <div className="flex items-center gap-1">
                                         <BadgeDollarSign className="w-3 h-3 text-blue-500" />
@@ -163,59 +269,6 @@ const DashboardHeaderStrip: React.FC = () => {
                     </CardContent>
                 </Card>
 
-                {/* 2. Prayer Times Card (Collapsible) */}
-                <Card className="border-0 shadow-md bg-emerald-50/50 overflow-hidden flex-1 min-w-[300px] transition-all duration-300">
-                    <CardContent className="p-0">
-                        {/* Header (Always Visible) */}
-                        <div
-                            className="bg-white/60 p-2 px-3 border-b border-white flex justify-between items-center cursor-pointer hover:bg-white/80"
-                            onClick={() => setExpandPrayer(!expandPrayer)}
-                        >
-                            <div className="flex items-center gap-2">
-                                {getPrayerIcon(nextPrayer?.name || '')}
-                                <div>
-                                    <span className="text-xs font-bold text-emerald-800 block">
-                                        {nextPrayer ? `القادمة: ${nextPrayer.nameAr}` : 'الصلاة القادمة'}
-                                    </span>
-                                    {!expandPrayer && (
-                                        <span className="text-[10px] font-mono text-emerald-600 block">
-                                            {showElapsed ? elapsedTimeStr : (timeUntilNext || '--:--:--')}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {expandPrayer && (
-                                    <div
-                                        onClick={handleCountdownClick}
-                                        className={`text-xs font-mono font-bold px-2 py-0.5 rounded cursor-pointer ${showElapsed ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}
-                                    >
-                                        {showElapsed ? elapsedTimeStr : (timeUntilNext || '--:--:--')}
-                                    </div>
-                                )}
-                                {expandPrayer ? <ChevronUp className="w-4 h-4 text-emerald-600" /> : <ChevronDown className="w-4 h-4 text-emerald-600" />}
-                            </div>
-                        </div>
-
-                        {/* Grid (Collapsible) */}
-                        {expandPrayer && (
-                            <div className="grid grid-cols-6 divide-x divide-x-reverse divide-emerald-100/50 animate-in slide-in-from-top-1">
-                                {['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'].map((key) => {
-                                    const prayer = prayerTimes.find(p => p.name === key);
-                                    if (!prayer) return null;
-                                    const isNext = nextPrayer?.name === prayer.name;
-
-                                    return (
-                                        <div key={key} className={`p-2 text-center flex flex-col items-center justify-center transition-colors ${isNext ? 'bg-emerald-100/50' : 'hover:bg-white/50'}`}>
-                                            <span className={`text-[9px] mb-1 ${isNext ? 'font-bold text-emerald-700' : 'text-gray-500'}`}>{prayer.nameAr}</span>
-                                            <span className={`text-[10px] font-mono ${isNext ? 'font-bold text-emerald-900' : 'text-gray-600'}`}>{prayer.time}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );

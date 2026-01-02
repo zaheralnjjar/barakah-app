@@ -136,27 +136,26 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 )}
 
                 {/* Normal Header */}
-                <div className={`bg-gradient-to-l from-emerald-50 to-white rounded-2xl p-4 shadow-sm border border-emerald-100 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
-                    <div className="flex items-center justify-between gap-3">
-                        {/* Date Info - Right Side (First in RTL) - CLICKABLE */}
+                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-3 shadow-sm border border-emerald-100 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
+                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                        {/* Notification Bell - Right Side (First in RTL) */}
+                        <div className="flex items-center">
+                            <NotificationBell />
+                        </div>
+
+                        {/* Logo - Centered */}
+                        <div className="flex flex-col items-center justify-center cursor-pointer" onClick={() => setShowBarakahPopup(true)}>
+                            <h1 className="text-xl md:text-2xl font-bold text-emerald-700 tracking-tight">البركة</h1>
+                            <span className="text-[10px] text-gray-400 font-light -mt-1 tracking-widest uppercase">Barakah Life</span>
+                        </div>
+
+                        {/* Date Info - Left Side (Last in RTL) - COMPACT */}
                         <div
-                            className="bg-emerald-100 text-emerald-700 rounded-xl px-4 py-2 text-center min-w-[120px] cursor-pointer hover:bg-emerald-200 transition-colors"
+                            className="bg-white border border-emerald-200 text-emerald-800 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-emerald-50 transition-all shadow-sm flex flex-col items-center justify-center min-w-[70px]"
                             onClick={() => setShowHolidaysPopup(true)}
                         >
-                            <span className="text-sm font-bold block">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'long' })}</span>
-                            <div className="border-t border-emerald-300 my-1"></div>
-                            <span className="text-xs block">{hijriDate}</span>
-                        </div>
-
-                        {/* Logo - Centered & Larger */}
-                        <div className="flex-1 text-center cursor-pointer" onClick={() => setShowBarakahPopup(true)}>
-                            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">البركة</h1>
-                            <span className="text-xs text-gray-400">Barakah Life</span>
-                        </div>
-
-                        {/* Notification Bell - Left Side (Last in RTL) */}
-                        <div className="flex items-center gap-2">
-                            <NotificationBell />
+                            <span className="text-xs font-bold leading-none">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'short' })}</span>
+                            <span className="text-[9px] text-emerald-600/80 leading-none mt-0.5">{hijriDate.split(' ')[0]} {hijriDate.split(' ')[1]}</span>
                         </div>
                     </div>
                 </div>

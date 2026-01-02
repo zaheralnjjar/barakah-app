@@ -25,7 +25,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, onSaveToActivities }) => {
     const { toast } = useToast();
-    const { notesHistory, appendToNote } = useQuickNotes();
+    const { notesHistory, appendToNote, archiveNote } = useQuickNotes();
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -161,9 +161,10 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         setIsProcessing(true);
         try {
-            if (selectedNoteIndex === 'new' || selectedNoteIndex === 'activities') {
-                onSaveToActivities(finalText);
-                toast({ title: 'تم حفظ الملاحظة الصوتية ✓' });
+            if (selectedNoteIndex === 'new') {
+                // Create a new regular note
+                archiveNote(finalText);
+                toast({ title: 'تم إنشاء ملاحظة جديدة ✓' });
             } else {
                 const noteIndex = parseInt(selectedNoteIndex);
                 if (!isNaN(noteIndex) && notesHistory[noteIndex]) {
@@ -177,7 +178,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         } finally {
             setIsProcessing(false);
         }
-    }, [transcript, interimTranscript, selectedNoteIndex, notesHistory, onSaveToActivities, onClose, toast, appendToNote]);
+    }, [transcript, interimTranscript, selectedNoteIndex, notesHistory, archiveNote, onClose, toast, appendToNote]);
 
     const handleClose = useCallback(() => {
         if (isRecording) stopRecording();
@@ -219,7 +220,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                                 <SelectItem value="new">
                                     <div className="flex items-center gap-2">
                                         <Plus className="w-4 h-4 text-emerald-600" />
-                                        <span>إنشاء ملاحظة جديدة (أنشطة)</span>
+                                        <span>إنشاء ملاحظة جديدة</span>
                                     </div>
                                 </SelectItem>
                                 {notesHistory.length > 0 && (

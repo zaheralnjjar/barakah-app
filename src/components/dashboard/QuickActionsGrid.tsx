@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { useFinance } from '@/hooks/useFinance';
+import { useTasks } from '@/hooks/useTasks';
+import { useAppointments } from '@/hooks/useAppointments';
 import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
-    CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill
+    CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
+    Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings
 } from 'lucide-react';
 
 interface QuickActionsGridProps {
@@ -14,6 +21,12 @@ interface QuickActionsGridProps {
 }
 
 const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder }) => {
+    const { toast } = useToast();
+    const { nextPrayer, timeUntilNext } = usePrayerTimes();
+    const { financeData, dailyLimit } = useFinance();
+    const { tasks } = useTasks();
+    const { appointments } = useAppointments();
+
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
@@ -21,6 +34,74 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     const [selectedWidgets, setSelectedWidgets] = useState<string[]>([]);
     const [inlineWidgetTypes, setInlineWidgetTypes] = useState<string[]>([]);
     const [showInlineWidget, setShowInlineWidget] = useState(false);
+    const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
+    const [shortcutResult, setShortcutResult] = useState<{ title: string; content: string } | null>(null);
+
+    // Shortcuts Management
+    const [customShortcuts, setCustomShortcuts] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('baraka_custom_shortcuts');
+            return saved ? JSON.parse(saved) : ['show_next_prayer', 'show_balance', 'add_note'];
+        } catch { return []; }
+    });
+
+    useEffect(() => {
+        localStorage.setItem('baraka_custom_shortcuts', JSON.stringify(customShortcuts));
+    }, [customShortcuts]);
+
+    // Available Actions (25+ options)
+    const AVAILABLE_ACTIONS = [
+        // Information Display
+        { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },
+        { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
+        { id: 'show_dollar', name: 'سعر الدولار', icon: DollarSign, category: 'info', description: 'عرض سعر الدولار الرسمي والبلو' },
+        { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
+        { id: 'show_today_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'عرض عدد المهام المتبقية لليوم' },
+        { id: 'show_appointments', name: 'المواعيد القادمة', icon: Calendar, category: 'info', description: 'عرض أقرب موعد قادم' },
+        { id: 'show_shopping', name: 'قائمة التسوق', icon: ShoppingCart, category: 'info', description: 'عرض عدد العناصر في قائمة التسوق' },
+        { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
+        { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض تقدم العادات اليومية' },
+        { id: 'show_goals', name: 'الأهداف', icon: Target, category: 'info', description: 'عرض تقدم الأهداف الحالية' },
+
+        // Quick Actions
+        { id: 'add_expense', name: 'إضافة مصروف', icon: DollarSign, category: 'action', description: 'إضافة مصروف سريع' },
+        { id: 'add_task', name: 'إضافة مهمة', icon: ListChecks, category: 'action', description: 'إضافة مهمة جديدة' },
+        { id: 'add_note', name: 'ملاحظة صوتية', icon: Mic, category: 'action', description: 'تسجيل ملاحظة صوتية' },
+        { id: 'save_parking', name: 'حفظ موقف', icon: MapPin, category: 'action', description: 'حفظ موقف السيارة الحالي' },
+        { id: 'start_pomodoro', name: 'بومودورو', icon: Timer, category: 'action', description: 'بدء مؤقت تركيز 25 دقيقة' },
+        { id: 'add_shopping', name: 'للتسوق', icon: ShoppingCart, category: 'action', description: 'إضافة عنصر لقائمة التسوق' },
+        { id: 'copy_location', name: 'نسخ موقعي', icon: Copy, category: 'action', description: 'نسخ رابط الموقع الحالي' },
+        { id: 'open_map', name: 'فتح الخريطة', icon: ExternalLink, category: 'action', description: 'فتح الموقع على الخريطة' },
+
+        // Calculators
+        { id: 'calc_currency', name: 'تحويل العملات', icon: Calculator, category: 'calc', description: 'حاسبة تحويل ARS ↔ USD' },
+        { id: 'calc_percentage', name: 'حساب النسبة', icon: Calculator, category: 'calc', description: 'حاسبة النسبة المئوية' },
+        { id: 'calc_age', name: 'حساب العمر', icon: Calendar, category: 'calc', description: 'حساب العمر بالهجري والميلادي' },
+        { id: 'calc_days', name: 'الفرق بين تاريخين', icon: Calendar, category: 'calc', description: 'حساب عدد الأيام بين تاريخين' },
+
+        // Reminders
+        { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'remind', description: 'تذكير بعد 5 دقائق' },
+        { id: 'remind_15min', name: 'تذكير 15 دقيقة', icon: Bell, category: 'remind', description: 'تذكير بعد 15 دقيقة' },
+        { id: 'remind_1hour', name: 'تذكير ساعة', icon: Bell, category: 'remind', description: 'تذكير بعد ساعة' },
+        { id: 'remind_water', name: 'شرب الماء', icon: Droplets, category: 'remind', description: 'تذكير بشرب الماء كل ساعة' },
+        { id: 'remind_break', name: 'استراحة', icon: Coffee, category: 'remind', description: 'تذكير بأخذ استراحة' },
+
+        // AI/Smart
+        { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'smart', description: 'ملخص ذكي لنشاطات اليوم' },
+        { id: 'quick_insights', name: 'رؤى سريعة', icon: Zap, category: 'smart', description: 'تحليل سريع للمصاريف والمهام' },
+    ];
+
+    const addShortcut = (actionId: string) => {
+        if (!customShortcuts.includes(actionId)) {
+            setCustomShortcuts([...customShortcuts, actionId]);
+        }
+    };
+
+    const removeShortcut = (actionId: string) => {
+        setCustomShortcuts(customShortcuts.filter(id => id !== actionId));
+    };
+
+    const getActionById = (id: string) => AVAILABLE_ACTIONS.find(a => a.id === id);
 
     // Check if running on mobile
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -31,7 +112,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         { type: 'tasks', label: 'المهام', icon: ListChecks, color: 'purple', size: '350,500' },
         { type: 'appointments', label: 'المواعيد', icon: Calendar, color: 'rose', size: '350,450' },
         { type: 'shopping', label: 'التسوق', icon: ShoppingCart, color: 'orange', size: '350,450' },
-        { type: 'notes', label: 'الملاحظات', icon: StickyNote, color: 'yellow', size: '350,450' },
+        { type: 'shortcuts', label: 'اختصارات', icon: Sparkles, color: 'emerald', size: '400,350' },
         { type: 'habits', label: 'العادات', icon: Heart, color: 'pink', size: '350,400' },
         { type: 'medications', label: 'الأدوية', icon: Pill, color: 'cyan', size: '350,400' },
         { type: 'locations', label: 'المواقع', icon: MapPin, color: 'indigo', size: '400,500' },
@@ -44,8 +125,312 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         setSelectedWidgets([]);
     };
 
+    // Execute shortcut action
+    const executeShortcut = (actionId: string) => {
+        const action = getActionById(actionId);
+        if (!action) return;
+
+        switch (actionId) {
+            // === INFORMATION ACTIONS ===
+            case 'show_time':
+                const now = new Date();
+                const hijri = now.toLocaleDateString('ar-SA-u-ca-islamic', { dateStyle: 'full' });
+                setShortcutResult({
+                    title: '🕐 الوقت والتاريخ',
+                    content: `الوقت: ${now.toLocaleTimeString('ar-SA')}\n\nالتاريخ الميلادي:\n${now.toLocaleDateString('ar-SA', { dateStyle: 'full' })}\n\nالتاريخ الهجري:\n${hijri}`
+                });
+                break;
+
+            case 'show_balance':
+                const balance = financeData?.current_balance_ars || 0;
+                const remaining = dailyLimit || 0;
+                setShortcutResult({
+                    title: '💰 الرصيد المالي',
+                    content: `الرصيد الحالي: ${balance.toLocaleString()} ARS\n\nالحد اليومي المتبقي: ${remaining.toLocaleString()} ARS`
+                });
+                break;
+
+            case 'show_dollar':
+                setShortcutResult({ title: '💵 سعر الدولار', content: 'جاري التحميل...' });
+                fetch('https://dolarapi.com/v1/dolares/oficial')
+                    .then(r => r.json())
+                    .then(official => {
+                        fetch('https://dolarapi.com/v1/dolares/blue')
+                            .then(r => r.json())
+                            .then(blue => {
+                                setShortcutResult({
+                                    title: '💵 سعر الدولار',
+                                    content: `🏦 الدولار الرسمي:\nشراء: ${official.compra} | بيع: ${official.venta}\n\n💵 الدولار الأزرق:\nشراء: ${blue.compra} | بيع: ${blue.venta}`
+                                });
+                            });
+                    })
+                    .catch(() => setShortcutResult({ title: '💵 سعر الدولار', content: 'خطأ في جلب البيانات' }));
+                break;
+
+            case 'show_next_prayer':
+                setShortcutResult({
+                    title: '🕌 الصلاة القادمة',
+                    content: `الصلاة: ${nextPrayer?.nameAr || 'غير متاح'}\n\nالوقت: ${nextPrayer?.time || '--:--'}\n\nالمتبقي: ${timeUntilNext || '--:--'}`
+                });
+                break;
+
+            case 'show_today_tasks':
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todayTasks = tasks.filter(t => t.deadline === todayStr && t.progress < 100);
+                const completedToday = tasks.filter(t => t.deadline === todayStr && t.progress >= 100);
+                setShortcutResult({
+                    title: '📋 مهام اليوم',
+                    content: `المهام المتبقية: ${todayTasks.length}\nالمهام المكتملة: ${completedToday.length}\n\n${todayTasks.length > 0 ? 'المهام:\n' + todayTasks.slice(0, 5).map(t => `• ${t.title}`).join('\n') : 'لا توجد مهام لليوم'}`
+                });
+                break;
+
+            case 'show_appointments':
+                const upcomingAppts = appointments.filter(a => new Date(a.date) >= new Date()).slice(0, 5);
+                setShortcutResult({
+                    title: '📅 المواعيد القادمة',
+                    content: upcomingAppts.length > 0
+                        ? upcomingAppts.map(a => `• ${a.title}\n  ${a.date} ${a.time || ''}`).join('\n\n')
+                        : 'لا توجد مواعيد قادمة'
+                });
+                break;
+
+            case 'show_shopping':
+                try {
+                    const shopping = JSON.parse(localStorage.getItem('baraka_shopping_list') || '[]');
+                    setShortcutResult({
+                        title: '🛒 قائمة التسوق',
+                        content: shopping.length > 0
+                            ? `عدد العناصر: ${shopping.length}\n\n${shopping.slice(0, 10).map((i: any) => `• ${i.name || i}`).join('\n')}`
+                            : 'قائمة التسوق فارغة'
+                    });
+                } catch { setShortcutResult({ title: '🛒 قائمة التسوق', content: 'قائمة التسوق فارغة' }); }
+                break;
+
+            case 'show_habits':
+                try {
+                    const habits = JSON.parse(localStorage.getItem('baraka_habits') || '[]');
+                    setShortcutResult({
+                        title: '💪 العادات',
+                        content: habits.length > 0
+                            ? `عدد العادات: ${habits.length}\n\n${habits.slice(0, 10).map((h: any) => `• ${h.name}`).join('\n')}`
+                            : 'لا توجد عادات مسجلة'
+                    });
+                } catch { setShortcutResult({ title: '💪 العادات', content: 'لا توجد عادات مسجلة' }); }
+                break;
+
+            case 'show_medications':
+                try {
+                    const meds = JSON.parse(localStorage.getItem('baraka_medications') || '[]');
+                    setShortcutResult({
+                        title: '💊 الأدوية',
+                        content: meds.length > 0
+                            ? `عدد الأدوية: ${meds.length}\n\n${meds.slice(0, 10).map((m: any) => `• ${m.name} - ${m.time || ''}`).join('\n')}`
+                            : 'لا توجد أدوية مسجلة'
+                    });
+                } catch { setShortcutResult({ title: '💊 الأدوية', content: 'لا توجد أدوية مسجلة' }); }
+                break;
+
+            case 'show_goals':
+                try {
+                    const goals = JSON.parse(localStorage.getItem('baraka_goals') || '[]');
+                    setShortcutResult({
+                        title: '🎯 الأهداف',
+                        content: goals.length > 0
+                            ? `عدد الأهداف: ${goals.length}\n\n${goals.slice(0, 10).map((g: any) => `• ${g.title || g.name}`).join('\n')}`
+                            : 'لا توجد أهداف مسجلة'
+                    });
+                } catch { setShortcutResult({ title: '🎯 الأهداف', content: 'لا توجد أهداف مسجلة' }); }
+                break;
+
+            // === QUICK ACTIONS ===
+            case 'add_expense':
+                onOpenAddDialog('expense');
+                break;
+
+            case 'add_task':
+                onOpenAddDialog('task');
+                break;
+
+            case 'add_note':
+                if (onOpenVoiceRecorder) onOpenVoiceRecorder();
+                else toast({ title: 'تسجيل ملاحظة صوتية غير متاح' });
+                break;
+
+            case 'save_parking':
+                if (onQuickParking) {
+                    onQuickParking();
+                    toast({ title: '🅿️ تم حفظ موقف السيارة' });
+                }
+                break;
+
+            case 'start_pomodoro':
+                if (onOpenTimer) onOpenTimer();
+                else toast({ title: 'المؤقت غير متاح' });
+                break;
+
+            case 'add_shopping':
+                onOpenAddDialog('shopping');
+                break;
+
+            case 'copy_location':
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            const url = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                            navigator.clipboard.writeText(url);
+                            toast({ title: '📍 تم نسخ رابط الموقع' });
+                        },
+                        () => toast({ title: '❌ فشل في الحصول على الموقع' })
+                    );
+                } else {
+                    toast({ title: '❌ خدمة الموقع غير متاحة' });
+                }
+                break;
+
+            case 'open_map':
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            window.open(`https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`, '_blank');
+                        },
+                        () => toast({ title: '❌ فشل في الحصول على الموقع' })
+                    );
+                } else {
+                    toast({ title: '❌ خدمة الموقع غير متاحة' });
+                }
+                break;
+
+            // === CALCULATORS ===
+            case 'calc_currency':
+                setShortcutResult({
+                    title: '💱 تحويل العملات',
+                    content: 'قريباً - حاسبة تحويل ARS ↔ USD'
+                });
+                break;
+
+            case 'calc_percentage':
+                setShortcutResult({
+                    title: '📊 حساب النسبة',
+                    content: 'قريباً - حاسبة النسبة المئوية'
+                });
+                break;
+
+            case 'calc_age':
+                setShortcutResult({
+                    title: '🎂 حساب العمر',
+                    content: 'قريباً - حساب العمر بالهجري والميلادي'
+                });
+                break;
+
+            case 'calc_days':
+                setShortcutResult({
+                    title: '📆 الفرق بين تاريخين',
+                    content: 'قريباً - حساب عدد الأيام بين تاريخين'
+                });
+                break;
+
+            // === REMINDERS ===
+            case 'remind_5min':
+                setTimeout(() => {
+                    toast({ title: '⏰ تذكير!', description: 'مضت 5 دقائق' });
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('تذكير البركة', { body: 'مضت 5 دقائق!' });
+                    }
+                }, 5 * 60 * 1000);
+                toast({ title: '✅ تذكير 5 دقائق', description: 'سيتم تنبيهك بعد 5 دقائق' });
+                break;
+
+            case 'remind_15min':
+                setTimeout(() => {
+                    toast({ title: '⏰ تذكير!', description: 'مضت 15 دقيقة' });
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('تذكير البركة', { body: 'مضت 15 دقيقة!' });
+                    }
+                }, 15 * 60 * 1000);
+                toast({ title: '✅ تذكير 15 دقيقة', description: 'سيتم تنبيهك بعد 15 دقيقة' });
+                break;
+
+            case 'remind_1hour':
+                setTimeout(() => {
+                    toast({ title: '⏰ تذكير!', description: 'مضت ساعة' });
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('تذكير البركة', { body: 'مضت ساعة!' });
+                    }
+                }, 60 * 60 * 1000);
+                toast({ title: '✅ تذكير ساعة', description: 'سيتم تنبيهك بعد ساعة' });
+                break;
+
+            case 'remind_water':
+                toast({ title: '💧 شرب الماء', description: 'تذكر أن تشرب الماء كل ساعة!' });
+                break;
+
+            case 'remind_break':
+                toast({ title: '☕ استراحة', description: 'حان وقت أخذ استراحة قصيرة!' });
+                break;
+
+            // === SMART ===
+            case 'daily_summary':
+                const todayTasksCount = tasks.filter(t => t.deadline === new Date().toISOString().split('T')[0]).length;
+                const todayApptsCount = appointments.filter(a => a.date === new Date().toISOString().split('T')[0]).length;
+                setShortcutResult({
+                    title: '📊 ملخص اليوم',
+                    content: `📋 المهام: ${todayTasksCount}\n📅 المواعيد: ${todayApptsCount}\n🕌 الصلاة القادمة: ${nextPrayer?.nameAr || 'غير متاح'}\n💰 الحد اليومي: ${dailyLimit?.toLocaleString() || 'غير متاح'} ARS`
+                });
+                break;
+
+            case 'quick_insights':
+                setShortcutResult({
+                    title: '💡 رؤى سريعة',
+                    content: 'قريباً - تحليل ذكي لنشاطاتك ومصاريفك'
+                });
+                break;
+
+            default:
+                toast({ title: action.name, description: action.description });
+        }
+    };
+
     return (
         <>
+            {/* ===== CUSTOM SHORTCUTS BAR ===== */}
+            {customShortcuts.length > 0 && (
+                <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-emerald-500" />
+                        <span className="text-xs font-bold text-gray-600">اختصاراتي</span>
+                        <button
+                            onClick={() => setShowShortcutsSettings(true)}
+                            className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
+                        >
+                            <Settings className="w-3 h-3" />
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {customShortcuts.map(id => {
+                            const action = getActionById(id);
+                            if (!action) return null;
+                            const Icon = action.icon;
+                            return (
+                                <button
+                                    key={id}
+                                    onClick={() => executeShortcut(id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all hover:scale-105 ${action.category === 'info' ? 'bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100' :
+                                        action.category === 'action' ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100' :
+                                            action.category === 'calc' ? 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100' :
+                                                action.category === 'remind' ? 'bg-amber-50 border-amber-100 text-amber-700 hover:bg-amber-100' :
+                                                    'bg-pink-50 border-pink-100 text-pink-700 hover:bg-pink-100'
+                                        }`}
+                                    title={action.description}
+                                >
+                                    <Icon className="w-3.5 h-3.5" />
+                                    <span>{action.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* ===== 3. QUICK ACTIONS ===== */}
             <div className="grid grid-cols-7 gap-2 mb-2">
                 {[
@@ -172,6 +557,12 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                 <button
                                     key={item.type}
                                     onClick={() => {
+                                        // Special handling for shortcuts - open settings directly
+                                        if (item.type === 'shortcuts') {
+                                            setShowWidgetMenu(false);
+                                            setShowShortcutsSettings(true);
+                                            return;
+                                        }
                                         if (isSelected) {
                                             setSelectedWidgets(prev => prev.filter(t => t !== item.type));
                                         } else {
@@ -332,6 +723,110 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                             );
                         })()}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Shortcuts Settings Dialog */}
+            <Dialog open={showShortcutsSettings} onOpenChange={setShowShortcutsSettings}>
+                <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-right">
+                            <Sparkles className="w-5 h-5 text-emerald-500" />
+                            اختصارات مخصصة ({customShortcuts.length})
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {/* Current Shortcuts */}
+                    {customShortcuts.length > 0 && (
+                        <div className="mb-3">
+                            <h4 className="text-xs font-bold text-gray-500 mb-2">الاختصارات الحالية</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {customShortcuts.map(id => {
+                                    const action = getActionById(id);
+                                    if (!action) return null;
+                                    const Icon = action.icon;
+                                    return (
+                                        <div key={id} className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-1">
+                                            <Icon className="w-3 h-3 text-emerald-600" />
+                                            <span className="text-xs text-emerald-700">{action.name}</span>
+                                            <button
+                                                onClick={() => removeShortcut(id)}
+                                                className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Available Actions */}
+                    <div className="flex-1 overflow-y-auto">
+                        <h4 className="text-xs font-bold text-gray-500 mb-2">إضافة اختصار جديد</h4>
+
+                        {['info', 'action', 'calc', 'remind', 'smart'].map(category => (
+                            <div key={category} className="mb-3">
+                                <Badge variant="outline" className="mb-2 text-[10px]">
+                                    {category === 'info' ? '📊 عرض معلومات' :
+                                        category === 'action' ? '⚡ إجراءات سريعة' :
+                                            category === 'calc' ? '🧮 حاسبات' :
+                                                category === 'remind' ? '🔔 تذكيرات' : '🧠 ذكي'}
+                                </Badge>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {AVAILABLE_ACTIONS.filter(a => a.category === category).map(action => {
+                                        const isAdded = customShortcuts.includes(action.id);
+                                        const Icon = action.icon;
+                                        return (
+                                            <button
+                                                key={action.id}
+                                                onClick={() => !isAdded && addShortcut(action.id)}
+                                                disabled={isAdded}
+                                                className={`flex items-center gap-2 p-2 rounded-lg border text-right transition-all ${isAdded
+                                                    ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'
+                                                    : 'bg-white border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
+                                                    }`}
+                                            >
+                                                <Icon className="w-4 h-4 text-gray-500 shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium text-gray-700 truncate">{action.name}</p>
+                                                    <p className="text-[9px] text-gray-400 truncate">{action.description}</p>
+                                                </div>
+                                                {!isAdded && <Plus className="w-3 h-3 text-emerald-500 shrink-0" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Done Button */}
+                    <div className="pt-3 border-t">
+                        <Button
+                            className="w-full bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => setShowShortcutsSettings(false)}
+                        >
+                            <Sparkles className="w-4 h-4 ml-2" />
+                            تم
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Shortcut Result Dialog */}
+            <Dialog open={shortcutResult !== null} onOpenChange={(open) => { if (!open) setShortcutResult(null); }}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right text-lg">{shortcutResult?.title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="whitespace-pre-wrap text-right text-sm text-gray-700 p-4 bg-gray-50 rounded-lg">
+                        {shortcutResult?.content}
+                    </div>
+                    <Button onClick={() => setShortcutResult(null)} className="w-full mt-2">
+                        إغلاق
+                    </Button>
                 </DialogContent>
             </Dialog>
         </>

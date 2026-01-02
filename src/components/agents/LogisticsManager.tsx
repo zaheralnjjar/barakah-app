@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Plus,
   CheckSquare,
@@ -11,7 +12,12 @@ import {
   Share2,
   Clock,
   Pill,
-  Flame
+  Flame,
+  ChevronDown,
+  ChevronUp,
+  ShoppingCart,
+  Zap,
+  Heart
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -74,6 +80,20 @@ const LogisticsManager = () => {
   const [editingTask, setEditingTask] = useState<MainTask | null>(null);
   const [showAddHabit, setShowAddHabit] = useState(false);
   const [showAddMedication, setShowAddMedication] = useState(false);
+
+  // Collapsible sections state
+  const [sectionsExpanded, setSectionsExpanded] = useState<Record<string, boolean>>({
+    shopping: true,
+    habits: true,
+    medications: true,
+    tasks: true,
+    checklist: true,
+    appointments: true
+  });
+
+  const toggleSection = (section: string) => {
+    setSectionsExpanded(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Extended Habit State
   const [newHabitName, setNewHabitName] = useState('');
@@ -664,12 +684,64 @@ const LogisticsManager = () => {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Column 1: Shopping, Quick Notes, Habit & Medication Trackers */}
+        {/* Column 1: Shopping, Habit & Medication Trackers */}
         <div className="space-y-4">
-          <ShoppingList />
-          <QuickNotes />
-          <HabitTracker />
-          <MedicationManager />
+          {/* Shopping Section - Collapsible */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <div
+              className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-amber-50 cursor-pointer hover:bg-orange-100 transition-colors"
+              onClick={() => toggleSection('shopping')}
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-bold text-gray-700">قائمة التسوق</span>
+              </div>
+              {sectionsExpanded.shopping ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+            {sectionsExpanded.shopping && (
+              <CardContent className="p-0">
+                <ShoppingList />
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Habits Section - Collapsible */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <div
+              className="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-red-50 cursor-pointer hover:bg-orange-100 transition-colors"
+              onClick={() => toggleSection('habits')}
+            >
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-bold text-gray-700">العادات</span>
+              </div>
+              {sectionsExpanded.habits ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+            {sectionsExpanded.habits && (
+              <CardContent className="p-0">
+                <HabitTracker />
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Medications Section - Collapsible */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <div
+              className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 cursor-pointer hover:bg-purple-100 transition-colors"
+              onClick={() => toggleSection('medications')}
+            >
+              <div className="flex items-center gap-2">
+                <Pill className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-bold text-gray-700">الأدوية</span>
+              </div>
+              {sectionsExpanded.medications ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+            {sectionsExpanded.medications && (
+              <CardContent className="p-0">
+                <MedicationManager />
+              </CardContent>
+            )}
+          </Card>
         </div>
 
         {/* Column 2 & 3: Tasks and Appointments */}
