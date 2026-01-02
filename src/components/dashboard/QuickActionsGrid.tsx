@@ -219,7 +219,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                             const item = widgetOptions.find(w => w.type === type);
                                             if (item) {
                                                 setTimeout(() => {
-                                                    window.open(`/#/widget?type=${type}`, `Barakah${type}${idx}`, `width=${item.size.split(',')[0]},height=${item.size.split(',')[1]}`);
+                                                    window.open(`${window.location.origin}${window.location.pathname}#/widget?type=${type}`, `Barakah${type}${idx}`, `width=${item.size.split(',')[0]},height=${item.size.split(',')[1]}`);
                                                 }, idx * 200);
                                             }
                                         });
@@ -236,7 +236,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                     onClick={() => {
                                         const types = selectedWidgets.join(',');
                                         const height = Math.min(800, 150 + selectedWidgets.length * 120);
-                                        window.open(`/#/widget?type=${types}`, 'BarakahCombined', `width=400,height=${height}`);
+                                        window.open(`${window.location.origin}${window.location.pathname}#/widget?type=${types}`, 'BarakahCombined', `width=400,height=${height}`);
                                         setShowWidgetMenu(false);
                                         setSelectedWidgets([]);
                                     }}
@@ -254,7 +254,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 <DialogContent className="sm:max-w-[95vw] md:max-w-[500px] max-h-[85vh] p-0 overflow-hidden">
                     <div className="h-full overflow-auto">
                         <iframe
-                            src={`/#/widget?type=${inlineWidgetTypes.join(',')}`}
+                            src={`${window.location.pathname}#/widget?type=${inlineWidgetTypes.join(',')}`}
                             className="w-full h-[75vh] border-0"
                             title="Barakah Widget"
                         />
