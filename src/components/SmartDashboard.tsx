@@ -16,8 +16,11 @@ import { useLocations } from '@/hooks/useLocations';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 import {
-    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, Pin, LayoutGrid, Calendar, Wallet, ListChecks, ChevronDown, ChevronUp, Bell, CalendarDays, Share, Edit, Trash2
+    Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, Pin, LayoutGrid, Calendar, Wallet, ListChecks, ChevronDown, ChevronUp, Bell, CalendarDays, Share, Share2, Edit, Trash2
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import { Share as CapacitorShare } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
@@ -466,17 +469,85 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                     <StickyNote className="w-5 h-5 text-amber-500" />
                                     <span>{selectedNoteForView?.note.content.split('\n')[0].substring(0, 30) || 'ملاحظة'}</span>
                                 </div>
-                                {selectedNoteForView && (
+
+                                <div className="flex gap-1">
                                     <button
                                         onClick={() => {
-                                            togglePin(selectedNoteForView.index);
-                                            setSelectedNoteForView(null);
+                                            const text = selectedNoteForView.note.content;
+                                            // Try native share first (likely text)
+                                            CapacitorShare.share({
+                                                title: 'مشاركة ملاحظة',
+                                                text: text,
+                                                dialogTitle: 'مشاركة الملاحظة'
+                                            }).catch(() => {
+                                                // Fallback to clipboard
+                                                navigator.clipboard.writeText(text);
+                                                toast({ title: 'تم النسخ', description: 'تم نسخ النص للحافظة' });
+                                            });
                                         }}
-                                        className={`p-1.5 rounded-full ${selectedNoteForView.note.isPinned ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 hover:text-amber-500'}`}
+                                        className="p-1.5 rounded-full bg-gray-100 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                                        title="مشاركة كنص"
                                     >
-                                        <Pin className="w-4 h-4" fill={selectedNoteForView.note.isPinned ? "currentColor" : "none"} />
+                                        <Share className="w-4 h-4" />
                                     </button>
-                                )}
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                const doc = new jsPDF();
+                                                // Basic PDF generation - text might be reversed for Arabic without fonts
+                                                // aligning right for RTL feel
+                                                doc.setFontSize(16);
+                                                const splitText = doc.splitTextToSize(selectedNoteForView.note.content, 180);
+                                                doc.text(splitText, 200, 20, { align: 'right' });
+
+                                                const fileName = `note-${Date.now()}.pdf`;
+
+                                                // For web:
+                                                // doc.save(fileName);
+
+                                                // For Capacitor/Android:
+                                                const base64Data = doc.output('datauristring').split(',')[1];
+
+                                                await Filesystem.writeFile({
+                                                    path: fileName,
+                                                    data: base64Data,
+                                                    directory: Directory.Cache,
+                                                });
+
+                                                const uriResult = await Filesystem.getUri({
+                                                    directory: Directory.Cache,
+                                                    path: fileName,
+                                                });
+
+                                                await CapacitorShare.share({
+                                                    title: 'تصدير PDF',
+                                                    url: uriResult.uri,
+                                                    dialogTitle: 'مشاركة كملف PDF'
+                                                });
+
+                                            } catch (e) {
+                                                console.error(e);
+                                                toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء ملف PDF', variant: 'destructive' });
+                                            }
+                                        }}
+                                        className="p-1.5 rounded-full bg-gray-100 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                        title="مشاركة PDF"
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                    </button>
+
+                                    {selectedNoteForView && (
+                                        <button
+                                            onClick={() => {
+                                                togglePin(selectedNoteForView.index);
+                                                setSelectedNoteForView(null);
+                                            }}
+                                            className={`p-1.5 rounded-full ${selectedNoteForView.note.isPinned ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 hover:text-amber-500'}`}
+                                        >
+                                            <Pin className="w-4 h-4" fill={selectedNoteForView.note.isPinned ? "currentColor" : "none"} />
+                                        </button>
+                                    )}
+                                </div>
                             </DialogTitle>
                         </DialogHeader>
                         <div className="flex-1 overflow-y-auto p-4 bg-amber-50/30 rounded-lg border border-amber-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -675,7 +746,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     </DialogContent>
                 </Dialog>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mic, MicOff, Check, X, Loader2, Plus, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 interface VoiceNoteRecorderProps {
     isOpen: boolean;
@@ -33,17 +34,48 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedNoteIndex, setSelectedNoteIndex] = useState<string>('new');
     const [manualMode, setManualMode] = useState(false);
+    const [useNativeSpeech, setUseNativeSpeech] = useState(false);
     const recognitionRef = useRef<any>(null);
     const finalTranscriptRef = useRef<string>('');
     const processedResultsRef = useRef<Set<number>>(new Set());
     const previousTranscriptRef = useRef<string>('');
 
     useEffect(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setSpeechSupported(false);
-            setManualMode(true);
-        }
+        const checkSpeechSupport = async () => {
+            // Check if running in Capacitor (Mobile App)
+            const isCapacitor = (window as any).Capacitor !== undefined;
+
+            if (isCapacitor) {
+                // Use native Capacitor speech recognition on mobile
+                try {
+                    const available = await SpeechRecognition.available();
+                    if (available.available) {
+                        // Request permissions
+                        const permission = await SpeechRecognition.requestPermissions();
+                        if (permission.speechRecognition === 'granted') {
+                            setUseNativeSpeech(true);
+                            setSpeechSupported(true);
+                            setManualMode(false);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Native speech recognition not available:', e);
+                }
+                // Fallback to manual mode if native speech fails
+                setSpeechSupported(false);
+                setManualMode(true);
+            } else {
+                // Desktop/Web: Use Web Speech API
+                const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                if (!WebSpeechRecognition) {
+                    setSpeechSupported(false);
+                    setManualMode(true);
+                }
+            }
+        };
+
+        checkSpeechSupport();
     }, []);
 
     useEffect(() => {
@@ -64,7 +96,47 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     }, [isOpen]);
 
     const startRecording = useCallback(async () => {
-        // Explicitly request microphone permission first (Critical for Desktop/Electron)
+        // Capture current text as the starting point for this session
+        previousTranscriptRef.current = transcript;
+
+        if (useNativeSpeech) {
+            // Use Native Capacitor Speech Recognition (Android/iOS)
+            try {
+                setIsRecording(true);
+                setInterimTranscript('');
+                finalTranscriptRef.current = '';
+
+                // Start listening with native plugin
+                await SpeechRecognition.start({
+                    language: 'ar-SA',
+                    maxResults: 5,
+                    popup: false, // Use our own UI
+                    partialResults: true,
+                });
+
+                // Listen for partial results
+                SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
+                    if (data.matches && data.matches.length > 0) {
+                        setInterimTranscript(data.matches[0]);
+                    }
+                });
+
+                // Listen for final results
+                SpeechRecognition.addListener('listeningState', (state: { status: string }) => {
+                    if (state.status === 'stopped') {
+                        setIsRecording(false);
+                    }
+                });
+
+            } catch (e) {
+                console.error('Native speech error:', e);
+                setIsRecording(false);
+                toast({ title: 'خطأ في التسجيل الصوتي', variant: 'destructive' });
+            }
+            return;
+        }
+
+        // Desktop/Web: Use Web Speech API
         try {
             await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (err) {
@@ -73,13 +145,10 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             return;
         }
 
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
+        const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!WebSpeechRecognition) return;
 
-        // Capture current text as the starting point for this session
-        previousTranscriptRef.current = transcript;
-
-        const recognition = new SpeechRecognition();
+        const recognition = new WebSpeechRecognition();
         recognition.lang = 'ar-SA';
         recognition.continuous = true;
         recognition.interimResults = true;
@@ -142,14 +211,34 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         } catch (e) {
             console.error("Failed to start recognition:", e);
         }
-    }, [transcript, toast]);
+    }, [transcript, toast, useNativeSpeech]);
 
-    const stopRecording = useCallback(() => {
+    const stopRecording = useCallback(async () => {
+        if (useNativeSpeech) {
+            // Stop native Capacitor speech recognition
+            try {
+                await SpeechRecognition.stop();
+                // Use the interim transcript that was accumulated during recording
+                if (interimTranscript) {
+                    const separator = previousTranscriptRef.current ? ' ' : '';
+                    setTranscript(previousTranscriptRef.current + separator + interimTranscript);
+                    setInterimTranscript('');
+                }
+                // Remove listeners
+                SpeechRecognition.removeAllListeners();
+            } catch (e) {
+                console.error('Error stopping native speech:', e);
+            }
+            setIsRecording(false);
+            return;
+        }
+
+        // Web Speech API stop
         if (recognitionRef.current) {
             recognitionRef.current.stop();
             setIsRecording(false);
         }
-    }, []);
+    }, [useNativeSpeech]);
 
     const handleSave = useCallback(() => {
         // Cleaning up spaces
@@ -254,8 +343,8 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         </div>
                     ) : (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                            <p className="text-amber-700 text-sm">التسجيل الصوتي غير مدعوم على هذا الجهاز</p>
-                            <p className="text-amber-600 text-xs mt-1">يمكنك كتابة الملاحظة يدوياً في الحقل أدناه</p>
+                            <p className="text-amber-700 text-sm font-bold">التسجيل المباشر غير مدعوم</p>
+                            <p className="text-amber-600 text-xs mt-1">يرجى استخدام 🎙️ ميكروفون لوحة المفاتيح للكتابة بالصوت</p>
                         </div>
                     )}
                     {/* Transcript Editable Area */}
@@ -263,6 +352,10 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         <textarea
                             value={transcript + (isRecording ? interimTranscript : '')}
                             onChange={(e) => {
+                                // Stop recording if user starts typing to avoid conflicts
+                                if (isRecording) {
+                                    stopRecording();
+                                }
                                 const val = e.target.value;
                                 setTranscript(val);
                                 // IMPORTANT: Sync manual edits to reference so resuming works
@@ -271,9 +364,27 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                                 finalTranscriptRef.current = '';
                             }}
                             className="w-full min-h-[120px] max-h-[200px] p-4 rounded-lg border bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all text-right text-lg leading-relaxed resize-none dir-rtl"
-                            placeholder={isRecording ? "جاري الاستماع..." : "تحدث للتسجيل أو اكتب هنا للتعديل..."}
+                            placeholder={isRecording ? "جاري الاستماع... (ابدأ الكتابة للإيقاف)" : "تحدث للتسجيل أو اكتب هنا للتعديل..."}
                             dir="rtl"
                         />
+
+                        {/* Clear Button - only when not recording and has text */}
+                        {!isRecording && transcript && (
+                            <button
+                                onClick={() => {
+                                    setTranscript('');
+                                    setInterimTranscript('');
+                                    previousTranscriptRef.current = '';
+                                    finalTranscriptRef.current = '';
+                                    processedResultsRef.current = new Set();
+                                }}
+                                className="absolute top-2 left-2 p-1.5 bg-gray-200/50 hover:bg-red-100 text-gray-500 hover:text-red-600 rounded-full transition-all"
+                                title="مسح النص"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+
                         {isRecording && (
                             <div className="absolute bottom-2 left-2">
                                 <span className="flex h-3 w-3">

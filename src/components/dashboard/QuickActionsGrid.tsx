@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
@@ -36,6 +37,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     const [showInlineWidget, setShowInlineWidget] = useState(false);
     const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
     const [shortcutResult, setShortcutResult] = useState<{ title: string; content: string } | null>(null);
+
+    // Calculator states
+    const [showCalcAge, setShowCalcAge] = useState(false);
+    const [showCalcDays, setShowCalcDays] = useState(false);
+    const [showCalcPercentage, setShowCalcPercentage] = useState(false);
+    const [showCalcCurrency, setShowCalcCurrency] = useState(false);
+    const [showCalcSalary, setShowCalcSalary] = useState(false);
+    const [calcInput1, setCalcInput1] = useState('');
+    const [calcInput2, setCalcInput2] = useState('');
+    const [calcResult, setCalcResult] = useState('');
 
     // Shortcuts Management
     const [customShortcuts, setCustomShortcuts] = useState<string[]>(() => {
@@ -78,6 +89,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         { id: 'calc_percentage', name: 'حساب النسبة', icon: Calculator, category: 'calc', description: 'حاسبة النسبة المئوية' },
         { id: 'calc_age', name: 'حساب العمر', icon: Calendar, category: 'calc', description: 'حساب العمر بالهجري والميلادي' },
         { id: 'calc_days', name: 'الفرق بين تاريخين', icon: Calendar, category: 'calc', description: 'حساب عدد الأيام بين تاريخين' },
+        { id: 'calc_salary', name: 'حساب الراتب اليومي', icon: DollarSign, category: 'calc', description: 'حساب الدخل اليومي من الراتب الشهري' },
 
         // Reminders
         { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'remind', description: 'تذكير بعد 5 دقائق' },
@@ -302,31 +314,36 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
             // === CALCULATORS ===
             case 'calc_currency':
-                setShortcutResult({
-                    title: '💱 تحويل العملات',
-                    content: 'قريباً - حاسبة تحويل ARS ↔ USD'
-                });
+                setCalcInput1('');
+                setCalcInput2('');
+                setCalcResult('');
+                setShowCalcCurrency(true);
                 break;
 
             case 'calc_percentage':
-                setShortcutResult({
-                    title: '📊 حساب النسبة',
-                    content: 'قريباً - حاسبة النسبة المئوية'
-                });
+                setCalcInput1('');
+                setCalcInput2('');
+                setCalcResult('');
+                setShowCalcPercentage(true);
                 break;
 
             case 'calc_age':
-                setShortcutResult({
-                    title: '🎂 حساب العمر',
-                    content: 'قريباً - حساب العمر بالهجري والميلادي'
-                });
+                setCalcInput1('');
+                setCalcResult('');
+                setShowCalcAge(true);
                 break;
 
             case 'calc_days':
-                setShortcutResult({
-                    title: '📆 الفرق بين تاريخين',
-                    content: 'قريباً - حساب عدد الأيام بين تاريخين'
-                });
+                setCalcInput1('');
+                setCalcInput2('');
+                setCalcResult('');
+                setShowCalcDays(true);
+                break;
+
+            case 'calc_salary':
+                setCalcInput1('');
+                setCalcResult('');
+                setShowCalcSalary(true);
                 break;
 
             // === REMINDERS ===
@@ -827,6 +844,222 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     <Button onClick={() => setShortcutResult(null)} className="w-full mt-2">
                         إغلاق
                     </Button>
+                </DialogContent>
+            </Dialog>
+
+            {/* Age Calculator Dialog */}
+            <Dialog open={showCalcAge} onOpenChange={setShowCalcAge}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">🎂 حساب العمر</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">تاريخ الميلاد</label>
+                            <Input
+                                type="date"
+                                value={calcInput1}
+                                onChange={(e) => setCalcInput1(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                if (calcInput1) {
+                                    const birth = new Date(calcInput1);
+                                    const now = new Date();
+                                    const ageMs = now.getTime() - birth.getTime();
+                                    const ageYears = Math.floor(ageMs / (365.25 * 24 * 60 * 60 * 1000));
+                                    const ageMonths = Math.floor((ageMs % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
+                                    const ageDays = Math.floor((ageMs % (30.44 * 24 * 60 * 60 * 1000)) / (24 * 60 * 60 * 1000));
+                                    const totalDays = Math.floor(ageMs / (24 * 60 * 60 * 1000));
+                                    setCalcResult(`العمر: ${ageYears} سنة و ${ageMonths} شهر و ${ageDays} يوم\n\nإجمالي الأيام: ${totalDays.toLocaleString()} يوم`);
+                                }
+                            }}
+                        >
+                            احسب
+                        </Button>
+                        {calcResult && (
+                            <div className="p-4 bg-emerald-50 rounded-lg text-right whitespace-pre-wrap">
+                                {calcResult}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Days Difference Calculator */}
+            <Dialog open={showCalcDays} onOpenChange={setShowCalcDays}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">📆 الفرق بين تاريخين</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">التاريخ الأول</label>
+                            <Input type="date" value={calcInput1} onChange={(e) => setCalcInput1(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">التاريخ الثاني</label>
+                            <Input type="date" value={calcInput2} onChange={(e) => setCalcInput2(e.target.value)} />
+                        </div>
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                if (calcInput1 && calcInput2) {
+                                    const d1 = new Date(calcInput1);
+                                    const d2 = new Date(calcInput2);
+                                    const diffMs = Math.abs(d2.getTime() - d1.getTime());
+                                    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+                                    const weeks = Math.floor(diffDays / 7);
+                                    const months = Math.floor(diffDays / 30.44);
+                                    setCalcResult(`الفرق: ${diffDays.toLocaleString()} يوم\n\n≈ ${weeks} أسبوع\n≈ ${months} شهر`);
+                                }
+                            }}
+                        >
+                            احسب
+                        </Button>
+                        {calcResult && (
+                            <div className="p-4 bg-blue-50 rounded-lg text-right whitespace-pre-wrap">
+                                {calcResult}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Percentage Calculator */}
+            <Dialog open={showCalcPercentage} onOpenChange={setShowCalcPercentage}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">📊 حساب النسبة المئوية</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">النسبة (%)</label>
+                            <Input type="number" placeholder="مثال: 15" value={calcInput1} onChange={(e) => setCalcInput1(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">من الرقم</label>
+                            <Input type="number" placeholder="مثال: 200" value={calcInput2} onChange={(e) => setCalcInput2(e.target.value)} />
+                        </div>
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                if (calcInput1 && calcInput2) {
+                                    const percent = parseFloat(calcInput1);
+                                    const total = parseFloat(calcInput2);
+                                    const result = (percent / 100) * total;
+                                    setCalcResult(`${percent}% من ${total} = ${result.toLocaleString()}`);
+                                }
+                            }}
+                        >
+                            احسب
+                        </Button>
+                        {calcResult && (
+                            <div className="p-4 bg-purple-50 rounded-lg text-right text-lg font-bold">
+                                {calcResult}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Currency Converter */}
+            <Dialog open={showCalcCurrency} onOpenChange={setShowCalcCurrency}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">💱 تحويل العملات</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">المبلغ بالـ ARS</label>
+                            <Input type="number" placeholder="أدخل المبلغ" value={calcInput1} onChange={(e) => setCalcInput1(e.target.value)} />
+                        </div>
+                        <Button
+                            className="w-full"
+                            onClick={async () => {
+                                if (calcInput1) {
+                                    setCalcResult('جاري الحساب...');
+                                    try {
+                                        const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+                                        const data = await res.json();
+                                        const ars = parseFloat(calcInput1);
+                                        const usd = ars / data.venta;
+                                        setCalcResult(`${ars.toLocaleString()} ARS = ${usd.toFixed(2)} USD\n\n(سعر البلو: ${data.venta} ARS/USD)`);
+                                    } catch {
+                                        setCalcResult('خطأ في جلب سعر الدولار');
+                                    }
+                                }
+                            }}
+                        >
+                            تحويل ARS → USD
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={async () => {
+                                if (calcInput1) {
+                                    setCalcResult('جاري الحساب...');
+                                    try {
+                                        const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+                                        const data = await res.json();
+                                        const usd = parseFloat(calcInput1);
+                                        const ars = usd * data.venta;
+                                        setCalcResult(`${usd.toLocaleString()} USD = ${ars.toLocaleString()} ARS\n\n(سعر البلو: ${data.venta} ARS/USD)`);
+                                    } catch {
+                                        setCalcResult('خطأ في جلب سعر الدولار');
+                                    }
+                                }
+                            }}
+                        >
+                            تحويل USD → ARS
+                        </Button>
+                        {calcResult && (
+                            <div className="p-4 bg-amber-50 rounded-lg text-right whitespace-pre-wrap">
+                                {calcResult}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Salary Calculator */}
+            <Dialog open={showCalcSalary} onOpenChange={setShowCalcSalary}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-right">💰 حساب الراتب اليومي</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-sm text-gray-600 block mb-1">الراتب الشهري</label>
+                            <Input type="number" placeholder="أدخل الراتب" value={calcInput1} onChange={(e) => setCalcInput1(e.target.value)} />
+                        </div>
+                        <Button
+                            className="w-full"
+                            onClick={() => {
+                                if (calcInput1) {
+                                    const salary = parseFloat(calcInput1);
+                                    const daily30 = salary / 30;
+                                    const dailyWorking = salary / 22; // Approx working days
+                                    const hourly = dailyWorking / 8;
+
+                                    setCalcResult(
+                                        `الدخل اليومي (30 يوم): ${daily30.toLocaleString(undefined, { maximumFractionDigits: 2 })} ARS\n` +
+                                        `الدخل اليومي (أيام عمل ≈ 22): ${dailyWorking.toLocaleString(undefined, { maximumFractionDigits: 2 })} ARS\n` +
+                                        `الدخل بالساعة (8 ساعات): ${hourly.toLocaleString(undefined, { maximumFractionDigits: 2 })} ARS`
+                                    );
+                                }
+                            }}
+                        >
+                            احسب
+                        </Button>
+                        {calcResult && (
+                            <div className="p-4 bg-emerald-50 rounded-lg text-right whitespace-pre-wrap font-medium">
+                                {calcResult}
+                            </div>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

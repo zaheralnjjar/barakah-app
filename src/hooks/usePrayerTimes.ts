@@ -296,10 +296,8 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-        // Skip sunrise for next prayer calculation
-        const prayersOnly = prayers.filter(p => p.name !== 'sunrise');
-
-        for (const prayer of prayersOnly) {
+        // Include all prayer times including sunrise
+        for (const prayer of prayers) {
             const prayerMinutes = prayer.timestamp.getHours() * 60 + prayer.timestamp.getMinutes();
             if (prayerMinutes > currentMinutes) {
                 setNextPrayer(prayer);
@@ -308,10 +306,10 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
         }
 
         // If all prayers have passed, next is Fajr tomorrow
-        if (prayersOnly.length > 0) {
+        if (prayers.length > 0) {
             setNextPrayer({
-                ...prayersOnly[0],
-                timestamp: new Date(prayersOnly[0].timestamp.getTime() + 24 * 60 * 60 * 1000),
+                ...prayers[0],
+                timestamp: new Date(prayers[0].timestamp.getTime() + 24 * 60 * 60 * 1000),
             });
         }
     };

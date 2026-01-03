@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Moon, Clock, MapPin, Share2, FileDown, Calendar, FileText, Download, Bell } from 'lucide-react';
+import { Moon, Clock, MapPin, Share2, FileDown, Calendar, FileText, Download, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -43,8 +43,10 @@ const PrayerManager = () => {
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         return nextMonth.toISOString().split('T')[0];
     });
+    const [exportTitle, setExportTitle] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [expandedWeeks, setExpandedWeeks] = useState<number[]>([]); // Array of week indices
 
     // Share Modal State
     const [showShareModal, setShowShareModal] = useState(false);
@@ -62,6 +64,26 @@ const PrayerManager = () => {
         loadPrayerData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDate]);
+
+    // Group data into weeks and set default expanded
+    const weeks = React.useMemo(() => {
+        const w: DailyPrayer[][] = [];
+        for (let i = 0; i < prayerData.length; i += 7) {
+            w.push(prayerData.slice(i, i + 7));
+        }
+        return w;
+    }, [prayerData]);
+
+    useEffect(() => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentWeekIdx = weeks.findIndex(week => week.some(d => d.date === todayStr));
+        if (currentWeekIdx !== -1) {
+            setExpandedWeeks([currentWeekIdx]);
+        } else {
+            // If today is not in this month view, maybe expand the first one?
+            if (weeks.length > 0) setExpandedWeeks([0]);
+        }
+    }, [weeks]);
 
     // Update time to next prayer every 30 seconds for more accuracy
     useEffect(() => {
@@ -197,6 +219,7 @@ const PrayerManager = () => {
                 const formattedData: DailyPrayer[] = data.data.map((day: any) => ({
                     date: day.date.gregorian.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
                     fajr: day.timings.Fajr.split(' ')[0],
+                    sunrise: day.timings.Sunrise.split(' ')[0],
                     dhuhr: day.timings.Dhuhr.split(' ')[0],
                     asr: day.timings.Asr.split(' ')[0],
                     maghrib: day.timings.Maghrib.split(' ')[0],
@@ -382,7 +405,9 @@ const PrayerManager = () => {
         };
 
         // Create text content for sharing
-        let textContent = `📿 مواقيت الصلاة - نظام بركة\n`;
+        let textContent = ``;
+        if (exportTitle) textContent += `🌟 ${exportTitle}\n\n`;
+        textContent += `📿 مواقيت الصلاة - نظام بركة\n`;
         textContent += `من ${exportFromDate} إلى ${exportToDate}\n\n`;
 
         dataToExport.forEach(day => {
@@ -627,6 +652,19 @@ const PrayerManager = () => {
                                             </div>
                                         </div>
 
+
+                                        {/* Motivational Title */}
+                                        <div>
+                                            <Label className="text-sm font-bold mb-2 block">عنوان تحفيزي (اختياري)</Label>
+                                            <Input
+                                                placeholder="مثال: اجعل صلاتك نبض حياتك..."
+                                                value={exportTitle}
+                                                onChange={(e) => setExportTitle(e.target.value)}
+                                                maxLength={100}
+                                            />
+                                            <p className="text-[10px] text-gray-400 mt-1">سيظهر هذا العنوان في بداية النص المصدر</p>
+                                        </div>
+
                                         {/* Prayers Selection */}
                                         <div>
                                             <Label className="text-sm font-bold mb-3 block text-center">الصلوات</Label>
@@ -730,43 +768,100 @@ const PrayerManager = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
+                    {/* Expand/Collapse Controls */}
+                    <div className="flex justify-end p-2 gap-2 bg-gray-50/50 border-b border-gray-100">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => setExpandedWeeks(weeks.map((_, i) => i))}
+                        >
+                            توسيع الكل
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => setExpandedWeeks([])}
+                        >
+                            طي الكل
+                        </Button>
+                    </div>
+
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-right">
+                        <table className="w-full text-sm text-right border-collapse">
                             <thead className="bg-gray-50 text-gray-600">
                                 <tr>
-                                    <th className="p-4 font-semibold whitespace-nowrap">التاريخ</th>
+                                    <th className="p-4 font-semibold whitespace-nowrap w-32">التاريخ</th>
                                     <th className="p-4 font-semibold text-emerald-700 whitespace-nowrap">الفجر</th>
+                                    <th className="p-4 font-semibold text-amber-500 whitespace-nowrap">الشروق</th>
                                     <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">الظهر</th>
                                     <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">العصر</th>
                                     <th className="p-4 font-semibold text-amber-600 whitespace-nowrap">المغرب</th>
                                     <th className="p-4 font-semibold text-indigo-700 whitespace-nowrap">العشاء</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {prayerData.map((day, index) => {
-                                    const isToday = day.date === new Date().toISOString().split('T')[0];
-                                    return (
-                                        <tr key={index} className={`hover:bg-gray-50 transition-colors ${isToday ? 'bg-emerald-50/60' : ''}`}>
-                                            <td className="p-4 font-medium whitespace-nowrap text-right">
-                                                <div className="font-english dir-ltr">{day.date}</div>
-                                                <div className="text-[10px] text-gray-400 mt-0.5">
-                                                    {new Date(day.date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' })}
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
-                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>
-                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.asr)}</td>
-                                            <td className="p-4 text-amber-600 font-bold">{formatNumberToLocale(day.maghrib)}</td>
-                                            <td className="p-4 text-indigo-700">{formatNumberToLocale(day.isha)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
+                            {weeks.map((week, weekIdx) => {
+                                const isExpanded = expandedWeeks.includes(weekIdx);
+                                const startDate = new Date(week[0].date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' });
+                                const endDate = new Date(week[week.length - 1].date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' });
+
+                                return (
+                                    <React.Fragment key={weekIdx}>
+                                        {/* Week Header */}
+                                        <tbody>
+                                            <tr
+                                                className="bg-gray-50/80 hover:bg-gray-100 cursor-pointer border-b border-gray-200"
+                                                onClick={() => {
+                                                    setExpandedWeeks(prev =>
+                                                        prev.includes(weekIdx)
+                                                            ? prev.filter(w => w !== weekIdx)
+                                                            : [...prev, weekIdx]
+                                                    );
+                                                }}
+                                            >
+                                                <td colSpan={7} className="p-2 px-4">
+                                                    <div className="flex items-center gap-2 font-bold text-gray-700">
+                                                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                        <span>الأسبوع {weekIdx + 1}</span>
+                                                        <span className="text-xs font-normal text-gray-500 mr-2">({startDate} - {endDate})</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+
+                                        {/* Week Days */}
+                                        {isExpanded && (
+                                            <tbody className="divide-y divide-gray-100 border-b border-gray-200">
+                                                {week.map((day, index) => {
+                                                    const isToday = day.date === new Date().toISOString().split('T')[0];
+                                                    return (
+                                                        <tr key={index} className={`hover:bg-gray-50 transition-colors ${isToday ? 'bg-emerald-50/60' : ''}`}>
+                                                            <td className="p-4 font-medium whitespace-nowrap text-right">
+                                                                <div className="font-english dir-ltr">{day.date}</div>
+                                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                                    {new Date(day.date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' })}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-4 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
+                                                            <td className="p-4 text-amber-500 font-medium">{formatNumberToLocale(day.sunrise || '--:--')}</td>
+                                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>
+                                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.asr)}</td>
+                                                            <td className="p-4 text-amber-600 font-bold">{formatNumberToLocale(day.maghrib)}</td>
+                                                            <td className="p-4 text-indigo-700">{formatNumberToLocale(day.isha)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </table>
                     </div>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 };
 
