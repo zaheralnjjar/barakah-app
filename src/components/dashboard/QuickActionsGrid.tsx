@@ -19,9 +19,10 @@ interface QuickActionsGridProps {
     onQuickParking?: () => void;
     onOpenTimer?: () => void;
     onOpenVoiceRecorder?: () => void;
+    latestParking?: any;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -56,9 +57,54 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         } catch { return []; }
     });
 
+    const [customLocations, setCustomLocations] = useState<{ id: string, name: string, url: string }[]>(() => {
+        try {
+            const saved = localStorage.getItem('baraka_custom_locations');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+
+    const [newLocName, setNewLocName] = useState('');
+    const [newLocUrl, setNewLocUrl] = useState('');
+    const [searchAddress, setSearchAddress] = useState('');
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
     useEffect(() => {
         localStorage.setItem('baraka_custom_shortcuts', JSON.stringify(customShortcuts));
     }, [customShortcuts]);
+
+    useEffect(() => {
+        localStorage.setItem('baraka_custom_locations', JSON.stringify(customLocations));
+    }, [customLocations]);
+
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            toast({ title: 'خطأ', description: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
+            return;
+        }
+        setIsLoadingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const link = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                setNewLocUrl(link);
+                if (!newLocName) setNewLocName("موقعي الحالي");
+                setIsLoadingLocation(false);
+                toast({ title: 'تم تحديد الموقع' });
+            },
+            (err) => {
+                console.error(err);
+                setIsLoadingLocation(false);
+                toast({ title: 'فشل تحديد الموقع', description: 'تأكد من تفعيل الـ GPS', variant: 'destructive' });
+            }
+        );
+    };
+
+    const handleGenerateUrlFromAddress = () => {
+        if (!searchAddress) return;
+        const link = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchAddress)}`;
+        setNewLocUrl(link);
+        if (!newLocName) setNewLocName(searchAddress);
+    };
 
     // Available Actions (25+ options)
     const AVAILABLE_ACTIONS = [
@@ -79,6 +125,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         { id: 'add_task', name: 'إضافة مهمة', icon: ListChecks, category: 'action', description: 'إضافة مهمة جديدة' },
         { id: 'add_note', name: 'ملاحظة صوتية', icon: Mic, category: 'action', description: 'تسجيل ملاحظة صوتية' },
         { id: 'save_parking', name: 'حفظ موقف', icon: MapPin, category: 'action', description: 'حفظ موقف السيارة الحالي' },
+        { id: 'find_parking', name: 'مكان سيارتي', icon: Navigation, category: 'action', description: 'الملاحة إلى آخر موقف محفوظ' },
         { id: 'start_pomodoro', name: 'بومودورو', icon: Timer, category: 'action', description: 'بدء مؤقت تركيز 25 دقيقة' },
         { id: 'add_shopping', name: 'للتسوق', icon: ShoppingCart, category: 'action', description: 'إضافة عنصر لقائمة التسوق' },
         { id: 'copy_location', name: 'نسخ موقعي', icon: Copy, category: 'action', description: 'نسخ رابط الموقع الحالي' },
@@ -101,6 +148,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         // AI/Smart
         { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'smart', description: 'ملخص ذكي لنشاطات اليوم' },
         { id: 'quick_insights', name: 'رؤى سريعة', icon: Zap, category: 'smart', description: 'تحليل سريع للمصاريف والمهام' },
+        { id: 'routine_modes', name: 'أوضاع دائمة', icon: Settings, category: 'smart', description: 'إدارة القوالب الروتينية' },
     ];
 
     const addShortcut = (actionId: string) => {
@@ -111,6 +159,15 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
     const removeShortcut = (actionId: string) => {
         setCustomShortcuts(customShortcuts.filter(id => id !== actionId));
+    };
+
+    const addCustomLocation = (name: string, url: string) => {
+        const newLoc = { id: Date.now().toString(), name, url };
+        setCustomLocations([...customLocations, newLoc]);
+    };
+
+    const removeCustomLocation = (id: string) => {
+        setCustomLocations(customLocations.filter(l => l.id !== id));
     };
 
     const getActionById = (id: string) => AVAILABLE_ACTIONS.find(a => a.id === id);
@@ -275,6 +332,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 }
                 break;
 
+            case 'find_parking':
+                if (latestParking) {
+                    const url = `https://www.google.com/maps?q=${latestParking.lat},${latestParking.lng}`;
+                    window.open(url, '_blank');
+                    toast({ title: '🚗 جاري الملاحة إلى السيارة' });
+                } else {
+                    toast({ title: '🚫 لم يتم حفظ موقف مسبقاً', variant: 'destructive' });
+                }
+                break;
+
             case 'start_pomodoro':
                 if (onOpenTimer) onOpenTimer();
                 else toast({ title: 'المؤقت غير متاح' });
@@ -402,6 +469,12 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 });
                 break;
 
+            case 'routine_modes':
+                // Dispatch custom event to open settings and navigate to routines section
+                window.dispatchEvent(new CustomEvent('openRoutineModes'));
+                toast({ title: '🔄 أوضاع دائمة', description: 'افتح الإعدادات > أوضاع دائمة' });
+                break;
+
             default:
                 toast({ title: action.name, description: action.description });
         }
@@ -410,7 +483,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     return (
         <>
             {/* ===== CUSTOM SHORTCUTS BAR ===== */}
-            {customShortcuts.length > 0 && (
+            {(customShortcuts.length > 0 || customLocations.length > 0) && (
                 <div className="mb-3">
                     <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-4 h-4 text-emerald-500" />
@@ -423,6 +496,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                         </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                        {customLocations.map(loc => (
+                            <button
+                                key={loc.id}
+                                onClick={() => window.open(loc.url, '_blank')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all hover:scale-105 bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100"
+                            >
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span>{loc.name}</span>
+                            </button>
+                        ))}
                         {customShortcuts.map(id => {
                             const action = getActionById(id);
                             if (!action) return null;
@@ -781,6 +864,83 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
                     {/* Available Actions */}
                     <div className="flex-1 overflow-y-auto">
+                        {/* Custom Locations Management */}
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                            <h4 className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                إضافة موقع سريع
+                            </h4>
+                            <div className="space-y-2">
+                                <Input
+                                    placeholder="اسم المكان (مثال: العمل، المطعم المفضل)"
+                                    value={newLocName}
+                                    onChange={(e) => setNewLocName(e.target.value)}
+                                    className="h-8 text-xs"
+                                />
+                                <div className="flex flex-col gap-2 bg-white p-2 rounded border border-gray-100">
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={handleGetCurrentLocation} disabled={isLoadingLocation} className="text-xs flex-1">
+                                            <MapPin className="w-3 h-3 mr-1" /> {isLoadingLocation ? 'جاري التحديد...' : 'موقعي الحالي'}
+                                        </Button>
+                                    </div>
+                                    <div className="flex gap-2 items-center">
+                                        <Input
+                                            placeholder="أو ابحث عن العنوان / اسم الشارع..."
+                                            value={searchAddress}
+                                            onChange={(e) => setSearchAddress(e.target.value)}
+                                            className="h-8 text-xs"
+                                        />
+                                        <Button size="sm" variant="ghost" onClick={handleGenerateUrlFromAddress}>
+                                            بحث
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="رابط الخريطة (يتم تعبئته تلقائياً)"
+                                        value={newLocUrl}
+                                        onChange={(e) => setNewLocUrl(e.target.value)}
+                                        className="h-8 text-xs text-left bg-gray-50"
+                                        dir="ltr"
+                                    />
+                                    <Button
+                                        size="icon"
+                                        className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700"
+                                        onClick={() => {
+                                            if (newLocName && newLocUrl) {
+                                                addCustomLocation(newLocName, newLocUrl);
+                                                setNewLocName('');
+                                                setNewLocUrl('');
+                                                setSearchAddress('');
+                                                toast({ title: 'تمت إضافة الموقع' });
+                                            } else {
+                                                toast({ title: 'يرجى إدخال الاسم والرابط', variant: 'destructive' });
+                                            }
+                                        }}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* List of custom locations to delete */}
+                            {customLocations.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {customLocations.map(loc => (
+                                        <div key={loc.id} className="flex items-center gap-1 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm">
+                                            <span className="text-xs text-gray-600">{loc.name}</span>
+                                            <button
+                                                onClick={() => removeCustomLocation(loc.id)}
+                                                className="p-0.5 text-red-400 hover:text-red-600 rounded-full"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <h4 className="text-xs font-bold text-gray-500 mb-2">إضافة اختصار جديد</h4>
 
                         {['info', 'action', 'calc', 'remind', 'smart'].map(category => (

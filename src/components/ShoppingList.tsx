@@ -1,26 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, Plus, Trash2, Edit, Share2, GripVertical } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Edit, Share2, GripVertical, Calendar, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-interface ShoppingItem {
-    id: string;
-    text: string;
-    quantity: number;
-    unit: 'kg' | 'unit' | 'liter' | 'gram';
-    completed: boolean;
-}
-
-const STORAGE_KEY = 'baraka_shopping_list';
+import { useShoppingList, ShoppingItem } from '@/hooks/useShoppingList';
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 
 // Sortable Item Component
 interface SortableItemProps {
@@ -62,9 +54,23 @@ const SortableShoppingItem: React.FC<SortableItemProps> = ({
                 <p className={`text-sm truncate ${item.completed ? 'line-through text-gray-400' : ''}`}>
                     {item.text}
                 </p>
-                <p className="text-[10px] text-gray-500">
-                    {item.quantity} {getUnitLabel(item.unit)}
-                </p>
+                <div className="flex flex-wrap gap-2 text-[10px] text-gray-500 mt-0.5">
+                    <span>
+                        {item.quantity} {getUnitLabel(item.unit)}
+                    </span>
+                    {item.deadline && (
+                        <span className="flex items-center gap-1 text-orange-600 bg-orange-50 px-1.5 rounded">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(item.deadline), 'dd/MM/yyyy')}
+                        </span>
+                    )}
+                    {item.createdAt && (
+                        <span className="flex items-center gap-1 text-gray-400">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(item.createdAt), 'dd/MM', { locale: arSA })}
+                        </span>
+                    )}
+                </div>
             </div>
             <div className="flex gap-0.5">
                 <Dialog>
@@ -84,28 +90,38 @@ const SortableShoppingItem: React.FC<SortableItemProps> = ({
                                     onChange={(e) => setEditingItem({ ...editingItem, text: e.target.value })}
                                     placeholder="اسم العنصر"
                                 />
-                                <Input
-                                    type="number"
-                                    min="0.1"
-                                    step="0.1"
-                                    value={editingItem.quantity}
-                                    onChange={(e) => setEditingItem({ ...editingItem, quantity: parseFloat(e.target.value) })}
-                                    placeholder="الكمية"
-                                />
-                                <Select
-                                    value={editingItem.unit}
-                                    onValueChange={(v: any) => setEditingItem({ ...editingItem, unit: v })}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="unit">وحدة</SelectItem>
-                                        <SelectItem value="kg">كيلو</SelectItem>
-                                        <SelectItem value="gram">جرام</SelectItem>
-                                        <SelectItem value="liter">لتر</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Input
+                                        type="number"
+                                        min="0.1"
+                                        step="0.1"
+                                        value={editingItem.quantity}
+                                        onChange={(e) => setEditingItem({ ...editingItem, quantity: parseFloat(e.target.value) })}
+                                        placeholder="الكمية"
+                                    />
+                                    <Select
+                                        value={editingItem.unit}
+                                        onValueChange={(v: any) => setEditingItem({ ...editingItem, unit: v })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="unit">وحدة</SelectItem>
+                                            <SelectItem value="kg">كيلو</SelectItem>
+                                            <SelectItem value="gram">جرام</SelectItem>
+                                            <SelectItem value="liter">لتر</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 block mb-1">تاريخ الاستحقاق (اختياري)</label>
+                                    <Input
+                                        type="date"
+                                        value={editingItem.deadline || ''}
+                                        onChange={(e) => setEditingItem({ ...editingItem, deadline: e.target.value })}
+                                    />
+                                </div>
                                 <Button onClick={saveEdit} className="w-full">
                                     حفظ
                                 </Button>
@@ -127,12 +143,13 @@ const SortableShoppingItem: React.FC<SortableItemProps> = ({
 };
 
 const ShoppingList = () => {
-    const [items, setItems] = useState<ShoppingItem[]>([]);
+    const { items, loading, addItem, updateItem, deleteItem, toggleItem, reorderItems } = useShoppingList();
     const [newItem, setNewItem] = useState('');
     const [newQuantity, setNewQuantity] = useState(1);
     const [newUnit, setNewUnit] = useState<'kg' | 'unit' | 'liter' | 'gram'>('unit');
-    const [loading, setLoading] = useState(true);
+    const [newDeadline, setNewDeadline] = useState('');
     const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+    const [showDeadlineInput, setShowDeadlineInput] = useState(false);
     const { toast } = useToast();
 
     // Drag and Drop Sensors
@@ -141,88 +158,20 @@ const ShoppingList = () => {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    // Initial Load
-    useEffect(() => {
-        loadItems();
-    }, []);
-
-    const loadItems = async () => {
-        try {
-            const user = (await supabase.auth.getUser()).data.user;
-            if (user) {
-                const { data } = await supabase.from('logistics_data_2025_12_18_18_42').select('shopping_list').eq('user_id', user.id).single();
-                if (data?.shopping_list) {
-                    setItems(data.shopping_list.map((i: any) => ({
-                        id: i.id?.toString() || Date.now().toString(),
-                        text: i.name || i.text,
-                        quantity: i.quantity || 1,
-                        unit: i.unit || 'unit',
-                        completed: i.completed
-                    })));
-                } else {
-                    const saved = localStorage.getItem(STORAGE_KEY);
-                    if (saved) setItems(JSON.parse(saved));
-                }
-            } else {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) setItems(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const saveItems = async (newItems: ShoppingItem[]) => {
-        setItems(newItems);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-
-        const user = (await supabase.auth.getUser()).data.user;
-        if (user) {
-            await supabase.from('logistics_data_2025_12_18_18_42')
-                .update({
-                    shopping_list: newItems.map(i => ({
-                        id: i.id,
-                        name: i.text,
-                        quantity: i.quantity,
-                        unit: i.unit,
-                        completed: i.completed
-                    })),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', user.id);
-        }
-    };
-
-    const addItem = async () => {
+    const handleAddItem = async () => {
         if (!newItem.trim()) return;
-        const item: ShoppingItem = {
-            id: Date.now().toString(),
+        await addItem({
             text: newItem.trim(),
             quantity: newQuantity,
             unit: newUnit,
-            completed: false
-        };
-        const updated = [item, ...items];
-        await saveItems(updated);
+            deadline: newDeadline || undefined
+        });
         setNewItem('');
         setNewQuantity(1);
         setNewUnit('unit');
+        setNewDeadline('');
+        setShowDeadlineInput(false);
         toast({ title: 'تمت الإضافة', description: 'تم إضافة العنصر للقائمة' });
-    };
-
-    const toggleItem = (id: string) => {
-        const updated = items.map(item =>
-            item.id === id ? { ...item, completed: !item.completed } : item
-        );
-        saveItems(updated);
-    };
-
-    const deleteItem = (id: string) => {
-        const updated = items.filter(item => item.id !== id);
-        saveItems(updated);
-        toast({ title: 'تم الحذف', description: 'تم حذف العنصر من القائمة' });
     };
 
     // Handle drag end for reordering
@@ -232,7 +181,7 @@ const ShoppingList = () => {
             const oldIndex = items.findIndex(item => item.id === active.id);
             const newIndex = items.findIndex(item => item.id === over.id);
             const reordered = arrayMove(items, oldIndex, newIndex);
-            saveItems(reordered);
+            reorderItems(reordered);
         }
     };
 
@@ -240,19 +189,16 @@ const ShoppingList = () => {
         setEditingItem(item);
     };
 
-    const saveEdit = () => {
+    const saveEdit = async () => {
         if (!editingItem) return;
-        const updated = items.map(item =>
-            item.id === editingItem.id ? editingItem : item
-        );
-        saveItems(updated);
+        await updateItem(editingItem.id, editingItem);
         setEditingItem(null);
         toast({ title: 'تم التحديث', description: 'تم تحديث العنصر بنجاح' });
     };
 
     const shareList = async () => {
         const listText = items
-            .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}`)
+            .map(item => `${item.completed ? '✓' : '○'} ${item.text} - ${item.quantity} ${getUnitLabel(item.unit)}${item.deadline ? ` (قبل: ${item.deadline})` : ''}`)
             .join('\n');
 
         if (navigator.share) {
@@ -325,50 +271,70 @@ const ShoppingList = () => {
                 </CardHeader>
                 <CardContent>
                     {/* Add Item Form */}
-                    <div className="flex gap-2 mb-4 flex-wrap">
-                        <Input
-                            placeholder="أضف عنصر جديد..."
-                            value={newItem}
-                            onChange={(e) => setNewItem(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    addItem();
-                                    // Keep focus on input for continuous entry
-                                    (e.target as HTMLInputElement).focus();
-                                }
-                            }}
-                            className="flex-1 min-w-[150px]"
-                        />
-                        <Input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={newQuantity}
-                            onChange={(e) => setNewQuantity(parseFloat(e.target.value) || 1)}
-                            className="w-24"
-                            placeholder="الكمية"
-                        />
-                        <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
-                            <SelectTrigger className="w-28">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="unit">وحدة</SelectItem>
-                                <SelectItem value="kg">كيلو</SelectItem>
-                                <SelectItem value="gram">جرام</SelectItem>
-                                <SelectItem value="liter">لتر</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button onClick={addItem} className="bg-green-600 hover:bg-green-700">
-                            <Plus className="w-4 h-4" />
-                        </Button>
+                    <div className="flex flex-col gap-2 mb-4">
+                        <div className="flex gap-2 flex-wrap">
+                            <Input
+                                placeholder="أضف عنصر جديد..."
+                                value={newItem}
+                                onChange={(e) => setNewItem(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddItem();
+                                        (e.target as HTMLInputElement).focus();
+                                    }
+                                }}
+                                className="flex-1 min-w-[150px]"
+                            />
+                            <Input
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                value={newQuantity}
+                                onChange={(e) => setNewQuantity(parseFloat(e.target.value) || 1)}
+                                className="w-20"
+                                placeholder="الكمية"
+                            />
+                            <Select value={newUnit} onValueChange={(v: any) => setNewUnit(v)}>
+                                <SelectTrigger className="w-24">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="unit">وحدة</SelectItem>
+                                    <SelectItem value="kg">كيلو</SelectItem>
+                                    <SelectItem value="gram">جرام</SelectItem>
+                                    <SelectItem value="liter">لتر</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className={`w-10 ${showDeadlineInput ? 'bg-orange-50 border-orange-200 text-orange-600' : ''}`}
+                                onClick={() => setShowDeadlineInput(!showDeadlineInput)}
+                                title="إضافة تاريخ استحقاق"
+                            >
+                                <Calendar className="w-4 h-4" />
+                            </Button>
+                            <Button onClick={handleAddItem} className="bg-green-600 hover:bg-green-700">
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        {showDeadlineInput && (
+                            <div className="animate-in slide-in-from-top-2">
+                                <Input
+                                    type="date"
+                                    value={newDeadline}
+                                    onChange={(e) => setNewDeadline(e.target.value)}
+                                    className="w-full sm:w-1/2"
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Items List with Drag and Drop */}
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                            <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
+                            <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
                                 {items.map((item) => (
                                     <SortableShoppingItem
                                         key={item.id}

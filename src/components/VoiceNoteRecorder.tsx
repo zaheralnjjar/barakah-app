@@ -39,40 +39,52 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const finalTranscriptRef = useRef<string>('');
     const processedResultsRef = useRef<Set<number>>(new Set());
     const previousTranscriptRef = useRef<string>('');
+    const manualStopRef = useRef<boolean>(false);
 
     useEffect(() => {
         const checkSpeechSupport = async () => {
-            // Check if running in Capacitor (Mobile App)
-            const isCapacitor = (window as any).Capacitor !== undefined;
+            // Check if running in Electron (Desktop)
+            const isElectron = navigator.userAgent.includes('Electron');
 
-            if (isCapacitor) {
-                // Use native Capacitor speech recognition on mobile
+            // Check if running in Capacitor (Mobile App) - but NOT Electron
+            const isCapacitor = (window as any).Capacitor !== undefined && !isElectron;
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+            // Desktop (Electron or Browser): Use Web Speech API
+            if (isElectron || !isMobileDevice) {
+                const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                if (WebSpeechRecognition) {
+                    setSpeechSupported(true);
+                    setManualMode(false);
+                    setUseNativeSpeech(false);
+                    console.log('Using Web Speech API for desktop/browser');
+                    return;
+                }
+            }
+
+            // Mobile with Capacitor: Try native speech recognition
+            if (isCapacitor && isMobileDevice) {
                 try {
                     const available = await SpeechRecognition.available();
                     if (available.available) {
-                        // Request permissions
                         const permission = await SpeechRecognition.requestPermissions();
                         if (permission.speechRecognition === 'granted') {
                             setUseNativeSpeech(true);
                             setSpeechSupported(true);
                             setManualMode(false);
+                            console.log('Using native Capacitor speech recognition');
                             return;
                         }
                     }
                 } catch (e) {
                     console.warn('Native speech recognition not available:', e);
                 }
-                // Fallback to manual mode if native speech fails
-                setSpeechSupported(false);
-                setManualMode(true);
-            } else {
-                // Desktop/Web: Use Web Speech API
-                const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                if (!WebSpeechRecognition) {
-                    setSpeechSupported(false);
-                    setManualMode(true);
-                }
             }
+
+            // Fallback to manual mode
+            setSpeechSupported(false);
+            setManualMode(true);
+            console.log('Speech recognition not available, using manual mode');
         };
 
         checkSpeechSupport();
@@ -96,6 +108,9 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     }, [isOpen]);
 
     const startRecording = useCallback(async () => {
+        // Reset manual stop flag - user is starting/resuming
+        manualStopRef.current = false;
+
         // Capture current text as the starting point for this session
         previousTranscriptRef.current = transcript;
 
@@ -104,7 +119,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             try {
                 setIsRecording(true);
                 setInterimTranscript('');
-                finalTranscriptRef.current = '';
+                // Don't clear finalTranscriptRef - keep accumulated text
 
                 // Start listening with native plugin
                 await SpeechRecognition.start({
@@ -117,14 +132,34 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 // Listen for partial results
                 SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
                     if (data.matches && data.matches.length > 0) {
-                        setInterimTranscript(data.matches[0]);
+                        const newText = data.matches[0];
+                        setInterimTranscript(newText);
+                        // Accumulate final text
+                        const separator = previousTranscriptRef.current ? ' ' : '';
+                        setTranscript(previousTranscriptRef.current + separator + newText);
                     }
                 });
 
-                // Listen for final results
-                SpeechRecognition.addListener('listeningState', (state: { status: string }) => {
+                // Listen for listening state changes - auto-restart if not manually stopped
+                SpeechRecognition.addListener('listeningState', async (state: { status: string }) => {
                     if (state.status === 'stopped') {
-                        setIsRecording(false);
+                        if (!manualStopRef.current) {
+                            // Auto-restart for continuous recording
+                            console.log('Native speech stopped, auto-restarting...');
+                            try {
+                                await SpeechRecognition.start({
+                                    language: 'ar-SA',
+                                    maxResults: 5,
+                                    popup: false,
+                                    partialResults: true,
+                                });
+                            } catch (e) {
+                                console.warn('Could not restart native speech:', e);
+                                setIsRecording(false);
+                            }
+                        } else {
+                            setIsRecording(false);
+                        }
                     }
                 });
 
@@ -157,7 +192,8 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         recognition.onstart = () => {
             setIsRecording(true);
             setInterimTranscript('');
-            finalTranscriptRef.current = '';
+            // Don't clear finalTranscriptRef - keep accumulated text
+            // Only reset processedResults for new session segments
             processedResultsRef.current = new Set();
         };
 
@@ -202,7 +238,22 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         };
 
         recognition.onend = () => {
-            setIsRecording(false);
+            // Auto-restart if not manually stopped (handles silence timeout)
+            if (!manualStopRef.current && recognitionRef.current) {
+                console.log('Auto-restarting speech recognition...');
+                try {
+                    setTimeout(() => {
+                        if (recognitionRef.current && !manualStopRef.current) {
+                            recognitionRef.current.start();
+                        }
+                    }, 100);
+                } catch (e) {
+                    console.warn('Could not restart recognition:', e);
+                    setIsRecording(false);
+                }
+            } else {
+                setIsRecording(false);
+            }
         };
 
         recognitionRef.current = recognition;
@@ -214,6 +265,9 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     }, [transcript, toast, useNativeSpeech]);
 
     const stopRecording = useCallback(async () => {
+        // Mark as manual stop so onend doesn't auto-restart
+        manualStopRef.current = true;
+
         if (useNativeSpeech) {
             // Stop native Capacitor speech recognition
             try {

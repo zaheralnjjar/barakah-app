@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Share } from '@capacitor/share';
+import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +12,7 @@ import {
     Database,
     RefreshCw,
     Download,
-    Calendar,
+    Calendar as CalendarIcon,
     LogOut,
     FileSpreadsheet,
     X,
@@ -27,7 +28,9 @@ import {
     Vibrate,
     Clock,
     Zap, // Added icon
-
+    Share2, // Added icon
+    Smartphone, // Added icon
+    Users, // Added icon
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -36,6 +39,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 import DataBackup from '@/components/DataBackup';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useMultiGoogleSheetsSync } from '@/hooks/useMultiGoogleSheetsSync';
@@ -48,6 +56,19 @@ import { PWAInstallButton } from '@/components/PWAInstallButton';
 // import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
 
 
+
+import { DateRange } from 'react-day-picker';
+import { LocalNotifications } from '@capacitor/local-notifications';
+
+const hashCode = (str: string): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+};
 
 const SettingsPanel = () => {
     const { toast } = useToast();
@@ -65,6 +86,189 @@ const SettingsPanel = () => {
     const [showAddSheet, setShowAddSheet] = useState(false);
     const [newSheetName, setNewSheetName] = useState('');
     const [newSheetUrl, setNewSheetUrl] = useState('');
+
+    // Routine Editor State
+    const [editingRoutine, setEditingRoutine] = useState<any>(null);
+    const [routineItemText, setRoutineItemText] = useState('');
+    const [routineItemType, setRoutineItemType] = useState<'task' | 'appointment' | 'habit' | 'medication'>('task');
+    const [routineItemTime, setRoutineItemTime] = useState('');
+    const [routineItemRepeat, setRoutineItemRepeat] = useState<'daily' | 'weekly' | 'custom' | 'once' | 'monthly'>('daily');
+    const [routineItemDays, setRoutineItemDays] = useState<{ [day: string]: string }>({});
+    const [routineItemCategory, setRoutineItemCategory] = useState<string>('work'); // New: Category
+    const [routineItemStartDate, setRoutineItemStartDate] = useState<string>(''); // New: Start Date
+    const [routineItemEndDate, setRoutineItemEndDate] = useState<string>(''); // New: End Date
+    const [routineItemDayOfMonth, setRoutineItemDayOfMonth] = useState<number>(1); // New: Monthly Day
+
+    // Routine Activation State
+    const [activatingRoutine, setActivatingRoutine] = useState<any>(null);
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+    const handleActivateRoutine = async () => {
+        if (!activatingRoutine || !dateRange?.from || !dateRange?.to) {
+            toast({ title: '❌ الرجاء تحديد فترة التفعيل', variant: 'destructive' });
+            return;
+        }
+
+        const startDate = new Date(dateRange.from);
+        const endDate = new Date(dateRange.to);
+        endDate.setHours(23, 59, 59, 999);
+
+        let tasksCreated = 0;
+        let appointmentsCreated = 0;
+
+        const existingTasks = JSON.parse(localStorage.getItem('baraka_tasks') || '[]');
+        const existingAppointments = JSON.parse(localStorage.getItem('baraka_appointments') || '[]');
+        const newTasks: any[] = [];
+        const newAppointments: any[] = [];
+        const notificationsToSchedule: any[] = [];
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = format(d, 'yyyy-MM-dd');
+            const getDayId = (date: Date) => ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][date.getDay()];
+            const currentDayId = getDayId(d);
+
+            activatingRoutine.items.forEach((item: any) => {
+                let shouldAdd = false;
+                let itemTime = item.time;
+
+                // --- Updated Logic: Date Range Check ---
+                // If item has specific start/end dates, ensure current date 'd' is within range
+                if (item.startDate || item.endDate) {
+                    const itemStart = item.startDate ? new Date(item.startDate) : new Date('2000-01-01');
+                    const itemEnd = item.endDate ? new Date(item.endDate) : new Date('2100-01-01');
+                    // Reset hours for comparison
+                    itemStart.setHours(0, 0, 0, 0);
+                    itemEnd.setHours(23, 59, 59, 999);
+
+                    if (d < itemStart || d > itemEnd) {
+                        return; // Continue to next item without adding
+                    }
+                }
+
+                if (item.repeat === 'daily') shouldAdd = true;
+                else if (item.repeat === 'weekly' && d.getDay() === startDate.getDay()) shouldAdd = true;
+                else if (item.repeat === 'custom' && item.customDays?.[currentDayId]) {
+                    shouldAdd = true;
+                    itemTime = item.customDays[currentDayId];
+                }
+                else if (item.repeat === 'once' && d.getTime() === startDate.getTime()) shouldAdd = true;
+                else if (item.repeat === 'monthly' && d.getDate() === (item.dayOfMonth || 1)) shouldAdd = true; // New Check
+
+                if (shouldAdd) {
+                    if (['task', 'habit', 'medication'].includes(item.type)) {
+                        const taskId = crypto.randomUUID();
+                        const newTask = {
+                            id: taskId,
+                            title: `${item.type === 'medication' ? '💊 ' : item.type === 'habit' ? '❤️ ' : ''}${item.text}`,
+                            description: `Generated from routine: ${activatingRoutine.name}`,
+                            deadline: dateStr,
+                            time: itemTime,
+                            completed: false,
+                            priority: 'medium',
+                            type: 'task',
+                            routineId: activatingRoutine.id,
+                            category: item.category || 'work' // Pass Category
+                        };
+                        newTasks.push(newTask);
+                        tasksCreated++;
+
+                        // Schedule Notification for Task if time exists
+                        if (itemTime) {
+                            const dateObj = new Date(`${dateStr}T${itemTime}`);
+                            if (dateObj > new Date()) {
+                                notificationsToSchedule.push({
+                                    title: item.type === 'medication' ? '💊 وقت الدواء' : item.type === 'habit' ? '❤️ تذكير عادة' : '📝 تذكير بمهمة',
+                                    body: item.text,
+                                    id: hashCode(taskId),
+                                    schedule: { at: dateObj },
+                                    sound: 'beep.wav',
+                                    extra: { taskId }
+                                });
+                            }
+                        }
+                    } else if (item.type === 'appointment') {
+                        const apptId = crypto.randomUUID();
+                        const newAppt = {
+                            id: apptId,
+                            title: item.text,
+                            date: dateStr,
+                            time: itemTime || '09:00',
+                            notes: `Generated from routine: ${activatingRoutine.name}`,
+                            is_completed: false,
+                            routineId: activatingRoutine.id
+                        };
+                        newAppointments.push(newAppt);
+                        appointmentsCreated++;
+
+                        // Schedule Notification for Appointment
+                        if (itemTime) {
+                            const dateObj = new Date(`${dateStr}T${itemTime}`);
+                            if (dateObj > new Date()) {
+                                notificationsToSchedule.push({
+                                    title: '📅 تذكير بموعد',
+                                    body: item.text,
+                                    id: hashCode(apptId),
+                                    schedule: { at: dateObj },
+                                    sound: 'beep.wav',
+                                    extra: { appointmentId: apptId }
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Save Data
+        if (newTasks.length > 0) {
+            localStorage.setItem('baraka_tasks', JSON.stringify([...existingTasks, ...newTasks]));
+            window.dispatchEvent(new Event('tasks-updated'));
+        }
+        if (newAppointments.length > 0) {
+            localStorage.setItem('baraka_appointments', JSON.stringify([...existingAppointments, ...newAppointments]));
+            window.dispatchEvent(new Event('appointments-updated'));
+        }
+
+        // Schedule All Notifications
+        if (notificationsToSchedule.length > 0) {
+            try {
+                await LocalNotifications.schedule({ notifications: notificationsToSchedule });
+                console.log(`Scheduled ${notificationsToSchedule.length} notifications`);
+            } catch (e) {
+                console.error("Failed to schedule routine notifications", e);
+            }
+        }
+
+        // Save Active Routine Reference
+        const newActive = {
+            id: Date.now().toString(),
+            routineId: activatingRoutine.id,
+            name: activatingRoutine.name,
+            startDate: dateRange.from?.toISOString(),
+            endDate: dateRange.to?.toISOString(),
+            items: activatingRoutine.items
+        };
+        const activeRoutines = JSON.parse(localStorage.getItem('baraka_active_routines') || '[]');
+        localStorage.setItem('baraka_active_routines', JSON.stringify([...activeRoutines, newActive]));
+
+        // Reset & Feedack
+        setActivatingRoutine(null);
+        setDateRange(undefined);
+        toast({
+            title: '✅ تم تفعيل الوضع',
+            description: `تم إنشاء ${tasksCreated} مهمة و ${appointmentsCreated} موعد مع التنبيهات`
+        });
+    };
+
+    const DAYS_OF_WEEK = [
+        { id: 'sun', name: 'الأحد' },
+        { id: 'mon', name: 'الاثنين' },
+        { id: 'tue', name: 'الثلاثاء' },
+        { id: 'wed', name: 'الأربعاء' },
+        { id: 'thu', name: 'الخميس' },
+        { id: 'fri', name: 'الجمعة' },
+        { id: 'sat', name: 'السبت' }
+    ];
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -125,9 +329,17 @@ const SettingsPanel = () => {
             title: 'التنبيهات',
             icon: Bell,
             color: 'text-orange-500',
-            bg: 'bg-orange-50',
             borderColor: 'border-orange-100',
             description: 'تخصيص تنبيهات الصلاة والمهام'
+        },
+        {
+            id: 'new_muslims',
+            title: 'رعاية المهتدين',
+            icon: Users,
+            color: 'text-emerald-600',
+            bg: 'bg-emerald-50',
+            borderColor: 'border-emerald-100',
+            description: 'إدارة شؤون المسلمين الجدد'
         },
         {
             id: 'sync',
@@ -164,6 +376,15 @@ const SettingsPanel = () => {
             bg: 'bg-red-50',
             borderColor: 'border-red-100',
             description: 'كلمة المرور وتسجيل الخروج'
+        },
+        {
+            id: 'routines',
+            title: 'أوضاع دائمة',
+            icon: RefreshCw,
+            color: 'text-purple-600',
+            bg: 'bg-purple-50',
+            borderColor: 'border-purple-100',
+            description: 'قوالب روتينية قابلة للتكرار'
         },
         {
             id: 'about',
@@ -225,7 +446,7 @@ const SettingsPanel = () => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="p-2 bg-green-100 rounded-lg">
-                                        <Calendar className="w-4 h-4 text-green-600" />
+                                        <CalendarIcon className="w-4 h-4 text-green-600" />
                                     </div>
                                     <div>
                                         <Label className="text-sm">تنبيهات الصلاة والمواعيد</Label>
@@ -579,7 +800,383 @@ const SettingsPanel = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* 6. About Dialog */}
+            {/* 6. Routines Dialog - أوضاع دائمة */}
+            <Dialog open={activeSection === 'routines'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-purple-600">
+                            <RefreshCw className="w-5 h-5" />
+                            أوضاع دائمة
+                        </DialogTitle>
+                        <DialogDescription>
+                            إنشاء قوالب روتينية تحتوي على مهام ومواعيد وعادات قابلة للتكرار
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {/* Editing a Routine */}
+                        {editingRoutine ? (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between bg-purple-100 p-3 rounded-lg">
+                                    <h4 className="font-bold text-purple-800">{editingRoutine.name}</h4>
+                                    <Button size="sm" variant="ghost" onClick={() => setEditingRoutine(null)}>
+                                        رجوع
+                                    </Button>
+                                </div>
+
+                                {/* Items List */}
+                                <div className="space-y-2">
+                                    <h5 className="text-sm font-bold text-gray-600">العناصر ({editingRoutine.items?.length || 0})</h5>
+                                    {editingRoutine.items?.length > 0 ? (
+                                        editingRoutine.items.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                                <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'task' ? 'bg-blue-100 text-blue-700' :
+                                                    item.type === 'appointment' ? 'bg-orange-100 text-orange-700' :
+                                                        item.type === 'habit' ? 'bg-pink-100 text-pink-700' :
+                                                            'bg-cyan-100 text-cyan-700'
+                                                    }`}>
+                                                    {item.type === 'task' ? 'مهمة' :
+                                                        item.type === 'appointment' ? 'موعد' :
+                                                            item.type === 'habit' ? 'عادة' : 'دواء'}
+                                                </span>
+                                                <span className="flex-1 text-sm">{item.text}</span>
+                                                {item.time && <span className="text-xs text-gray-500">{item.time}</span>}
+                                                <span className="text-[10px] text-purple-500">
+                                                    {item.repeat === 'daily' ? 'يومياً' : item.repeat === 'weekly' ? 'أسبوعياً' : 'مرة'}
+                                                </span>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 w-6 p-0 text-red-400"
+                                                    onClick={() => {
+                                                        const updated = { ...editingRoutine };
+                                                        updated.items = updated.items.filter((_: any, i: number) => i !== idx);
+                                                        setEditingRoutine(updated);
+                                                        // Save to storage
+                                                        const routines = JSON.parse(localStorage.getItem('baraka_routines') || '[]');
+                                                        const routineIdx = routines.findIndex((r: any) => r.id === editingRoutine.id);
+                                                        if (routineIdx >= 0) {
+                                                            routines[routineIdx] = updated;
+                                                            localStorage.setItem('baraka_routines', JSON.stringify(routines));
+                                                        }
+                                                    }}
+                                                >
+                                                    ×
+                                                </Button>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center text-gray-400 py-4 text-sm">لا توجد عناصر - أضف عناصر أدناه</p>
+                                    )}
+                                </div>
+
+                                {/* Add New Item Form */}
+                                <div className="border-t pt-4 space-y-3">
+                                    <h5 className="text-sm font-bold text-gray-600">إضافة عنصر جديد</h5>
+                                    <Input
+                                        placeholder="النص (مثال: مشي 20 دقيقة)"
+                                        value={routineItemText}
+                                        onChange={(e) => setRoutineItemText(e.target.value)}
+                                        className="text-right"
+                                    />
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="text-[10px] text-gray-500 block mb-1">النوع</label>
+                                            <select
+                                                value={routineItemType}
+                                                onChange={(e) => setRoutineItemType(e.target.value as any)}
+                                                className="w-full h-9 text-xs border rounded-md px-2"
+                                            >
+                                                <option value="task">مهمة</option>
+                                                <option value="appointment">موعد</option>
+                                                <option value="habit">عادة</option>
+                                                <option value="medication">دواء</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {/* New: Category Selection */}
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 space-y-2">
+                                            <Label className="text-xs">الفئة</Label>
+                                            <Select value={routineItemCategory} onValueChange={setRoutineItemCategory}>
+                                                <SelectTrigger className="h-9 text-xs">
+                                                    <SelectValue placeholder="اختر الفئة" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="work">عمل</SelectItem>
+                                                    <SelectItem value="personal">شخصي</SelectItem>
+                                                    <SelectItem value="health">صحة</SelectItem>
+                                                    <SelectItem value="family">عائلة</SelectItem>
+                                                    <SelectItem value="worship">عبادة</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* New: Date Range (Start/End) */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">تاريخ البدء (اختياري)</Label>
+                                            <Input
+                                                type="date"
+                                                value={routineItemStartDate}
+                                                onChange={(e) => setRoutineItemStartDate(e.target.value)}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">تاريخ الانتهاء (اختياري)</Label>
+                                            <Input
+                                                type="date"
+                                                value={routineItemEndDate}
+                                                onChange={(e) => setRoutineItemEndDate(e.target.value)}
+                                                className="h-9 text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs">التكرار</Label>
+                                        <Select value={routineItemRepeat} onValueChange={(val: any) => {
+                                            setRoutineItemRepeat(val);
+                                            if (val !== 'custom') {
+                                                setRoutineItemDays({});
+                                            }
+                                        }}>
+                                            <SelectTrigger className="h-9 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="daily">يومياً</SelectItem>
+                                                <SelectItem value="weekly">أسبوعياً</SelectItem>
+                                                <SelectItem value="monthly">شهرياً</SelectItem>
+                                                <SelectItem value="custom">أيام مخصصة</SelectItem>
+                                                <SelectItem value="once">مرة واحدة</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Time or Monthly Day */}
+                                    {routineItemRepeat !== 'custom' && (
+                                        <div className="flex gap-2">
+                                            <div className="flex-1 space-y-2">
+                                                <Label className="text-xs">الوقت</Label>
+                                                <Input
+                                                    type="time"
+                                                    value={routineItemTime}
+                                                    onChange={(e) => setRoutineItemTime(e.target.value)}
+                                                    className="h-9 text-xs"
+                                                />
+                                            </div>
+                                            {routineItemRepeat === 'monthly' && (
+                                                <div className="flex-1 space-y-2">
+                                                    <Label className="text-xs">يوم في الشهر</Label>
+                                                    <Input
+                                                        type="number"
+                                                        min={1} max={31}
+                                                        value={routineItemDayOfMonth}
+                                                        onChange={(e) => setRoutineItemDayOfMonth(parseInt(e.target.value))}
+                                                        className="h-9 text-xs"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Custom days with individual times */}
+                                    {routineItemRepeat === 'custom' && (
+                                        <div className="bg-purple-50 p-3 rounded-lg space-y-2">
+                                            <p className="text-xs font-bold text-purple-700 mb-2">اختر الأيام والأوقات:</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {DAYS_OF_WEEK.map(day => (
+                                                    <div key={day.id} className="flex items-center gap-2 bg-white p-2 rounded-lg border">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`day-${day.id}`}
+                                                            checked={day.id in routineItemDays}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setRoutineItemDays({ ...routineItemDays, [day.id]: '08:00' });
+                                                                } else {
+                                                                    const newDays = { ...routineItemDays };
+                                                                    delete newDays[day.id];
+                                                                    setRoutineItemDays(newDays);
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <label htmlFor={`day-${day.id}`} className="text-xs flex-1">{day.name}</label>
+                                                        {day.id in routineItemDays && (
+                                                            <Input
+                                                                type="time"
+                                                                value={routineItemDays[day.id]}
+                                                                onChange={(e) => setRoutineItemDays({ ...routineItemDays, [day.id]: e.target.value })}
+                                                                className="h-7 text-xs w-20"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        className="w-full bg-purple-500 hover:bg-purple-600"
+                                        disabled={!routineItemText.trim() || (routineItemRepeat === 'custom' && Object.keys(routineItemDays).length === 0)}
+                                        onClick={() => {
+                                            const newItem = {
+                                                id: Date.now().toString(),
+                                                text: routineItemText,
+                                                type: routineItemType,
+                                                time: routineItemRepeat === 'custom' ? null : (routineItemTime || null),
+                                                repeat: routineItemRepeat,
+                                                customDays: routineItemRepeat === 'custom' ? routineItemDays : null,
+                                                category: routineItemCategory, // Save Category
+                                                startDate: routineItemStartDate || null, // Save Start Date
+                                                endDate: routineItemEndDate || null, // Save End Date
+                                                dayOfMonth: routineItemRepeat === 'monthly' ? routineItemDayOfMonth : null // Save Monthly Day
+                                            };
+                                            const updated = { ...editingRoutine };
+                                            updated.items = [...(updated.items || []), newItem];
+                                            setEditingRoutine(updated);
+                                            // Save to storage
+                                            const routines = JSON.parse(localStorage.getItem('baraka_routines') || '[]');
+                                            const routineIdx = routines.findIndex((r: any) => r.id === editingRoutine.id);
+                                            if (routineIdx >= 0) {
+                                                routines[routineIdx] = updated;
+                                                localStorage.setItem('baraka_routines', JSON.stringify(routines));
+                                            }
+                                            // Reset form
+                                            setRoutineItemText('');
+                                            setRoutineItemTime('');
+                                            setRoutineItemDays({});
+                                            setRoutineItemStartDate('');
+                                            setRoutineItemEndDate('');
+                                            setRoutineItemCategory('work');
+                                            toast({ title: '✅ تمت الإضافة' });
+                                        }}
+                                    >
+                                        إضافة العنصر
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Saved Routines List */}
+                                {(() => {
+                                    const routines = JSON.parse(localStorage.getItem('baraka_routines') || '[]');
+
+                                    return routines.length > 0 ? (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-bold text-gray-700">الأوضاع المحفوظة</h4>
+                                            {routines.map((routine: any, idx: number) => (
+                                                <div key={idx} className="p-3 border rounded-lg hover:bg-purple-50 transition-colors">
+                                                    <div className="flex items-center justify-between">
+                                                        <div
+                                                            className="flex-1 cursor-pointer"
+                                                            onClick={() => setEditingRoutine(routine)}
+                                                        >
+                                                            <h5 className="font-bold text-gray-800">{routine.name}</h5>
+                                                            <p className="text-xs text-gray-500">
+                                                                {routine.items?.length || 0} عناصر - اضغط للتعديل
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-purple-600 border-purple-200 h-8 text-xs"
+                                                                onClick={() => setActivatingRoutine(routine)}
+                                                            >
+                                                                تفعيل
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                className="text-red-500 h-8"
+                                                                onClick={() => {
+                                                                    const id = routine.id;
+
+                                                                    // 1. Delete associated tasks
+                                                                    const tasks = JSON.parse(localStorage.getItem('baraka_tasks') || '[]');
+                                                                    localStorage.setItem('baraka_tasks', JSON.stringify(tasks.filter((t: any) => t.routineId !== id)));
+
+                                                                    // 2. Delete associated appointments
+                                                                    const appts = JSON.parse(localStorage.getItem('baraka_appointments') || '[]');
+                                                                    localStorage.setItem('baraka_appointments', JSON.stringify(appts.filter((a: any) => a.routineId !== id)));
+
+                                                                    // 3. Delete active routines
+                                                                    const active = JSON.parse(localStorage.getItem('baraka_active_routines') || '[]');
+                                                                    localStorage.setItem('baraka_active_routines', JSON.stringify(active.filter((ar: any) => ar.routineId !== id)));
+
+                                                                    // Dispatch updates
+                                                                    window.dispatchEvent(new Event('tasks-updated'));
+                                                                    window.dispatchEvent(new Event('appointments-updated'));
+
+                                                                    const updated = routines.filter((_: any, i: number) => i !== idx);
+                                                                    localStorage.setItem('baraka_routines', JSON.stringify(updated));
+                                                                    toast({ title: '🗑️ تم الحذف', description: 'تم حذف القالب وجميع الأحداث المرتبطة به' });
+                                                                    setActiveSection(null);
+                                                                    setTimeout(() => setActiveSection('routines'), 100);
+                                                                }}
+                                                            >
+                                                                حذف
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-gray-500">
+                                            <RefreshCw className="w-12 h-12 mx-auto mb-3 text-purple-200" />
+                                            <p>لا توجد أوضاع محفوظة</p>
+                                            <p className="text-xs mt-1">أنشئ وضعاً جديداً لتنظيم روتينك</p>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Create New Routine */}
+                                <div className="border-t pt-4">
+                                    <h4 className="text-sm font-bold text-gray-700 mb-3">إنشاء وضع جديد</h4>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="اسم الوضع (مثال: أسبوع صحي)"
+                                            id="new-routine-name"
+                                            className="text-right flex-1"
+                                        />
+                                        <Button
+                                            className="bg-purple-500 hover:bg-purple-600"
+                                            onClick={() => {
+                                                const name = (document.getElementById('new-routine-name') as HTMLInputElement)?.value;
+                                                if (!name?.trim()) {
+                                                    toast({ title: 'أدخل اسم الوضع', variant: 'destructive' });
+                                                    return;
+                                                }
+                                                const newRoutine = {
+                                                    id: Date.now().toString(),
+                                                    name: name.trim(),
+                                                    items: [],
+                                                    createdAt: new Date().toISOString()
+                                                };
+                                                const routines = JSON.parse(localStorage.getItem('baraka_routines') || '[]');
+                                                routines.push(newRoutine);
+                                                localStorage.setItem('baraka_routines', JSON.stringify(routines));
+                                                (document.getElementById('new-routine-name') as HTMLInputElement).value = '';
+                                                setEditingRoutine(newRoutine);
+                                                toast({ title: '✅ تم إنشاء الوضع' });
+                                            }}
+                                        >
+                                            إنشاء
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* 7. About Dialog */}
             <Dialog open={activeSection === 'about'} onOpenChange={(open) => !open && setActiveSection(null)}>
                 <DialogContent className="max-w-xs text-center">
                     <DialogHeader>
@@ -596,8 +1193,54 @@ const SettingsPanel = () => {
                         <p className="text-sm mt-1">لإدارة الحياة</p>
                         <div className="mt-6 p-4 bg-gray-50 rounded-lg text-xs">
                             <p>الإصدار: 14.0.0</p>
-                            <p className="mt-1">بناء: 2026.01.02</p>
+                            <p className="mt-1">بناء: 2026.01.03</p>
                         </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Routine Activation Dialog */}
+            <Dialog open={!!activatingRoutine} onOpenChange={(open) => !open && setActivatingRoutine(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-purple-600">
+                            <Clock className="w-5 h-5" />
+                            تفعيل {activatingRoutine?.name}
+                        </DialogTitle>
+                        <DialogDescription>
+                            حدد المدة الزمنية لتفعيل هذا الروتين
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex flex-col items-center space-y-4 py-4">
+                        <div className="border rounded-lg p-2 bg-gray-50">
+                            <Calendar
+                                mode="range"
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                locale={arSA}
+                                className="rounded-md border bg-white"
+                                dir="rtl"
+                            />
+                        </div>
+
+                        {dateRange?.from && (
+                            <div className="text-sm text-center bg-purple-50 p-2 rounded w-full">
+                                <span className="font-bold text-purple-700">الفترة المحددة:</span>
+                                <div className="mt-1">
+                                    {format(dateRange.from, 'dd MMM', { locale: arSA })}
+                                    {dateRange.to && ` - ${format(dateRange.to, 'dd MMM', { locale: arSA })}`}
+                                </div>
+                            </div>
+                        )}
+
+                        <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                            disabled={!dateRange?.from || !dateRange?.to}
+                            onClick={handleActivateRoutine}
+                        >
+                            تأكيد التفعيل وجدولة التنبيهات
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -710,6 +1353,17 @@ const SettingsPanel = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* New Muslim Care Dialog */}
+            <Dialog open={activeSection === 'new_muslims'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent
+                    className="max-w-5xl max-h-[90vh] overflow-y-auto w-full p-0"
+                    onInteractOutside={(e) => e.preventDefault()}
+                >
+                    <NewMuslimsManager />
+                </DialogContent>
+            </Dialog>
+
         </div >
     );
 };

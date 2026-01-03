@@ -230,9 +230,25 @@ export const useLocations = () => {
                 async (pos) => {
                     const { latitude, longitude } = pos.coords;
                     const now = new Date();
-                    const dateStr = `${now.getDate()}/${now.getMonth() + 1}`;
-                    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                    const title = `موقف ${dateStr} ${timeStr}`;
+                    // Compact date format: DD.MM HH:MM
+                    const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+                    // Fetch street address
+                    let streetAddress = 'موقف';
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
+                        const data = await res.json();
+                        const addr = data.address || {};
+                        const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+                        const number = addr.house_number || '';
+                        if (road) {
+                            streetAddress = number ? `${road} ${number}` : road;
+                        }
+                    } catch (e) {
+                        console.log('Could not fetch address for parking');
+                    }
+
+                    const title = `${streetAddress} ${dateTimeStr}`;
 
                     const location = await saveLocation(title, latitude, longitude, {
                         category: 'parking',

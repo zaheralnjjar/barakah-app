@@ -336,15 +336,21 @@ const InteractiveMap = () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
+            // Add timestamp to title
+            const now = new Date();
+            const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const titleWithTime = `${addressName} ${dateTimeStr}`;
+
             const newLocation = {
                 id: Date.now().toString(),
-                title: addressName,
+                title: titleWithTime,
                 address: addressDetails ? addressDetails : `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
                 category: selectedCategory,
                 lat: position.lat,
                 lng: position.lng,
                 url: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
-                user_id: user?.id
+                user_id: user?.id,
+                createdAt: now.toISOString()
             };
 
             if (user) {
@@ -458,14 +464,20 @@ const InteractiveMap = () => {
                 const number = addr.house_number || '';
                 const addressName = number ? `${road} ${number}` : road;
 
+                // Add timestamp to title
+                const now = new Date();
+                const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                const titleWithTime = `${addressName} ${dateTimeStr}`;
+
                 const newLocation = {
                     id: Date.now().toString(),
-                    title: addressName,
+                    title: titleWithTime,
                     address: addressName,
                     lat: latitude,
                     lng: longitude,
                     url: `https://www.google.com/maps?q=${latitude},${longitude}`,
-                    category: 'other'
+                    category: 'other',
+                    createdAt: now.toISOString()
                 };
                 const updated = [...savedLocations, newLocation];
                 // Save to all keys for compatibility
@@ -474,7 +486,7 @@ const InteractiveMap = () => {
                 setSavedLocations(updated);
                 window.dispatchEvent(new Event('locations-updated'));
 
-                toast({ title: "تم الحفظ السريع!", description: addressName });
+                toast({ title: "تم الحفظ السريع!", description: titleWithTime });
             } catch (e) {
                 console.error(e);
             } finally {

@@ -4,7 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Bot } from 'lucide-react';
+import { Loader2, Bot, Users, ChevronDown, ChevronUp, GraduationCap } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
+import AcademicManager from '@/components/AcademicManager';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -39,6 +42,8 @@ const Index = () => {
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const { toast } = useToast();
+  const [isNewMuslimsOpen, setIsNewMuslimsOpen] = useState(false);
+  const [isAcademicOpen, setIsAcademicOpen] = useState(false);
   const { appendToActivitiesNote } = useQuickNotes();
 
   // Sync Hooks
@@ -215,6 +220,51 @@ const Index = () => {
                   onNavigateToTab={setActiveTab}
                   onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
                 />
+                {/* New Muslims Section (Collapsible) */}
+                <div className="mt-4 mb-4 animate-in slide-in-from-bottom-4 duration-700 delay-300">
+                  <Collapsible open={isNewMuslimsOpen} onOpenChange={setIsNewMuslimsOpen} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-emerald-50/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-100 rounded-xl">
+                          <Users className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="text-right">
+                          <h3 className="font-bold text-gray-800 text-sm sm:text-base">رعاية المهتدين</h3>
+                          <p className="text-xs text-gray-500">متابعة الطلاب والمهام</p>
+                        </div>
+                      </div>
+                      {isNewMuslimsOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-2 sm:p-4 pt-0 border-t border-emerald-50">
+                        <NewMuslimsManager />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+
+                {/* Academic Section (Collapsible) */}
+                <div className="mb-20 animate-in slide-in-from-bottom-4 duration-700 delay-500">
+                  <Collapsible open={isAcademicOpen} onOpenChange={setIsAcademicOpen} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-blue-50/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-xl">
+                          <GraduationCap className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="text-right">
+                          <h3 className="font-bold text-gray-800 text-sm sm:text-base">القسم الأكاديمي</h3>
+                          <p className="text-xs text-gray-500">إدارة الطلاب والمواد</p>
+                        </div>
+                      </div>
+                      {isAcademicOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-2 sm:p-4 pt-0 border-t border-blue-50">
+                        <AcademicManager />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">

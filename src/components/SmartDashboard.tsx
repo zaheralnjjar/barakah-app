@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
+import { useShoppingList } from '@/hooks/useShoppingList';
 import {
     Plus, CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, Clock, MapPin, Timer, Play, StickyNote, Pin, LayoutGrid, Calendar, Wallet, ListChecks, ChevronDown, ChevronUp, Bell, CalendarDays, Share, Share2, Edit, Trash2
 } from 'lucide-react';
@@ -29,6 +30,7 @@ import PomodoroTimer from '@/components/PomodoroTimer';
 import { Card, CardContent } from '@/components/ui/card';
 
 // New Components
+import { RoutineModesWidget } from './dashboard/RoutineModesWidget';
 import DashboardHeader from './dashboard/DashboardHeader';
 import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import DashboardStats from './dashboard/DashboardStats';
@@ -68,9 +70,17 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { toast } = useToast();
     const navigate = useNavigate();
     const {
-        financeData, loading: dataLoading, shoppingListSummary,
+        financeData, loading: dataLoading,
         prayerTimes = [], refetch, nextPrayer, timeUntilNext
     } = useDashboardData();
+
+    const { items: shoppingItems, addItem: addShoppingItem } = useShoppingList();
+
+    const shoppingListSummary = {
+        totalItems: shoppingItems.length,
+        completedItems: shoppingItems.filter(i => i.completed).length,
+        recentItems: shoppingItems.filter(i => !i.completed).slice(0, 5)
+    };
 
     const { habits } = useHabits();
     const { medications } = useMedications();
@@ -88,6 +98,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [showWidgetMenu, setShowWidgetMenu] = useState(false);
     const [selectedNoteForView, setSelectedNoteForView] = useState<{ note: NoteData; index: number } | null>(null);
     const [notesExpanded, setNotesExpanded] = useState(false);
+
+    // Shopping form state
+    const [shoppingItemName, setShoppingItemName] = useState('');
+    const [shoppingItemQuantity, setShoppingItemQuantity] = useState(1);
+    const [shoppingItemDeadline, setShoppingItemDeadline] = useState('');
 
     const [weekStartDate, setWeekStartDate] = useState(() => {
         const today = new Date();
@@ -147,8 +162,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 const { syncWidgetData } = await import('@/utils/widgetSync');
                 await syncWidgetData({
                     tasks, appointments, habits, medications, prayers: prayerTimes,
-                    finance: { balance: financeData?.total_balance?.toString() || '0', debt: financeData?.total_debt?.toString() || '0' },
-                    shopping: shoppingListSummary
+                    finance: { balance: financeData?.current_balance_ars?.toString() || '0', debt: financeData?.total_debt?.toString() || '0' },
+                    shopping: shoppingItems
                 });
             } catch (e) { console.error("Widget sync error", e); }
         };
@@ -176,7 +191,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
     const calculateDailyLimit = () => {
         if (!financeData) return 0;
-        const explicitLimit = financeData?.financial_config?.daily_limit_ars || 0;
+        const explicitLimit = financeData?.daily_limit || 0;
         if (explicitLimit > 0) return explicitLimit;
 
         const balance = financeData.current_balance_ars || 0;
@@ -233,7 +248,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 <QuickActionsGrid
                     onOpenAddDialog={setShowAddDialog}
                     onQuickParking={saveParking}
-                    onOpenTimer={() => setShowAddDialog('goal')}
+                    onOpenTimer={() => window.dispatchEvent(new CustomEvent('openPomodoroDialog'))}
                     onOpenVoiceRecorder={onOpenVoiceRecorder}
                 />
             </div>
@@ -493,41 +508,77 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                     <button
                                         onClick={async () => {
                                             try {
-                                                const doc = new jsPDF();
-                                                // Basic PDF generation - text might be reversed for Arabic without fonts
-                                                // aligning right for RTL feel
-                                                doc.setFontSize(16);
-                                                const splitText = doc.splitTextToSize(selectedNoteForView.note.content, 180);
-                                                doc.text(splitText, 200, 20, { align: 'right' });
-
+                                                const noteContent = selectedNoteForView.note.content;
                                                 const fileName = `note-${Date.now()}.pdf`;
 
-                                                // For web:
-                                                // doc.save(fileName);
+                                                // Check if running in Capacitor (Mobile) or Desktop/Web
+                                                const isCapacitor = (window as any).Capacitor !== undefined;
+                                                const isElectron = navigator.userAgent.includes('Electron');
 
-                                                // For Capacitor/Android:
-                                                const base64Data = doc.output('datauristring').split(',')[1];
+                                                // Create a styled HTML content for better Arabic support
+                                                const htmlContent = `
+                                                    <html dir="rtl" lang="ar">
+                                                    <head>
+                                                        <meta charset="UTF-8">
+                                                        <style>
+                                                            body {
+                                                                font-family: 'Amiri', 'Arial', sans-serif;
+                                                                font-size: 16px;
+                                                                line-height: 1.8;
+                                                                padding: 40px;
+                                                                direction: rtl;
+                                                                text-align: right;
+                                                            }
+                                                            .content {
+                                                                white-space: pre-wrap;
+                                                            }
+                                                            .header {
+                                                                text-align: center;
+                                                                margin-bottom: 20px;
+                                                                color: #059669;
+                                                                font-size: 24px;
+                                                            }
+                                                            .date {
+                                                                text-align: left;
+                                                                color: #666;
+                                                                font-size: 12px;
+                                                                margin-bottom: 20px;
+                                                            }
+                                                        </style>
+                                                    </head>
+                                                    <body>
+                                                        <div class="header">بركة - ملاحظة</div>
+                                                        <div class="date">${new Date().toLocaleDateString('ar-SA')}</div>
+                                                        <div class="content">${noteContent.replace(/\n/g, '<br>')}</div>
+                                                    </body>
+                                                    </html>
+                                                `;
 
-                                                await Filesystem.writeFile({
-                                                    path: fileName,
-                                                    data: base64Data,
-                                                    directory: Directory.Cache,
-                                                });
-
-                                                const uriResult = await Filesystem.getUri({
-                                                    directory: Directory.Cache,
-                                                    path: fileName,
-                                                });
-
-                                                await CapacitorShare.share({
-                                                    title: 'تصدير PDF',
-                                                    url: uriResult.uri,
-                                                    dialogTitle: 'مشاركة كملف PDF'
-                                                });
+                                                if (isElectron || !isCapacitor) {
+                                                    // Desktop/Web: Use browser print dialog or text file download
+                                                    // Create a blob with the content as text for simplicity
+                                                    const textBlob = new Blob([noteContent], { type: 'text/plain;charset=utf-8' });
+                                                    const textUrl = URL.createObjectURL(textBlob);
+                                                    const a = document.createElement('a');
+                                                    a.href = textUrl;
+                                                    a.download = `note-${Date.now()}.txt`;
+                                                    document.body.appendChild(a);
+                                                    a.click();
+                                                    document.body.removeChild(a);
+                                                    URL.revokeObjectURL(textUrl);
+                                                    toast({ title: 'تم التصدير', description: 'تم تصدير الملاحظة كملف نصي' });
+                                                } else {
+                                                    // Mobile/Capacitor: Share as text (more reliable than PDF for Arabic)
+                                                    await CapacitorShare.share({
+                                                        title: 'مشاركة ملاحظة',
+                                                        text: noteContent,
+                                                        dialogTitle: 'مشاركة الملاحظة'
+                                                    });
+                                                }
 
                                             } catch (e) {
                                                 console.error(e);
-                                                toast({ title: 'خطأ', description: 'حدث خطأ أثناء إنشاء ملف PDF', variant: 'destructive' });
+                                                toast({ title: 'خطأ', description: 'حدث خطأ أثناء التصدير', variant: 'destructive' });
                                             }
                                         }}
                                         className="p-1.5 rounded-full bg-gray-100 text-gray-500 hover:text-red-600 hover:bg-red-50"
@@ -568,6 +619,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
                 {/* Pomodoro Timer (Hidden Trigger, accessible via Top Icon) */}
                 <PomodoroTimer hideTrigger={true} />
+
+                {/* Routine Modes Widget */}
+                <div className="mb-20">
+                    <RoutineModesWidget />
+                </div>
 
                 <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
                     if (!open) {
@@ -739,13 +795,76 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 }}>حفظ الملاحظة</Button>
                             </div>
                         )}
-                        {/* Shopping and Goal dialogs kept minimal or standard */}
-                        {showAddDialog === 'shopping' && <div className="text-center p-4">يمكنك إضافة عناصر للتسوق من قسم اللوجستيات.</div>}
+                        {/* Shopping Dialog with Full Form */}
+                        {showAddDialog === 'shopping' && (
+                            <div className="space-y-4 py-2">
+                                <div>
+                                    <label className="text-sm text-gray-600 block mb-1">اسم المنتج</label>
+                                    <Input
+                                        placeholder="مثال: حليب، خبز..."
+                                        value={shoppingItemName}
+                                        onChange={(e) => setShoppingItemName(e.target.value)}
+                                        className="text-right"
+                                        onKeyPress={async (e) => {
+                                            if (e.key === 'Enter' && shoppingItemName.trim()) {
+                                                await addShoppingItem({
+                                                    text: shoppingItemName,
+                                                    quantity: shoppingItemQuantity,
+                                                    deadline: shoppingItemDeadline || undefined
+                                                });
+                                                toast({ title: '✅ تمت الإضافة', description: shoppingItemName });
+                                                setShoppingItemName('');
+                                                setShoppingItemQuantity(1);
+                                                setShoppingItemDeadline('');
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-sm text-gray-600 block mb-1">الكمية</label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            value={shoppingItemQuantity}
+                                            onChange={(e) => setShoppingItemQuantity(Number(e.target.value))}
+                                            className="text-center"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-gray-600 block mb-1">مطلوب قبل (اختياري)</label>
+                                        <Input
+                                            type="date"
+                                            value={shoppingItemDeadline}
+                                            onChange={(e) => setShoppingItemDeadline(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={async () => {
+                                        if (!shoppingItemName.trim()) return;
+                                        await addShoppingItem({
+                                            text: shoppingItemName,
+                                            quantity: shoppingItemQuantity,
+                                            deadline: shoppingItemDeadline || undefined
+                                        });
+                                        toast({ title: '✅ تمت الإضافة', description: shoppingItemName });
+                                        setShoppingItemName('');
+                                        setShoppingItemQuantity(1);
+                                        setShoppingItemDeadline('');
+                                    }}
+                                    className="w-full bg-pink-500 hover:bg-pink-600"
+                                >
+                                    <ShoppingCart className="w-4 h-4 ml-2" />
+                                    إضافة للقائمة
+                                </Button>
+                            </div>
+                        )}
                         {showAddDialog === 'goal' && <div className="text-center p-4">إضافة هدف جديد (قريباً).</div>}
 
                     </DialogContent>
-                </Dialog>
-            </div>
+                </Dialog >
+            </div >
         </div >
     );
 };

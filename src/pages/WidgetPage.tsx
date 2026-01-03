@@ -47,8 +47,8 @@ const WidgetPage: React.FC = () => {
 
     const { tasks, updateTask } = useTasks();
     const { appointments } = useAppointments();
-    const { habits, toggleHabitCompletion } = useHabits();
-    const { medications, markMedicationTaken } = useMedications();
+    const { habits, toggleHabit } = useHabits();
+    const { medications, toggleMedTaken } = useMedications();
     const { getLocationsOnly } = useLocations();
     const { notesHistory } = useQuickNotes();
     const { addTransaction } = useFinance();
@@ -98,7 +98,7 @@ const WidgetPage: React.FC = () => {
             amount: Number(quickExpenseAmount),
             description: quickExpenseDesc || 'مصروف سريع',
             category: 'other',
-            timestamp: new Date().toISOString()
+            currency: 'ARS'
         });
         setQuickExpenseAmount('');
         setQuickExpenseDesc('');
@@ -106,15 +106,15 @@ const WidgetPage: React.FC = () => {
     };
 
     const handleToggleHabit = async (habitId: string) => {
-        if (toggleHabitCompletion) {
-            await toggleHabitCompletion(habitId);
+        if (toggleHabit) {
+            toggleHabit(habitId);
             toast({ title: 'تم تحديث العادة ✓' });
         }
     };
 
     const handleMedicationTaken = async (medId: string) => {
-        if (markMedicationTaken) {
-            await markMedicationTaken(medId);
+        if (toggleMedTaken) {
+            await toggleMedTaken(medId, todayStr);
             toast({ title: 'تم تسجيل الدواء ✓' });
         }
     };
@@ -297,37 +297,56 @@ const WidgetPage: React.FC = () => {
             )}
 
             {/* ===== SHOPPING (Interactive) ===== */}
-            {shouldShow('shopping') && shoppingListSummary && (
-                <Card className="border-0 shadow-md bg-white/90">
-                    <CardContent className="p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-1.5 bg-orange-100 rounded-lg"><ShoppingCart className="w-4 h-4 text-orange-600" /></div>
-                            <span className="text-sm font-bold text-gray-800">قائمة التسوق</span>
-                            <Badge variant="outline" className="ml-auto text-[10px]">
-                                {shoppingListSummary.completedItems}/{shoppingListSummary.totalItems}
-                            </Badge>
-                        </div>
-                        {shoppingListSummary.recentItems?.length > 0 ? (
-                            <div className="space-y-1">
-                                {shoppingListSummary.recentItems.slice(0, 6).map((item: any, idx: number) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center gap-2 p-1.5 bg-orange-50/50 rounded-lg hover:bg-orange-100/50 cursor-pointer transition-colors"
-                                    >
-                                        <div className={`w-4 h-4 rounded border ${item.completed ? 'bg-green-500 border-green-500' : 'border-orange-300 hover:border-orange-500'} flex items-center justify-center transition-colors`}>
-                                            {item.completed && <Check className="w-3 h-3 text-white" />}
-                                        </div>
-                                        <span className={`text-xs flex-1 ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item.name}</span>
-                                        {item.quantity > 1 && <span className="text-[10px] text-orange-500">×{item.quantity}</span>}
-                                    </div>
-                                ))}
+            {shouldShow('shopping') && shoppingListSummary && (() => {
+                // Get full shopping list for interactive updates
+                const shoppingList = JSON.parse(localStorage.getItem('baraka_shopping_list') || '[]');
+
+                const toggleShoppingItem = (itemIndex: number) => {
+                    const updatedList = [...shoppingList];
+                    updatedList[itemIndex].completed = !updatedList[itemIndex].completed;
+                    localStorage.setItem('baraka_shopping_list', JSON.stringify(updatedList));
+                    window.location.reload(); // Simple reload to reflect changes
+                };
+
+                return (
+                    <Card className="border-0 shadow-md bg-white/90">
+                        <CardContent className="p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1.5 bg-orange-100 rounded-lg"><ShoppingCart className="w-4 h-4 text-orange-600" /></div>
+                                <span className="text-sm font-bold text-gray-800">قائمة التسوق</span>
+                                <Badge variant="outline" className="ml-auto text-[10px]">
+                                    {shoppingList.filter((i: any) => i.completed).length}/{shoppingList.length}
+                                </Badge>
                             </div>
-                        ) : (
-                            <p className="text-xs text-gray-400 text-center py-2">القائمة فارغة</p>
-                        )}
-                    </CardContent>
-                </Card>
-            )}
+                            {shoppingList.length > 0 ? (
+                                <div className="space-y-1">
+                                    {shoppingList.slice(0, 8).map((item: any, idx: number) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => toggleShoppingItem(idx)}
+                                            className="flex items-center gap-2 p-1.5 bg-orange-50/50 rounded-lg hover:bg-orange-100/50 cursor-pointer transition-colors active:scale-[0.98]"
+                                        >
+                                            <div className={`w-5 h-5 rounded border-2 ${item.completed ? 'bg-green-500 border-green-500' : 'border-orange-300 hover:border-orange-500'} flex items-center justify-center transition-colors`}>
+                                                {item.completed && <Check className="w-3 h-3 text-white" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <span className={`text-xs block ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{item.name}</span>
+                                                <div className="flex gap-2 text-[9px] text-gray-400">
+                                                    {item.addedAt && <span>أُضيف: {item.addedAt}</span>}
+                                                    {item.deadline && <span className="text-red-400">قبل: {item.deadline}</span>}
+                                                </div>
+                                            </div>
+                                            {item.quantity > 1 && <span className="text-[10px] text-orange-500">×{item.quantity}</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400 text-center py-2">القائمة فارغة</p>
+                            )}
+                        </CardContent>
+                    </Card>
+                );
+            })()}
 
             {/* ===== NOTES ===== */}
             {shouldShow('notes') && (
@@ -371,8 +390,8 @@ const WidgetPage: React.FC = () => {
                                             key={habit.id}
                                             onClick={() => handleToggleHabit(habit.id)}
                                             className={`p-2 rounded-lg text-center cursor-pointer transition-all ${isCompleted
-                                                    ? 'bg-pink-500 text-white'
-                                                    : 'bg-pink-50/50 hover:bg-pink-100'
+                                                ? 'bg-pink-500 text-white'
+                                                : 'bg-pink-50/50 hover:bg-pink-100'
                                                 }`}
                                         >
                                             <p className={`text-xs truncate ${isCompleted ? 'font-bold' : 'text-gray-700'}`}>{habit.name}</p>
@@ -407,8 +426,8 @@ const WidgetPage: React.FC = () => {
                                             key={med.id}
                                             onClick={() => !isTaken && handleMedicationTaken(med.id)}
                                             className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all ${isTaken
-                                                    ? 'bg-cyan-500 text-white'
-                                                    : 'bg-cyan-50/50 hover:bg-cyan-100'
+                                                ? 'bg-cyan-500 text-white'
+                                                : 'bg-cyan-50/50 hover:bg-cyan-100'
                                                 }`}
                                         >
                                             <div className={`w-4 h-4 rounded-full flex items-center justify-center ${isTaken ? 'bg-white' : 'border-2 border-cyan-400'}`}>
