@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Bot, Users, ChevronDown, ChevronUp, GraduationCap } from 'lucide-react';
+import { Loader2, Bot, Users, ChevronDown, ChevronUp, GraduationCap, GripVertical } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
 import AcademicManager from '@/components/AcademicManager';
@@ -33,6 +33,18 @@ import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 
+// Section types for reordering
+type SectionId = 'newmuslims' | 'academic';
+interface SectionConfig {
+  id: SectionId;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  colorClass: string;
+  borderColor: string;
+  component: React.ReactNode;
+}
+
 const Index = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,8 +54,24 @@ const Index = () => {
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const { toast } = useToast();
-  const [isNewMuslimsOpen, setIsNewMuslimsOpen] = useState(false);
-  const [isAcademicOpen, setIsAcademicOpen] = useState(false);
+
+  // Collapsible states
+  const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
+    newmuslims: false,
+    academic: false,
+  });
+
+  // Reorderable sections order
+  const [sectionOrder, setSectionOrder] = useState<SectionId[]>(() => {
+    try {
+      const saved = localStorage.getItem('baraka_section_order');
+      return saved ? JSON.parse(saved) : ['newmuslims', 'academic'];
+    } catch { return ['newmuslims', 'academic']; }
+  });
+
+  // Drag state
+  const [draggedSection, setDraggedSection] = useState<SectionId | null>(null);
+
   const { appendToActivitiesNote } = useQuickNotes();
 
   // Sync Hooks
@@ -220,50 +248,83 @@ const Index = () => {
                   onNavigateToTab={setActiveTab}
                   onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
                 />
-                {/* New Muslims Section (Collapsible) */}
-                <div className="mt-4 mb-4 animate-in slide-in-from-bottom-4 duration-700 delay-300">
-                  <Collapsible open={isNewMuslimsOpen} onOpenChange={setIsNewMuslimsOpen} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-emerald-100 shadow-sm overflow-hidden">
-                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-emerald-50/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-100 rounded-xl">
-                          <Users className="w-5 h-5 text-emerald-600" />
-                        </div>
-                        <div className="text-right">
-                          <h3 className="font-bold text-gray-800 text-sm sm:text-base">رعاية المهتدين</h3>
-                          <p className="text-xs text-gray-500">متابعة الطلاب والمهام</p>
-                        </div>
-                      </div>
-                      {isNewMuslimsOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="p-2 sm:p-4 pt-0 border-t border-emerald-50">
-                        <NewMuslimsManager />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </div>
+                {/* Reorderable Sections */}
+                <div className="mt-4 mb-20 space-y-3">
+                  {sectionOrder.map((sectionId, index) => {
+                    const isOpen = openSections[sectionId];
+                    const toggleOpen = (open: boolean) => setOpenSections(prev => ({ ...prev, [sectionId]: open }));
 
-                {/* Academic Section (Collapsible) */}
-                <div className="mb-20 animate-in slide-in-from-bottom-4 duration-700 delay-500">
-                  <Collapsible open={isAcademicOpen} onOpenChange={setIsAcademicOpen} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
-                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-blue-50/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-xl">
-                          <GraduationCap className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div className="text-right">
-                          <h3 className="font-bold text-gray-800 text-sm sm:text-base">القسم الأكاديمي</h3>
-                          <p className="text-xs text-gray-500">إدارة الطلاب والمواد</p>
-                        </div>
+                    const config: Record<SectionId, { title: string; subtitle: string; icon: React.ReactNode; colorClass: string; borderColor: string; hoverBg: string }> = {
+                      newmuslims: {
+                        title: 'رعاية المهتدين',
+                        subtitle: 'متابعة الطلاب والمهام',
+                        icon: <Users className="w-5 h-5 text-emerald-600" />,
+                        colorClass: 'bg-emerald-100',
+                        borderColor: 'border-emerald-100',
+                        hoverBg: 'hover:bg-emerald-50/50',
+                      },
+                      academic: {
+                        title: 'القسم الأكاديمي',
+                        subtitle: 'خطة البحث والدراسة',
+                        icon: <GraduationCap className="w-5 h-5 text-blue-600" />,
+                        colorClass: 'bg-blue-100',
+                        borderColor: 'border-blue-100',
+                        hoverBg: 'hover:bg-blue-50/50',
+                      },
+                    };
+
+                    const sec = config[sectionId];
+
+                    return (
+                      <div
+                        key={sectionId}
+                        draggable
+                        onDragStart={() => setDraggedSection(sectionId)}
+                        onDragEnd={() => setDraggedSection(null)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          if (draggedSection && draggedSection !== sectionId) {
+                            const newOrder = [...sectionOrder];
+                            const fromIndex = newOrder.indexOf(draggedSection);
+                            const toIndex = newOrder.indexOf(sectionId);
+                            newOrder.splice(fromIndex, 1);
+                            newOrder.splice(toIndex, 0, draggedSection);
+                            setSectionOrder(newOrder);
+                            localStorage.setItem('baraka_section_order', JSON.stringify(newOrder));
+                          }
+                        }}
+                        className={`animate-in slide-in-from-bottom-4 duration-700 transition-all ${draggedSection === sectionId ? 'opacity-50 scale-95' : ''
+                          } ${draggedSection && draggedSection !== sectionId ? 'border-2 border-dashed border-blue-300 rounded-2xl' : ''}`}
+                      >
+                        <Collapsible open={isOpen} onOpenChange={toggleOpen} className={`bg-white/80 backdrop-blur-sm rounded-2xl border ${sec.borderColor} shadow-sm overflow-hidden`}>
+                          <div className="flex items-center">
+                            {/* Drag Handle */}
+                            <div className="p-3 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none">
+                              <GripVertical className="w-5 h-5" />
+                            </div>
+                            <CollapsibleTrigger className={`flex-1 flex items-center justify-between p-4 pr-2 ${sec.hoverBg} transition-colors`}>
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 ${sec.colorClass} rounded-xl`}>
+                                  {sec.icon}
+                                </div>
+                                <div className="text-right">
+                                  <h3 className="font-bold text-gray-800 text-sm sm:text-base">{sec.title}</h3>
+                                  <p className="text-xs text-gray-500">{sec.subtitle}</p>
+                                </div>
+                              </div>
+                              {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                            </CollapsibleTrigger>
+                          </div>
+                          <CollapsibleContent>
+                            <div className="p-2 sm:p-4 pt-0 border-t border-gray-100">
+                              {sectionId === 'newmuslims' && <NewMuslimsManager />}
+                              {sectionId === 'academic' && <AcademicManager />}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </div>
-                      {isAcademicOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="p-2 sm:p-4 pt-0 border-t border-blue-50">
-                        <AcademicManager />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    );
+                  })}
                 </div>
               </TabsContent>
 
