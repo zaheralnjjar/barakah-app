@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import {
     Search, Plus, ChevronRight, User, Phone, MapPin,
     GraduationCap, Clock, Award, MoreVertical, FileText,
     MessageCircle, Download, Share2, Printer, History, Flag,
-    Filter, ArrowUpDown, Check, Settings, Copy, Edit, FileInput, Trash2
+    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -813,7 +814,41 @@ const NewMuslimsManager = () => {
             const skippedCount = newStudents.length - validStudents.length;
 
             if (validStudents.length > 0) {
+                // Save to local state
                 setStudents(prev => [...prev, ...validStudents]);
+
+                // Save to Supabase
+                const supabaseRecords = validStudents.map(s => ({
+                    full_name: s.fullName,
+                    arabic_name: s.arabicName || null,
+                    phone: s.phone || null,
+                    nationality: s.nationality || null,
+                    gender: s.gender || 'male',
+                    birth_date: s.birthDate || null,
+                    address: s.address || null,
+                    conversion_date: s.conversionDate || null,
+                    status: 'active',
+                    level: 'beginner',
+                    notes: `Imported from Excel. Sheikh: ${s.witnessSheikh || '-'}, Occupation: ${s.occupation || '-'}, Education: ${s.education || '-'}`
+                }));
+
+                supabase.from('new_muslims').insert(supabaseRecords)
+                    .then(({ error }) => {
+                        if (error) {
+                            console.error('Supabase insert error:', error);
+                            toast({
+                                title: "تحذير",
+                                description: "تم الحفظ محلياً لكن فشل الحفظ في قاعدة البيانات",
+                                variant: "destructive"
+                            });
+                        } else {
+                            toast({
+                                title: "تم الحفظ في قاعدة البيانات ☁️",
+                                description: `تم رفع ${validStudents.length} طالب إلى السحابة`
+                            });
+                        }
+                    });
+
                 toast({
                     title: "تم الاستيراد بنجاح ✅",
                     description: `تم إضافة ${validStudents.length} مهتدي جديد${skippedCount > 0 ? ` (تم تجاهل ${skippedCount} صف فارغ)` : ''}`
@@ -1283,10 +1318,6 @@ const NewMuslimsManager = () => {
                             <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={() => setIsSettingsOpen(true)}>
                                 <Settings className="w-4 h-4" />
                                 <span className="hidden sm:inline">الإعدادات</span>
-                            </Button>
-                            <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => setIsTextImportOpen(true)}>
-                                <FileText className="w-4 h-4" />
-                                <span className="hidden sm:inline">استيراد نص</span>
                             </Button>
                             <div className="relative">
                                 <Input
