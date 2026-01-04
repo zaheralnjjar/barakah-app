@@ -30,6 +30,20 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import * as XLSX from 'xlsx';
 
+// --- Milestone Types ---
+type MilestoneKey = 'shahada' | 'fatiha' | 'wudu' | 'salah' | 'basics' | 'quran_reading' | 'fasting' | 'zakat';
+
+const MILESTONES_CONFIG: Record<MilestoneKey, { label: string; icon: string; order: number }> = {
+    shahada: { label: 'نطق الشهادة', icon: '🕌', order: 1 },
+    fatiha: { label: 'حفظ الفاتحة', icon: '📖', order: 2 },
+    wudu: { label: 'تعلم الوضوء', icon: '💧', order: 3 },
+    salah: { label: 'تعلم الصلاة', icon: '🙏', order: 4 },
+    basics: { label: 'أساسيات الإسلام', icon: '📚', order: 5 },
+    quran_reading: { label: 'قراءة القرآن', icon: '📕', order: 6 },
+    fasting: { label: 'الصيام', icon: '🌙', order: 7 },
+    zakat: { label: 'الزكاة والصدقة', icon: '💰', order: 8 },
+};
+
 // --- Types ---
 interface Student {
     id: string;
@@ -53,7 +67,9 @@ interface Student {
     notes?: string;
     currentStage?: number; // 1, 2, or 3
     assignedSheikh?: string;
+    milestones?: Record<MilestoneKey, boolean>; // Track completed milestones
 }
+
 
 interface CommunicationLog {
     id: string;
@@ -1073,6 +1089,87 @@ const NewMuslimsManager = () => {
                                     <div className="flex justify-between border-b pb-2">
                                         <span className="text-sm text-gray-500">الجنس</span>
                                         <span className="text-sm font-medium">{student.gender === 'male' ? 'ذكر' : 'أنثى'}</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Milestones Tracker Card */}
+                            <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="flex justify-between items-center text-sm">
+                                        <span className="flex items-center gap-2 text-emerald-800">
+                                            🎯 مراحل التعلم
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                                {Object.values(student.milestones || {}).filter(Boolean).length}/{Object.keys(MILESTONES_CONFIG).length}
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                                                onClick={() => {
+                                                    if (confirm('هل تريد تصفير جميع المراحل؟')) {
+                                                        setStudents(prev => prev.map(s =>
+                                                            s.id === student.id ? { ...s, milestones: {} as Record<MilestoneKey, boolean>, progress: 0 } : s
+                                                        ));
+                                                        toast({ title: "تم التصفير", description: "تم إعادة ضبط جميع المراحل" });
+                                                    }
+                                                }}
+                                            >
+                                                🔄
+                                            </Button>
+                                        </div>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {(Object.keys(MILESTONES_CONFIG) as MilestoneKey[])
+                                            .sort((a, b) => MILESTONES_CONFIG[a].order - MILESTONES_CONFIG[b].order)
+                                            .map((key) => {
+                                                const milestone = MILESTONES_CONFIG[key];
+                                                const isCompleted = student.milestones?.[key] || false;
+                                                return (
+                                                    <div
+                                                        key={key}
+                                                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${isCompleted
+                                                                ? 'bg-emerald-100 border-emerald-300 shadow-sm'
+                                                                : 'bg-white border-gray-200 hover:border-emerald-200'
+                                                            }`}
+                                                        onClick={() => {
+                                                            const newMilestones = { ...(student.milestones || {}), [key]: !isCompleted };
+                                                            const completedCount = Object.values(newMilestones).filter(Boolean).length;
+                                                            const totalCount = Object.keys(MILESTONES_CONFIG).length;
+                                                            const newProgress = Math.round((completedCount / totalCount) * 100);
+                                                            setStudents(prev => prev.map(s =>
+                                                                s.id === student.id ? { ...s, milestones: newMilestones as Record<MilestoneKey, boolean>, progress: newProgress } : s
+                                                            ));
+                                                        }}
+                                                    >
+                                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400'
+                                                            }`}>
+                                                            {isCompleted ? '✓' : milestone.order}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-sm">{milestone.icon}</span>
+                                                                <span className={`text-xs font-medium truncate ${isCompleted ? 'text-emerald-800' : 'text-gray-600'}`}>
+                                                                    {milestone.label}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        }
+                                    </div>
+                                    {/* Progress Bar */}
+                                    <div className="mt-3 pt-2 border-t border-emerald-100">
+                                        <div className="flex items-center justify-between text-xs text-emerald-700 mb-1">
+                                            <span>التقدم الكلي</span>
+                                            <span className="font-bold">{student.progress || 0}%</span>
+                                        </div>
+                                        <Progress value={student.progress || 0} className="h-2" />
                                     </div>
                                 </CardContent>
                             </Card>
