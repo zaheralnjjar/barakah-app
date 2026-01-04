@@ -103,7 +103,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     const remainingDaily = dailyLimitARS - todayExpense;
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
             {/* 1. Prayer Times Card */}
             <Card className="border-0 shadow-sm bg-white overflow-hidden">
                 <CardContent className="p-0">
@@ -125,10 +125,10 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                             }`}>
                             {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--:--')}
                         </div>
-                    </div >
+                    </div>
 
                     {/* Header Row (Grid Titles) */}
-                    < div className="grid grid-cols-6 bg-gradient-to-l from-emerald-600 to-teal-600 text-center" >
+                    <div className="grid grid-cols-6 bg-gradient-to-l from-emerald-600 to-teal-600 text-center">
                         {
                             PRAYER_ORDER.map((prayerKey, idx) => (
                                 <div key={prayerKey} className={`py-1.5 px-0.5 ${idx < 5 ? 'border-l border-white/20' : ''}`}>
@@ -138,10 +138,10 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                 </div>
                             ))
                         }
-                    </div >
+                    </div>
 
                     {/* Times Row with Intervals Inside */}
-                    < div className="grid grid-cols-6 bg-emerald-50 text-center pb-2" >
+                    <div className="grid grid-cols-6 bg-emerald-50 text-center pb-2">
                         {
                             PRAYER_ORDER.map((prayerKey, idx) => {
                                 const isNext = nextPrayer?.name?.toLowerCase() === prayerKey;
@@ -193,12 +193,12 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                 );
                             })
                         }
-                    </div >
-                </CardContent >
-            </Card >
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* 2. Financial Summary Card (Collapsible) */}
-            < Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300" >
+            <Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300">
                 <CardContent className="p-0">
                     {/* Header (Collapsible Trigger) */}
                     <div
@@ -273,11 +273,10 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                         </div>
                     )}
                 </CardContent>
-            </Card >
+            </Card>
 
-        </div >
-    </div >
-);
+        </div>
+    );
 };
 
 export default DashboardHeaderStrip;
