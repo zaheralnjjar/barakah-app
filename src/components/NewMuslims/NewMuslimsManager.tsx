@@ -473,23 +473,21 @@ const NewMuslimsManager = () => {
 
     // --- Protocol Management ---
     const updateProtocolItem = (stageId: number, itemId: string, completed: boolean) => {
-        setStudyProtocol(prev => {
-            const newProtocol = {
-                stages: prev.stages.map(stage =>
-                    stage.id === stageId
-                        ? { ...stage, items: stage.items.map(item => item.id === itemId ? { ...item, completed } : item) }
-                        : stage
-                )
-            };
+        const newProtocol = {
+            stages: studyProtocol.stages.map(stage =>
+                stage.id === stageId
+                    ? { ...stage, items: stage.items.map(item => item.id === itemId ? { ...item, completed } : item) }
+                    : stage
+            )
+        };
 
-            // If a student is selected, save to their custom protocol
-            if (selectedStudent) {
-                updateStudent(selectedStudent.id, { customProtocol: newProtocol });
-            }
+        setStudyProtocol(newProtocol);
 
-            return newProtocol;
-        });
+        if (selectedStudent) {
+            updateStudent(selectedStudent.id, { customProtocol: newProtocol });
+        }
     };
+
 
     const addProtocolItem = (stageId: number, name: string, description: string) => {
         const newItem: StudyStageItem = {
@@ -498,40 +496,38 @@ const NewMuslimsManager = () => {
             description,
             completed: false,
         };
-        setStudyProtocol(prev => ({
-            stages: prev.stages.map(stage =>
+
+        const newProtocol = {
+            stages: studyProtocol.stages.map(stage =>
                 stage.id === stageId
                     ? { ...stage, items: [...stage.items, newItem] }
                     : stage
             )
-        }));
+        };
+
+        setStudyProtocol(newProtocol);
         toast({ title: "تم الإضافة", description: `تم إضافة "${name}" للمرحلة` });
 
-        // We also need to save this new item to the student if selected
+        // Save to student if selected
         if (selectedStudent) {
-            setStudyProtocol(current => {
-                updateStudent(selectedStudent.id, { customProtocol: current });
-                return current;
-            });
+            updateStudent(selectedStudent.id, { customProtocol: newProtocol });
         }
     };
 
     const deleteProtocolItem = (stageId: number, itemId: string) => {
-        setStudyProtocol(prev => {
-            const newProtocol = {
-                stages: prev.stages.map(stage =>
-                    stage.id === stageId
-                        ? { ...stage, items: stage.items.filter(item => item.id !== itemId) }
-                        : stage
-                )
-            };
+        const newProtocol = {
+            stages: studyProtocol.stages.map(stage =>
+                stage.id === stageId
+                    ? { ...stage, items: stage.items.filter(item => item.id !== itemId) }
+                    : stage
+            )
+        };
 
-            if (selectedStudent) {
-                updateStudent(selectedStudent.id, { customProtocol: newProtocol });
-            }
+        setStudyProtocol(newProtocol);
 
-            return newProtocol;
-        });
+        if (selectedStudent) {
+            updateStudent(selectedStudent.id, { customProtocol: newProtocol });
+        }
     };
 
     // --- Calculate Student Progress ---
@@ -1191,9 +1187,7 @@ const NewMuslimsManager = () => {
                                                 className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
                                                 onClick={() => {
                                                     if (confirm('هل تريد تصفير جميع المراحل؟')) {
-                                                        setStudents(prev => prev.map(s =>
-                                                            s.id === student.id ? { ...s, milestones: {} as Record<MilestoneKey, boolean>, progress: 0 } : s
-                                                        ));
+                                                        updateStudent(student.id, { milestones: {} as Record<MilestoneKey, boolean>, progress: 0 });
                                                         toast({ title: "تم التصفير", description: "تم إعادة ضبط جميع المراحل" });
                                                     }
                                                 }}
@@ -1222,9 +1216,8 @@ const NewMuslimsManager = () => {
                                                             const completedCount = Object.values(newMilestones).filter(Boolean).length;
                                                             const totalCount = Object.keys(MILESTONES_CONFIG).length;
                                                             const newProgress = Math.round((completedCount / totalCount) * 100);
-                                                            setStudents(prev => prev.map(s =>
-                                                                s.id === student.id ? { ...s, milestones: newMilestones as Record<MilestoneKey, boolean>, progress: newProgress } : s
-                                                            ));
+
+                                                            updateStudent(student.id, { milestones: newMilestones as Record<MilestoneKey, boolean>, progress: newProgress });
                                                         }}
                                                     >
                                                         <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400'
