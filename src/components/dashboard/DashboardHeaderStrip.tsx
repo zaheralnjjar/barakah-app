@@ -7,7 +7,11 @@ import { useFinance } from '@/hooks/useFinance';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { cn } from '@/lib/utils';
 
-const DashboardHeaderStrip: React.FC = () => {
+interface DashboardHeaderStripProps {
+    newMuslimsCount?: number;
+}
+
+const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsCount }) => {
     // 1. Fetch Finance Data
     const { financeData, dailyLimit } = useFinance();
     const [dollarRates, setDollarRates] = useState<{ official: number; blue: number } | null>(null);
@@ -99,46 +103,47 @@ const DashboardHeaderStrip: React.FC = () => {
     const remainingDaily = dailyLimitARS - todayExpense;
 
     return (
-        <div className="w-full space-y-3 animate-fade-in font-sans">
-            <div className="flex flex-col gap-3">
-
-                {/* 1. Prayer Times Card (Fixed, Expanded) */}
-                <Card className="border-0 shadow-sm bg-white overflow-hidden">
-                    <CardContent className="p-0">
-                        {/* Interactive Header: Next Prayer & Timer */}
-                        <div
-                            className="bg-emerald-50/50 px-3 py-2 flex justify-between items-center border-b border-emerald-100 cursor-pointer select-none transition-colors hover:bg-emerald-100/50"
-                            onClick={handleHeaderTimeClick}
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className={`text-xs font-bold text-emerald-800 flex items-center gap-1.5`}>
-                                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                                    {nextPrayer ? `القادمة: ${nextPrayer.nameAr}` : 'الصلاة القادمة'}
-                                </span>
-                            </div>
-
-                            <div className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all shadow-sm border ${showElapsedHeader
-                                    ? 'bg-amber-100 text-amber-800 border-amber-200 animate-in fade-in zoom-in'
-                                    : 'bg-white text-emerald-700 border-emerald-200'
-                                }`}>
-                                {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--:--')}
-                            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* 1. Prayer Times Card */}
+            <Card className="border-0 shadow-sm bg-white overflow-hidden">
+                <CardContent className="p-0">
+                    {/* Header (Next Prayer) */}
+                    <div
+                        className="bg-emerald-50/50 px-3 py-2 flex justify-between items-center border-b border-emerald-100 cursor-pointer select-none transition-colors hover:bg-emerald-100/50"
+                        onClick={handleHeaderTimeClick}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold text-emerald-800 flex items-center gap-1.5`}>
+                                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                                {nextPrayer ? `القادمة: ${nextPrayer.nameAr}` : 'الصلاة القادمة'}
+                            </span>
                         </div>
 
-                        {/* Header Row (Grid Titles) */}
-                        <div className="grid grid-cols-6 bg-gradient-to-l from-emerald-600 to-teal-600 text-center">
-                            {PRAYER_ORDER.map((prayerKey, idx) => (
+                        <div className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all shadow-sm border ${showElapsedHeader
+                            ? 'bg-amber-100 text-amber-800 border-amber-200 animate-in fade-in zoom-in'
+                            : 'bg-white text-emerald-700 border-emerald-200'
+                            }`}>
+                            {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--:--')}
+                        </div>
+                    </div >
+
+                    {/* Header Row (Grid Titles) */}
+                    < div className="grid grid-cols-6 bg-gradient-to-l from-emerald-600 to-teal-600 text-center" >
+                        {
+                            PRAYER_ORDER.map((prayerKey, idx) => (
                                 <div key={prayerKey} className={`py-1.5 px-0.5 ${idx < 5 ? 'border-l border-white/20' : ''}`}>
                                     <span className="text-[10px] font-bold text-white whitespace-nowrap">
                                         {PRAYER_NAMES[prayerKey as keyof typeof PRAYER_NAMES]}
                                     </span>
                                 </div>
-                            ))}
-                        </div>
+                            ))
+                        }
+                    </div >
 
-                        {/* Times Row with Intervals Inside */}
-                        <div className="grid grid-cols-6 bg-emerald-50 text-center pb-2">
-                            {PRAYER_ORDER.map((prayerKey, idx) => {
+                    {/* Times Row with Intervals Inside */}
+                    < div className="grid grid-cols-6 bg-emerald-50 text-center pb-2" >
+                        {
+                            PRAYER_ORDER.map((prayerKey, idx) => {
                                 const isNext = nextPrayer?.name?.toLowerCase() === prayerKey;
                                 const pData = prayerTimes.find(p => p.name.toLowerCase() === prayerKey);
                                 const pTime = pData?.time || '--:--';
@@ -186,92 +191,93 @@ const DashboardHeaderStrip: React.FC = () => {
                                         )}
                                     </div>
                                 );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
+                            })
+                        }
+                    </div >
+                </CardContent >
+            </Card >
 
-                {/* 2. Financial Summary Card (Collapsible) */}
-                <Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300">
-                    <CardContent className="p-0">
-                        {/* Header (Collapsible Trigger) */}
-                        <div
-                            className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
-                            onClick={() => setExpandFinance(!expandFinance)}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 relative">
-                                    <Wallet className="w-4 h-4" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-gray-700">الملخص المالي</span>
-                                        {/* Official Rate Badge */}
-                                        <div className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
-                                            <span className="text-[9px] text-gray-400">$</span>
-                                            <span className="text-[9px] font-mono font-bold text-gray-600">{dollarRates?.official || '---'}</span>
-                                        </div>
+            {/* 2. Financial Summary Card (Collapsible) */}
+            < Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300" >
+                <CardContent className="p-0">
+                    {/* Header (Collapsible Trigger) */}
+                    <div
+                        className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50"
+                        onClick={() => setExpandFinance(!expandFinance)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="p-1.5 bg-emerald-100 rounded-full text-emerald-600 relative">
+                                <Wallet className="w-4 h-4" />
+                            </div>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-gray-700">الملخص المالي</span>
+                                    {/* Official Rate Badge */}
+                                    <div className="flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                                        <span className="text-[9px] text-gray-400">$</span>
+                                        <span className="text-[9px] font-mono font-bold text-gray-600">{dollarRates?.official || '---'}</span>
                                     </div>
-                                    {!expandFinance && (
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-[9px] text-gray-400">الرصيد:</span>
-                                                <span className="text-[10px] font-mono font-bold text-gray-700">
-                                                    {financeData?.current_balance_ars?.toLocaleString() || '0'}
-                                                </span>
-                                            </div>
-                                            <span className="text-[9px] text-gray-300">|</span>
-                                            <span className={`text-[10px] font-mono font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                                                {remainingDaily.toLocaleString()}
+                                </div>
+                                {!expandFinance && (
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[9px] text-gray-400">الرصيد:</span>
+                                            <span className="text-[10px] font-mono font-bold text-gray-700">
+                                                {financeData?.current_balance_ars?.toLocaleString() || '0'}
                                             </span>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                            {expandFinance ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                        </div>
-
-                        {/* Expanded Details */}
-                        {expandFinance && (
-                            <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-1">
-                                <div className="h-px w-full bg-gray-100 mb-2"></div>
-
-                                {/* Full Rates */}
-                                <div className="flex justify-between items-center mb-2 px-1 bg-blue-50/50 p-1.5 rounded">
-                                    <div className="flex items-center gap-1">
-                                        <BadgeDollarSign className="w-3 h-3 text-blue-500" />
-                                        <span className="text-[10px] font-bold text-blue-700">أسعار الصرف:</span>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <span className="text-[10px] text-gray-600">رسمي: <b className="font-mono">{dollarRates?.official || '---'}</b></span>
-                                        <span className="text-[10px] text-blue-600">بلو: <b className="font-mono">{dollarRates?.blue || '---'}</b></span>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2 divide-x divide-x-reverse divide-gray-100">
-                                    <div className="text-center px-1">
-                                        <p className="text-[9px] text-gray-400 mb-0.5">الحد اليومي</p>
-                                        <p className="text-sm font-bold font-mono text-gray-700">{dailyLimitARS.toLocaleString()}</p>
-                                    </div>
-                                    <div className="text-center px-1">
-                                        <p className="text-[9px] text-gray-400 mb-0.5">مصروف اليوم</p>
-                                        <p className="text-sm font-bold font-mono text-red-600">{todayExpense.toLocaleString()}</p>
-                                    </div>
-                                    <div className="text-center px-1">
-                                        <p className="text-[9px] text-gray-400 mb-0.5">المتبقي</p>
-                                        <p className={`text-sm font-bold font-mono ${remainingDaily < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                        <span className="text-[9px] text-gray-300">|</span>
+                                        <span className={`text-[10px] font-mono font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
                                             {remainingDaily.toLocaleString()}
-                                        </p>
+                                        </span>
                                     </div>
+                                )}
+                            </div>
+                        </div>
+                        {expandFinance ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                    </div>
+
+                    {/* Expanded Details */}
+                    {expandFinance && (
+                        <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-1">
+                            <div className="h-px w-full bg-gray-100 mb-2"></div>
+
+                            {/* Full Rates */}
+                            <div className="flex justify-between items-center mb-2 px-1 bg-blue-50/50 p-1.5 rounded">
+                                <div className="flex items-center gap-1">
+                                    <BadgeDollarSign className="w-3 h-3 text-blue-500" />
+                                    <span className="text-[10px] font-bold text-blue-700">أسعار الصرف:</span>
+                                </div>
+                                <div className="flex gap-3">
+                                    <span className="text-[10px] text-gray-600">رسمي: <b className="font-mono">{dollarRates?.official || '---'}</b></span>
+                                    <span className="text-[10px] text-blue-600">بلو: <b className="font-mono">{dollarRates?.blue || '---'}</b></span>
                                 </div>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
 
-            </div>
-        </div>
-    );
+                            <div className="grid grid-cols-3 gap-2 divide-x divide-x-reverse divide-gray-100">
+                                <div className="text-center px-1">
+                                    <p className="text-[9px] text-gray-400 mb-0.5">الحد اليومي</p>
+                                    <p className="text-sm font-bold font-mono text-gray-700">{dailyLimitARS.toLocaleString()}</p>
+                                </div>
+                                <div className="text-center px-1">
+                                    <p className="text-[9px] text-gray-400 mb-0.5">مصروف اليوم</p>
+                                    <p className="text-sm font-bold font-mono text-red-600">{todayExpense.toLocaleString()}</p>
+                                </div>
+                                <div className="text-center px-1">
+                                    <p className="text-[9px] text-gray-400 mb-0.5">المتبقي</p>
+                                    <p className={`text-sm font-bold font-mono ${remainingDaily < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                        {remainingDaily.toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card >
+
+        </div >
+    </div >
+);
 };
 
 export default DashboardHeaderStrip;

@@ -146,6 +146,23 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         return () => clearInterval(interval);
     }, [getParkingOnly]);
 
+    // Read New Muslims Count
+    const [newMuslimsCount, setNewMuslimsCount] = useState(0);
+    useEffect(() => {
+        const loadNewMuslimsCount = () => {
+            try {
+                const stored = localStorage.getItem('my_new_muslims_data');
+                if (stored) {
+                    const data = JSON.parse(stored);
+                    if (Array.isArray(data)) setNewMuslimsCount(data.length);
+                }
+            } catch (e) { console.error(e); }
+        };
+        loadNewMuslimsCount();
+        window.addEventListener('storage', loadNewMuslimsCount);
+        return () => window.removeEventListener('storage', loadNewMuslimsCount);
+    }, []);
+
     const stopParking = async () => {
         if (latestParking) {
             await deleteLocation(latestParking.id);
@@ -255,7 +272,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             {/* 3. Finance & Prayer Header Strip */}
             <div className="px-2 pt-1 pb-2 max-w-7xl mx-auto">
-                <DashboardHeaderStrip />
+                <DashboardHeaderStrip newMuslimsCount={newMuslimsCount} />
             </div>
 
             <div

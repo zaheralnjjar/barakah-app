@@ -17,7 +17,7 @@ import {
     Search, Plus, ChevronRight, User, Phone, MapPin,
     GraduationCap, Clock, Award, MoreVertical, FileText,
     MessageCircle, Download, Share2, Printer, History, Flag,
-    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2
+    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -68,6 +68,7 @@ interface Student {
     currentStage?: number; // 1, 2, or 3
     assignedSheikh?: string;
     milestones?: Record<MilestoneKey, boolean>; // Track completed milestones
+    customProtocol?: StudyProtocol; // Individualized study plan
 }
 
 
@@ -343,12 +344,39 @@ const NewMuslimsManager = () => {
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
 
     // --- Derived Data ---
-    // --- Derived Data ---
+    // Filtering State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'all' | Student['status']>('all'); // Changed from NewMuslim to Student
+    const [ageFilter, setAgeFilter] = useState('');
+    const [uniFilter, setUniFilter] = useState('');
+    const [workFilter, setWorkFilter] = useState('');
+    const [nationalityFilter, setNationalityFilter] = useState<string>('all');
+    const [attentionFilter, setAttentionFilter] = useState<boolean>(false);
+
+    // Plan Management State
+    const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+
+    // Derived State: Filtered List
     const filteredStudents = students.filter(s => {
-        const matchesSearch = s.fullName.includes(searchQuery) || (s.arabicName?.includes(searchQuery) ?? false);
-        const matchesNat = filterNationality === 'all' || s.nationality === filterNationality;
-        const matchesGender = filterGender === 'all' || s.gender === filterGender;
-        return matchesSearch && matchesNat && matchesGender;
+        const matchesSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.phone.includes(searchTerm) ||
+            (s.education && s.education.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
+
+        // Assuming 'age' is derived from birthDate or added to Student interface
+        const matchesAge = !ageFilter || (s.birthDate && (new Date().getFullYear() - new Date(s.birthDate).getFullYear()).toString() === ageFilter);
+        const matchesUni = !uniFilter || (s.education && s.education.includes(uniFilter));
+        const matchesWork = !workFilter || (s.occupation && s.occupation.includes(workFilter));
+        const matchesNat = nationalityFilter === 'all' || s.nationality === nationalityFilter;
+
+        // Needs Attention: Default logic (e.g. inactive or no recent visit > 30 days)
+        // Adjust logic as per requirements. Here: lastVisit > 30 days or status inactive
+        const matchesAttention = !attentionFilter || (
+            s.status === 'inactive' ||
+            (s.lastVisit !== 'جديد' && new Date(s.lastVisit).getTime() < Date.now() - 30 * 24 * 60 * 60 * 1000)
+        );
+
+        return matchesSearch && matchesStatus && matchesAge && matchesUni && matchesWork && matchesNat && matchesAttention;
     }).sort((a, b) => {
         if (sortOption === 'name') return (a.arabicName || a.fullName).localeCompare(b.arabicName || b.fullName);
         if (sortOption === 'date_new') return new Date(b.conversionDate).getTime() - new Date(a.conversionDate).getTime();
@@ -1090,6 +1118,23 @@ const NewMuslimsManager = () => {
                                         <span className="text-sm text-gray-500">الجنس</span>
                                         <span className="text-sm font-medium">{student.gender === 'male' ? 'ذكر' : 'أنثى'}</span>
                                     </div>
+                                    <div className="flex justify-between items-center pt-2">
+                                        <span className="text-sm text-gray-500">الداعية المختص</span>
+                                        {student.assignedSheikh ? (
+                                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                                {student.assignedSheikh}
+                                            </Badge>
+                                        ) : (
+                                            <Button size="sm" variant="ghost" className="h-6 text-xs text-blue-600" onClick={() => {
+                                                const sheikh = prompt("أدخل اسم الداعية/المعلم:");
+                                                if (sheikh) {
+                                                    setStudents(prev => prev.map(s => s.id === student.id ? { ...s, assignedSheikh: sheikh } : s));
+                                                }
+                                            }}>
+                                                <Plus className="w-3 h-3 ml-1" /> تعيين
+                                            </Button>
+                                        )}
+                                    </div>
                                 </CardContent>
                             </Card>
 
@@ -1133,8 +1178,8 @@ const NewMuslimsManager = () => {
                                                     <div
                                                         key={key}
                                                         className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${isCompleted
-                                                                ? 'bg-emerald-100 border-emerald-300 shadow-sm'
-                                                                : 'bg-white border-gray-200 hover:border-emerald-200'
+                                                            ? 'bg-emerald-100 border-emerald-300 shadow-sm'
+                                                            : 'bg-white border-gray-200 hover:border-emerald-200'
                                                             }`}
                                                         onClick={() => {
                                                             const newMilestones = { ...(student.milestones || {}), [key]: !isCompleted };
@@ -1416,6 +1461,10 @@ const NewMuslimsManager = () => {
                                 <Settings className="w-4 h-4" />
                                 <span className="hidden sm:inline">الإعدادات</span>
                             </Button>
+                            <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={() => setIsProtocolOpen(true)}>
+                                <ClipboardList className="w-4 h-4" />
+                                <span className="hidden sm:inline">خطة التعليم</span>
+                            </Button>
                             <div className="relative">
                                 <Input
                                     type="file"
@@ -1481,6 +1530,95 @@ const NewMuslimsManager = () => {
                                 </div>
                             </CardContent>
                         </Card>
+                    </div>
+
+                    {/* Key Metrics Row (New) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <Card className="bg-emerald-50 border-emerald-100 shadow-sm">
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                                <p className="text-xs text-emerald-600 font-bold mb-1">إجمالي المهتدين</p>
+                                <p className="text-2xl font-black text-emerald-800">{students.length}</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-blue-50 border-blue-100 shadow-sm">
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                                <p className="text-xs text-blue-600 font-bold mb-1">الجدد (هذا الشهر)</p>
+                                <p className="text-2xl font-black text-blue-800">
+                                    {students.filter(s => new Date(s.conversionDate).getMonth() === new Date().getMonth()).length}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-amber-50 border-amber-100 shadow-sm">
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                                <p className="text-xs text-amber-600 font-bold mb-1">يحتاجون متابعة</p>
+                                <p className="text-2xl font-black text-amber-800">
+                                    {students.filter(s => s.status === 'active' && (!s.lastVisit || s.lastVisit.includes('يوم'))).length}
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-purple-50 border-purple-100 shadow-sm">
+                            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                                <p className="text-xs text-purple-600 font-bold mb-1">الخريجين</p>
+                                <p className="text-2xl font-black text-purple-800">
+                                    {students.filter(s => s.status === 'graduated').length}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Filters Section - Professional Look */}
+                    {/* Filters Section - Professional Look */}
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4 bg-white p-3 rounded-lg border shadow-sm">
+                        <div className="md:col-span-2 relative">
+                            <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+                            <Input
+                                placeholder="بحث بالاسم، الهاتف..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pr-9"
+                            />
+                        </div>
+
+                        {/* Status Filter */}
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                        >
+                            <option value="all">كل الحالات</option>
+                            <option value="active">🌟 نشط</option>
+                            <option value="inactive">💤 غير نشط</option>
+                            <option value="graduated">🎓 خريج</option>
+                        </select>
+
+                        {/* Nationality Filter */}
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={nationalityFilter}
+                            onChange={(e) => setNationalityFilter(e.target.value)}
+                        >
+                            <option value="all">كل الجنسيات</option>
+                            {uniqueNationalities.filter(Boolean).map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+
+                        {/* University Filter */}
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={uniFilter}
+                            onChange={(e) => setUniFilter(e.target.value)}
+                        >
+                            <option value="">كل التخصصات</option>
+                            {students.map(s => s.education).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+
+                        {/* Attention Toggle */}
+                        <Button
+                            variant={attentionFilter ? "destructive" : "outline"}
+                            className={`w-full ${attentionFilter ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'text-gray-500'}`}
+                            onClick={() => setAttentionFilter(!attentionFilter)}
+                        >
+                            {attentionFilter ? '⚠️ يحتاج متابعة' : '✔️ الكل بخير'}
+                        </Button>
                     </div>
 
                     <Tabs defaultValue="students" className="w-full">
@@ -1921,37 +2059,27 @@ const NewMuslimsManager = () => {
                             قم بنسخ الرسالة ثم اضغط على زر الإرسال أمام كل طالب لفتح المحادثة.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <ScrollArea className="h-[200px] border rounded-md p-2">
                         <div className="space-y-2">
-                            <Label>نص الرسالة</Label>
-                            <Textarea
-                                placeholder="اكتب رسالتك هنا..."
-                                value={bulkMessageText}
-                                onChange={(e) => setBulkMessageText(e.target.value)}
-                            />
+                            {students.filter(s => selectedStudentIds.includes(s.id)).map(student => (
+                                <div key={student.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                                    <span>{student.arabicName || student.fullName}</span>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50"
+                                        onClick={() => {
+                                            const formattedPhone = formatPhoneForWhatsapp(student.phone);
+                                            const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(bulkMessageText)}`;
+                                            window.open(url, '_blank');
+                                        }}
+                                    >
+                                        إرسال <MessageCircle className="w-3 h-3 ml-1" />
+                                    </Button>
+                                </div>
+                            ))}
                         </div>
-                        <ScrollArea className="h-[200px] border rounded-md p-2">
-                            <div className="space-y-2">
-                                {students.filter(s => selectedStudentIds.includes(s.id)).map(student => (
-                                    <div key={student.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                                        <span>{student.arabicName || student.fullName}</span>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-7 text-xs border-green-200 text-green-700 hover:bg-green-50"
-                                            onClick={() => {
-                                                const formattedPhone = formatPhoneForWhatsapp(student.phone);
-                                                const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(bulkMessageText)}`;
-                                                window.open(url, '_blank');
-                                            }}
-                                        >
-                                            إرسال <MessageCircle className="w-3 h-3 ml-1" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </div>
+                    </ScrollArea>
                 </DialogContent>
             </Dialog>
 
@@ -1961,39 +2089,28 @@ const NewMuslimsManager = () => {
                     <DialogHeader>
                         <DialogTitle>📋 استيراد نص</DialogTitle>
                         <DialogDescription>
-                            الصق قائمة الأسماء والأرقام من WhatsApp أو أي مصدر آخر
+                            الصق النص هنا ليتم تحليله واستخراج البيانات (يدعم تنسيقات مختلفة)
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <Textarea
-                            placeholder="مثال:\nأحمد محمد - 1159612728\nسارة أحمد: 1187654321\nمحمد علي 1123456789"
+                            placeholder="مثال: الاسم: أحمد - الهاتف: 05000000..."
+                            className="min-h-[200px] font-mono text-sm"
                             value={importText}
                             onChange={(e) => setImportText(e.target.value)}
-                            className="min-h-[150px] text-sm"
-                            dir="auto"
                         />
-                        <Button onClick={parseImportText} variant="outline" className="w-full">
-                            🔍 تحليل النص
-                        </Button>
-                        {stagedStudents.length > 0 && (
-                            <div className="border rounded-lg p-3 space-y-2">
-                                <p className="text-sm font-medium text-emerald-600">تم العثور على {stagedStudents.length} طالب:</p>
-                                <ScrollArea className="h-[120px]">
-                                    {stagedStudents.map((s, i) => (
-                                        <div key={i} className="flex justify-between text-sm p-1 bg-gray-50 rounded mb-1">
-                                            <span>{s.fullName}</span>
-                                            <span dir="ltr" className="text-gray-500">{s.phone}</span>
-                                        </div>
-                                    ))}
-                                </ScrollArea>
-                            </div>
-                        )}
+                        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
+                            <strong>نصائح:</strong>
+                            <ul className="list-disc list-inside mt-1 space-y-1">
+                                <li>يمكنك نسخ نص من واتساب أو إكسل</li>
+                                <li>حاول أن يكون كل طالب في سطر منفصل</li>
+                                <li>سيحاول النظام اكتشاف الاسم ورقم الهاتف تلقائياً</li>
+                            </ul>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => { setIsTextImportOpen(false); setStagedStudents([]); setImportText(''); }}>إلغاء</Button>
-                        <Button onClick={handleSaveStaged} disabled={stagedStudents.length === 0} className="bg-emerald-600">
-                            حفظ {stagedStudents.length} طالب
-                        </Button>
+                        <Button onClick={parseImportText} className="bg-emerald-600">تحليل واستيراد</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2002,7 +2119,7 @@ const NewMuslimsManager = () => {
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>⚙️ إعدادات النظام</DialogTitle>
+                        <DialogTitle>⚙️ الإعدادات</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-6 py-4">
                         <div className="space-y-3">
@@ -2040,9 +2157,6 @@ const NewMuslimsManager = () => {
                             </Button>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button onClick={() => setIsSettingsOpen(false)} className="bg-emerald-600">حفظ الإعدادات</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

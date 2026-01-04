@@ -11,7 +11,8 @@ import { useAppointments } from '@/hooks/useAppointments';
 import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
     CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
-    Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings
+    Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings,
+    GraduationCap, Users
 } from 'lucide-react';
 
 interface QuickActionsGridProps {
@@ -20,9 +21,10 @@ interface QuickActionsGridProps {
     onOpenTimer?: () => void;
     onOpenVoiceRecorder?: () => void;
     latestParking?: any;
+    onNavigateToTab?: (tabId: string) => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -108,8 +110,12 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
     // Available Actions (25+ options)
     const AVAILABLE_ACTIONS = [
+        { id: 'show_academic_research', name: 'البحث العلمي', icon: GraduationCap, category: 'info', description: 'الانتقال إلى قسم البحث العلمي' },
+        { id: 'show_new_muslims', name: 'المهتدين الجدد', icon: Users, category: 'info', description: 'الانتقال إلى قسم المهتدين الجدد' },
+
         // Information Display
         { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },
+        // ... rest of actions ...
         { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
         { id: 'show_dollar', name: 'سعر الدولار', icon: DollarSign, category: 'info', description: 'عرض سعر الدولار الرسمي والبلو' },
         { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
@@ -185,6 +191,8 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         { type: 'habits', label: 'العادات', icon: Heart, color: 'pink', size: '350,400' },
         { type: 'medications', label: 'الأدوية', icon: Pill, color: 'cyan', size: '350,400' },
         { type: 'locations', label: 'المواقع', icon: MapPin, color: 'indigo', size: '400,500' },
+        { type: 'educational', label: 'أكاديمي', icon: GraduationCap, color: 'violet', size: '400,500' },
+        { type: 'daura', label: 'المهتدين', icon: Users, color: 'teal', size: '400,500' },
     ];
 
     const openWidgetInline = () => {
@@ -200,6 +208,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         if (!action) return;
 
         switch (actionId) {
+            case 'show_academic_research':
+                if (onNavigateToTab) onNavigateToTab('educational');
+                else toast({ title: 'غير متاح', description: 'التنقل غير مفعل' });
+                break;
+
+            case 'show_new_muslims':
+                if (onNavigateToTab) onNavigateToTab('daura');
+                else toast({ title: 'غير متاح', description: 'التنقل غير مفعل' });
+                break;
+
             // === INFORMATION ACTIONS ===
             case 'show_time':
                 const now = new Date();

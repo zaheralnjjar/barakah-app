@@ -11,13 +11,15 @@ interface DashboardStatsProps {
     };
     todayExpense: number;
     dailyLimitARS: number;
+    newMuslimsCount?: number;
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({
     onNavigateToFinance,
     financeData,
     todayExpense,
-    dailyLimitARS
+    dailyLimitARS,
+    newMuslimsCount
 }) => {
     const totalBalanceARS = financeData?.current_balance_ars || 0;
     const exchangeRate = financeData?.exchange_rate || 0;
@@ -94,6 +96,12 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
                         <span className="text-xs font-medium text-emerald-600" dir="ltr">${exchangeRate ? formatCurrency(totalBalanceARS / exchangeRate) : '--'}</span>
                     </div>
                 </div>
+                {/* New Muslims Count Badge - Optional Display */}
+                {newMuslimsCount !== undefined && newMuslimsCount > 0 && (
+                    <div className="bg-emerald-600 text-white text-center py-1 text-xs font-bold w-full">
+                        👥 عدد المهتدين الجدد: {newMuslimsCount}
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
