@@ -343,6 +343,17 @@ const NewMuslimsManager = () => {
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.PROTOCOL, studyProtocol); }, [studyProtocol]);
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
 
+    // Sync Protocol with Selected Student
+    React.useEffect(() => {
+        if (selectedStudent) {
+            if (selectedStudent.customProtocol) {
+                setStudyProtocol(selectedStudent.customProtocol);
+            } else {
+                setStudyProtocol(DEFAULT_PROTOCOL);
+            }
+        }
+    }, [selectedStudent]);
+
     // --- Derived Data ---
     // Filtering State
     const [searchTerm, setSearchTerm] = useState('');
@@ -462,13 +473,22 @@ const NewMuslimsManager = () => {
 
     // --- Protocol Management ---
     const updateProtocolItem = (stageId: number, itemId: string, completed: boolean) => {
-        setStudyProtocol(prev => ({
-            stages: prev.stages.map(stage =>
-                stage.id === stageId
-                    ? { ...stage, items: stage.items.map(item => item.id === itemId ? { ...item, completed } : item) }
-                    : stage
-            )
-        }));
+        setStudyProtocol(prev => {
+            const newProtocol = {
+                stages: prev.stages.map(stage =>
+                    stage.id === stageId
+                        ? { ...stage, items: stage.items.map(item => item.id === itemId ? { ...item, completed } : item) }
+                        : stage
+                )
+            };
+
+            // If a student is selected, save to their custom protocol
+            if (selectedStudent) {
+                updateStudent(selectedStudent.id, { customProtocol: newProtocol });
+            }
+
+            return newProtocol;
+        });
     };
 
     const addProtocolItem = (stageId: number, name: string, description: string) => {
@@ -486,16 +506,32 @@ const NewMuslimsManager = () => {
             )
         }));
         toast({ title: "تم الإضافة", description: `تم إضافة "${name}" للمرحلة` });
+
+        // We also need to save this new item to the student if selected
+        if (selectedStudent) {
+            setStudyProtocol(current => {
+                updateStudent(selectedStudent.id, { customProtocol: current });
+                return current;
+            });
+        }
     };
 
     const deleteProtocolItem = (stageId: number, itemId: string) => {
-        setStudyProtocol(prev => ({
-            stages: prev.stages.map(stage =>
-                stage.id === stageId
-                    ? { ...stage, items: stage.items.filter(item => item.id !== itemId) }
-                    : stage
-            )
-        }));
+        setStudyProtocol(prev => {
+            const newProtocol = {
+                stages: prev.stages.map(stage =>
+                    stage.id === stageId
+                        ? { ...stage, items: stage.items.filter(item => item.id !== itemId) }
+                        : stage
+                )
+            };
+
+            if (selectedStudent) {
+                updateStudent(selectedStudent.id, { customProtocol: newProtocol });
+            }
+
+            return newProtocol;
+        });
     };
 
     // --- Calculate Student Progress ---
