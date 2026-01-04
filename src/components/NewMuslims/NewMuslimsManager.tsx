@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
     Users, BookOpen, Calendar as CalendarIcon, CheckCircle2,
-    Search, Plus, ChevronRight, User, Phone, MapPin,
+    Search, Plus, ChevronRight, ChevronDown, User, Phone, MapPin,
     GraduationCap, Clock, Award, MoreVertical, FileText,
     MessageCircle, Download, Share2, Printer, History, Flag,
     Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info
@@ -126,11 +126,27 @@ interface Exam {
     notes?: string;
 }
 
+interface ProtocolSubTask {
+    id: string;
+    title: string;
+    completed: boolean;
+}
+
+interface ProtocolResource {
+    id: string;
+    title: string;
+    url: string;
+    type: 'video' | 'article' | 'audio' | 'pdf';
+}
+
 interface StudyStageItem {
     id: string;
     name: string;
     description: string;
     completed: boolean;
+    subTasks?: ProtocolSubTask[];
+    deadline?: string;
+    resources?: ProtocolResource[];
 }
 
 interface StudyStage {
@@ -332,6 +348,7 @@ const NewMuslimsManager = () => {
     const [certData, setCertData] = useState<{ name: string; date: string; sheikh: string; studentId: string } | null>(null);
     const [isProtocolOpen, setIsProtocolOpen] = useState(false); // New: Protocol customization dialog
     const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'progress' | 'communications' | 'materials' | 'lessons'>('info');
+    const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
     // --- Auto-save to localStorage ---
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.STUDENTS, students); }, [students]);
@@ -477,6 +494,27 @@ const NewMuslimsManager = () => {
             stages: studyProtocol.stages.map(stage =>
                 stage.id === stageId
                     ? { ...stage, items: stage.items.map(item => item.id === itemId ? { ...item, completed } : item) }
+                    : stage
+            )
+        };
+
+        setStudyProtocol(newProtocol);
+
+        if (selectedStudent) {
+            updateStudent(selectedStudent.id, { customProtocol: newProtocol });
+        }
+    };
+
+    const updateProtocolItemDetails = (stageId: number, itemId: string, updates: Partial<StudyStageItem>) => {
+        const newProtocol = {
+            stages: studyProtocol.stages.map(stage =>
+                stage.id === stageId
+                    ? {
+                        ...stage,
+                        items: stage.items.map(item =>
+                            item.id === itemId ? { ...item, ...updates } : item
+                        )
+                    }
                     : stage
             )
         };
@@ -2137,24 +2175,179 @@ const NewMuslimsManager = () => {
                                                 </div>
                                             ) : (
                                                 stage.items.map((item, idx) => (
-                                                    <div key={item.id} className="flex items-center group bg-gray-50 p-3 rounded-md hover:bg-emerald-50/50 transition-colors border border-transparent hover:border-emerald-100">
-                                                        <div className="w-8 text-center text-gray-400 text-xs font-mono">{idx + 1}</div>
-                                                        <div className="flex-1">
-                                                            <div className="font-medium text-gray-800">{item.name}</div>
-                                                            {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+                                                    <div key={item.id} className={`group border rounded-md transition-all ${expandedItemId === item.id ? 'border-emerald-500 bg-emerald-50/10' : 'bg-gray-50 border-transparent hover:border-emerald-200'}`}>
+                                                        {/* Item Header */}
+                                                        <div className="flex items-center p-3 cursor-pointer" onClick={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)}>
+                                                            <div className="w-8 text-center text-gray-400 text-xs font-mono">{idx + 1}</div>
+                                                            <div className="flex-1">
+                                                                <div className="font-medium text-gray-800 flex items-center gap-2">
+                                                                    {item.name}
+                                                                    {item.deadline && (
+                                                                        <Badge variant="outline" className="text-xs font-normal text-amber-600 border-amber-200 bg-amber-50">
+                                                                            <CalendarIcon className="w-3 h-3 mr-1" /> {item.deadline}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                                {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+
+                                                                {/* Summary stats for sub-tasks */}
+                                                                {item.subTasks && item.subTasks.length > 0 && (
+                                                                    <div className="mt-1 flex gap-2">
+                                                                        <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-600">
+                                                                            {item.subTasks.filter(t => t.completed).length}/{item.subTasks.length} مهام
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className={`hover:bg-emerald-100 ${expandedItemId === item.id ? 'rotate-180' : ''}`}
+                                                                >
+                                                                    <ChevronDown className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (confirm("هل أنت متأكد من حذف هذا العنصر؟")) {
+                                                                            deleteProtocolItem(stage.id, item.id);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                                            onClick={() => {
-                                                                if (confirm("هل أنت متأكد من حذف هذا العنصر؟")) {
-                                                                    deleteProtocolItem(stage.id, item.id);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
+
+                                                        {/* Expanded Details */}
+                                                        {expandedItemId === item.id && (
+                                                            <div className="p-3 pt-0 border-t border-emerald-100/50 ml-8 space-y-4 animate-in slide-in-from-top-2 duration-200">
+
+                                                                {/* 1. Deadline & Description Edit */}
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                                                                    <div className="space-y-1">
+                                                                        <Label className="text-xs text-gray-500">آخر موعد لإنجاز المهمة</Label>
+                                                                        <Input
+                                                                            type="date"
+                                                                            className="h-8 text-sm"
+                                                                            value={item.deadline || ''}
+                                                                            onChange={(e) => updateProtocolItemDetails(stage.id, item.id, { deadline: e.target.value })}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* 2. Sub-tasks */}
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs font-semibold text-gray-600 flex items-center gap-2">
+                                                                        <CheckCircle2 className="w-3 h-3" /> المهام الفرعية (Checklist)
+                                                                    </Label>
+                                                                    <div className="space-y-1">
+                                                                        {item.subTasks?.map(subTask => (
+                                                                            <div key={subTask.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded border border-gray-100">
+                                                                                <Checkbox
+                                                                                    checked={subTask.completed}
+                                                                                    onCheckedChange={(checked) => {
+                                                                                        const newSubTasks = item.subTasks?.map(t =>
+                                                                                            t.id === subTask.id ? { ...t, completed: !!checked } : t
+                                                                                        ) || [];
+                                                                                        updateProtocolItemDetails(stage.id, item.id, { subTasks: newSubTasks });
+                                                                                    }}
+                                                                                />
+                                                                                <span className={subTask.completed ? 'line-through text-gray-400' : ''}>{subTask.title}</span>
+                                                                                <Button
+                                                                                    variant="ghost" size="icon" className="h-6 w-6 ml-auto text-gray-400 hover:text-red-500"
+                                                                                    onClick={() => {
+                                                                                        const newSubTasks = item.subTasks?.filter(t => t.id !== subTask.id) || [];
+                                                                                        updateProtocolItemDetails(stage.id, item.id, { subTasks: newSubTasks });
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                        <div className="flex gap-2 mt-2">
+                                                                            <Input
+                                                                                placeholder="مهمة فرعية جديدة..."
+                                                                                className="h-8 text-sm"
+                                                                                id={`new-subtask-${item.id}`}
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === 'Enter') {
+                                                                                        const target = e.currentTarget;
+                                                                                        if (target.value.trim()) {
+                                                                                            const newSubTask: ProtocolSubTask = { id: Date.now().toString(), title: target.value, completed: false };
+                                                                                            const currentSubTasks = item.subTasks || [];
+                                                                                            updateProtocolItemDetails(stage.id, item.id, { subTasks: [...currentSubTasks, newSubTask] });
+                                                                                            target.value = '';
+                                                                                        }
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                            <Button
+                                                                                size="sm" variant="outline" className="h-8"
+                                                                                onClick={() => {
+                                                                                    const input = document.getElementById(`new-subtask-${item.id}`) as HTMLInputElement;
+                                                                                    if (input && input.value.trim()) {
+                                                                                        const newSubTask: ProtocolSubTask = { id: Date.now().toString(), title: input.value, completed: false };
+                                                                                        const currentSubTasks = item.subTasks || [];
+                                                                                        updateProtocolItemDetails(stage.id, item.id, { subTasks: [...currentSubTasks, newSubTask] });
+                                                                                        input.value = '';
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <Plus className="w-3 h-3" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* 3. Materials / Resources */}
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-xs font-semibold text-gray-600 flex items-center gap-2">
+                                                                        <BookOpen className="w-3 h-3" /> مواد تعليمية (روابط، فيديوهات، pdf)
+                                                                    </Label>
+                                                                    <div className="grid grid-cols-1 gap-1">
+                                                                        {item.resources?.map(res => (
+                                                                            <div key={res.id} className="flex items-center gap-2 text-sm bg-blue-50/50 p-2 rounded border border-blue-100 text-blue-800">
+                                                                                {res.type === 'video' ? <span className="text-lg">🎥</span> : res.type === 'pdf' ? <span className="text-lg">📄</span> : <span className="text-lg">🔗</span>}
+                                                                                <a href={res.url} target="_blank" rel="noopener noreferrer" className="underline truncate flex-1 block">
+                                                                                    {res.title}
+                                                                                </a>
+                                                                                <Button
+                                                                                    variant="ghost" size="icon" className="h-6 w-6 ml-auto text-blue-300 hover:text-red-500"
+                                                                                    onClick={() => {
+                                                                                        const newResources = item.resources?.filter(r => r.id !== res.id) || [];
+                                                                                        updateProtocolItemDetails(stage.id, item.id, { resources: newResources });
+                                                                                    }}
+                                                                                >
+                                                                                    <Trash2 className="w-3 h-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        ))}
+                                                                        <Button
+                                                                            size="sm" variant="outline" className="h-8 w-full border-dashed text-gray-500 hover:text-emerald-600"
+                                                                            onClick={() => {
+                                                                                const title = prompt("عنوان المادة:");
+                                                                                if (!title) return;
+                                                                                const url = prompt("الرابط (URL):");
+                                                                                if (!url) return;
+                                                                                const type = prompt("النوع (video, pdf, article):", "video") as any || 'article';
+
+                                                                                const newResource: ProtocolResource = { id: Date.now().toString(), title, url, type };
+                                                                                const currentResources = item.resources || [];
+                                                                                updateProtocolItemDetails(stage.id, item.id, { resources: [...currentResources, newResource] });
+                                                                            }}
+                                                                        >
+                                                                            <Plus className="w-3 h-3 mr-1" /> إضافة مادة تعليمية
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))
                                             )}
