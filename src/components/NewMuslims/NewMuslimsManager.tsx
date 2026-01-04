@@ -2497,55 +2497,80 @@ const NewMuslimsManager = () => {
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCertificateOpen(false)}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setIsCertificateOpen(false)}>Cancelar</Button>
                         <Button className="bg-emerald-600" onClick={() => {
                             if (!certData) return;
                             const printWindow = window.open('', '_blank');
                             if (printWindow) {
                                 printWindow.document.write(`
-                                    <html dir="rtl">
+                                    <html dir="ltr">
                                     <head>
-                                        <title>شهادة إسلام - ${certData.name}</title>
+                                        <title>Certificado de Islam - ${certData.name}</title>
                                         <style>
                                             @page { size: A4 landscape; margin: 0; }
-                                            body { font-family: 'Traditional Arabic', 'Amiri', serif; margin: 0; padding: 40px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-                                            .certificate { background: white; border: 8px double #10B981; padding: 60px; text-align: center; max-width: 800px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-                                            .header { color: #10B981; font-size: 42px; font-weight: bold; margin-bottom: 10px; }
-                                            .bismillah { font-size: 28px; color: #059669; margin-bottom: 30px; }
-                                            .body-text { font-size: 22px; line-height: 2; color: #374151; margin: 30px 0; }
-                                            .name { font-size: 36px; color: #10B981; font-weight: bold; margin: 20px 0; border-bottom: 2px solid #10B981; display: inline-block; padding: 0 30px 10px; }
-                                            .details { display: flex; justify-content: space-around; margin-top: 50px; }
+                                            body { font-family: 'Georgia', 'Times New Roman', serif; margin: 0; padding: 40px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+                                            .certificate { background: white; border: 8px double #10B981; padding: 60px; text-align: center; max-width: 850px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); position: relative; }
+                                            .logo-area { margin-bottom: 20px; }
+                                            .center-name { color: #059669; font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+                                            .center-location { color: #6b7280; font-size: 14px; margin-bottom: 30px; }
+                                            .header { color: #10B981; font-size: 38px; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; }
+                                            .bismillah { font-size: 24px; color: #059669; margin-bottom: 25px; font-family: 'Traditional Arabic', 'Amiri', serif; }
+                                            .body-text { font-size: 20px; line-height: 1.8; color: #374151; margin: 25px 0; }
+                                            .name { font-size: 34px; color: #10B981; font-weight: bold; margin: 20px 0; border-bottom: 2px solid #10B981; display: inline-block; padding: 0 30px 10px; }
+                                            .shahada { font-size: 22px; color: #1f2937; margin: 20px 40px; padding: 15px; background: #f0fdf4; border-radius: 8px; font-family: 'Traditional Arabic', 'Amiri', serif; direction: rtl; }
+                                            .details { display: flex; justify-content: space-around; margin-top: 40px; }
                                             .detail-item { text-align: center; }
-                                            .detail-label { font-size: 14px; color: #6b7280; }
-                                            .detail-value { font-size: 18px; font-weight: bold; color: #1f2937; margin-top: 5px; }
-                                            .footer { margin-top: 50px; font-size: 14px; color: #9ca3af; }
-                                            .verse { font-size: 18px; color: #059669; font-style: italic; margin-top: 30px; }
+                                            .detail-label { font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
+                                            .detail-value { font-size: 17px; font-weight: bold; color: #1f2937; margin-top: 5px; }
+                                            .footer { margin-top: 40px; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+                                            .verse { font-size: 16px; color: #059669; font-style: italic; margin-top: 25px; }
+                                            .signature-area { display: flex; justify-content: space-between; margin-top: 50px; padding: 0 40px; }
+                                            .signature-box { text-align: center; width: 200px; }
+                                            .signature-line { border-top: 1px solid #374151; margin-top: 60px; padding-top: 5px; font-size: 12px; color: #6b7280; }
                                         </style>
                                     </head>
                                     <body>
                                         <div class="certificate">
+                                            <div class="logo-area">
+                                                <div class="center-name">🕌 Centro Cultural Islámico Rey Fahd</div>
+                                                <div class="center-location">República Argentina - Buenos Aires</div>
+                                            </div>
                                             <div class="bismillah">بسم الله الرحمن الرحيم</div>
-                                            <div class="header">🕌 شهادة إعلان الإسلام</div>
+                                            <div class="header">CERTIFICADO DE CONVERSIÓN AL ISLAM</div>
                                             <div class="body-text">
-                                                يشهد مركز رعاية المهتدين أن
+                                                Por medio del presente se certifica que
                                             </div>
                                             <div class="name">${certData.name}</div>
                                             <div class="body-text">
-                                                قد نطق بالشهادتين وأعلن إسلامه<br>
+                                                ha pronunciado la Shahada (Testimonio de Fe) y ha abrazado el Islam,<br>
+                                                declarando su fe en un único Dios (Alá) y en Muhammad como Su Mensajero.
+                                            </div>
+                                            <div class="shahada">
                                                 أشهد أن لا إله إلا الله وأشهد أن محمداً عبده ورسوله
+                                            </div>
+                                            <div class="body-text" style="font-size: 16px; color: #6b7280;">
+                                                "Atestiguo que no hay más dios que Alá y atestiguo que Muhammad es Su siervo y Mensajero"
                                             </div>
                                             <div class="details">
                                                 <div class="detail-item">
-                                                    <div class="detail-label">تاريخ الإسلام</div>
-                                                    <div class="detail-value">${new Date(certData.date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                                                    <div class="detail-label">Fecha de Conversión</div>
+                                                    <div class="detail-value">${new Date(certData.date).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
                                                 </div>
                                                 <div class="detail-item">
-                                                    <div class="detail-label">الشيخ الشاهد</div>
-                                                    <div class="detail-value">${certData.sheikh || 'غير محدد'}</div>
+                                                    <div class="detail-label">Testigo / Sheikh</div>
+                                                    <div class="detail-value">${certData.sheikh || 'No especificado'}</div>
                                                 </div>
                                             </div>
-                                            <div class="verse">"إِنَّ الدِّينَ عِندَ اللَّهِ الْإِسْلَامُ"</div>
-                                            <div class="footer">مركز رعاية المهتدين - نظام بركة</div>
+                                            <div class="signature-area">
+                                                <div class="signature-box">
+                                                    <div class="signature-line">Firma del Converso</div>
+                                                </div>
+                                                <div class="signature-box">
+                                                    <div class="signature-line">Firma del Testigo</div>
+                                                </div>
+                                            </div>
+                                            <div class="verse">"إِنَّ الدِّينَ عِندَ اللَّهِ الْإِسْلَامُ"<br><span style="font-size: 14px;">"Ciertamente, la religión ante Alá es el Islam" (Corán 3:19)</span></div>
+                                            <div class="footer">Centro Cultural Islámico Rey Fahd - Av. Intendente Bullrich 55, Buenos Aires, Argentina</div>
                                         </div>
                                     </body>
                                     </html>
@@ -2555,7 +2580,7 @@ const NewMuslimsManager = () => {
                                 setIsCertificateOpen(false);
                             }
                         }}>
-                            🖨️ طباعة الشهادة
+                            🖨️ Imprimir Certificado
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -31,6 +31,7 @@ import {
     Share2, // Added icon
     Smartphone, // Added icon
     Users, // Added icon
+    GraduationCap, // Academic icon
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -385,6 +386,15 @@ const SettingsPanel = () => {
             bg: 'bg-purple-50',
             borderColor: 'border-purple-100',
             description: 'قوالب روتينية قابلة للتكرار'
+        },
+        {
+            id: 'academic',
+            title: 'البحث الأكاديمي',
+            icon: GraduationCap,
+            color: 'text-violet-600',
+            bg: 'bg-violet-50',
+            borderColor: 'border-violet-100',
+            description: 'إدارة خطة رسالة الماجستير/الدكتوراه'
         },
         {
             id: 'about',

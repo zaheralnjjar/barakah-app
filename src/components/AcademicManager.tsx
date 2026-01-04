@@ -149,16 +149,22 @@ export default function AcademicManager() {
 
     const addPhase = () => {
         if (!newPhaseName.trim() || !project) return;
+        const startDateInput = document.getElementById('phase-start-date') as HTMLInputElement;
+        const endDateInput = document.getElementById('phase-end-date') as HTMLInputElement;
         const newPhase: ResearchPhase = {
             id: `phase-${Date.now()}`,
             title: newPhaseName,
+            startDate: startDateInput?.value || undefined,
+            endDate: endDateInput?.value || undefined,
             status: 'pending',
-            chapters: [], // Initialize chapters
+            chapters: [],
             tasks: []
         };
         setProject({ ...project, phases: [...project.phases, newPhase] });
         setNewPhaseName('');
-        toast({ title: "تمت إضافة المرحلة" });
+        if (startDateInput) startDateInput.value = '';
+        if (endDateInput) endDateInput.value = '';
+        toast({ title: "✅ تمت إضافة المرحلة", description: newPhaseName });
     };
 
     const deletePhase = (phaseId: string) => {
@@ -433,18 +439,33 @@ export default function AcademicManager() {
 
                 <TabsContent value="plan" className="mt-6 space-y-6">
                     {/* Add Phase Input */}
-                    <Card className="border-dashed border-2">
+                    <Card className="border-dashed border-2 border-purple-200">
                         <CardContent className="pt-6">
-                            <div className="flex gap-3">
-                                <Input
-                                    placeholder="اسم المرحلة (مثلاً: جمع المصادر، صياغة الفصل الأول...)"
-                                    value={newPhaseName}
-                                    onChange={(e) => setNewPhaseName(e.target.value)}
-                                    className="flex-1"
-                                />
-                                <Button onClick={addPhase} className="bg-purple-600">
-                                    <Plus className="w-4 h-4 ml-1" /> إضافة مرحلة
-                                </Button>
+                            <div className="space-y-4">
+                                <div className="flex gap-3">
+                                    <Input
+                                        placeholder="اسم المرحلة (مثلاً: جمع المصادر، صياغة الفصل الأول...)"
+                                        value={newPhaseName}
+                                        onChange={(e) => setNewPhaseName(e.target.value)}
+                                        className="flex-1"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') addPhase();
+                                        }}
+                                    />
+                                    <Button onClick={addPhase} className="bg-purple-600" disabled={!newPhaseName.trim()}>
+                                        <Plus className="w-4 h-4 ml-1" /> إضافة مرحلة
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500">تاريخ البدء (اختياري)</Label>
+                                        <Input type="date" id="phase-start-date" className="h-9" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500">تاريخ الانتهاء (اختياري)</Label>
+                                        <Input type="date" id="phase-end-date" className="h-9" />
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
