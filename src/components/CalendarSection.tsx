@@ -43,6 +43,34 @@ const CalendarSection: React.FC = () => {
     const { medications } = useMedications();
     const { prayerTimes = [], nextPrayer, timeUntilNext } = useDashboardData();
     const { toast } = useToast();
+    const [academicSubtasks, setAcademicSubtasks] = useState<any[]>([]);
+
+    // Load academic tasks subtasks
+    useEffect(() => {
+        const loadAcademicTasks = () => {
+            try {
+                const stored = localStorage.getItem('my_research_tasks');
+                if (stored) {
+                    const tasks: any[] = JSON.parse(stored);
+                    const subtasks = tasks.flatMap(t =>
+                        (t.subtasks || []).map((s: any) => ({
+                            ...s,
+                            parentId: t.id,
+                            parentTitle: t.title,
+                            type: 'academic'
+                        }))
+                    );
+                    setAcademicSubtasks(subtasks);
+                }
+            } catch (e) {
+                console.error("Failed to load academic tasks", e);
+            }
+        };
+
+        loadAcademicTasks();
+        window.addEventListener('storage', loadAcademicTasks);
+        return () => window.removeEventListener('storage', loadAcademicTasks);
+    }, []);
 
     // Prayer icon helper
     const getPrayerIcon = (name: string) => {
@@ -60,7 +88,22 @@ const CalendarSection: React.FC = () => {
     const getDateData = (dateStr: string) => {
         const dateTasks = tasks.filter(t => t.deadline === dateStr);
         const dateAppointments = appointments.filter(a => a.date === dateStr);
-        return { tasks: dateTasks, appointments: dateAppointments };
+
+        // Filter academic subtasks for this date
+        const dateAcademicSubtasks = academicSubtasks.filter(s => s.date === dateStr).map(s => ({
+            id: s.id,
+            title: `🎓 ${s.parentTitle}: ${s.title}`,
+            description: s.time ? `Unfolds at ${s.time}` : 'Academic Subtask',
+            deadline: s.date,
+            time: s.time,
+            status: s.completed ? 'completed' : 'pending',
+            progress: s.completed ? 100 : 0,
+            subtasks: [],
+            priority: 'medium',
+            type: 'academic'
+        }));
+
+        return { tasks: [...dateTasks, ...dateAcademicSubtasks], appointments: dateAppointments };
     };
 
     // Generate calendar days

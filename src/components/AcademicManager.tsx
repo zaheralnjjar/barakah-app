@@ -14,12 +14,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     GraduationCap, BookOpen, Calendar, Clock, Plus, Edit, Trash2,
     CheckCircle, FileText, Target, BookMarked, Award, TrendingUp,
-    PenTool, Timer, Star, ChevronDown, ChevronUp
+    PenTool, Timer, Star, ChevronDown, ChevronUp, GripVertical, X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // --- Types ---
+interface SubTask {
+    id: string;
+    title: string;
+    date?: string;
+    time?: string;
+    completed: boolean;
+}
+
 interface ResearchTask {
     id: string;
     title: string;
@@ -28,6 +36,7 @@ interface ResearchTask {
     status: 'pending' | 'in_progress' | 'completed';
     priority: 'high' | 'medium' | 'low';
     createdAt: string;
+    subtasks?: SubTask[];
 }
 
 interface Course {
@@ -107,10 +116,59 @@ const AcademicManager = () => {
 
     // --- Handlers ---
     const addTask = (data: Omit<ResearchTask, 'id' | 'createdAt'>) => {
-        const newTask: ResearchTask = { ...data, id: `task-${Date.now()}`, createdAt: new Date().toISOString() };
+        const newTask: ResearchTask = {
+            ...data,
+            id: `task-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            subtasks: []
+        };
         setTasks(prev => [...prev, newTask]);
         toast({ title: "✅ تمت الإضافة", description: data.title });
         setIsTaskOpen(false);
+    };
+
+    const addSubTask = (taskId: string, title: string, date?: string, time?: string) => {
+        setTasks(prev => prev.map(t => {
+            if (t.id === taskId) {
+                const newSub: SubTask = {
+                    id: `sub-${Date.now()}`,
+                    title,
+                    date,
+                    time,
+                    completed: false
+                };
+                return { ...t, subtasks: [...(t.subtasks || []), newSub] };
+            }
+            return t;
+        }));
+        toast({ title: "✅ تمت إضافة المهمة الفرعية" });
+    };
+
+    const toggleSubTask = (taskId: string, subId: string) => {
+        setTasks(prev => prev.map(t => {
+            if (t.id === taskId) {
+                return {
+                    ...t,
+                    subtasks: t.subtasks?.map(s =>
+                        s.id === subId ? { ...s, completed: !s.completed } : s
+                    )
+                };
+            }
+            return t;
+        }));
+    };
+
+    const deleteSubTask = (taskId: string, subId: string) => {
+        setTasks(prev => prev.map(t => {
+            if (t.id === taskId) {
+                return {
+                    ...t,
+                    subtasks: t.subtasks?.filter(s => s.id !== subId)
+                };
+            }
+            return t;
+        }));
+        toast({ title: "تم حذف المهمة الفرعية" });
     };
 
     const toggleTaskStatus = (id: string) => {
@@ -243,27 +301,110 @@ const AcademicManager = () => {
                                             {tasks.map(task => (
                                                 <div
                                                     key={task.id}
-                                                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+                                                    className={`p-3 rounded-lg border transition-all ${task.status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
                                                         }`}
                                                 >
-                                                    <Checkbox
-                                                        checked={task.status === 'completed'}
-                                                        onCheckedChange={() => toggleTaskStatus(task.id)}
-                                                        className="mt-1"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                                                            {task.title}
-                                                        </h4>
-                                                        {task.description && <p className="text-xs text-gray-500 truncate">{task.description}</p>}
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <PriorityBadge priority={task.priority} />
-                                                            {task.deadline && <span className="text-xs text-gray-400">📅 {task.deadline}</span>}
+                                                    <div className="flex items-start gap-3">
+                                                        <Checkbox
+                                                            checked={task.status === 'completed'}
+                                                            onCheckedChange={() => toggleTaskStatus(task.id)}
+                                                            className="mt-1"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex justify-between items-start">
+                                                                <h4 className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                                                    {task.title}
+                                                                </h4>
+                                                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={() => deleteTask(task.id)}>
+                                                                    <Trash2 className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
+
+                                                            {task.description && <p className="text-xs text-gray-500 truncate mt-0.5">{task.description}</p>}
+
+                                                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                                <PriorityBadge priority={task.priority} />
+                                                                {task.deadline && <span className="text-xs text-gray-400 flex items-center gap-1"><Calendar className="w-3 h-3" /> {task.deadline}</span>}
+                                                            </div>
+
+                                                            {/* Subtasks Section */}
+                                                            <div className="mt-3 space-y-2">
+                                                                {task.subtasks?.map(sub => (
+                                                                    <div key={sub.id} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded border border-gray-100">
+                                                                        <Checkbox
+                                                                            checked={sub.completed}
+                                                                            onCheckedChange={() => toggleSubTask(task.id, sub.id)}
+                                                                            className="h-3 w-3"
+                                                                        />
+                                                                        <span className={`flex-1 ${sub.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                                                            {sub.title}
+                                                                        </span>
+                                                                        {(sub.date || sub.time) && (
+                                                                            <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                                                {sub.date && <span>{sub.date}</span>}
+                                                                                {sub.time && <span>{sub.time}</span>}
+                                                                            </span>
+                                                                        )}
+                                                                        <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-gray-400 hover:text-red-400" onClick={() => deleteSubTask(task.id, sub.id)}>
+                                                                            <Trash2 className="w-3 h-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ))}
+
+                                                                {/* Add Subtask Input */}
+                                                                <div className="flex items-center gap-2 mt-2">
+                                                                    <Input
+                                                                        placeholder="خطوة فرعية..."
+                                                                        className="h-7 text-xs min-w-[120px]"
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                const target = e.currentTarget;
+                                                                                const parent = target.parentElement;
+                                                                                const dateInput = parent?.querySelector('input[type="date"]') as HTMLInputElement;
+                                                                                const timeInput = parent?.querySelector('input[type="time"]') as HTMLInputElement;
+
+                                                                                if (target.value.trim()) {
+                                                                                    addSubTask(task.id, target.value, dateInput?.value, timeInput?.value);
+                                                                                    target.value = '';
+                                                                                    if (dateInput) dateInput.value = '';
+                                                                                    if (timeInput) timeInput.value = '';
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <input
+                                                                        type="date"
+                                                                        className="h-7 text-[10px] border rounded px-1 w-24 bg-transparent"
+                                                                    />
+                                                                    <input
+                                                                        type="time"
+                                                                        className="h-7 text-[10px] border rounded px-1 w-16 bg-transparent"
+                                                                    />
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        className="h-7 w-7 p-0"
+                                                                        onClick={(e) => {
+                                                                            const btn = e.currentTarget;
+                                                                            const parent = btn.parentElement;
+                                                                            const textInput = parent?.querySelector('input[type="text"]') as HTMLInputElement;
+                                                                            const dateInput = parent?.querySelector('input[type="date"]') as HTMLInputElement;
+                                                                            const timeInput = parent?.querySelector('input[type="time"]') as HTMLInputElement;
+
+                                                                            if (textInput?.value.trim()) {
+                                                                                addSubTask(task.id, textInput.value, dateInput?.value, timeInput?.value);
+                                                                                textInput.value = '';
+                                                                                if (dateInput) dateInput.value = '';
+                                                                                if (timeInput) timeInput.value = '';
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        <Plus className="w-4 h-4 text-purple-600" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400" onClick={() => deleteTask(task.id)}>
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
                                                 </div>
                                             ))}
                                         </div>
