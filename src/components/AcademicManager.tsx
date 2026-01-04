@@ -59,6 +59,23 @@ interface ResearchPhase {
     tasks: ResearchTask[]; // Keep direct tasks for phases that might not need chapters (e.g. Admin phase)
 }
 
+interface ResearchCircle {
+    id: string;
+    title: string;
+    date: string;
+    location?: string;
+    notes?: string;
+    completed: boolean;
+}
+
+interface ResearchMaterial {
+    id: string;
+    title: string;
+    type: 'book' | 'paper' | 'link' | 'other';
+    url?: string;
+    status: 'to_read' | 'reading' | 'read';
+}
+
 interface ResearchProject {
     title: string;
     description: string;
@@ -67,6 +84,8 @@ interface ResearchProject {
     startDate: string;
     deadline: string;
     phases: ResearchPhase[];
+    researchCircles: ResearchCircle[];
+    materials: ResearchMaterial[];
 }
 
 const STORAGE_KEYS = {
@@ -118,7 +137,9 @@ export default function AcademicManager() {
             institution: formData.get('institution') as string,
             startDate: formData.get('startDate') as string,
             deadline: formData.get('deadline') as string,
-            phases: []
+            phases: [],
+            researchCircles: [],
+            materials: []
         };
 
         setProject(newProject);
@@ -395,12 +416,18 @@ export default function AcademicManager() {
 
             {/* Content Tabs */}
             <Tabs defaultValue="plan" className="w-full">
-                <TabsList className="w-full justify-start border-b rounded-none h-12 bg-transparent p-0 gap-6">
+                <TabsList className="w-full justify-start border-b rounded-none h-12 bg-transparent p-0 gap-6 overflow-x-auto">
                     <TabsTrigger value="plan" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-purple-600 rounded-none px-0 pb-2">
                         خطة البحث والمراحل
                     </TabsTrigger>
+                    <TabsTrigger value="circles" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-purple-600 rounded-none px-0 pb-2">
+                        حلقات البحث 📚
+                    </TabsTrigger>
+                    <TabsTrigger value="materials" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-purple-600 rounded-none px-0 pb-2">
+                        المراجع والمصادر 📖
+                    </TabsTrigger>
                     <TabsTrigger value="timeline" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-purple-600 rounded-none px-0 pb-2">
-                        الجدول الزمني (Timeline)
+                        الجدول الزمني
                     </TabsTrigger>
                 </TabsList>
 
@@ -590,6 +617,168 @@ export default function AcademicManager() {
                             </CardContent>
                         </Card>
                     ))}
+                </TabsContent>
+
+                {/* Research Circles Tab */}
+                <TabsContent value="circles" className="mt-6 space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center">
+                                <span>📚 حلقات البحث والاجتماعات الأكاديمية</span>
+                            </CardTitle>
+                            <CardDescription>سجل حلقات البحث مع المشرف والاجتماعات الأكاديمية</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Add Circle Form */}
+                            <div className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Input placeholder="عنوان الحلقة/الاجتماع..." className="flex-1" id="new-circle-title" />
+                                <Input type="date" className="w-36" id="new-circle-date" />
+                                <Button onClick={() => {
+                                    const titleInput = document.getElementById('new-circle-title') as HTMLInputElement;
+                                    const dateInput = document.getElementById('new-circle-date') as HTMLInputElement;
+                                    if (titleInput.value && dateInput.value && project) {
+                                        const newCircle: ResearchCircle = {
+                                            id: `circle-${Date.now()}`,
+                                            title: titleInput.value,
+                                            date: dateInput.value,
+                                            completed: false
+                                        };
+                                        setProject({ ...project, researchCircles: [...(project.researchCircles || []), newCircle] });
+                                        titleInput.value = '';
+                                        dateInput.value = '';
+                                        toast({ title: "✅ تمت إضافة الحلقة" });
+                                    }
+                                }} className="bg-purple-600">
+                                    <Plus className="w-4 h-4 mr-1" /> إضافة
+                                </Button>
+                            </div>
+
+                            {/* Circles List */}
+                            <div className="space-y-2">
+                                {(project?.researchCircles || []).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
+                                        لم يتم تسجيل أي حلقات بحثية بعد
+                                    </div>
+                                ) : (
+                                    project?.researchCircles?.map(circle => (
+                                        <div key={circle.id} className={`flex items-center gap-3 p-3 rounded-lg border ${circle.completed ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}>
+                                            <Checkbox
+                                                checked={circle.completed}
+                                                onCheckedChange={(checked) => {
+                                                    if (!project) return;
+                                                    setProject({
+                                                        ...project,
+                                                        researchCircles: project.researchCircles.map(c =>
+                                                            c.id === circle.id ? { ...c, completed: !!checked } : c
+                                                        )
+                                                    });
+                                                }}
+                                            />
+                                            <div className="flex-1">
+                                                <div className={`font-medium ${circle.completed ? 'line-through text-gray-400' : ''}`}>{circle.title}</div>
+                                                <div className="text-xs text-gray-500">{circle.date}</div>
+                                            </div>
+                                            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600" onClick={() => {
+                                                if (!project) return;
+                                                setProject({ ...project, researchCircles: project.researchCircles.filter(c => c.id !== circle.id) });
+                                            }}>
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Materials Tab */}
+                <TabsContent value="materials" className="mt-6 space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex justify-between items-center">
+                                <span>📖 المراجع والمصادر</span>
+                            </CardTitle>
+                            <CardDescription>أضف الكتب والأبحاث والروابط المرجعية</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Add Material Form */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg">
+                                <Input placeholder="عنوان المرجع..." className="sm:col-span-2" id="new-material-title" />
+                                <Select defaultValue="book">
+                                    <SelectTrigger id="new-material-type"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="book">📕 كتاب</SelectItem>
+                                        <SelectItem value="paper">📄 بحث/ورقة</SelectItem>
+                                        <SelectItem value="link">🔗 رابط</SelectItem>
+                                        <SelectItem value="other">📁 أخرى</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button onClick={() => {
+                                    const titleInput = document.getElementById('new-material-title') as HTMLInputElement;
+                                    const typeSelect = document.getElementById('new-material-type') as HTMLSelectElement;
+                                    if (titleInput.value && project) {
+                                        const newMaterial: ResearchMaterial = {
+                                            id: `material-${Date.now()}`,
+                                            title: titleInput.value,
+                                            type: (typeSelect?.textContent?.includes('كتاب') ? 'book' : typeSelect?.textContent?.includes('بحث') ? 'paper' : typeSelect?.textContent?.includes('رابط') ? 'link' : 'other') as any,
+                                            status: 'to_read'
+                                        };
+                                        setProject({ ...project, materials: [...(project.materials || []), newMaterial] });
+                                        titleInput.value = '';
+                                        toast({ title: "✅ تمت إضافة المرجع" });
+                                    }
+                                }} className="bg-purple-600">
+                                    <Plus className="w-4 h-4 mr-1" /> إضافة
+                                </Button>
+                            </div>
+
+                            {/* Materials List */}
+                            <div className="space-y-2">
+                                {(project?.materials || []).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
+                                        لم يتم إضافة أي مراجع بعد
+                                    </div>
+                                ) : (
+                                    project?.materials?.map(mat => (
+                                        <div key={mat.id} className="flex items-center gap-3 p-3 rounded-lg border bg-white border-gray-100">
+                                            <span className="text-xl">
+                                                {mat.type === 'book' ? '📕' : mat.type === 'paper' ? '📄' : mat.type === 'link' ? '🔗' : '📁'}
+                                            </span>
+                                            <div className="flex-1">
+                                                <div className="font-medium">{mat.title}</div>
+                                                {mat.url && <a href={mat.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 underline">{mat.url}</a>}
+                                            </div>
+                                            <Select value={mat.status} onValueChange={(val) => {
+                                                if (!project) return;
+                                                setProject({
+                                                    ...project,
+                                                    materials: project.materials.map(m =>
+                                                        m.id === mat.id ? { ...m, status: val as any } : m
+                                                    )
+                                                });
+                                            }}>
+                                                <SelectTrigger className="w-28 h-8 text-xs">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="to_read">للقراءة</SelectItem>
+                                                    <SelectItem value="reading">قيد القراءة</SelectItem>
+                                                    <SelectItem value="read">تمت القراءة</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600" onClick={() => {
+                                                if (!project) return;
+                                                setProject({ ...project, materials: project.materials.filter(m => m.id !== mat.id) });
+                                            }}>
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
 
                 <TabsContent value="timeline">

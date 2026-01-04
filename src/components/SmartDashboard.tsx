@@ -267,6 +267,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     onQuickParking={saveParking}
                     onOpenTimer={() => window.dispatchEvent(new CustomEvent('openPomodoroDialog'))}
                     onOpenVoiceRecorder={onOpenVoiceRecorder}
+                    onNavigateToTab={onNavigateToTab}
                 />
             </div>
 
