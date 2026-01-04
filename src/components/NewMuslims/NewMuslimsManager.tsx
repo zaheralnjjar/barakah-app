@@ -2079,6 +2079,98 @@ const NewMuslimsManager = () => {
                 </DialogContent>
             </Dialog>
 
+            {/* Protocol Management Dialog (The Missing Feature) */}
+            <Dialog open={isProtocolOpen} onOpenChange={setIsProtocolOpen}>
+                <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <ClipboardList className="w-5 h-5 text-emerald-600" />
+                                <span>خطة التعليم والمناهج (Education Plan)</span>
+                            </div>
+                            {selectedStudent && (
+                                <Badge variant="outline" className="text-emerald-700 bg-emerald-50">
+                                    تخصيص لـ: {selectedStudent.arabicName || selectedStudent.fullName}
+                                </Badge>
+                            )}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedStudent
+                                ? "يتم الآن تعديل الخطة الخاصة بهذا الطالب فقط. التغييرات لن تؤثر على بقية الطلاب."
+                                : "إدارة الخطة الدراسية العامة. التغييرات هنا ستطبق على الطلاب الجدد."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-auto p-6 pt-2 bg-gray-50/50">
+                        <Tabs defaultValue={String(studyProtocol.stages[0]?.id)}>
+                            <TabsList className="w-full justify-start overflow-x-auto">
+                                {studyProtocol.stages.map(stage => (
+                                    <TabsTrigger key={stage.id} value={String(stage.id)} className="gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                                            {stage.id}
+                                        </div>
+                                        {stage.name}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+
+                            {studyProtocol.stages.map(stage => (
+                                <TabsContent key={stage.id} value={String(stage.id)} className="mt-4 space-y-4">
+                                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                                <BookOpen className="w-4 h-4 text-emerald-500" />
+                                                محتوى المرحلة: {stage.name}
+                                            </h3>
+                                            <Button size="sm" variant="outline" onClick={() => {
+                                                const name = prompt("اسم الدرس/المهمة:");
+                                                if (name) addProtocolItem(stage.id, name, "");
+                                            }}>
+                                                <Plus className="w-4 h-4 mr-1" /> إضافة عنصر
+                                            </Button>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            {stage.items.length === 0 ? (
+                                                <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
+                                                    لا توجد مهام في هذه المرحلة
+                                                </div>
+                                            ) : (
+                                                stage.items.map((item, idx) => (
+                                                    <div key={item.id} className="flex items-center group bg-gray-50 p-3 rounded-md hover:bg-emerald-50/50 transition-colors border border-transparent hover:border-emerald-100">
+                                                        <div className="w-8 text-center text-gray-400 text-xs font-mono">{idx + 1}</div>
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-gray-800">{item.name}</div>
+                                                            {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+                                                        </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() => {
+                                                                if (confirm("هل أنت متأكد من حذف هذا العنصر؟")) {
+                                                                    deleteProtocolItem(stage.id, item.id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </TabsContent>
+                            ))}
+                        </Tabs>
+                    </div>
+
+                    <DialogFooter className="p-4 border-t bg-white">
+                        <Button variant="outline" onClick={() => setIsProtocolOpen(false)}>إغلاق</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Bulk Message Dialog */}
             <Dialog open={isBulkMessageOpen} onOpenChange={setIsBulkMessageOpen}>
                 <DialogContent>
