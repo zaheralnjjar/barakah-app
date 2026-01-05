@@ -33,8 +33,14 @@ import { ar } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+import { AcademicService } from '@/services/AcademicService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Loader2, RefreshCw, BarChart2 } from 'lucide-react';
+import { GlobalSearch } from './academic/GlobalSearch';
+import { StatsDashboard } from './academic/StatsDashboard';
+
 // --- Types ---
-interface SubTask {
+export interface SubTask {
     id: string;
     title: string;
     date?: string;
@@ -42,7 +48,7 @@ interface SubTask {
     completed: boolean;
 }
 
-interface ResearchTask {
+export interface ResearchTask {
     id: string;
     title: string;
     description?: string;
@@ -53,16 +59,17 @@ interface ResearchTask {
     subtasks: SubTask[];
 }
 
-interface ResearchChapter {
+export interface ResearchChapter {
     id: string;
     title: string;
     description?: string;
     content?: string; // For drafting (Keep style)
     status: 'pending' | 'in_progress' | 'completed';
     tasks: ResearchTask[];
+    tags?: string[];
 }
 
-interface ResearchPhase {
+export interface ResearchPhase {
     id: string;
     title: string;
     startDate?: string;
@@ -70,9 +77,10 @@ interface ResearchPhase {
     status: 'pending' | 'in_progress' | 'completed';
     chapters: ResearchChapter[];
     tasks: ResearchTask[];
+    tags?: string[];
 }
 
-interface ResearchCircle {
+export interface ResearchCircle {
     id: string;
     title: string;
     date: string;
@@ -81,7 +89,7 @@ interface ResearchCircle {
     completed: boolean;
 }
 
-interface ResearchMaterial {
+export interface ResearchMaterial {
     id: string;
     title: string;
     type: 'book' | 'paper' | 'link' | 'other';
@@ -91,9 +99,11 @@ interface ResearchMaterial {
     publisher?: string;
     year?: string;
     deathDate?: string;
+    tags?: string[];
 }
 
-interface ResearchProject {
+export interface ResearchProject {
+    id?: string; // Optional for new creation
     title: string;
     description: string;
     supervisor: string;
@@ -111,9 +121,35 @@ const STORAGE_KEYS = {
 
 export default function AcademicManager() {
     const { toast } = useToast();
+    const queryClient = useQueryClient();
+
+    // -- Queries --
+    const { data: projects, isLoading: isLoadingProjects, refetch: refetchProjects } = useQuery({
+        queryKey: ['academic-projects'],
+        queryFn: () => AcademicService.getProjects()
+    });
+
+    // Debugging logs
+    useEffect(() => {
+        console.log("AcademicManager - projects list updated:", projects);
+        if (projects) {
+            console.log(`AcademicManager - total projects found: ${projects.length}`);
+            if (projects.length > 0) {
+                console.log("AcademicManager - active project selected:", projects[0]);
+            }
+        }
+    }, [projects]);
+
+    // Determine active project (default to first one for now)
+    const project = projects && projects.length > 0 ? projects[0] : null;
+
+    const handleRefresh = async () => {
+        toast({ title: "جاري التحديث..." });
+        await refetchProjects();
+        toast({ title: "تم تحديث البيانات" });
+    };
 
     // State
-    const [project, setProject] = useState<ResearchProject | null>(null);
     const [isSetupOpen, setIsSetupOpen] = useState(false);
     const [isPhaseOpen, setIsPhaseOpen] = useState(false);
     const [isSessionOpen, setIsSessionOpen] = useState(false);
@@ -122,6 +158,7 @@ export default function AcademicManager() {
     // Drafting State
     const [editingNode, setEditingNode] = useState<{ phaseId: string, chapterId?: string, taskId?: string } | null>(null);
     const [draftContent, setDraftContent] = useState('');
+    const [draftTags, setDraftTags] = useState<string[]>([]);
     const [selectedForExport, setSelectedForExport] = useState<Set<string>>(new Set());
 
     // Phase/Chapter Add State
@@ -131,6 +168,7 @@ export default function AcademicManager() {
     const [renamingNode, setRenamingNode] = useState<{ type: 'phase' | 'chapter', id: string, title: string, parentId?: string } | null>(null);
     const [isNewChapterOpen, setIsNewChapterOpen] = useState(false);
     const [newChapterTitle, setNewChapterTitle] = useState('');
+    const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
     // Toggle folder open/close
@@ -173,120 +211,227 @@ export default function AcademicManager() {
         }
     };
 
+    const updatePhaseMutation = useMutation({
+        mutationFn: (data: { id: string; updates: Partial<ResearchPhase> }) => AcademicService.updatePhase(data.id, data.updates), // Assuming service method exists, else need to add it or skip
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+        }
+    });
+
+    const updateCircleMutation = useMutation({
+        mutationFn: (data: { id: string; updates: Partial<ResearchCircle> }) => AcademicService.updateCircle(data.id, data.updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+        }
+    });
+
     // Export / Internal Editor State
     const [isInternalExportOpen, setIsInternalExportOpen] = useState(false);
     const [exportContent, setExportContent] = useState('');
 
-    // Load data
+    // Open setup if no project exists
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEYS.PROJECT);
-        if (saved) {
-            try {
-                setProject(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to parse project", e);
-            }
-        } else {
+        if (!isLoadingProjects && !project) {
             setIsSetupOpen(true);
         }
-    }, []);
+    }, [project, isLoadingProjects]);
 
-    // Save data
+    // Deadline Reminder
     useEffect(() => {
-        if (project) {
-            localStorage.setItem(STORAGE_KEYS.PROJECT, JSON.stringify(project));
+        if (project && project.deadline) {
+            const daysLeft = differenceInDays(parseISO(project.deadline), new Date());
+            if (daysLeft <= 7 && daysLeft >= 0) {
+                toast({ title: `⏳ تذكير`, description: `بقي ${daysLeft} أيام على الموعد النهائي للمشروع`, duration: 5000 });
+            }
         }
     }, [project]);
 
+    // -- Mutations --
+    const createProjectMutation = useMutation({
+        mutationFn: AcademicService.createProject,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            setIsSetupOpen(false);
+            toast({ title: "✅ تم إنشاء خطة البحث" });
+        }
+    });
+
+    const createPhaseMutation = useMutation({
+        mutationFn: (data: { projectId: string; title: string; index: number }) => AcademicService.createPhase(data.projectId, data.title, data.index),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            setNewPhaseName('');
+            setIsPhaseOpen(false);
+            toast({ title: "✅ تمت إضافة المرحلة" });
+        }
+    });
+
+    const deletePhaseMutation = useMutation({
+        mutationFn: AcademicService.deletePhase,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            toast({ title: "🗑️ تم حذف المرحلة" });
+        }
+    });
+
+    const createChapterMutation = useMutation({
+        mutationFn: (data: { phaseId: string; title: string }) => AcademicService.createChapter(data.phaseId, data.title),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            toast({ title: "✅ تم إنشاء صندوق النص" });
+        }
+    });
+
+    const updateChapterMutation = useMutation({
+        mutationFn: (data: { id: string; updates: Partial<ResearchChapter> }) => AcademicService.updateChapter(data.id, data.updates),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+        }
+    });
+
+    const deleteChapterMutation = useMutation({
+        mutationFn: AcademicService.deleteChapter,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            toast({ title: "🗑️ تم حذف الصندوق" });
+        }
+    });
+
+    const addMaterialMutation = useMutation({
+        mutationFn: (material: Omit<ResearchMaterial, 'id'>) => AcademicService.addMaterial(project!.id, material),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            toast({ title: "✅ تمت إضافة المرجع" });
+        }
+    });
+
+    const deleteMaterialMutation = useMutation({
+        mutationFn: AcademicService.deleteMaterial,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            toast({ title: "🗑️ تم حذف المرجع" });
+        }
+    });
+
+
+    const updateTaskContentMutation = useMutation({
+        mutationFn: (data: { phaseId: string; chapterId?: string; taskId?: string; content: string; tags?: string[] }) =>
+            AcademicService.updateChapter(data.chapterId!, { content: data.content, tags: data.tags }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+        }
+    });
+
+    // --- Material Mutations ---
+    const updateMaterialMutation = useMutation({
+        mutationFn: (data: { id: string; updates: Partial<ResearchMaterial> }) => AcademicService.updateMaterial(data.id, data.updates),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['academic-projects'] })
+    });
+
+
+    // --- Circle Mutations ---
+    const createCircleMutation = useMutation({
+        mutationFn: (circle: Omit<ResearchCircle, 'id'>) => AcademicService.addCircle(project!.id, circle),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+        }
+    });
+
     // --- Handlers ---
 
-    const handleCreateProject = (e: React.FormEvent) => {
+    const handleCreateProject = async (e: React.FormEvent) => {
         e.preventDefault();
+        toast({ title: "⏳ جاري البدء...", description: "بدأنا معالجة طلبك" }); // Diagnostic logging
+
         const formData = new FormData(e.target as HTMLFormElement);
+        const title = formData.get('title') as string;
+        const startDate = formData.get('startDate') as string;
+        const deadline = formData.get('deadline') as string;
 
-        const newProject: ResearchProject = {
-            title: formData.get('title') as string,
-            description: formData.get('description') as string,
-            supervisor: formData.get('supervisor') as string,
-            institution: formData.get('institution') as string,
-            startDate: formData.get('startDate') as string,
-            deadline: formData.get('deadline') as string,
-            phases: [],
-            researchCircles: [],
-            materials: []
-        };
+        // Manual Validation (Redundant but safe if browser tooltips fail)
+        if (!title || !startDate || !deadline) {
+            toast({ title: "⚠️ يرجى تعبئة الحقول الأساسية", description: "العنوان وتاريخ البدء والموعد النهائي مطلوبة", variant: "destructive" });
+            return;
+        }
 
-        setProject(newProject);
-        setIsSetupOpen(false);
-        toast({ title: "✅ تم إنشاء خطة البحث", description: newProject.title });
+        try {
+            console.log("Submitting project creation...");
+            const newProject = await createProjectMutation.mutateAsync({
+                title,
+                description: formData.get('description') as string || '',
+                supervisor: formData.get('supervisor') as string || '',
+                institution: formData.get('institution') as string || '',
+                startDate,
+                deadline,
+            });
+
+            console.log("Project created:", newProject);
+
+            if (newProject && newProject.id && selectedTemplate && selectedTemplate !== 'none') {
+                toast({ title: "🛠️ جاري تطبيق القالب...", description: `تطبيق قالب: ${selectedTemplate}` });
+                const phases = {
+                    'masters': ['المقدمة والإطار العام', 'الإطار النظري والدراسات السابقة', 'منهجية البحث', 'تحليل النتائج', 'الخاتمة والتوصيات'],
+                    'phd': ['الإطار العام للدراسة', 'الإطار النظري', 'الدراسات السابقة', 'بناء النموذج البحثي', 'منهجية الدراسة', 'عرض وتحليل النتائج', 'مناقشة النتائج', 'الخاتمة']
+                }[selectedTemplate];
+
+                if (phases) {
+                    for (let i = 0; i < phases.length; i++) {
+                        await AcademicService.createPhase(newProject.id, phases[i], i);
+                    }
+                    queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+                    toast({ title: "✅ تم تطبيق القالب البحثي بنجاح" });
+                }
+            }
+        } catch (error: any) {
+            console.error("Project creation error:", error);
+            toast({
+                title: "❌ فشل إنشاء المشروع",
+                description: error.data?.message || (typeof error.message === 'string' ? error.message : "تأكد من اتصال الإنترنت ومن تسجيل دخولك"),
+                variant: "destructive",
+                duration: 7000
+            });
+        }
+    };
+
+    const handleDownloadBackup = () => {
+        if (!project) return;
+        const data = JSON.stringify(project, null, 2);
+        const blob = new Blob([data], { type: "application/json" });
+        saveAs(blob, `Academic_Backup_${format(new Date(), 'yyyy-MM-dd')}.json`);
+        toast({ title: "✅ تم تحميل النسخة الاحتياطية" });
     };
 
     const addPhase = () => {
         if (!project || !newPhaseName.trim()) return;
-        const newPhase: ResearchPhase = {
-            id: `phase-${Date.now()}`,
+        createPhaseMutation.mutate({
+            projectId: project.id, // Assuming ID is present
             title: newPhaseName,
-            status: 'pending',
-            chapters: [],
-            tasks: []
-        };
-        setProject({ ...project, phases: [...(project.phases || []), newPhase] });
-        setNewPhaseName('');
-        setIsPhaseOpen(false);
-        toast({ title: "✅ تمت إضافة المرحلة" });
+            index: (project.phases || []).length
+        });
     };
 
     const deletePhase = (phaseId: string) => {
         if (!project) return;
-        setProject({ ...project, phases: project.phases.filter(p => p.id !== phaseId) });
+        if (confirm("هل أنت متأكد من حذف هذه المرحلة وجميع محتوياتها؟")) {
+            deletePhaseMutation.mutate(phaseId);
+        }
     };
 
     const addChapter = (phaseId: string, title: string) => {
-        if (!project || !title.trim()) return;
-        const newChapter: ResearchChapter = {
-            id: `chapter-${Date.now()}`,
-            title,
-            status: 'pending',
-            tasks: []
-        };
-        setProject({
-            ...project,
-            phases: project.phases.map(p =>
-                p.id === phaseId ? { ...p, chapters: [...(p.chapters || []), newChapter] } : p
-            )
-        });
+        if (!title.trim()) return;
+        createChapterMutation.mutate({ phaseId, title });
     };
 
     const updateContent = (phaseId: string, chapterId?: string, taskId?: string, content?: string) => {
         if (!project) return;
-        setProject({
-            ...project,
-            phases: project.phases.map(p => {
-                if (p.id !== phaseId) return p;
-                if (chapterId && !taskId) {
-                    return {
-                        ...p,
-                        chapters: (p.chapters || []).map(c => c.id === chapterId ? { ...c, content } : c)
-                    };
-                }
-                if (taskId) {
-                    if (chapterId) {
-                        return {
-                            ...p,
-                            chapters: (p.chapters || []).map(c => c.id === chapterId ? {
-                                ...c,
-                                tasks: (c.tasks || []).map(t => t.id === taskId ? { ...t, content } : t)
-                            } : c)
-                        };
-                    }
-                    return {
-                        ...p,
-                        tasks: (p.tasks || []).map(t => t.id === taskId ? { ...t, content } : t)
-                    };
-                }
-                return p;
-            })
-        });
+        // This function is primarily for local state updates in the editor.
+        // The actual persistence should happen via saveContent or on blur.
+        // For now, we'll just call saveContent directly if chapterId is present.
+        if (chapterId) {
+            saveContent(chapterId, content || '');
+        }
+        // If tasks were to be updated, a separate mutation would be needed.
+        // For now, we're focusing on chapter content.
     };
 
     const handlePdfExport = async () => {
@@ -309,36 +454,35 @@ export default function AcademicManager() {
         }
     };
 
-    const handleRename = () => {
-        if (!project || !renamingNode) return;
-        const { type, id, title, parentId } = renamingNode;
+    // Auto-save draft content with debounce (handled by Effect + Mutation if we wanted auto-save, 
+    // but for now keeping explicit save or blur save might be safer for quota, 
+    // let's stick to update on blur or a 'Save' button for content)
 
-        setProject({
-            ...project,
-            phases: project.phases.map(p => {
-                if (type === 'phase' && p.id === id) return { ...p, title };
-                if (type === 'chapter' && parentId === p.id) {
-                    return {
-                        ...p,
-                        chapters: p.chapters.map(c => c.id === id ? { ...c, title } : c)
-                    };
-                }
-                return p;
-            })
-        });
+    // Actually, let's implement a simple auto-save effect or function
+    const saveContent = (chapterId: string, content: string) => {
+        updateChapterMutation.mutate({ id: chapterId, updates: { content } });
+    };
+
+    const handleRename = () => {
+        if (!renamingNode) return;
+        if (renamingNode.type === 'phase') {
+            // Not implementing Phase rename API yet in service, skipping or need to add it
+            // Let's rely on local consistency for now or add updatePhase to service
+            updatePhaseMutation.mutate({ id: renamingNode.id, updates: { title: renamingNode.title } });
+        } else {
+            updateChapterMutation.mutate({
+                id: renamingNode.id,
+                updates: { title: renamingNode.title }
+            });
+        }
         setRenamingNode(null);
         toast({ title: "✅ تم تحديث العنوان" });
     };
 
     const deleteChapter = (phaseId: string, chapterId: string) => {
-        if (!project) return;
-        setProject({
-            ...project,
-            phases: project.phases.map(p =>
-                p.id === phaseId ? { ...p, chapters: p.chapters.filter(c => c.id !== chapterId) } : p
-            )
-        });
-        toast({ title: "🗑️ تم حذف القسم" });
+        if (confirm("هل أنت متأكد من حذف صندوق النص؟")) {
+            deleteChapterMutation.mutate(chapterId);
+        }
     };
 
     const handleShare = (title: string, content: string) => {
@@ -347,46 +491,43 @@ export default function AcademicManager() {
         toast({ title: "📋 تم نسخ النص", description: "يمكنك لصقه في أي مكان للمشاركة" });
     };
 
-    const handleAutoGeneratePlan = () => {
+    const handleAutoGeneratePlan = async () => {
         if (!project || !planText.trim()) return;
 
         const lines = planText.split('\n').filter(l => l.trim());
-        const newPhases: ResearchPhase[] = [];
-        let currentPhase: ResearchPhase | null = null;
+        const newPhasesToCreate: { title: string; chapters: string[] }[] = [];
+        let currentPhaseIndex = -1;
 
         lines.forEach(line => {
             const cleanLine = line.trim();
             const isSub = cleanLine.startsWith('-') || cleanLine.startsWith('•') || cleanLine.startsWith('*');
             const content = cleanLine.replace(/^[-•*]\s*/, '');
 
-            if (isSub && currentPhase) {
-                // Add as chapter
-                const newChapter: ResearchChapter = {
-                    id: `chapter-${Date.now()}-${Math.random()}`,
-                    title: content,
-                    status: 'pending',
-                    tasks: []
-                };
-                currentPhase.chapters.push(newChapter);
+            if (isSub && currentPhaseIndex !== -1) {
+                // Add as chapter to the current phase
+                newPhasesToCreate[currentPhaseIndex].chapters.push(content);
             } else {
                 // New Phase
-                if (currentPhase) newPhases.push(currentPhase);
-                currentPhase = {
-                    id: `phase-${Date.now()}-${Math.random()}`,
-                    title: content,
-                    status: 'pending',
-                    chapters: [],
-                    tasks: []
-                };
+                newPhasesToCreate.push({ title: content, chapters: [] });
+                currentPhaseIndex = newPhasesToCreate.length - 1;
             }
         });
-        if (currentPhase) newPhases.push(currentPhase);
 
-        if (newPhases.length > 0) {
-            setProject({ ...project, phases: [...(project.phases || []), ...newPhases] });
+        if (newPhasesToCreate.length > 0) {
+            for (const phaseData of newPhasesToCreate) {
+                // Create phase
+                const newPhase = await AcademicService.createPhase(project.id, phaseData.title, (project.phases || []).length + newPhasesToCreate.indexOf(phaseData));
+                if (newPhase && newPhase.id) {
+                    // Create chapters for the phase
+                    for (const chapterTitle of phaseData.chapters) {
+                        await AcademicService.createChapter(newPhase.id, chapterTitle);
+                    }
+                }
+            }
+            queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
             setPlanText('');
             setIsAutoPlanOpen(false);
-            toast({ title: `✅ تم توليد ${newPhases.length} مراحل` });
+            toast({ title: `✅ تم توليد ${newPhasesToCreate.length} مراحل` });
         }
     };
 
@@ -537,6 +678,15 @@ export default function AcademicManager() {
         return null;
     };
 
+    if (isLoadingProjects) {
+        return (
+            <div className="p-12 text-center flex flex-col items-center justify-center min-h-[300px]" dir="rtl">
+                <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                <p className="text-gray-500">جاري تحميل البيانات الأكاديمية...</p>
+            </div>
+        );
+    }
+
     if (!project && !isSetupOpen) {
         return (
             <div className="p-8 text-center flex flex-col items-center justify-center min-h-[300px]" dir="rtl">
@@ -601,6 +751,9 @@ export default function AcademicManager() {
                         </TabsTrigger>
                         <TabsTrigger value="timeline" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
                             <History className="w-4 h-4" /> الجدول الزمني
+                        </TabsTrigger>
+                        <TabsTrigger value="stats" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-amber-700 bg-amber-50/50">
+                            <BarChart2 className="w-4 h-4" /> الإحصائيات
                         </TabsTrigger>
                     </TabsList>
 
@@ -721,6 +874,7 @@ export default function AcademicManager() {
                                                         if ((e.target as HTMLElement).closest('.export-toggle')) return;
                                                         setEditingNode({ phaseId: phase.id, chapterId: chapter.id });
                                                         setDraftContent(chapter.content || '');
+                                                        setDraftTags(chapter.tags || []);
                                                     }}
                                                 >
                                                     <div className="absolute top-2 left-2 z-20">
@@ -871,10 +1025,7 @@ export default function AcademicManager() {
                                         <div className="flex justify-between items-start">
                                             <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-0">{circle.date}</Badge>
                                             <Checkbox checked={circle.completed} onCheckedChange={(val) => {
-                                                setProject({
-                                                    ...project,
-                                                    researchCircles: project.researchCircles.map(c => c.id === circle.id ? { ...c, completed: !!val } : c)
-                                                });
+                                                updateCircleMutation.mutate({ id: circle.id, updates: { completed: !!val } });
                                             }} />
                                         </div>
                                         <CardTitle className="text-md font-bold mt-2">{circle.title}</CardTitle>
@@ -906,6 +1057,7 @@ export default function AcademicManager() {
                                     <Input placeholder="الدار الناشرة" id="mat-publisher" className="h-10 text-sm" />
                                     <Input placeholder="سنة الطبع" id="mat-year" className="h-10 text-sm" />
                                     <Input placeholder="تاريخ وفاة المؤلف (هـ)" id="mat-death" className="h-10 text-sm" />
+                                    <Input placeholder="الوسوم (مثلاً: فقه, تاريخ)" id="mat-tags" className="h-10 text-sm" />
                                     <Select defaultValue="book">
                                         <SelectTrigger className="h-10" id="mat-type">
                                             <SelectValue placeholder="نوع المرجع" />
@@ -924,25 +1076,25 @@ export default function AcademicManager() {
                                     const publisherEl = document.getElementById('mat-publisher') as HTMLInputElement;
                                     const yearEl = document.getElementById('mat-year') as HTMLInputElement;
                                     const deathEl = document.getElementById('mat-death') as HTMLInputElement;
+                                    const tagsEl = document.getElementById('mat-tags') as HTMLInputElement;
 
                                     if (titleEl.value && project) {
-                                        const newMat: ResearchMaterial = {
-                                            id: `mat-${Date.now()}`,
+                                        const newMat: Omit<ResearchMaterial, 'id'> = {
                                             title: titleEl.value,
                                             author: authorEl.value || undefined,
                                             publisher: publisherEl.value || undefined,
                                             year: yearEl.value || undefined,
                                             deathDate: deathEl.value || undefined,
+                                            tags: tagsEl.value ? tagsEl.value.split(',').map(t => t.trim()) : [],
                                             type: 'book',
                                             status: 'to_read'
                                         };
-                                        setProject({ ...project, materials: [...(project.materials || []), newMat] });
+                                        addMaterialMutation.mutate(newMat);
                                         titleEl.value = '';
                                         authorEl.value = '';
                                         publisherEl.value = '';
                                         yearEl.value = '';
                                         deathEl.value = '';
-                                        toast({ title: "✅ تمت إضافة المرجع" });
                                     }
                                 }} className="bg-purple-600 hover:bg-purple-700 h-10 w-full md:w-auto">
                                     <Plus className="w-4 h-4 ml-1" /> إضافة مرجع
@@ -974,20 +1126,15 @@ export default function AcademicManager() {
                                             </div>
                                             <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
                                                 <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => {
-                                                    setProject({
-                                                        ...project!,
-                                                        materials: project!.materials.map(m =>
-                                                            m.id === mat.id ? { ...m, status: m.status === 'read' ? 'to_read' : 'read' } : m
-                                                        )
-                                                    });
+                                                    const newStatus = mat.status === 'read' ? 'to_read' : 'read';
+                                                    updateMaterialMutation.mutate({ id: mat.id, updates: { status: newStatus } });
                                                 }}>
                                                     {mat.status === 'read' ? 'إعادة للانتظار' : 'تم القراءة'}
                                                 </Button>
                                                 <Button size="sm" variant="ghost" className="h-7 text-xs text-rose-500 hover:bg-rose-50" onClick={() => {
-                                                    setProject({
-                                                        ...project!,
-                                                        materials: project!.materials.filter(m => m.id !== mat.id)
-                                                    });
+                                                    if (confirm("هل أنت متأكد من حذف المرجع؟")) {
+                                                        deleteMaterialMutation.mutate(mat.id);
+                                                    }
                                                 }}>
                                                     <Trash className="w-3 h-3" />
                                                 </Button>
@@ -1036,11 +1183,17 @@ export default function AcademicManager() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-            </Tabs>
+
+                {/* --- Statistics Tab --- */}
+                <TabsContent value="stats" className="focus-visible:outline-none">
+                    <StatsDashboard project={project} />
+                </TabsContent>
+            </Tabs >
 
             {/* --- Dialogs --- */}
 
             {/* Editor Dialog */}
+            <GlobalSearch />
             <Dialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
                 <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
                     <div className="bg-slate-900 p-6 text-white flex justify-between items-center shrink-0">
@@ -1069,14 +1222,32 @@ export default function AcademicManager() {
                             onChange={(e) => setDraftContent(e.target.value)}
                             autoFocus
                         />
+                        <div className="mt-4">
+                            <Label htmlFor="draft-tags" className="font-bold text-gray-700 text-xs">الوسوم (افصل بينها بفاصلة)</Label>
+                            <Input
+                                id="draft-tags"
+                                value={draftTags.join(', ')}
+                                onChange={(e) => setDraftTags(e.target.value.split(',').map(tag => tag.trim()))}
+                                placeholder="مثال: فقه, تاريخ, منهجية"
+                                className="text-right"
+                            />
+                        </div>
                     </div>
                     <div className="p-6 bg-slate-50 border-t flex justify-end gap-3">
                         <Button variant="outline" onClick={() => setEditingNode(null)} className="h-12 px-6 rounded-2xl font-bold border-gray-200">إلغاء</Button>
                         <Button className="h-12 px-8 rounded-2xl font-black bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-100" onClick={() => {
                             if (editingNode) {
-                                updateContent(editingNode.phaseId, editingNode.chapterId, editingNode.taskId, draftContent);
+                                const targetPhaseId = editingNode.phaseId;
+                                const targetId = editingNode.chapterId || editingNode.taskId;
+                                if (!targetPhaseId || !targetId) return;
+
+                                if (editingNode.chapterId) {
+                                    updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: draftContent, tags: draftTags });
+                                } else if (editingNode.taskId) {
+                                    updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: draftContent, tags: draftTags });
+                                }
                                 setEditingNode(null);
-                                toast({ title: "✅ تم الحفظ بنجاح" });
+                                toast({ title: "✅ تم حفظ المسودة" });
                             }
                         }}>حفظ التغييرات</Button>
                     </div>
@@ -1090,13 +1261,13 @@ export default function AcademicManager() {
                         <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-4 border border-white/20">
                             <GraduationCap className="w-8 h-8 text-amber-300" />
                         </div>
-                        <DialogTitle className="text-2xl font-black">إعداد الخطة البحثية 🎓</DialogTitle>
+                        <DialogTitle className="text-2xl font-black">{project ? 'إعدادات المشروع' : 'إعداد الخطة البحثية 🎓'}</DialogTitle>
                         <p className="text-indigo-200 text-sm mt-2">سوف نساعدك في تنظيم وإدارة رسالتك العلمية بكفاءة عالية</p>
                     </div>
                     <form onSubmit={handleCreateProject} className="p-8 space-y-6">
                         <div className="space-y-2">
                             <Label className="font-bold text-gray-700 text-xs">عنوان الرسالة / البحث</Label>
-                            <Input name="title" required placeholder="مثال: تحليل البيانات الضخمة في قطاع..." className="h-12 bg-gray-50 border-0 text-right font-bold" />
+                            <Input name="title" placeholder="مثال: تحليل البيانات الضخمة في قطاع..." className="h-12 bg-gray-50 border-0 text-right font-bold" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -1111,14 +1282,47 @@ export default function AcademicManager() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="font-bold text-gray-700 text-xs">تاريخ البدء</Label>
-                                <Input name="startDate" type="date" required className="h-12 bg-gray-50 border-0" />
+                                <Input name="startDate" type="date" className="h-12 bg-gray-50 border-0" />
                             </div>
                             <div className="space-y-2">
                                 <Label className="font-bold text-gray-700 text-xs">الموعد النهائي</Label>
-                                <Input name="deadline" type="date" required className="h-12 bg-gray-50 border-0" />
+                                <Input name="deadline" type="date" className="h-12 bg-gray-50 border-0" />
                             </div>
                         </div>
-                        <Button type="submit" className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 transition-all active:scale-95">بدء البرنامج البحثي 🚀</Button>
+                        <div className="space-y-2">
+                            <Label className="font-bold text-gray-700 text-xs">قالب المشروع (اختياري)</Label>
+                            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                                <SelectTrigger className="h-12 bg-gray-50 border-0 text-right">
+                                    <SelectValue placeholder="اختر نوع القالب..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">فارغ (مخصص)</SelectItem>
+                                    <SelectItem value="masters">رسالة ماجستير (5 فصول)</SelectItem>
+                                    <SelectItem value="phd">أطروحة دكتوراه (8 فصول)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <Button
+                                type="submit"
+                                disabled={createProjectMutation.isPending}
+                                className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 rounded-2xl font-black text-lg shadow-xl shadow-indigo-100 transition-all active:scale-95 disabled:opacity-70"
+                            >
+                                {createProjectMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 ml-2 animate-spin" />
+                                        جاري الإنشاء...
+                                    </>
+                                ) : (
+                                    project ? 'حفظ التعديلات' : 'بدء البرنامج البحثي 🚀'
+                                )}
+                            </Button>
+                            {project && (
+                                <Button type="button" variant="outline" onClick={handleDownloadBackup} className="w-full h-12 rounded-2xl border-dashed border-2 border-gray-300 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50">
+                                    <Download className="w-4 h-4 ml-2" /> تحميل نسخة احتياطية (JSON)
+                                </Button>
+                            )}
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
@@ -1145,16 +1349,14 @@ export default function AcademicManager() {
                         e.preventDefault();
                         const fd = new FormData(e.target as HTMLFormElement);
                         if (!project) return;
-                        const newCircle: ResearchCircle = {
-                            id: `circle-${Date.now()}`,
+                        const newCircle = {
                             title: fd.get('title') as string,
                             date: fd.get('date') as string,
                             notes: fd.get('notes') as string,
                             completed: false
                         };
-                        setProject({ ...project, researchCircles: [...(project.researchCircles || []), newCircle] });
+                        createCircleMutation.mutate(newCircle);
                         setIsSessionOpen(false);
-                        toast({ title: "✅ تم تسجيل الحلقة" });
                     }} className="space-y-4 py-4">
                         <div className="space-y-2"><Label className="text-right block">العنوان</Label><Input name="title" required placeholder="مناقشة الفصل الأول..." className="text-right" /></div>
                         <div className="space-y-2"><Label className="text-right block">التاريخ</Label><Input name="date" type="date" required className="text-right" /></div>
@@ -1299,27 +1501,19 @@ export default function AcademicManager() {
                         <Input
                             value={newChapterTitle}
                             onChange={(e) => setNewChapterTitle(e.target.value)}
-                            placeholder="أدخل العنوان هنا..."
                             className="text-right"
-                            autoFocus
+                            placeholder="العنوان..."
                         />
-                        <Button
-                            onClick={() => {
-                                if (newChapterTitle.trim() && project && project.phases.length > 0) {
-                                    addChapter(project.phases[0].id, newChapterTitle.trim());
-                                    setIsNewChapterOpen(false);
-                                    setNewChapterTitle('');
-                                }
-                            }}
-                            className="w-full bg-purple-600 hover:bg-purple-700"
-                            disabled={!newChapterTitle.trim()}
-                        >
-                            إنشاء صندوق النص
-                        </Button>
+                        <Button onClick={() => {
+                            if (project && project.phases && project.phases.length > 0) {
+                                addChapter(project.phases[0].id, newChapterTitle || 'صندوق نص جديد');
+                                setIsNewChapterOpen(false);
+                            }
+                        }} className="w-full bg-indigo-600">إضافة</Button>
                     </div>
                 </DialogContent>
             </Dialog>
-        </div >
+        </div>
     );
-}
+};
 

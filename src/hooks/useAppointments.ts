@@ -33,6 +33,31 @@ export const useAppointments = () => {
     const loadAppointments = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+
+        // --- Auto-cleanup old appointments (older than 30 days) ---
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const dateLimit = thirtyDaysAgo.toISOString().split('T')[0];
+
+        try {
+            const { data: oldAppointments } = await supabase
+                .from('appointments')
+                .select('id')
+                .eq('user_id', user.id)
+                .lt('date', dateLimit);
+
+            if (oldAppointments && oldAppointments.length > 0) {
+                console.log(`Cleaning up ${oldAppointments.length} old appointments...`);
+                await supabase
+                    .from('appointments')
+                    .delete()
+                    .in('id', oldAppointments.map(a => a.id));
+            }
+        } catch (e) {
+            console.error("Failed to cleanup old appointments:", e);
+        }
+
+        // --- Fetch current appointments ---
         const { data } = await supabase
             .from('appointments')
             .select('*')
