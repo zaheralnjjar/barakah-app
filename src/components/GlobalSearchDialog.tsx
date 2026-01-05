@@ -19,9 +19,11 @@ interface GlobalSearchDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onNavigateToTab?: (tab: string) => void;
+    onOpenNewMuslims?: () => void;
+    onOpenAcademic?: () => void;
 }
 
-export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, onClose, onNavigateToTab }) => {
+export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, onClose, onNavigateToTab, onOpenNewMuslims, onOpenAcademic }) => {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
 
@@ -30,12 +32,24 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
     const { notesHistory } = useQuickNotes();
     const navigate = useNavigate();
 
-    // Students Data (From LocalStorage for now as per current NewMuslimsManager implementation)
+    // Data fetching (From LocalStorage for mobile performance and consistency with NewMuslimsManager)
     const [students, setStudents] = useState<any[]>([]);
+    const [muslimAppointments, setMuslimAppointments] = useState<any[]>([]);
+    const [generalAppointments, setGeneralAppointments] = useState<any[]>([]);
+
     useEffect(() => {
+        if (!isOpen) return;
+
         try {
-            const stored = localStorage.getItem('my_new_muslims_data');
-            if (stored) setStudents(JSON.parse(stored));
+            // Correct keys from NewMuslimsManager
+            const storedStudents = localStorage.getItem('newmuslims_students');
+            if (storedStudents) setStudents(JSON.parse(storedStudents));
+
+            const storedApts = localStorage.getItem('newmuslims_appointments');
+            if (storedApts) setMuslimAppointments(JSON.parse(storedApts));
+
+            const storedGeneralApts = localStorage.getItem('baraka_appointments');
+            if (storedGeneralApts) setGeneralAppointments(JSON.parse(storedGeneralApts));
         } catch (e) {
             console.error(e);
         }
@@ -60,14 +74,38 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
                     subtitle: task.description || 'مهمة',
                     date: task.deadline,
                     onClick: () => {
-                        if (onNavigateToTab) onNavigateToTab('dashboard'); // Tasks are usually on dashboard or specific tab
+                        if (onNavigateToTab) onNavigateToTab('dashboard'); // Tasks are on dashboard
                         onClose();
                     }
                 });
             }
         });
 
-        // 2. Search Notes
+        // 2. Search Appointments (New Muslims & General)
+        const allApts = [...muslimAppointments, ...generalAppointments];
+        allApts.forEach(apt => {
+            if (apt.title?.toLowerCase().includes(lowerQuery) || apt.notes?.toLowerCase().includes(lowerQuery)) {
+                newResults.push({
+                    id: apt.id,
+                    type: 'task', // Reusing task icon/style for simplicity
+                    title: `📅 ${apt.title}`,
+                    subtitle: apt.notes || 'موعد',
+                    date: apt.date,
+                    onClick: () => {
+                        onClose();
+                        // If it's a muslim appointment, open that section. If general, just dashboard for now.
+                        const isMuslimApt = muslimAppointments.some(ma => ma.id === apt.id);
+                        if (isMuslimApt && onOpenNewMuslims) {
+                            onOpenNewMuslims();
+                        } else if (onNavigateToTab) {
+                            onNavigateToTab('dashboard');
+                        }
+                    }
+                });
+            }
+        });
+
+        // 3. Search Notes
         notesHistory.forEach((note, idx) => {
             if (note.content.toLowerCase().includes(lowerQuery)) {
                 newResults.push({
@@ -77,7 +115,6 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
                     subtitle: note.content.substring(0, 50).replace(/\n/g, ' '),
                     date: note.createdAt,
                     onClick: () => {
-                        // Notes are on dashboard, might need a way to auto-open specific note
                         if (onNavigateToTab) onNavigateToTab('dashboard');
                         onClose();
                     }
@@ -85,18 +122,25 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
             }
         });
 
-        // 3. Search Students (New Muslims)
+        // 4. Search Students (New Muslims) - Using correct "fullName" and "arabicName"
         students.forEach(student => {
-            if (student.name.toLowerCase().includes(lowerQuery) || student.notes?.toLowerCase().includes(lowerQuery)) {
+            const matchesName = student.fullName?.toLowerCase().includes(lowerQuery) ||
+                student.arabicName?.toLowerCase().includes(lowerQuery) ||
+                student.name?.toLowerCase().includes(lowerQuery); // Fallback
+
+            const matchesNotes = student.notes?.toLowerCase().includes(lowerQuery);
+            const matchesPhone = student.phone?.includes(query);
+
+            if (matchesName || matchesNotes || matchesPhone) {
                 newResults.push({
                     id: student.id,
                     type: 'student',
-                    title: student.name,
+                    title: student.fullName || student.arabicName || student.name || 'مجهول',
                     subtitle: student.phone || 'طالب جديد',
                     date: student.date,
                     onClick: () => {
-                        if (onNavigateToTab) onNavigateToTab('newmuslims'); // Use tab ID from Index.tsx
                         onClose();
+                        if (onOpenNewMuslims) onOpenNewMuslims();
                     }
                 });
             }
@@ -104,7 +148,7 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
 
         setResults(newResults);
 
-    }, [query, tasks, notesHistory, students]);
+    }, [query, tasks, notesHistory, students, muslimAppointments]);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -121,6 +165,18 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
                 </div>
 
                 <div className="max-h-[60vh] overflow-y-auto p-2">
+                    {results.length === 0 && !query.trim() && (
+                        <div className="text-center py-8 text-gray-500 space-y-2">
+                            <p className="font-bold">البحث الشامل الذكي 🚀</p>
+                            <p className="text-sm text-gray-400 max-w-[80%] mx-auto leading-relaxed">
+                                يمكنك البحث عن أي شيء في التطبيق:
+                                <br />• عناوين ومحتوى المهام
+                                <br />• الملاحظات السريعة
+                                <br />• أسماء وبيانات الطلاب والمهتدين الجدد
+                            </p>
+                        </div>
+                    )}
+
                     {results.length === 0 && query.trim() && (
                         <div className="text-center py-8 text-gray-400">
                             لا توجد نتائج
@@ -136,8 +192,8 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
                                     className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                                 >
                                     <div className={`p-2 rounded-full ${result.type === 'task' ? 'bg-blue-100 text-blue-600' :
-                                            result.type === 'note' ? 'bg-amber-100 text-amber-600' :
-                                                'bg-emerald-100 text-emerald-600'
+                                        result.type === 'note' ? 'bg-amber-100 text-amber-600' :
+                                            'bg-emerald-100 text-emerald-600'
                                         }`}>
                                         {result.type === 'task' && <CheckSquare className="w-4 h-4" />}
                                         {result.type === 'note' && <StickyNote className="w-4 h-4" />}

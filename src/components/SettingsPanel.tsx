@@ -1500,20 +1500,52 @@ const SettingsPanel = () => {
             {/* New Muslim Care Dialog */}
             <Dialog open={activeSection === 'new_muslims'} onOpenChange={(open) => !open && setActiveSection(null)}>
                 <DialogContent
-                    className="max-w-5xl max-h-[90vh] overflow-y-auto w-full p-0"
+                    className="w-[98vw] sm:max-w-5xl max-h-[95vh] overflow-y-auto p-0"
                     onInteractOutside={(e) => e.preventDefault()}
                 >
-                    <NewMuslimsManager />
+                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <Users className="w-5 h-5" />
+                            رعاية المهتدين الجدد
+                        </DialogTitle>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setActiveSection(null)}
+                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
+                    </DialogHeader>
+                    <div className="p-2 sm:p-4">
+                        <NewMuslimsManager />
+                    </div>
                 </DialogContent>
             </Dialog>
 
             {/* Academic Research Dialog */}
             <Dialog open={activeSection === 'academic'} onOpenChange={(open) => !open && setActiveSection(null)}>
                 <DialogContent
-                    className="max-w-7xl max-h-[95vh] overflow-y-auto w-full p-0"
+                    className="w-[95vw] max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0"
                     onInteractOutside={(e) => e.preventDefault()}
                 >
-                    <AcademicManager />
+                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2 text-purple-700">
+                            <GraduationCap className="w-5 h-5" />
+                            القسم الأكاديمي
+                        </DialogTitle>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setActiveSection(null)}
+                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
+                    </DialogHeader>
+                    <div className="p-2 sm:p-4 overflow-x-hidden">
+                        <AcademicManager />
+                    </div>
                 </DialogContent>
             </Dialog>
 

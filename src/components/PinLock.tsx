@@ -98,8 +98,8 @@ const PinLock: React.FC<PinLockProps> = ({ onUnlock, isSetupMode, onSetupComplet
                     <div
                         key={i}
                         className={`w-4 h-4 rounded-full transition-all duration-200 ${i < pin.length
-                                ? 'bg-white scale-110'
-                                : 'bg-white/30'
+                            ? 'bg-white scale-110'
+                            : 'bg-white/30'
                             }`}
                     />
                 ))}
@@ -133,15 +133,28 @@ const PinLock: React.FC<PinLockProps> = ({ onUnlock, isSetupMode, onSetupComplet
 
 // Hook to manage PIN lock state
 export const usePinLock = () => {
-    const [isLocked, setIsLocked] = useState(true);
-    const [pinEnabled, setPinEnabled] = useState(false);
+    // Initialize state directly from localStorage to prevent content flash
+    const [isLocked, setIsLocked] = useState(() => {
+        const enabled = localStorage.getItem('baraka_pin_enabled') === 'true';
+        const hasPin = !!localStorage.getItem('baraka_pin');
+        return enabled && hasPin;
+    });
+
+    const [pinEnabled, setPinEnabled] = useState(() => {
+        const enabled = localStorage.getItem('baraka_pin_enabled') === 'true';
+        const hasPin = !!localStorage.getItem('baraka_pin');
+        return enabled && hasPin;
+    });
+
     const [showSetup, setShowSetup] = useState(false);
 
+    // Sync effect just in case storage changes externally (optional)
     useEffect(() => {
         const enabled = localStorage.getItem('baraka_pin_enabled') === 'true';
         const hasPin = !!localStorage.getItem('baraka_pin');
         setPinEnabled(enabled && hasPin);
-        setIsLocked(enabled && hasPin);
+        // Only lock if we are absolutely sure we should be locked? 
+        // Actually, better rely on initial state for startup lock.
     }, []);
 
     const unlock = () => setIsLocked(false);

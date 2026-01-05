@@ -535,11 +535,11 @@ const NewMuslimsManager = () => {
 
             } catch (err) {
                 console.error("Supabase fetch error:", err);
-                toast({
-                    title: "خطأ في المزامنة",
-                    description: "لم نتمكن من استرجاع البيانات من السحابة. جاري استخدام النسخة المحلية.",
-                    variant: "destructive"
-                });
+                // toast({
+                //     title: "خطأ في المزامنة",
+                //     description: "لم نتمكن من استرجاع البيانات من السحابة. جاري استخدام النسخة المحلية.",
+                //     variant: "destructive"
+                // });
             }
         };
 

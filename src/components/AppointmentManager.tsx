@@ -172,6 +172,7 @@ const AppointmentManager: React.FC = () => {
                     new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime()
                 );
                 setAppointments(mappedAppointments);
+                localStorage.setItem('baraka_appointments', JSON.stringify(mappedAppointments));
             }
         } catch (error) {
             console.error('Error fetching appointments:', error);

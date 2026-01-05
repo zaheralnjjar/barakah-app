@@ -224,11 +224,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                             <span className="text-[9px] text-gray-400">الرصيد:</span>
                                             <span className="text-[10px] font-mono font-bold text-gray-700">
                                                 {financeData?.current_balance_ars?.toLocaleString() || '0'}
+                                                <span className="text-[8px] text-gray-400 mr-1">(${dollarRates?.official ? ((financeData?.current_balance_ars || 0) / dollarRates.official).toFixed(0) : '--'})</span>
                                             </span>
                                         </div>
                                         <span className="text-[9px] text-gray-300">|</span>
                                         <span className={`text-[10px] font-mono font-bold ${remainingDaily < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
                                             {remainingDaily.toLocaleString()}
+                                            <span className={`text-[8px] mr-1 ${remainingDaily < 0 ? 'text-red-400' : 'text-emerald-400'}`}>(${dollarRates?.official ? (remainingDaily / dollarRates.official).toFixed(0) : '--'})</span>
                                         </span>
                                     </div>
                                 )}
@@ -258,16 +260,19 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                 <div className="text-center px-1">
                                     <p className="text-[9px] text-gray-400 mb-0.5">الحد اليومي</p>
                                     <p className="text-sm font-bold font-mono text-gray-700">{dailyLimitARS.toLocaleString()}</p>
+                                    <p className="text-[8px] text-gray-400">${dollarRates?.official ? (dailyLimitARS / dollarRates.official).toFixed(1) : '--'}</p>
                                 </div>
                                 <div className="text-center px-1">
                                     <p className="text-[9px] text-gray-400 mb-0.5">مصروف اليوم</p>
                                     <p className="text-sm font-bold font-mono text-red-600">{todayExpense.toLocaleString()}</p>
+                                    <p className="text-[8px] text-red-400">${dollarRates?.official ? (todayExpense / dollarRates.official).toFixed(1) : '--'}</p>
                                 </div>
                                 <div className="text-center px-1">
-                                    <p className="text-[9px] text-gray-400 mb-0.5">المتبقي</p>
-                                    <p className={`text-sm font-bold font-mono ${remainingDaily < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                        {remainingDaily.toLocaleString()}
+                                    <p className="text-[9px] text-gray-400 mb-0.5">الرصيد الكلي</p>
+                                    <p className="text-sm font-bold font-mono text-emerald-600">
+                                        {financeData?.current_balance_ars?.toLocaleString() || '0'}
                                     </p>
+                                    <p className="text-[8px] text-emerald-400">${dollarRates?.official ? ((financeData?.current_balance_ars || 0) / dollarRates.official).toFixed(1) : '--'}</p>
                                 </div>
                             </div>
                         </div>

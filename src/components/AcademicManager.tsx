@@ -699,65 +699,66 @@ export default function AcademicManager() {
     }
 
     return (
-        <div className="space-y-6 bg-gray-50/30 p-4 sm:p-6" dir="rtl">
-            {/* Header section ( restored v1/v2 style) */}
+        <div className="space-y-4 bg-gray-50/30 p-2 sm:p-4" dir="rtl">
+            {/* Header section (Mobile Optimized) */}
             {project && (
-                <div className="bg-gradient-to-r from-purple-800 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                <div className="bg-gradient-to-r from-purple-800 via-indigo-900 to-slate-900 rounded-xl p-3 sm:p-4 text-white shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <div className="flex flex-col gap-3 relative z-10">
                         <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <Badge className="bg-amber-500 hover:bg-amber-600 border-0">نظام البحث المتكامل</Badge>
-                                {(project.phases || []).length > 0 && <Badge variant="outline" className="text-white border-white/20">{(project.phases || []).length} مراحل</Badge>}
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <Badge className="bg-amber-500 hover:bg-amber-600 border-0 text-[10px] px-2 py-0.5">نظام البحث</Badge>
+                                {(project.phases || []).length > 0 && <Badge variant="outline" className="text-white border-white/20 text-[10px] px-2 py-0.5">{(project.phases || []).length} مراحل</Badge>}
                             </div>
-                            <h2 className="text-3xl font-black tracking-tight">{project.title}</h2>
-                            <div className="flex flex-wrap items-center gap-4 mt-3 text-purple-100/70 text-sm">
-                                <span className="flex items-center gap-1.5"><GraduationCap className="w-4 h-4" /> {project.supervisor}</span>
+                            <h2 className="text-lg sm:text-xl font-bold tracking-tight line-clamp-2">{project.title}</h2>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-purple-100/70 text-[10px] sm:text-xs">
+                                <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" /> {project.supervisor}</span>
                                 <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-                                <span className="flex items-center gap-1.5"><BookOpen className="w-4 h-4" /> {project.institution}</span>
+                                <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" /> {project.institution}</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/10 backdrop-blur-sm shadow-inner">
-                            <div className="text-center min-w-[100px]">
-                                <span className="text-4xl font-black text-amber-300">{calculateProgress()}%</span>
-                                <Progress value={calculateProgress()} className="h-1.5 mt-2 bg-white/20" />
-                                <p className="text-[10px] uppercase font-bold tracking-widest text-purple-200 mt-1">الإنجاز الكلي</p>
+                        <div className="flex items-center justify-between bg-white/10 p-2 rounded-xl border border-white/10">
+                            <div className="text-center flex-1">
+                                <span className="text-2xl font-black text-amber-300">{calculateProgress()}%</span>
+                                <Progress value={calculateProgress()} className="h-1 mt-1 bg-white/20" />
+                                <p className="text-[8px] uppercase font-bold tracking-widest text-purple-200 mt-0.5">الإنجاز</p>
                             </div>
-                            <div className="w-px h-12 bg-white/10 mx-2 hidden md:block"></div>
-                            <div className="text-right hidden md:block">
-                                <span className="text-sm font-bold block text-purple-100">{format(new Date(project.deadline), 'dd MMM yyyy', { locale: ar })}</span>
-                                <span className="text-[10px] text-purple-300">الموعد النهائي</span>
+                            <div className="w-px h-8 bg-white/10 mx-2"></div>
+                            <div className="text-center flex-1">
+                                <span className="text-xs font-bold block text-purple-100">{format(new Date(project.deadline), 'dd/MM/yy', { locale: ar })}</span>
+                                <span className="text-[8px] text-purple-300">الموعد النهائي</span>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Navigation Tabs */}
+            {/* Navigation Tabs (Mobile Optimized) */}
             <Tabs defaultValue="drafts" onValueChange={setActiveTab} className="w-full">
-                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white/80 backdrop-blur border border-gray-100 p-2 rounded-2xl shadow-sm mb-6 sticky top-0 z-30 overflow-x-auto">
-                    <TabsList className="bg-gray-100/50 p-1 rounded-xl h-auto flex flex-nowrap lg:flex-wrap justify-start min-w-max lg:min-w-0">
-                        <TabsTrigger value="drafts" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
-                            <StickyNote className="w-4 h-4" /> معمل النصوص
-                        </TabsTrigger>
-                        <TabsTrigger value="plan" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
-                            <LayoutList className="w-4 h-4" /> هيكل البحث
-                        </TabsTrigger>
-                        <TabsTrigger value="circles" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
-                            <UsersIcon className="w-4 h-4" /> الحلقات الأكاديمية
-                        </TabsTrigger>
-                        <TabsTrigger value="materials" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
-                            <Library className="w-4 h-4" /> المكتبة والمراجع
-                        </TabsTrigger>
-                        <TabsTrigger value="timeline" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
-                            <History className="w-4 h-4" /> الجدول الزمني
-                        </TabsTrigger>
-                        <TabsTrigger value="stats" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-amber-700 bg-amber-50/50">
-                            <BarChart2 className="w-4 h-4" /> الإحصائيات
-                        </TabsTrigger>
-                    </TabsList>
+                <div className="bg-white/80 backdrop-blur border border-gray-100 p-1.5 rounded-xl shadow-sm mb-4 sticky top-0 z-30">
+                    <div className="overflow-x-auto scrollbar-thin">
+                        <TabsList className="bg-gray-100/50 p-0.5 rounded-lg h-auto flex flex-nowrap justify-start min-w-max gap-0.5">
+                            <TabsTrigger value="drafts" className="gap-1 px-2 py-1.5 text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+                                <StickyNote className="w-3 h-3" /> النصوص
+                            </TabsTrigger>
+                            <TabsTrigger value="plan" className="gap-1 px-2 py-1.5 text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+                                <LayoutList className="w-3 h-3" /> الهيكل
+                            </TabsTrigger>
 
-                    <div className="flex gap-2">
+                            <TabsTrigger value="materials" className="gap-1 px-2 py-1.5 text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+                                <Library className="w-3 h-3" /> المكتبة
+                            </TabsTrigger>
+                            <TabsTrigger value="timeline" className="gap-1 px-2 py-1.5 text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md">
+                                <History className="w-3 h-3" /> الجدول
+                            </TabsTrigger>
+                            <TabsTrigger value="stats" className="gap-1 px-2 py-1.5 text-[10px] data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-amber-700 bg-amber-50/50">
+                                <BarChart2 className="w-3 h-3" /> إحصائيات
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    {/* Action Buttons (Compact) */}
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
                         {/* Edit Project Settings Button - Always visible */}
                         <Button
                             size="sm"
@@ -799,11 +800,7 @@ export default function AcademicManager() {
                                 </Button>
                             </>
                         )}
-                        {activeTab === 'circles' && (
-                            <Button size="sm" onClick={() => setIsSessionOpen(true)} className="bg-blue-600 h-10 px-4 rounded-xl">
-                                <Plus className="w-4 h-4 ml-1" /> تسجيل حلقة
-                            </Button>
-                        )}
+
                     </div>
                 </div>
 
