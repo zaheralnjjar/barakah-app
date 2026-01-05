@@ -18,7 +18,8 @@ import {
     LayoutList, LayoutDashboard, Download, StickyNote, Library,
     History, Users as UsersIcon, Link as LinkIcon, Settings, Sparkles,
     Printer, Bold, Italic, Underline, Palette, Type, AlignLeft, AlignCenter, AlignRight,
-    Share2, Pencil, Trash, FileUp, Copy, Square, Circle, Minus, RectangleHorizontal
+    Share2, Pencil, Trash, FileUp, Copy, Square, Circle, Minus, RectangleHorizontal,
+    Folder, FolderOpen, CheckSquare
 } from 'lucide-react';
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
@@ -86,6 +87,10 @@ interface ResearchMaterial {
     type: 'book' | 'paper' | 'link' | 'other';
     url?: string;
     status: 'to_read' | 'reading' | 'read';
+    author?: string;
+    publisher?: string;
+    year?: string;
+    deathDate?: string;
 }
 
 interface ResearchProject {
@@ -126,6 +131,47 @@ export default function AcademicManager() {
     const [renamingNode, setRenamingNode] = useState<{ type: 'phase' | 'chapter', id: string, title: string, parentId?: string } | null>(null);
     const [isNewChapterOpen, setIsNewChapterOpen] = useState(false);
     const [newChapterTitle, setNewChapterTitle] = useState('');
+    const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+
+    // Toggle folder open/close
+    const toggleFolder = (phaseId: string) => {
+        setOpenFolders(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(phaseId)) newSet.delete(phaseId);
+            else newSet.add(phaseId);
+            return newSet;
+        });
+    };
+
+    // Select all chapters in a phase
+    const selectAllInPhase = (phaseId: string) => {
+        if (!project) return;
+        const phase = project.phases.find(p => p.id === phaseId);
+        if (!phase) return;
+        const chapterIds = phase.chapters.map(c => c.id);
+        const allSelected = chapterIds.every(id => selectedForExport.has(id));
+
+        const newSet = new Set(selectedForExport);
+        if (allSelected) {
+            chapterIds.forEach(id => newSet.delete(id));
+        } else {
+            chapterIds.forEach(id => newSet.add(id));
+        }
+        setSelectedForExport(newSet);
+    };
+
+    // Select all chapters globally
+    const selectAllChapters = () => {
+        if (!project) return;
+        const allIds = project.phases.flatMap(p => p.chapters.map(c => c.id));
+        const allSelected = allIds.every(id => selectedForExport.has(id));
+
+        if (allSelected) {
+            setSelectedForExport(new Set());
+        } else {
+            setSelectedForExport(new Set(allIds));
+        }
+    };
 
     // Export / Internal Editor State
     const [isInternalExportOpen, setIsInternalExportOpen] = useState(false);
@@ -608,65 +654,130 @@ export default function AcademicManager() {
                     </div>
                 </div>
 
-                {/* --- Drafts Tab --- */}
+                {/* --- Drafts Tab (Folder View) --- */}
                 <TabsContent value="drafts" className="mt-0 focus-visible:outline-none">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {(project?.phases || []).map(phase => (
-                            <React.Fragment key={phase.id}>
-                                {(phase.chapters || []).map(chapter => (
-                                    <Card
-                                        key={chapter.id}
-                                        className={`group relative transition-all hover:scale-[1.02] cursor-pointer border-2 overflow-hidden ${selectedForExport.has(chapter.id) ? 'border-purple-500 bg-purple-50/30' : 'border-transparent bg-white shadow-sm hover:shadow-md'}`}
-                                        onClick={(e) => {
-                                            if ((e.target as HTMLElement).closest('.export-toggle')) return;
-                                            setEditingNode({ phaseId: phase.id, chapterId: chapter.id });
-                                            setDraftContent(chapter.content || '');
-                                        }}
-                                    >
-                                        <div className="absolute top-2 left-2 z-20">
-                                            <Checkbox
-                                                className="export-toggle w-5 h-5 rounded-md"
-                                                checked={selectedForExport.has(chapter.id)}
-                                                onCheckedChange={(checked) => {
-                                                    const newSet = new Set(selectedForExport);
-                                                    if (checked) newSet.add(chapter.id);
-                                                    else newSet.delete(chapter.id);
-                                                    setSelectedForExport(newSet);
-                                                }}
-                                            />
-                                        </div>
-                                        <CardHeader className="pb-2 pt-8">
-                                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                                {chapter.title}
-                                            </CardTitle>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2">
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenamingNode({ type: 'chapter', id: chapter.id, title: chapter.title, parentId: phase.id }); }}>
-                                                    <Pencil className="w-3 h-3 text-gray-500" />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleShare(chapter.title, chapter.content || ''); }}>
-                                                    <Share2 className="w-3 h-3 text-gray-500" />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6 hover:bg-rose-50" onClick={(e) => { e.stopPropagation(); deleteChapter(phase.id, chapter.id); }}>
-                                                    <Trash className="w-3 h-3 text-rose-500" />
-                                                </Button>
-                                            </div>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase">{phase.title}</p>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <p className={`text-xs leading-relaxed text-gray-600 line-clamp-5 min-h-[6rem] whitespace-pre-wrap ${!chapter.content ? 'text-gray-300 italic flex items-center justify-center border-dashed border-2 border-gray-100 rounded-lg' : ''}`}>
-                                                {chapter.content || 'انقر للكتابة...'}
-                                            </p>
-                                        </CardContent>
-                                        <div className="px-4 py-2 bg-gray-50/50 flex justify-between items-center text-[10px] text-gray-400">
-                                            <span>{chapter.content?.length || 0} حرف</span>
-                                            <PenTool className="w-3 h-3 group-hover:text-purple-500 transition-colors" />
-                                        </div>
-                                    </Card>
-                                ))}
-                            </React.Fragment>
-                        ))}
+                    {/* Select All Button */}
+                    <div className="flex justify-between items-center mb-4 bg-white/80 p-3 rounded-xl border border-gray-100">
+                        <span className="text-sm font-bold text-gray-600">
+                            {selectedForExport.size} / {project?.phases.reduce((acc, p) => acc + p.chapters.length, 0) || 0} محدد
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={selectAllChapters}
+                            className="h-8 gap-2 text-xs"
+                        >
+                            <CheckSquare className="w-3 h-3" />
+                            {project?.phases.flatMap(p => p.chapters).every(c => selectedForExport.has(c.id)) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                        </Button>
                     </div>
+
+                    {/* Folders (Phases) */}
+                    <div className="space-y-4">
+                        {(project?.phases || []).map(phase => {
+                            const isOpen = openFolders.has(phase.id);
+                            const phaseChapterIds = phase.chapters.map(c => c.id);
+                            const allPhaseSelected = phaseChapterIds.length > 0 && phaseChapterIds.every(id => selectedForExport.has(id));
+                            const somePhaseSelected = phaseChapterIds.some(id => selectedForExport.has(id));
+
+                            return (
+                                <div key={phase.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                    {/* Folder Header */}
+                                    <div
+                                        className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition-colors"
+                                        onClick={() => toggleFolder(phase.id)}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {isOpen ? <FolderOpen className="w-5 h-5 text-indigo-600" /> : <Folder className="w-5 h-5 text-indigo-500" />}
+                                            <div>
+                                                <h3 className="font-bold text-gray-800">{phase.title}</h3>
+                                                <p className="text-[10px] text-gray-500">{phase.chapters.length} صندوق نص</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant={allPhaseSelected ? 'default' : 'outline'}
+                                                className={`h-7 text-[10px] gap-1 ${allPhaseSelected ? 'bg-indigo-600' : ''}`}
+                                                onClick={(e) => { e.stopPropagation(); selectAllInPhase(phase.id); }}
+                                            >
+                                                <CheckSquare className="w-3 h-3" />
+                                                {allPhaseSelected ? 'إلغاء' : 'تحديد الكل'}
+                                            </Button>
+                                            <Badge variant="outline" className={somePhaseSelected ? 'bg-purple-100 text-purple-700' : ''}>
+                                                {phaseChapterIds.filter(id => selectedForExport.has(id)).length}/{phaseChapterIds.length}
+                                            </Badge>
+                                        </div>
+                                    </div>
+
+                                    {/* Folder Contents */}
+                                    {isOpen && (
+                                        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {phase.chapters.map(chapter => (
+                                                <Card
+                                                    key={chapter.id}
+                                                    className={`group relative transition-all hover:scale-[1.02] cursor-pointer border-2 overflow-hidden ${selectedForExport.has(chapter.id) ? 'border-purple-500 bg-purple-50/30' : 'border-transparent bg-gray-50 hover:bg-white'}`}
+                                                    onClick={(e) => {
+                                                        if ((e.target as HTMLElement).closest('.export-toggle')) return;
+                                                        setEditingNode({ phaseId: phase.id, chapterId: chapter.id });
+                                                        setDraftContent(chapter.content || '');
+                                                    }}
+                                                >
+                                                    <div className="absolute top-2 left-2 z-20">
+                                                        <Checkbox
+                                                            className="export-toggle w-5 h-5 rounded-md"
+                                                            checked={selectedForExport.has(chapter.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                const newSet = new Set(selectedForExport);
+                                                                if (checked) newSet.add(chapter.id);
+                                                                else newSet.delete(chapter.id);
+                                                                setSelectedForExport(newSet);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <CardHeader className="pb-2 pt-8">
+                                                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                                            {chapter.title}
+                                                        </CardTitle>
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2">
+                                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setRenamingNode({ type: 'chapter', id: chapter.id, title: chapter.title, parentId: phase.id }); }}>
+                                                                <Pencil className="w-3 h-3 text-gray-500" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleShare(chapter.title, chapter.content || ''); }}>
+                                                                <Share2 className="w-3 h-3 text-gray-500" />
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-6 w-6 hover:bg-rose-50" onClick={(e) => { e.stopPropagation(); deleteChapter(phase.id, chapter.id); }}>
+                                                                <Trash className="w-3 h-3 text-rose-500" />
+                                                            </Button>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent>
+                                                        <p className={`text-xs leading-relaxed text-gray-600 line-clamp-3 min-h-[4rem] whitespace-pre-wrap ${!chapter.content ? 'text-gray-300 italic' : ''}`}>
+                                                            {chapter.content || 'انقر للكتابة...'}
+                                                        </p>
+                                                    </CardContent>
+                                                    <div className="px-4 py-2 bg-gray-100/50 flex justify-between items-center text-[10px] text-gray-400">
+                                                        <span>{chapter.content?.length || 0} حرف</span>
+                                                        <PenTool className="w-3 h-3 group-hover:text-purple-500 transition-colors" />
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Empty State */}
+                    {(project?.phases || []).length === 0 && (
+                        <div className="text-center py-20 bg-white/50 border-2 border-dashed rounded-3xl">
+                            <Folder className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-500 font-bold">لا توجد مجلدات بعد</p>
+                            <Button variant="link" onClick={() => setIsPhaseOpen(true)} className="text-purple-600 font-black mt-2 underline">أضف أول مرحلة بحثية الآن</Button>
+                        </div>
+                    )}
                 </TabsContent>
 
                 {/* --- Structure/Plan Tab --- */}
@@ -780,52 +891,118 @@ export default function AcademicManager() {
 
                 {/* --- Materials Tab --- */}
                 <TabsContent value="materials" className="focus-visible:outline-none">
-                    <Card>
+                    <Card className="border-0 shadow-sm">
                         <CardHeader>
                             <CardTitle className="text-lg font-bold">مكتبة المصادر والمراجع</CardTitle>
                             <CardDescription>نظم الكتب والأبحاث التي تعتمد عليها في دراستك</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <Input placeholder="عنوان المرجع أو الكتاب..." id="mat-title" className="h-10 text-sm" />
-                                <Select defaultValue="book">
-                                    <SelectTrigger className="w-32 h-10"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="book">كتاب</SelectItem>
-                                        <SelectItem value="paper">بحث/ورقة</SelectItem>
-                                        <SelectItem value="link">رابط</SelectItem>
-                                        <SelectItem value="other">أخرى</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                        <CardContent className="space-y-6">
+                            {/* Add Material Form */}
+                            <div className="bg-gray-50 p-4 rounded-2xl space-y-4">
+                                <h4 className="font-bold text-sm text-gray-700">إضافة مرجع جديد</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <Input placeholder="عنوان الكتاب / المرجع" id="mat-title" className="h-10 text-sm" />
+                                    <Input placeholder="اسم المؤلف" id="mat-author" className="h-10 text-sm" />
+                                    <Input placeholder="الدار الناشرة" id="mat-publisher" className="h-10 text-sm" />
+                                    <Input placeholder="سنة الطبع" id="mat-year" className="h-10 text-sm" />
+                                    <Input placeholder="تاريخ وفاة المؤلف (هـ)" id="mat-death" className="h-10 text-sm" />
+                                    <Select defaultValue="book">
+                                        <SelectTrigger className="h-10" id="mat-type">
+                                            <SelectValue placeholder="نوع المرجع" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="book">كتاب</SelectItem>
+                                            <SelectItem value="paper">بحث/ورقة</SelectItem>
+                                            <SelectItem value="link">رابط</SelectItem>
+                                            <SelectItem value="other">أخرى</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <Button onClick={() => {
                                     const titleEl = document.getElementById('mat-title') as HTMLInputElement;
-                                    const typeEl = document.querySelector('[data-radix-collection-item]') as HTMLElement; // Simplified
+                                    const authorEl = document.getElementById('mat-author') as HTMLInputElement;
+                                    const publisherEl = document.getElementById('mat-publisher') as HTMLInputElement;
+                                    const yearEl = document.getElementById('mat-year') as HTMLInputElement;
+                                    const deathEl = document.getElementById('mat-death') as HTMLInputElement;
+
                                     if (titleEl.value && project) {
                                         const newMat: ResearchMaterial = {
                                             id: `mat-${Date.now()}`,
                                             title: titleEl.value,
-                                            type: 'book', // Simplification for logic
+                                            author: authorEl.value || undefined,
+                                            publisher: publisherEl.value || undefined,
+                                            year: yearEl.value || undefined,
+                                            deathDate: deathEl.value || undefined,
+                                            type: 'book',
                                             status: 'to_read'
                                         };
                                         setProject({ ...project, materials: [...(project.materials || []), newMat] });
                                         titleEl.value = '';
-                                        toast({ title: "✅ تمت الإضافة" });
+                                        authorEl.value = '';
+                                        publisherEl.value = '';
+                                        yearEl.value = '';
+                                        deathEl.value = '';
+                                        toast({ title: "✅ تمت إضافة المرجع" });
                                     }
-                                }} className="bg-purple-600 h-10"><Plus className="w-4 h-4 ml-1" /> إضافة</Button>
+                                }} className="bg-purple-600 hover:bg-purple-700 h-10 w-full md:w-auto">
+                                    <Plus className="w-4 h-4 ml-1" /> إضافة مرجع
+                                </Button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+
+                            {/* Materials List */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {(project?.materials || []).map(mat => (
-                                    <div key={mat.id} className="p-3 border rounded-xl flex items-center justify-between bg-white hover:border-gray-300 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center">
-                                                {mat.type === 'book' ? '📕' : mat.type === 'paper' ? '📄' : '🔗'}
+                                    <Card key={mat.id} className="border border-gray-100 hover:border-purple-200 transition-colors">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-lg">
+                                                        {mat.type === 'book' ? '📕' : mat.type === 'paper' ? '📄' : '🔗'}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-sm text-gray-800">{mat.title}</h4>
+                                                        {mat.author && <p className="text-xs text-gray-500">{mat.author} {mat.deathDate ? `(ت: ${mat.deathDate})` : ''}</p>}
+                                                    </div>
+                                                </div>
+                                                <Badge variant="outline" className={`text-[10px] ${mat.status === 'read' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                    {mat.status === 'read' ? '✅ قرأت' : '⏳ قيد الانتظار'}
+                                                </Badge>
                                             </div>
-                                            <span className="font-bold text-sm">{mat.title}</span>
-                                        </div>
-                                        <Badge variant="outline" className="text-[10px]">{mat.status === 'read' ? 'قرأت' : 'قيد الانتظار'}</Badge>
-                                    </div>
+                                            <div className="flex flex-wrap gap-2 text-[10px] text-gray-400">
+                                                {mat.publisher && <span className="bg-gray-100 px-2 py-1 rounded">🏛️ {mat.publisher}</span>}
+                                                {mat.year && <span className="bg-gray-100 px-2 py-1 rounded">📅 {mat.year}</span>}
+                                            </div>
+                                            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => {
+                                                    setProject({
+                                                        ...project!,
+                                                        materials: project!.materials.map(m =>
+                                                            m.id === mat.id ? { ...m, status: m.status === 'read' ? 'to_read' : 'read' } : m
+                                                        )
+                                                    });
+                                                }}>
+                                                    {mat.status === 'read' ? 'إعادة للانتظار' : 'تم القراءة'}
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs text-rose-500 hover:bg-rose-50" onClick={() => {
+                                                    setProject({
+                                                        ...project!,
+                                                        materials: project!.materials.filter(m => m.id !== mat.id)
+                                                    });
+                                                }}>
+                                                    <Trash className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 ))}
                             </div>
+
+                            {(project?.materials || []).length === 0 && (
+                                <div className="text-center py-12 text-gray-400">
+                                    <Library className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                    <p>لا توجد مراجع مسجلة بعد</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
