@@ -219,6 +219,7 @@ export default defineConfig(({ mode }) => {
       componentTagger(),
       cdnPrefixImages(),
       VitePWA({
+        disable: true, // Temporarily disabled to fix build issues
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {

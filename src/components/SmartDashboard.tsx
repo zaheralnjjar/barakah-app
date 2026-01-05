@@ -205,16 +205,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     <RoutineModesWidget />
                 </CollapsibleSection>
 
-                {/* 10. New Muslims Care - Collapsible */}
-                <CollapsibleSection title="رعاية المهتدين" icon={Users} defaultOpen={false} badge={newMuslimsCount > 0 ? newMuslimsCount : undefined}>
-                    <NewMuslimsManager />
-                </CollapsibleSection>
-
-                {/* 11. Academic Section - Collapsible */}
-                <CollapsibleSection title="القسم الأكاديمي" icon={GraduationCap} defaultOpen={false}>
-                    <AcademicManager />
-                </CollapsibleSection>
-
                 {/* Pomodoro Timer (Hidden Trigger) */}
                 <PomodoroTimer hideTrigger={true} />
             </div>
@@ -234,9 +224,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     setShowAddDialog(null);
                 }
             }}>
-                <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'w-full max-w-3xl max-h-[90vh] overflow-y-auto' : 'w-full max-w-sm'}>
-                    <DialogHeader>
-                        <DialogTitle className="text-right flex items-center gap-2">
+                <DialogContent className={showAddDialog === 'appointment' || showAddDialog === 'location' ? 'w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4' : 'w-[95vw] sm:max-w-sm max-h-[90vh] overflow-y-auto p-4'}>
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="text-right flex items-center gap-2 text-lg">
                             {showAddDialog === 'appointment' && <><CalendarPlus className="w-5 h-5 text-orange-500" /> إضافة موعد</>}
                             {showAddDialog === 'task' && <><CheckSquare className="w-5 h-5 text-blue-500" /> إضافة مهمة</>}
                             {showAddDialog === 'location' && <><MapPin className="w-5 h-5 text-green-500" /> حفظ موقع</>}

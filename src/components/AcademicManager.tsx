@@ -735,8 +735,8 @@ export default function AcademicManager() {
 
             {/* Navigation Tabs */}
             <Tabs defaultValue="drafts" onValueChange={setActiveTab} className="w-full">
-                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white/80 backdrop-blur border border-gray-100 p-2 rounded-2xl shadow-sm mb-6 sticky top-0 z-30">
-                    <TabsList className="bg-gray-100/50 p-1 rounded-xl h-auto flex flex-wrap justify-start">
+                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 bg-white/80 backdrop-blur border border-gray-100 p-2 rounded-2xl shadow-sm mb-6 sticky top-0 z-30 overflow-x-auto">
+                    <TabsList className="bg-gray-100/50 p-1 rounded-xl h-auto flex flex-nowrap lg:flex-wrap justify-start min-w-max lg:min-w-0">
                         <TabsTrigger value="drafts" className="gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
                             <StickyNote className="w-4 h-4" /> معمل النصوص
                         </TabsTrigger>
@@ -1367,7 +1367,7 @@ export default function AcademicManager() {
             </Dialog>
             {/* Auto Plan Dialog */}
             <Dialog open={isAutoPlanOpen} onOpenChange={setIsAutoPlanOpen}>
-                <DialogContent className="max-w-lg rounded-2xl">
+                <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-4" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="text-right flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-indigo-500" />
@@ -1393,7 +1393,7 @@ export default function AcademicManager() {
             </Dialog>
             {/* Rename Dialog */}
             <Dialog open={!!renamingNode} onOpenChange={(open) => !open && setRenamingNode(null)}>
-                <DialogContent className="max-w-sm rounded-2xl">
+                <DialogContent className="w-[95vw] sm:max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl p-4" dir="rtl">
                     <DialogHeader><DialogTitle className="text-right">تعديل العنوان</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
                         <Input
@@ -1408,7 +1408,7 @@ export default function AcademicManager() {
 
             {/* Compiled Export Editor Dialog */}
             <Dialog open={isInternalExportOpen} onOpenChange={setIsInternalExportOpen}>
-                <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
+                <DialogContent className="w-[95vw] sm:max-w-6xl max-h-[95vh] overflow-y-auto flex flex-col p-0 rounded-3xl border-0 shadow-2xl" dir="rtl">
                     <div className="bg-slate-900 p-4 text-white flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-3">
                             <FileUp className="w-5 h-5 text-emerald-400" />
@@ -1495,7 +1495,7 @@ export default function AcademicManager() {
 
             {/* New Chapter Title Dialog */}
             <Dialog open={isNewChapterOpen} onOpenChange={setIsNewChapterOpen}>
-                <DialogContent className="max-w-sm rounded-2xl">
+                <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4" dir="rtl">
                     <DialogHeader><DialogTitle className="text-right">عنوان صندوق النص الجديد</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
                         <Input
