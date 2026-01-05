@@ -245,7 +245,7 @@ const DashboardTicker: React.FC<DashboardTickerProps> = ({ externalBalance }) =>
     if (tickerItems.length === 0) return null;
 
     return (
-        <div className="w-full bg-slate-900/95 backdrop-blur-md border-b border-white/10 overflow-hidden py-2 z-50 shadow-md">
+        <div className="w-full bg-slate-900/80 backdrop-blur-lg border-b border-white/10 overflow-hidden py-3.5 z-50 shadow-md">
             <div
                 className="flex whitespace-nowrap animate-marquee"
                 style={{ animationDuration: animationDuration }}

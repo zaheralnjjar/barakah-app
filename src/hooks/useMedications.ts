@@ -15,13 +15,69 @@ export interface Medication {
     takenHistory: Record<string, boolean>; // YYYY-MM-DD -> boolean
 }
 
+import { supabase } from '@/integrations/supabase/client';
+
 export const useMedications = () => {
-    const [medications, setMedications] = useState<Medication[]>(() => {
-        try { return JSON.parse(localStorage.getItem('baraka_medications_v2') || '[]'); } catch { return []; }
-    });
+    const [medications, setMedications] = useState<Medication[]>([]);
     const { toast } = useToast();
 
-    // Notification Logic
+    // Fetch from Supabase
+    const fetchMedications = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // 1. Fetch Medications
+                const { data: medsData, error: medsError } = await supabase
+                    .from('medications')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+
+                if (medsError) throw medsError;
+
+                if (medsData) {
+                    // 2. Fetch Logs
+                    const { data: logsData } = await supabase
+                        .from('medication_logs')
+                        .select('*')
+                        .gte('date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+                    const mappedMeds: Medication[] = medsData.map((m: any) => {
+                        const history: Record<string, boolean> = {};
+                        logsData?.filter((l: any) => l.medication_id === m.id).forEach((l: any) => {
+                            history[l.date] = l.taken;
+                        });
+
+                        return {
+                            id: m.id,
+                            name: m.name,
+                            time: m.time || '08:00',
+                            frequency: m.frequency as any,
+                            customDays: m.custom_days || [],
+                            customTimes: {}, // Not in schema yet, ignore or add later
+                            startDate: m.start_date || new Date().toISOString().split('T')[0],
+                            endDate: m.end_date || '',
+                            isPermanent: m.is_permanent || false,
+                            reminder: m.reminder !== false,
+                            takenHistory: history
+                        };
+                    });
+                    setMedications(mappedMeds);
+                    localStorage.setItem('baraka_medications_v2', JSON.stringify(mappedMeds));
+                }
+            } else {
+                const saved = localStorage.getItem('baraka_medications_v2');
+                if (saved) setMedications(JSON.parse(saved));
+            }
+        } catch (e) {
+            console.error("Error fetching medications", e);
+        }
+    };
+
+    useEffect(() => {
+        fetchMedications();
+    }, []);
+
+    // Notification Logic (same as before, relies on 'medications' state)
     useEffect(() => {
         if ('Notification' in window && Notification.permission !== 'granted') {
             Notification.requestPermission();
@@ -64,50 +120,74 @@ export const useMedications = () => {
         return () => clearInterval(interval);
     }, [medications]);
 
-    useEffect(() => {
-        localStorage.setItem('baraka_medications_v2', JSON.stringify(medications));
-        window.dispatchEvent(new Event('medications-updated'));
-    }, [medications]);
-
-    useEffect(() => {
-        const handleUpdates = () => {
-            const current = localStorage.getItem('baraka_medications_v2');
-            if (current && current !== JSON.stringify(medications)) {
-                try {
-                    setMedications(JSON.parse(current));
-                } catch (e) {
-                    // ignore
-                }
-            }
-        };
-        window.addEventListener('medications-updated', handleUpdates);
-        return () => window.removeEventListener('medications-updated', handleUpdates);
-    }, [medications]);
-
-    const addMedication = (med: Omit<Medication, 'id' | 'takenHistory'>) => {
+    const addMedication = async (med: Omit<Medication, 'id' | 'takenHistory'>) => {
         const newMed: Medication = {
             ...med,
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             takenHistory: {}
         };
+
+        // Optimistic
         setMedications(prev => [...prev, newMed]);
-        toast({ title: 'تم إضافة الدواء' });
+
+        // Sync
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { error } = await supabase.from('medications').insert({
+                id: newMed.id,
+                user_id: user.id,
+                name: newMed.name,
+                time: newMed.time,
+                frequency: newMed.frequency,
+                custom_days: newMed.customDays,
+                start_date: newMed.startDate,
+                end_date: newMed.endDate,
+                is_permanent: newMed.isPermanent,
+                reminder: newMed.reminder
+            });
+
+            if (error) {
+                toast({ title: "خطأ", description: "فشل حفظ الدواء", variant: "destructive" });
+            } else {
+                toast({ title: 'تم إضافة الدواء' });
+            }
+        }
     };
 
-    const toggleMedTaken = (id: string, dateStr: string) => {
+    const toggleMedTaken = async (id: string, dateStr: string) => {
+        let isTaken = false;
         setMedications(prev => prev.map(m => {
             if (m.id === id) {
                 const history = m.takenHistory || {};
-                const isTaken = history[dateStr];
-                return { ...m, takenHistory: { ...history, [dateStr]: !isTaken } };
+                isTaken = !history[dateStr];
+                return { ...m, takenHistory: { ...history, [dateStr]: isTaken } };
             }
             return m;
         }));
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            if (isTaken) {
+                await supabase.from('medication_logs').upsert({
+                    medication_id: id,
+                    user_id: user.id,
+                    date: dateStr,
+                    taken: true,
+                    taken_at: new Date().toISOString()
+                }, { onConflict: 'medication_id, date' });
+            } else {
+                await supabase.from('medication_logs').delete().match({ medication_id: id, date: dateStr });
+            }
+        }
     };
 
-    const deleteMedication = (id: string) => {
+    const deleteMedication = async (id: string) => {
         setMedications(prev => prev.filter(m => m.id !== id));
-        toast({ title: 'تم الحذف' });
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('medications').delete().eq('id', id);
+            toast({ title: 'تم الحذف' });
+        }
     };
 
     return {

@@ -24,6 +24,9 @@ export interface MainTask {
     linkedAppointmentId?: string;  // Linked appointment ID
     isPreparatoryFor?: string;     // This task is preparatory for this appointment ID
     reminderBeforeAppointment?: number; // Reminder minutes before appointment
+    location?: string;             // Location name/address
+    latitude?: number;
+    longitude?: number;
 }
 
 

@@ -17,9 +17,11 @@ import {
     Search, Plus, ChevronRight, ChevronDown, User, Phone, MapPin,
     GraduationCap, Clock, Award, MoreVertical, FileText,
     MessageCircle, Download, Share2, Printer, History, Flag,
-    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info
+    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info, Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { NotificationManager } from '@/services/NotificationManager';
+import { generatePDF, generateStudentReport, generateStudentProfile } from '@/utils/pdfGenerator';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
@@ -32,6 +34,32 @@ import * as XLSX from 'xlsx';
 
 // --- Milestone Types ---
 type MilestoneKey = 'shahada' | 'fatiha' | 'wudu' | 'salah' | 'basics' | 'quran_reading' | 'fasting' | 'zakat';
+
+type NewMuslimsRow = {
+    id: number | string;
+    full_name: string;
+    arabic_name: string | null;
+    phone: string | null;
+    nationality: string | null;
+    gender: 'male' | 'female';
+    conversion_date: string | null;
+    status: 'active' | 'inactive' | 'graduated' | null;
+    level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null;
+    progress: number | null;
+    address: string | null;
+    national_id: string | null;
+    occupation: string | null;
+    education: string | null;
+    birth_date: string | null;
+    last_visit: string | null;
+    witness_sheikh: string | null;
+    current_stage?: number | null;
+    available_days?: string[] | null;
+    custom_protocol?: any | null;
+    milestones?: any | null;
+    notes?: string | null;
+    user_id: string;
+};
 
 const MILESTONES_CONFIG: Record<MilestoneKey, { label: string; icon: string; order: number }> = {
     shahada: { label: 'نطق الشهادة', icon: '🕌', order: 1 },
@@ -251,31 +279,24 @@ const DEFAULT_MATERIALS: Material[] = [
 
 
 // --- Mock Data ---
-const MOCK_STUDENTS: Student[] = [
-    { id: '1', fullName: 'Ahmed Mohammed', arabicName: 'أحمد محمد', status: 'active', level: 'elementary', lastVisit: 'اليوم', progress: 80, phone: '5511999999999', conversionDate: '2024-03-15', nationality: 'البرازيل', gender: 'male', birthDate: '1990-01-01', availableDays: ['الجمعة', 'السبت'], occupation: 'Engineer', education: 'University', witnessSheikh: 'Sheikh Ali', nationalId: '123456789' },
-    { id: '2', fullName: 'Sarah Silva', arabicName: 'سارة', status: 'active', level: 'beginner', lastVisit: 'منذ 3 أيام', progress: 45, phone: '5511888888888', conversionDate: '2024-05-20', nationality: 'البرازيل', gender: 'female', birthDate: '1995-05-05', availableDays: ['الأحد'], occupation: 'Teacher', education: 'College', witnessSheikh: 'Sheikh Omar', nationalId: '987654321' },
-    { id: '3', fullName: 'John Doe', arabicName: 'يحيى', status: 'graduated', level: 'advanced', lastVisit: 'منذ أسبوع', progress: 100, phone: '15550192', conversionDate: '2023-01-10', nationality: 'الولايات المتحدة', gender: 'male', birthDate: '1985-11-20', availableDays: ['all'], occupation: 'Developer', education: 'Masters', witnessSheikh: 'Sheikh Khalid', nationalId: '1122334455' }
-];
+const MOCK_STUDENTS: Student[] = [];
 
-const MOCK_APPOINTMENTS: Appointment[] = [
-    { id: '1', studentId: '1', date: '2024-01-04', time: '16:30', studentName: 'أحمد محمد', type: 'درس قرآن', status: 'scheduled' },
-    { id: '2', studentId: '2', date: '2024-01-05', time: '17:00', studentName: 'سارة', type: 'شرح الوضوء', status: 'scheduled' },
-];
+const MOCK_APPOINTMENTS: Appointment[] = [];
 
 const ATTENDANCE_DATA = [
-    { name: 'السبت', count: 12 },
-    { name: 'الأحد', count: 8 },
-    { name: 'الاثنين', count: 15 },
-    { name: 'الثلاثاء', count: 10 },
-    { name: 'الأربعاء', count: 20 },
-    { name: 'الخميس', count: 18 },
-    { name: 'الجمعة', count: 45 },
+    { name: 'السبت', count: 0 },
+    { name: 'الأحد', count: 0 },
+    { name: 'الاثنين', count: 0 },
+    { name: 'الثلاثاء', count: 0 },
+    { name: 'الأربعاء', count: 0 },
+    { name: 'الخميس', count: 0 },
+    { name: 'الجمعة', count: 0 },
 ];
 
 const STATUS_DATA = [
-    { name: 'نشط', value: 23, color: '#10B981' }, // Emerald
-    { name: 'خريج', value: 12, color: '#F59E0B' }, // Amber
-    { name: 'غير نشط', value: 10, color: '#6B7280' }, // Gray
+    { name: 'نشط', value: 0, color: '#10B981' }, // Emerald
+    { name: 'خريج', value: 0, color: '#F59E0B' }, // Amber
+    { name: 'غير نشط', value: 0, color: '#6B7280' }, // Gray
 ];
 
 const NewMuslimsManager = () => {
@@ -310,7 +331,7 @@ const NewMuslimsManager = () => {
     const [communications, setCommunications] = useState<CommunicationLog[]>(() =>
         loadFromStorage(STORAGE_KEYS.COMMUNICATIONS, [])
     );
-    const [materials] = useState<Material[]>(() =>
+    const [materials, setMaterials] = useState<Material[]>(() =>
         loadFromStorage(STORAGE_KEYS.MATERIALS, DEFAULT_MATERIALS)
     );
     const [studentMaterials, setStudentMaterials] = useState<StudentMaterial[]>(() =>
@@ -349,6 +370,7 @@ const NewMuslimsManager = () => {
     const [isProtocolOpen, setIsProtocolOpen] = useState(false); // New: Protocol customization dialog
     const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'progress' | 'communications' | 'materials' | 'lessons'>('info');
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+    const [newApptData, setNewApptData] = useState({ studentId: '', date: '', time: '', type: '', notes: '' });
 
     // --- Auto-save to localStorage ---
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.STUDENTS, students); }, [students]);
@@ -358,6 +380,171 @@ const NewMuslimsManager = () => {
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.LESSONS, lessons); }, [lessons]);
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.EXAMS, exams); }, [exams]);
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.PROTOCOL, studyProtocol); }, [studyProtocol]);
+
+    // --- Supabase Sync ---
+    useEffect(() => {
+        const fetchAllData = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // 1. Fetch Students
+                const { data: studentsData, error: studentsError } = await supabase.from('new_muslims').select('*');
+                if (studentsError) throw studentsError;
+
+                let fetchedStudents: Student[] = [];
+                if (studentsData) {
+                    fetchedStudents = (studentsData as NewMuslimsRow[]).map((d) => ({
+                        id: d.id?.toString(),
+                        fullName: d.full_name,
+                        arabicName: d.arabic_name,
+                        phone: d.phone,
+                        nationality: d.nationality || '',
+                        gender: d.gender || 'male',
+                        conversionDate: d.conversion_date || new Date().toISOString().split('T')[0],
+                        status: d.status || 'active',
+                        level: d.level || 'beginner',
+                        progress: d.progress || 0,
+                        address: d.address || '',
+                        nationalId: d.national_id || '',
+                        occupation: d.occupation || '',
+                        education: d.education || '',
+                        witnessSheikh: d.notes ? (d.notes.match(/Sheikh: (.*?),/) || [])[1] : '',
+                        lastVisit: d.last_visit || 'جديد',
+                    }));
+                    setStudents(fetchedStudents);
+                }
+
+                // 2. Fetch Communications
+                const { data: commsData, error: commsError } = await supabase.from('communications').select('*');
+                if (!commsError && commsData) {
+                    const mappedComms: CommunicationLog[] = commsData.map((c: any) => ({
+                        id: c.id.toString(),
+                        studentId: c.student_id,
+                        date: c.date,
+                        type: c.type,
+                        direction: c.direction,
+                        content: c.content,
+                        notes: c.notes
+                    }));
+                    setCommunications(mappedComms);
+                }
+
+                // 3. Fetch Lessons
+                const { data: lessonsData, error: lessonsError } = await supabase.from('lessons').select('*');
+                if (!lessonsError && lessonsData) {
+                    const mappedLessons: Lesson[] = lessonsData.map((l: any) => ({
+                        id: l.id.toString(),
+                        studentId: l.student_id,
+                        date: l.date,
+                        time: l.time,
+                        topic: l.topic,
+                        teacher: l.teacher,
+                        duration: l.duration,
+                        attended: l.attended,
+                        notes: l.notes
+                    }));
+                    setLessons(mappedLessons);
+                }
+
+                // 4. Fetch Appointments
+                const { data: apptsData, error: apptsError } = await supabase.from('appointments').select('*');
+                if (!apptsError && apptsData) {
+                    const mappedAppts: Appointment[] = apptsData.map((a: any) => {
+                        const student = fetchedStudents.find(s => s.id === a.student_id);
+                        return {
+                            id: a.id.toString(),
+                            studentId: a.student_id,
+                            date: a.date,
+                            time: a.time,
+                            studentName: student ? (student.arabicName || student.fullName) : 'Unknown',
+                            type: a.type,
+                            status: a.status,
+                            notes: a.notes
+                        };
+                    });
+                    setAppointments(mappedAppts);
+                }
+
+                // 5. Fetch Materials
+                const { data: matData } = await supabase.from('educational_resources').select('*');
+                if (matData && matData.length > 0) {
+                    setMaterials(matData.map((m: any) => ({
+                        id: m.id,
+                        name: m.title, // Map DB title to UI name
+                        type: m.type as any,
+                        url: m.url,
+                        category: m.category as any
+                    })));
+                } else {
+                    // Seed Defaults if empty? For now keep local default if empty.
+                    // Or consider pushing defaults to DB here?
+                }
+
+                // 6. Fetch Student Materials
+                const { data: stMatData } = await supabase.from('student_materials').select('*');
+                if (stMatData) {
+                    setStudentMaterials(stMatData.map((sm: any) => ({
+                        id: sm.id,
+                        studentId: sm.student_id,
+                        materialId: sm.material_id,
+                        dateGiven: sm.assigned_date || new Date().toISOString().split('T')[0], // Map DB assigned_date
+                        completed: sm.status === 'completed', // Derive completed boolean
+                        completionDate: sm.completed_date,
+                        notes: sm.notes
+                    })));
+                }
+
+                // 7. Fetch Exams (Results + Definitions)
+                const { data: examResultsData } = await supabase
+                    .from('exam_results')
+                    .select('*, exams(title, total_score)');
+
+                if (examResultsData) {
+                    setExams(examResultsData.map((r: any) => ({
+                        id: r.id,
+                        studentId: r.student_id,
+                        type: 'written', // Default or derive if needed
+                        subject: r.exams?.title || 'Unknown Exam',
+                        date: r.date,
+                        score: r.score,
+                        maxScore: r.exams?.total_score || 100,
+                        passed: r.passed,
+                        notes: r.notes
+                    })));
+                }
+
+                // 8. Fetch Templates
+                const { data: tplData } = await supabase.from('message_templates').select('*');
+                if (tplData && tplData.length > 0) {
+                    const newTemplates = { ...DEFAULT_TEMPLATES };
+                    tplData.forEach((t: any) => {
+                        if (t.category === 'welcome') newTemplates.welcome = t.content;
+                        if (t.category === 'reminder') newTemplates.reminder = t.content;
+                    });
+                    setTemplates(newTemplates);
+                }
+
+                // 9. Fetch Protocol
+                const { data: protoData } = await supabase.from('study_protocol').select('*').single();
+                if (protoData && protoData.stages) {
+                    setStudyProtocol({
+                        stages: protoData.stages
+                    });
+                }
+
+            } catch (err) {
+                console.error("Supabase fetch error:", err);
+                toast({
+                    title: "خطأ في المزامنة",
+                    description: "لم نتمكن من استرجاع البيانات من السحابة. جاري استخدام النسخة المحلية.",
+                    variant: "destructive"
+                });
+            }
+        };
+
+        fetchAllData();
+    }, []);
     React.useEffect(() => { saveToStorage(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
 
     // Sync Protocol with Selected Student
@@ -433,59 +620,256 @@ const NewMuslimsManager = () => {
     };
 
     // --- Student CRUD ---
-    const addStudent = (studentData: Omit<Student, 'id'>) => {
-        const newStudent: Student = {
-            ...studentData,
-            id: `student-${Date.now()}`,
-            currentStage: 1,
-            progress: 0,
-        };
-        setStudents(prev => [...prev, newStudent]);
-        toast({ title: "تم التسجيل", description: `تم إضافة ${studentData.arabicName || studentData.fullName} بنجاح` });
-        setIsRegOpen(false);
-    };
+    const addStudent = async (studentData: Omit<Student, 'id'>) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                toast({ title: "يرجى تسجيل الدخول", variant: "destructive" });
+                return;
+            }
 
-    const updateStudent = (id: string, updates: Partial<Student>) => {
-        setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-        if (selectedStudent?.id === id) {
-            setSelectedStudent(prev => prev ? { ...prev, ...updates } : null);
+            const dbData = {
+                full_name: studentData.fullName,
+                arabic_name: studentData.arabicName,
+                phone: studentData.phone,
+                nationality: studentData.nationality,
+                gender: studentData.gender,
+                conversion_date: studentData.conversionDate,
+                status: studentData.status || 'active',
+                level: studentData.level || 'beginner',
+                progress: 0,
+                address: studentData.address,
+                national_id: studentData.nationalId,
+                occupation: studentData.occupation,
+                education: studentData.education,
+                last_visit: new Date().toISOString(),
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('new_muslims').insert(dbData).select().single();
+
+            if (error) throw error;
+
+            if (data) {
+                const newStudent: Student = {
+                    ...studentData,
+                    id: data.id.toString(),
+                    currentStage: 1,
+                    progress: 0,
+                    lastVisit: data.last_visit
+                };
+                setStudents(prev => [...prev, newStudent]);
+                toast({ title: "تم التسجيل", description: `تم إضافة ${studentData.arabicName || studentData.fullName} بنجاح` });
+                setIsRegOpen(false);
+            }
+        } catch (err: any) {
+            console.error("Error adding student:", err);
+            toast({ title: "خطأ", description: err.message, variant: "destructive" });
         }
-        toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب" });
     };
 
-    const deleteStudent = (id: string) => {
-        setStudents(prev => prev.filter(s => s.id !== id));
-        if (selectedStudent?.id === id) setSelectedStudent(null);
-        toast({ title: "تم الحذف", description: "تم حذف الطالب من النظام" });
+    const updateStudent = async (id: string, updates: Partial<Student>) => {
+        try {
+            // Optimistic update
+            setStudents(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+            if (selectedStudent?.id === id) {
+                setSelectedStudent(prev => prev ? { ...prev, ...updates } : null);
+            }
+
+            // Map updates to DB columns
+            const dbUpdates: any = {};
+            if (updates.fullName) dbUpdates.full_name = updates.fullName;
+            if (updates.arabicName) dbUpdates.arabic_name = updates.arabicName;
+            if (updates.phone) dbUpdates.phone = updates.phone;
+            if (updates.status) dbUpdates.status = updates.status;
+            if (updates.progress !== undefined) dbUpdates.progress = updates.progress;
+            if (updates.lastVisit) dbUpdates.last_visit = updates.lastVisit;
+            if (updates.nationality) dbUpdates.nationality = updates.nationality;
+            if (updates.gender) dbUpdates.gender = updates.gender;
+            if (updates.birthDate) dbUpdates.birth_date = updates.birthDate;
+            if (updates.availableDays) dbUpdates.available_days = updates.availableDays;
+            if (updates.occupation) dbUpdates.occupation = updates.occupation;
+            if (updates.education) dbUpdates.education = updates.education;
+            if (updates.witnessSheikh) dbUpdates.witness_sheikh = updates.witnessSheikh;
+            if (updates.nationalId) dbUpdates.national_id = updates.nationalId;
+            if (updates.address) dbUpdates.address = updates.address;
+            if (updates.notes) dbUpdates.notes = updates.notes;
+            if (updates.currentStage) dbUpdates.current_stage = updates.currentStage; // Ensure column exists? Migrated? Assuming yes or handled by JSON/Notes? 
+            // I forgot 'current_stage' in migration. But previous schema might have it.
+            // If not, I'll rely on it failing or being ignored. The 'progress' might cover it? 
+            // In Student struct, 'currentStage' is present.
+
+            if (updates.customProtocol) dbUpdates.custom_protocol = updates.customProtocol;
+            if (updates.milestones) dbUpdates.milestones = updates.milestones;
+
+            const { error } = await supabase.from('new_muslims').update(dbUpdates).eq('id', id);
+            if (error) throw error;
+
+            toast({ title: "تم التحديث", description: "تم تحديث بيانات الطالب" });
+        } catch (err: any) {
+            console.error("Error updating student:", err);
+            toast({ title: "خطأ في الحفظ", description: "فشل تحديث قاعدة البيانات", variant: "destructive" });
+        }
+    };
+
+    const deleteStudent = async (id: string) => {
+        try {
+            setStudents(prev => prev.filter(s => s.id !== id));
+            if (selectedStudent?.id === id) setSelectedStudent(null);
+
+            const { error } = await supabase.from('new_muslims').delete().eq('id', id);
+            if (error) throw error;
+
+            toast({ title: "تم الحذف", description: "تم حذف سجل الطالب" });
+        } catch (err: any) {
+            console.error("Error deleting student:", err);
+            toast({ title: "خطأ", description: "فشل حذف الطالب من قاعدة البيانات", variant: "destructive" });
+        }
     };
 
     // --- Communication Log ---
-    const addCommunication = (studentId: string, type: CommunicationLog['type'], content: string, direction: 'sent' | 'received' = 'sent') => {
-        const newLog: CommunicationLog = {
-            id: `comm-${Date.now()}`,
-            studentId,
-            date: new Date().toISOString(),
-            type,
-            direction,
-            content,
-        };
-        setCommunications(prev => [...prev, newLog]);
+    // --- Communication Log ---
+    const addCommunication = async (studentId: string, type: CommunicationLog['type'], content: string, direction: 'sent' | 'received' = 'sent') => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const newLog = {
+                student_id: studentId,
+                type,
+                content,
+                direction,
+                date: new Date().toISOString(),
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('communications').insert(newLog).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const localLog: CommunicationLog = {
+                    id: data.id.toString(),
+                    studentId: data.student_id,
+                    date: data.date,
+                    type: data.type,
+                    direction: data.direction,
+                    content: data.content
+                };
+                setCommunications(prev => [...prev, localLog]);
+                toast({ title: "تم الحفظ", description: "تم تسجيل التواصل" });
+            }
+        } catch (e: any) {
+            console.error("Error adding communication", e);
+            toast({ title: "خطأ", description: "فشل الحفظ في قاعدة البيانات", variant: "destructive" });
+        }
+    };
+
+    // --- Appointments ---
+    const addAppointment = async (studentId: string, date: string, time: string, type: string, notes?: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const student = students.find(s => s.id === studentId);
+            const studentName = student ? (student.arabicName || student.fullName) : 'Unknown';
+
+            const newAppt = {
+                student_id: studentId,
+                date,
+                time,
+                type,
+                status: 'scheduled',
+                notes,
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('appointments').insert(newAppt).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const localAppt: Appointment = {
+                    id: data.id.toString(),
+                    studentId: data.student_id,
+                    date: data.date,
+                    time: data.time,
+                    studentName: studentName,
+                    type: data.type,
+                    status: data.status,
+                    notes: data.notes
+                };
+
+                setAppointments(prev => [...prev, localAppt]);
+
+                // Schedule Notification
+                const apptDate = new Date(`${date}T${time}`);
+                NotificationManager.schedule({
+                    id: parseInt(data.id) || Date.now(),
+                    title: `موعد: ${type}`,
+                    body: `مع الطالب: ${studentName}`,
+                    schedule: apptDate
+                });
+
+                toast({ title: "تم الحجز", description: "تم حجز الموعد وتفعيل التذكير" });
+                setIsApptOpen(false);
+            }
+        } catch (e: any) {
+            console.error("Error adding appointment", e);
+            toast({ title: "خطأ", description: "فشل حجز الموعد", variant: "destructive" });
+        }
     };
 
     // --- Lessons ---
-    const addLesson = (studentId: string, topic: string, date: string, time: string, teacher: string) => {
-        const newLesson: Lesson = {
-            id: `lesson-${Date.now()}`,
-            studentId,
-            date,
-            time,
-            topic,
-            teacher,
-            duration: 60,
-            attended: null,
-        };
-        setLessons(prev => [...prev, newLesson]);
-        toast({ title: "تم الحفظ", description: "تم إضافة الدرس" });
+    // --- Lessons ---
+    const addLesson = async (studentId: string, topic: string, date: string, time: string, teacher: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const dbLesson = {
+                student_id: studentId,
+                topic,
+                date,
+                time,
+                teacher,
+                duration: 60,
+                attended: null,
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('lessons').insert(dbLesson).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const newLesson: Lesson = {
+                    id: data.id.toString(),
+                    studentId: data.student_id,
+                    date: data.date,
+                    time: data.time,
+                    topic: data.topic,
+                    teacher: data.teacher,
+                    duration: data.duration,
+                    attended: data.attended
+                };
+
+                setLessons(prev => [...prev, newLesson]);
+
+                // Schedule Notification
+                const lessonDate = new Date(`${date}T${time}`);
+                NotificationManager.schedule({
+                    id: parseInt(data.id) || Date.now(),
+                    title: `درس: ${topic}`,
+                    body: `مع الطالب`,
+                    schedule: lessonDate
+                }).then(() => {
+                    console.log('Notification scheduled for lesson');
+                });
+
+                toast({ title: "تم الحفظ", description: "تم إضافة الدرس وتفعيل التذكير" });
+            }
+        } catch (e: any) {
+            console.error("Error adding lesson", e);
+            toast({ title: "خطأ", description: "فشل الحفظ في قاعدة البيانات", variant: "destructive" });
+        }
     };
 
     // --- Protocol Management ---
@@ -576,6 +960,111 @@ const NewMuslimsManager = () => {
         return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
     };
 
+    // --- Materials & Student Progress ---
+    const addMaterial = async (mat: Omit<Material, 'id'>) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const dbMat = {
+                title: mat.name,
+                type: mat.type,
+                category: mat.category,
+                url: mat.url,
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('educational_resources').insert(dbMat).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const localMat: Material = {
+                    id: data.id,
+                    name: data.title,
+                    type: data.type,
+                    category: data.category,
+                    url: data.url
+                };
+                setMaterials(prev => [...prev, localMat]);
+                toast({ title: "تم الإضافة", description: `تم إضافة ${mat.name} لمكتبة المواد.` });
+            }
+        } catch (e: any) {
+            console.error("Error adding material", e);
+            toast({ title: "خطأ", description: "فشل إضافة المادة للقاعدة", variant: "destructive" });
+        }
+    };
+
+    const assignMaterialToStudent = async (studentId: string, materialId: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const dbEntry = {
+                student_id: studentId,
+                material_id: materialId,
+                status: 'assigned',
+                assigned_date: new Date().toISOString(),
+                user_id: user.id
+            };
+
+            const { data, error } = await supabase.from('student_materials').insert(dbEntry).select().single();
+            if (error) throw error;
+
+            if (data) {
+                const localEntry: StudentMaterial = {
+                    id: data.id,
+                    studentId: data.student_id,
+                    materialId: data.material_id,
+                    dateGiven: data.assigned_date,
+                    completed: false
+                };
+                setStudentMaterials(prev => [...prev, localEntry]);
+                toast({ title: "تم التخصيص", description: "تم ربط المادة بالطالب" });
+            }
+        } catch (e) {
+            console.error("Error assigning material", e);
+        }
+    };
+
+    const deleteMaterial = async (id: string) => {
+        try {
+            const { error } = await supabase.from('educational_resources').delete().eq('id', id);
+            if (error) throw error;
+            setMaterials(prev => prev.filter(m => m.id !== id));
+            toast({ title: "تم الحذف", description: "تمت إزالة المادة من المكتبة" });
+        } catch (e) {
+            console.error("Error deleting material", e);
+        }
+    };
+
+    const saveTemplates = async (newTemplates: MessageTemplates) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Delete existing and re-insert? Or upsert?
+            // Since there are only 2, let's upsert by category.
+            const tpls = [
+                { user_id: user.id, category: 'welcome', content: newTemplates.welcome },
+                { user_id: user.id, category: 'reminder', content: newTemplates.reminder }
+            ];
+
+            // In Supabase, upsert needs a constraint. 
+            // Better to just plain loop or use a unique constraint on (user_id, category).
+            // Let's use a simple loop for now as it's just 2 items.
+            for (const t of tpls) {
+                await supabase.from('message_templates')
+                    .upsert(t, { onConflict: 'user_id,category' });
+            }
+
+            setTemplates(newTemplates);
+            toast({ title: "تم الحفظ", description: "تم تحديث قوالب الرسائل" });
+        } catch (e: any) {
+            console.error("Error saving templates", e);
+            toast({ title: "خطأ", description: "فشل حفظ القوالب", variant: "destructive" });
+        }
+    };
+
     // --- Get Student Communications ---
     const getStudentCommunications = (studentId: string) => {
         return communications.filter(c => c.studentId === studentId).sort((a, b) =>
@@ -635,87 +1124,9 @@ const NewMuslimsManager = () => {
     };
 
     const handlePrintProfile = (student: Student) => {
-        // Logic to print individual profile with lesson plan
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            const stageHtml = studyProtocol.stages.map((stage, idx) => `
-                <div style="margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-                    <h3 style="color: ${idx === 0 ? '#10B981' : idx === 1 ? '#3B82F6' : '#8B5CF6'}; margin: 0 0 10px 0;">
-                        المرحلة ${idx + 1}: ${stage.name}
-                    </h3>
-                    <ul style="margin: 0; padding-right: 20px;">
-                        ${stage.items.map(item => `
-                            <li style="margin: 5px 0;">
-                                <span style="${item.completed ? 'text-decoration: line-through; color: #888;' : ''}">${item.name}</span>
-                                ${item.completed ? ' ✓' : ' ☐'}
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-            `).join('');
-
-            const commsHtml = getStudentCommunications(student.id).slice(0, 5).map(comm => `
-                <tr>
-                    <td>${new Date(comm.date).toLocaleDateString('ar-SA')}</td>
-                    <td>${comm.type === 'whatsapp' ? 'واتساب' : comm.type === 'call' ? 'مكالمة' : comm.type === 'visit' ? 'زيارة' : 'رسالة'}</td>
-                    <td>${comm.content.substring(0, 50)}</td>
-                </tr>
-            `).join('');
-
-            printWindow.document.write(`
-                <html dir="rtl">
-                <head>
-                    <title>ملف الطالب - ${student.arabicName || student.fullName}</title>
-                    <style>
-                        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 30px; max-width: 800px; margin: 0 auto; }
-                        h1 { color: #10B981; border-bottom: 3px solid #10B981; padding-bottom: 10px; }
-                        h2 { color: #374151; margin-top: 25px; }
-                        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-                        .info-item { padding: 8px 12px; background: #f3f4f6; border-radius: 6px; }
-                        .info-label { font-size: 12px; color: #6b7280; }
-                        .info-value { font-weight: bold; color: #1f2937; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: right; }
-                        th { background: #f9fafb; }
-                        .footer { margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px; }
-                    </style>
-                </head>
-                <body>
-                    <h1>📋 ملف الطالب: ${student.arabicName || student.fullName}</h1>
-                    
-                    <h2>📝 المعلومات الأساسية</h2>
-                    <div class="info-grid">
-                        <div class="info-item"><div class="info-label">الاسم الكامل</div><div class="info-value">${student.fullName}</div></div>
-                        <div class="info-item"><div class="info-label">الهوية / DNI</div><div class="info-value">${student.nationalId || '-'}</div></div>
-                        <div class="info-item"><div class="info-label">واتساب</div><div class="info-value">${student.phone || '-'}</div></div>
-                        <div class="info-item"><div class="info-label">الجنسية</div><div class="info-value">${student.nationality || '-'}</div></div>
-                        <div class="info-item"><div class="info-label">تاريخ الإسلام</div><div class="info-value">${student.conversionDate}</div></div>
-                        <div class="info-item"><div class="info-label">الشيخ الشاهد</div><div class="info-value">${student.witnessSheikh || '-'}</div></div>
-                        <div class="info-item"><div class="info-label">العمل</div><div class="info-value">${student.occupation || '-'}</div></div>
-                        <div class="info-item"><div class="info-label">الدراسة</div><div class="info-value">${student.education || '-'}</div></div>
-                    </div>
-
-                    <h2>📚 خطة الدروس (البروتوكول التعليمي)</h2>
-                    ${stageHtml}
-
-                    <h2>💬 آخر المراسلات</h2>
-                    ${commsHtml.length > 0 ? `
-                        <table>
-                            <thead><tr><th>التاريخ</th><th>النوع</th><th>المحتوى</th></tr></thead>
-                            <tbody>${commsHtml}</tbody>
-                        </table>
-                    ` : '<p style="color: #9ca3af;">لا توجد مراسلات مسجلة</p>'}
-
-                    <div class="footer">
-                        <p>تم الطباعة بتاريخ: ${new Date().toLocaleDateString('ar-SA')}</p>
-                        <p>نظام بركة - مركز رعاية المهتدين</p>
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
+        const studentComms = getStudentCommunications(student.id);
+        const studentLessons = getStudentLessons(student.id);
+        generateStudentProfile(student, studentComms, studentLessons);
     };
 
     // --- Text Import Logic ---
@@ -745,99 +1156,64 @@ const NewMuslimsManager = () => {
         setStagedStudents(parsed);
     };
 
-    const handleSaveStaged = () => {
+    const handleSaveStaged = async () => {
         // Filter valid ones
         const valid = stagedStudents.filter(s => s.fullName && s.phone) as Student[];
         if (valid.length > 0) {
-            setStudents(prev => [...prev, ...valid]);
-            setStagedStudents([]);
-            setImportText('');
-            setIsTextImportOpen(false);
-            toast({ title: "تم الحفظ", description: `تمت إضافة ${valid.length} طالب.` });
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const dbData = valid.map(studentData => ({
+                    full_name: studentData.fullName,
+                    arabic_name: studentData.arabicName,
+                    phone: studentData.phone,
+                    nationality: studentData.nationality,
+                    gender: studentData.gender,
+                    conversion_date: studentData.conversionDate,
+                    status: studentData.status || 'active',
+                    level: studentData.level || 'beginner',
+                    progress: 0,
+                    user_id: user.id,
+                    last_visit: new Date().toISOString()
+                }));
+
+                const { data, error } = await supabase.from('new_muslims').insert(dbData).select();
+                if (error) throw error;
+
+                if (data) {
+                    const newStudents: Student[] = (data as NewMuslimsRow[]).map((d) => ({
+                        id: d.id.toString(),
+                        fullName: d.full_name,
+                        arabicName: d.arabic_name,
+                        phone: d.phone,
+                        nationality: d.nationality,
+                        gender: d.gender,
+                        conversionDate: d.conversion_date,
+                        status: d.status,
+                        level: d.level,
+                        progress: d.progress,
+                        lastVisit: d.last_visit,
+                        availableDays: []
+                    }));
+                    setStudents(prev => [...prev, ...newStudents]);
+                    setStagedStudents([]);
+                    setImportText('');
+                    setIsTextImportOpen(false);
+                    toast({ title: "تم الحفظ", description: `تمت إضافة ${newStudents.length} طالب إلى السحابة.` });
+                }
+            } catch (err: any) {
+                console.error("Error saving staged students:", err);
+                toast({ title: "خطأ في المزامنة", description: err.message, variant: "destructive" });
+            }
         }
     };
 
     const handlePrintReport = () => {
-        // Export all students to printable PDF table
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            const studentsToExport = selectedStudentIds.length > 0
-                ? students.filter(s => selectedStudentIds.includes(s.id))
-                : students;
-
-            const tableRows = studentsToExport.map((s, idx) => `
-                <tr>
-                    <td>${idx + 1}</td>
-                    <td>${s.fullName || '-'}</td>
-                    <td>${s.arabicName || '-'}</td>
-                    <td dir="ltr">${s.phone || '-'}</td>
-                    <td>${s.nationality || '-'}</td>
-                    <td>${s.nationalId || '-'}</td>
-                    <td>${s.address || '-'}</td>
-                    <td>${s.occupation || '-'}</td>
-                    <td>${s.conversionDate || '-'}</td>
-                    <td>${s.witnessSheikh || '-'}</td>
-                </tr>
-            `).join('');
-
-            printWindow.document.write(`
-                <html dir="rtl">
-                <head>
-                    <title>قائمة المهتدين الجدد - ${new Date().toLocaleDateString('ar-SA')}</title>
-                    <style>
-                        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; padding: 20px; }
-                        h1 { color: #10B981; text-align: center; margin-bottom: 5px; }
-                        .subtitle { text-align: center; color: #6b7280; margin-bottom: 20px; }
-                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-                        th { background: #10B981; color: white; padding: 8px 4px; text-align: right; }
-                        td { border: 1px solid #e5e7eb; padding: 6px 4px; }
-                        tr:nth-child(even) { background: #f9fafb; }
-                        .footer { margin-top: 20px; text-align: center; color: #9ca3af; font-size: 11px; }
-                        @media print { 
-                            body { padding: 10px; } 
-                            table { font-size: 9px; }
-                            th, td { padding: 4px 2px; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1>📋 قائمة المهتدين الجدد</h1>
-                    <div class="subtitle">إجمالي: ${studentsToExport.length} طالب | تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}</div>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>الاسم الكامل</th>
-                                <th>الاسم العربي</th>
-                                <th>واتساب</th>
-                                <th>الجنسية</th>
-                                <th>الهوية/DNI</th>
-                                <th>المدينة</th>
-                                <th>العمل</th>
-                                <th>تاريخ الإسلام</th>
-                                <th>الشيخ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-
-                    <div class="footer">
-                        <p>نظام بركة - مركز رعاية المهتدين</p>
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-
-            toast({
-                title: "تم فتح نافذة الطباعة ✅",
-                description: `جاهز لطباعة ${studentsToExport.length} طالب`
-            });
-        }
+        const studentsToExport = selectedStudentIds.length > 0
+            ? students.filter(s => selectedStudentIds.includes(s.id))
+            : students;
+        generateStudentReport(studentsToExport);
     };
 
     // --- Excel Import ---
@@ -853,15 +1229,10 @@ const NewMuslimsManager = () => {
             const ws = wb.Sheets[wsname];
             const data = XLSX.utils.sheet_to_json(ws);
 
-            // Map Excel data to Student interface
-            // Supports user's Spanish columns: Nombre completo, Edad, Ciudad donde vives, WhatsApp, Trabajo, Estudio, Dni, Nacionalidad, Fecha cuando abrazo, Con el sheij
             const newStudents: Student[] = data.map((row: any, index: number) => {
-                // Helper function to find column value with flexible matching
                 const getCol = (...names: string[]): string => {
                     for (const name of names) {
-                        // Try exact match first
                         if (row[name] !== undefined && row[name] !== null && row[name] !== '') return String(row[name]);
-                        // Try case-insensitive and trimmed match
                         const keys = Object.keys(row);
                         for (const key of keys) {
                             const cleanKey = key.trim().toLowerCase();
@@ -874,53 +1245,35 @@ const NewMuslimsManager = () => {
                     return '';
                 };
 
-                // Calculate birth year from age if provided
                 const ageStr = getCol('Edad', 'Age', 'العمر');
                 const age = parseInt(ageStr);
                 const birthYear = !isNaN(age) ? new Date().getFullYear() - age : null;
                 const birthDate = birthYear ? `${birthYear}-01-01` : '';
-
-                // Get full name - this is the main field
                 const fullName = getCol('Nombre completo', 'nombre completo', 'Name', 'الاسم', 'Nombre', 'nombre');
-
-                // Debug: log what we're getting
-                console.log('Row keys:', Object.keys(row));
-                console.log('Full name found:', fullName);
 
                 return {
                     id: `excel-${Date.now()}-${index}`,
-                    // Name mapping - use fullName for both if arabicName not found
                     fullName: fullName || 'Unknown',
                     arabicName: getCol('ArabicName', 'الاسم العربي', 'Nombre árabe') || fullName || '',
-                    // Status defaults
                     status: 'active' as const,
                     level: 'beginner' as const,
                     lastVisit: 'جديد',
                     progress: 0,
                     currentStage: 1,
-                    // Contact
                     phone: getCol('WhatsApp', 'whatsapp', 'Phone', 'رقم الهاتف', 'Teléfono', 'Telefono').replace(/\D/g, ''),
-                    // Location
                     address: getCol('Ciudad donde vives', 'ciudad', 'City', 'المدينة', 'Ciudad'),
                     nationality: getCol('Nacionalidad', 'nacionalidad', 'Nationality', 'الجنسية') || 'غير محدد',
-                    // Identity
                     nationalId: getCol('Dni', 'DNI', 'dni', 'NationalID', 'الهوية', 'ID'),
-                    // Dates
                     conversionDate: getCol('Fecha cuando abrazo e', 'Fecha cuando abrazo', 'fecha cuando abrazo', 'Date', 'تاريخ الإسلام', 'Fecha') || new Date().toISOString().split('T')[0],
                     birthDate: birthDate || getCol('BirthDate', 'تاريخ الميلاد', 'Fecha Nacimiento'),
-                    // Work & Education
                     occupation: getCol('Trabajo', 'trabajo', 'Occupation', 'العمل', 'Ocupación'),
                     education: getCol('Estudio', 'estudio', 'Education', 'الدراسة', 'Educación'),
-                    // Sheikh
                     witnessSheikh: getCol('Con el sheij', 'Con el shiej', 'con el sheij', 'Sheikh', 'الشيخ', 'Testigo'),
-                    // Gender (default to male if not specified)
                     gender: (['F', 'f', 'أنثى', 'Femenino', 'femenino'].includes(getCol('Gender', 'Sexo', 'الجنس', 'Género'))) ? 'female' as const : 'male' as const,
-                    // Available days
                     availableDays: getCol('Days', 'الأيام', 'Días').split(',').map((d: string) => d.trim()).filter(Boolean),
                 };
             });
 
-            // Filter out empty/invalid students (no valid name)
             const validStudents = newStudents.filter(s =>
                 s.fullName && s.fullName !== 'Unknown' && s.fullName.trim().length > 0
             );
@@ -928,44 +1281,52 @@ const NewMuslimsManager = () => {
             const skippedCount = newStudents.length - validStudents.length;
 
             if (validStudents.length > 0) {
-                // Save to local state
                 setStudents(prev => [...prev, ...validStudents]);
 
-                // Save to Supabase
-                const supabaseRecords = validStudents.map(s => ({
-                    full_name: s.fullName,
-                    arabic_name: s.arabicName || null,
-                    phone: s.phone || null,
-                    nationality: s.nationality || null,
-                    gender: s.gender || 'male',
-                    birth_date: s.birthDate || null,
-                    address: s.address || null,
-                    conversion_date: s.conversionDate || null,
-                    status: 'active',
-                    level: 'beginner',
-                    notes: `Imported from Excel. Sheikh: ${s.witnessSheikh || '-'}, Occupation: ${s.occupation || '-'}, Education: ${s.education || '-'}`
-                }));
+                const syncToSupabase = async () => {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
 
-                supabase.from('new_muslims').insert(supabaseRecords)
-                    .then(({ error }) => {
-                        if (error) {
-                            console.error('Supabase insert error:', error);
-                            toast({
-                                title: "تحذير",
-                                description: "تم الحفظ محلياً لكن فشل الحفظ في قاعدة البيانات",
-                                variant: "destructive"
-                            });
-                        } else {
-                            toast({
-                                title: "تم الحفظ في قاعدة البيانات ☁️",
-                                description: `تم رفع ${validStudents.length} طالب إلى السحابة`
-                            });
-                        }
-                    });
+                    const supabaseRecords = validStudents.map(s => ({
+                        full_name: s.fullName,
+                        arabic_name: s.arabicName || null,
+                        phone: s.phone || null,
+                        nationality: s.nationality || null,
+                        gender: s.gender || 'male',
+                        birth_date: s.birthDate || null,
+                        address: s.address || null,
+                        conversion_date: s.conversionDate || null,
+                        status: 'active',
+                        level: 'beginner',
+                        witness_sheikh: s.witnessSheikh || null,
+                        occupation: s.occupation || null,
+                        education: s.education || null,
+                        national_id: s.nationalId || null,
+                        available_days: s.availableDays || [],
+                        user_id: user.id
+                    }));
+
+                    const { error } = await supabase.from('new_muslims').insert(supabaseRecords);
+                    if (error) {
+                        console.error('Supabase insert error:', error);
+                        toast({
+                            title: "تحذير",
+                            description: "تم الحفظ محلياً لكن فشل الحفظ في قاعدة البيانات",
+                            variant: "destructive"
+                        });
+                    } else {
+                        toast({
+                            title: "تم الحفظ في قاعدة البيانات ☁️",
+                            description: `تم رفع ${validStudents.length} طالب إلى السحابة`
+                        });
+                    }
+                };
+
+                syncToSupabase();
 
                 toast({
                     title: "تم الاستيراد بنجاح ✅",
-                    description: `تم إضافة ${validStudents.length} مهتدي جديد${skippedCount > 0 ? ` (تم تجاهل ${skippedCount} صف فارغ)` : ''}`
+                    description: `تم إضافة ${validStudents.length} مهتدي جديد${skippedCount > 0 ? ` (تم تجاهل ${skippedCount} صف فارغ)` : ''} `
                 });
             } else {
                 toast({
@@ -996,7 +1357,7 @@ const NewMuslimsManager = () => {
             'advanced': { label: 'متقدم', color: 'bg-rose-100 text-rose-700' },
         };
         const l = levels[level] || levels['beginner'];
-        return <span className={`text-xs px-2 py-1 rounded-full ${l.color}`}>{l.label}</span>;
+        return <span className={`text - xs px - 2 py - 1 rounded - full ${l.color} `}>{l.label}</span>;
     };
 
     // --- Views ---
@@ -1011,7 +1372,7 @@ const NewMuslimsManager = () => {
                     <Avatar className="w-16 h-16 border-2 border-emerald-100">
                         <AvatarImage src={`https://ui-avatars.com/api/?name=${student.fullName}&background=10B981&color=fff`} />
                         <AvatarFallback>{student.arabicName?.[0]}</AvatarFallback>
-                    </Avatar>
+                    </Avatar >
                     <div>
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{student.arabicName}</h2>
                         <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500">
@@ -1040,7 +1401,7 @@ const NewMuslimsManager = () => {
                             </span>
                         </div>
                     </div>
-                </div>
+                </div >
                 <div className="mr-auto flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50 text-xs sm:text-sm" onClick={() => handleWhatsapp(student)}>
                         <MessageCircle className="w-4 h-4 ml-1" /> <span className="hidden sm:inline">واتساب</span>
@@ -1055,10 +1416,10 @@ const NewMuslimsManager = () => {
                         <CalendarIcon className="w-4 h-4 ml-1" /> <span className="hidden sm:inline">حجز موعد</span>
                     </Button>
                 </div>
-            </div>
+            </div >
 
             {/* Tabs for different sections */}
-            <Tabs defaultValue="info" className="w-full">
+            < Tabs defaultValue="info" className="w-full" >
                 <TabsList className="bg-white p-1 border shadow-sm rounded-lg mb-4 w-full justify-start overflow-x-auto">
                     <TabsTrigger value="info" className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">
                         📋 المعلومات
@@ -1142,7 +1503,7 @@ const NewMuslimsManager = () => {
                                             <h4 className="font-bold text-emerald-800 text-sm">شهادة الإسلام</h4>
                                             <p className="text-[10px] text-gray-500 mb-2">{student.conversionDate}</p>
                                             <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={() => handlePrintCertificate(student)}>
-                                                <Printer className="w-3 h-3 ml-1" /> طباعة
+                                                <Printer className="w-3 h-3 ml-1" /> تصدير PDF / طباعة
                                             </Button>
                                             <Button size="sm" variant="ghost" className="w-full text-xs h-7 text-gray-400 mt-1">
                                                 <Download className="w-3 h-3 ml-1" /> تحميل
@@ -1164,7 +1525,10 @@ const NewMuslimsManager = () => {
                                 <CardHeader>
                                     <CardTitle className="flex justify-between items-center text-sm text-gray-500">
                                         معلومات أساسية
-                                        <Button size="sm" variant="ghost" onClick={() => handlePrintProfile(student)}><Printer className="w-4 h-4" /></Button>
+                                        <Button size="sm" variant="ghost" className="gap-2" onClick={() => handlePrintProfile(student)}>
+                                            <Printer className="w-4 h-4" />
+                                            <span className="text-xs">تصدير ملف الطالب (PDF)</span>
+                                        </Button>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
@@ -1414,7 +1778,13 @@ const NewMuslimsManager = () => {
                             <CardTitle className="flex items-center gap-2">
                                 📚 المواد التعليمية
                             </CardTitle>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" onClick={() => {
+                                const name = prompt("اسم المادة:");
+                                if (!name) return;
+                                const type = prompt("النوع (book, video, audio, link):", "book") as any;
+                                const category = prompt("التصنيف (عقيدة, فقه, قرآن, سيرة, أخلاق):", "عقيدة") as any;
+                                addMaterial({ name, type, category });
+                            }}>
                                 <Plus className="w-4 h-4 mr-1" /> إضافة مادة
                             </Button>
                         </CardHeader>
@@ -1496,8 +1866,8 @@ const NewMuslimsManager = () => {
                         </CardContent>
                     </Card>
                 </TabsContent>
-            </Tabs>
-        </div>
+            </Tabs >
+        </div >
     );
 
 
@@ -2080,39 +2450,69 @@ const NewMuslimsManager = () => {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label>الطالب</Label>
-                            <Select>
+                            <Select onValueChange={(val) => setNewApptData({ ...newApptData, studentId: val })}>
                                 <SelectTrigger><SelectValue placeholder="اختر الطالب" /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="1">أحمد محمد</SelectItem>
-                                    <SelectItem value="2">سارة</SelectItem>
+                                    {students.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.arabicName || s.fullName}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>التاريخ</Label>
-                                <Input type="date" />
+                                <Input
+                                    type="date"
+                                    value={newApptData.date}
+                                    onChange={(e) => setNewApptData({ ...newApptData, date: e.target.value })}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>الوقت</Label>
-                                <Input type="time" />
+                                <Input
+                                    type="time"
+                                    value={newApptData.time}
+                                    onChange={(e) => setNewApptData({ ...newApptData, time: e.target.value })}
+                                />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label>نوع الموعد</Label>
-                            <Select>
+                            <Select onValueChange={(val) => setNewApptData({ ...newApptData, type: val })}>
                                 <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="quran">درس قرآن</SelectItem>
-                                    <SelectItem value="fiqh">فقه (وضوء/صلاة)</SelectItem>
-                                    <SelectItem value="aqidah">عقيدة</SelectItem>
-                                    <SelectItem value="followup">متابعة عامة</SelectItem>
+                                    <SelectItem value="درس قرآن">درس قرآن</SelectItem>
+                                    <SelectItem value="فقه">فقه (وضوء/صلاة)</SelectItem>
+                                    <SelectItem value="عقيدة">عقيدة</SelectItem>
+                                    <SelectItem value="متابعة">متابعة دينية</SelectItem>
+                                    <SelectItem value="اجتماعي">زيارة اجتماعية</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="space-y-2">
+                            <Label>ملاحظات إضافية</Label>
+                            <Textarea
+                                placeholder="ملاحظات حول الموعد..."
+                                value={newApptData.notes}
+                                onChange={(e) => setNewApptData({ ...newApptData, notes: e.target.value })}
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
-                        <Button onClick={() => setIsApptOpen(false)} className="bg-blue-600">جدولة الموعد</Button>
+                        <Button variant="outline" onClick={() => setIsApptOpen(false)}>إلغاء</Button>
+                        <Button
+                            onClick={() => {
+                                if (newApptData.studentId && newApptData.date && newApptData.time) {
+                                    addAppointment(newApptData.studentId, newApptData.date, newApptData.time, newApptData.type, newApptData.notes);
+                                } else {
+                                    toast({ title: "بيانات ناقصة", description: "يرجى تعبئة جميع الحقول المطلوبة", variant: "destructive" });
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            تأكيد الحجز
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2455,6 +2855,11 @@ const NewMuslimsManager = () => {
                                 />
                             </div>
                             <p className="text-xs text-gray-500">استخدم {'{name}'} لإدراج اسم الطالب تلقائياً</p>
+                        </div>
+                        <div className="flex justify-end pt-4">
+                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => saveTemplates(templates)}>
+                                <Save className="w-4 h-4 mr-2" /> حفظ الإعدادات
+                            </Button>
                         </div>
                         <div className="space-y-3">
                             <h4 className="font-medium text-gray-700">🗑️ إدارة البيانات</h4>

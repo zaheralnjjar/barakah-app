@@ -20,62 +20,41 @@ export const useShoppingList = () => {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
+    // Fetch from Supabase
     const fetchItems = useCallback(async () => {
         try {
-            const user = (await supabase.auth.getUser()).data.user;
-            let loadedItems: ShoppingItem[] = [];
+            setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
 
-            // 1. Try Local Storage first for immediate feedback (or offline)
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    // Map legacy or external formats to standardized ShoppingItem
-                    loadedItems = parsed.map((i: any) => ({
-                        id: i.id?.toString() || Date.now().toString(),
-                        text: i.text || i.name || 'Unnamed Item',
-                        quantity: i.quantity || 1,
-                        unit: i.unit || 'unit',
-                        completed: !!i.completed,
-                        deadline: i.deadline || null,
-                        createdAt: i.createdAt || i.addedAt || new Date().toISOString()
-                    }));
-                } catch (e) {
-                    console.error("Error parsing local shopping list", e);
-                }
-            }
-
-            // 2. If user is logged in, try to fetch/sync with Supabase
-            // Note: In a real robust sync, we'd merge. For now, Supabase applies over local if exists.
             if (user) {
                 const { data, error } = await supabase
-                    .from('logistics_data_2025_12_18_18_42')
-                    .select('shopping_list')
-                    .eq('user_id', user.id)
-                    .single();
+                    .from('shopping_items')
+                    .select('*')
+                    .order('created_at', { ascending: false });
 
-                if (!error && data?.shopping_list) {
-                    // Prefer server data if available, but maybe we should merge? 
-                    // For simplicity, let's respect the server as source of truth if it has data.
-                    // But we must map it correctly.
-                    const serverItems = data.shopping_list.map((i: any) => ({
-                        id: i.id?.toString() || Date.now().toString(),
-                        text: i.text || i.name || 'Unnamed Item',
-                        quantity: i.quantity || 1,
-                        unit: i.unit || 'unit',
-                        completed: !!i.completed,
-                        deadline: i.deadline || null,
-                        createdAt: i.createdAt || i.addedAt || new Date().toISOString()
+                if (error) {
+                    console.error('Supabase fetch error:', error);
+                    // Fallback to local storage
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) setItems(JSON.parse(saved));
+                } else if (data) {
+                    const mappedItems: ShoppingItem[] = data.map((i: any) => ({
+                        id: i.id,
+                        text: i.text,
+                        quantity: i.quantity,
+                        unit: i.unit,
+                        completed: i.completed,
+                        deadline: i.deadline,
+                        createdAt: i.created_at
                     }));
-
-                    // If server has data, use it. Otherwise keep local.
-                    if (serverItems.length > 0 || loadedItems.length === 0) {
-                        loadedItems = serverItems;
-                    }
+                    setItems(mappedItems);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(mappedItems));
                 }
+            } else {
+                // Not logged in, load from local
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) setItems(JSON.parse(saved));
             }
-
-            setItems(loadedItems);
         } catch (error) {
             console.error('Error fetching shopping list:', error);
         } finally {
@@ -83,57 +62,33 @@ export const useShoppingList = () => {
         }
     }, []);
 
-    // Initial load and Event Listener
+    // Initial Load
     useEffect(() => {
         fetchItems();
-
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === STORAGE_KEY) {
-                fetchItems();
-            }
-        };
-
-        const handleCustomEvent = () => fetchItems();
-
-        window.addEventListener('storage', handleStorageChange);
-        window.addEventListener(EVENT_KEY, handleCustomEvent);
-
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener(EVENT_KEY, handleCustomEvent);
-        };
     }, [fetchItems]);
 
-    // Persist helper
-    const persistItems = async (newItems: ShoppingItem[]) => {
-        // 1. Update State
-        setItems(newItems);
-
-        // 2. Update Local Storage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
-
-        // 3. Dispatch Event for other components
-        window.dispatchEvent(new Event(EVENT_KEY));
-
-        // 4. Update Supabase
+    // Helpers
+    const syncToSupabase = async (operation: 'insert' | 'update' | 'delete', payload: any, id?: string) => {
         try {
-            const user = (await supabase.auth.getUser()).data.user;
-            if (user) {
-                await supabase.from('logistics_data_2025_12_18_18_42')
-                    .update({
-                        shopping_list: newItems,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('user_id', user.id);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return; // Local only
+
+            if (operation === 'insert') {
+                await supabase.from('shopping_items').insert({ ...payload, user_id: user.id });
+            } else if (operation === 'update' && id) {
+                await supabase.from('shopping_items').update(payload).eq('id', id);
+            } else if (operation === 'delete' && id) {
+                await supabase.from('shopping_items').delete().eq('id', id);
             }
-        } catch (error) {
-            console.error("Error syncing shopping list to Supabase", error);
+        } catch (e) {
+            console.error("Supabase sync error", e);
+            toast({ title: "خطأ في المزامنة", description: "لم يتم حفظ التغييرات في السحابة", variant: "destructive" });
         }
     };
 
     const addItem = async (item: Partial<ShoppingItem>) => {
         const newItem: ShoppingItem = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(), // Temporarily generate UUID locally
             text: item.text || 'New Item',
             quantity: item.quantity || 1,
             unit: item.unit || 'unit',
@@ -143,58 +98,50 @@ export const useShoppingList = () => {
             ...item
         };
 
-        // Handle Reminder Logic if deadline exists (moved from SmartDashboard)
-        if (newItem.deadline) {
-            try {
-                const reminders = JSON.parse(localStorage.getItem('baraka_reminders') || '[]');
-                const deadlineDate = new Date(newItem.deadline);
-                const now = new Date();
-
-                // Reminder on deadline day morning (8 AM)
-                const dayOfReminder = new Date(deadlineDate);
-                dayOfReminder.setHours(8, 0, 0, 0);
-                reminders.push({
-                    id: `shop-${newItem.id}-day`,
-                    type: 'shopping',
-                    title: `🛒 تذكير: ${newItem.text}`,
-                    message: `اليوم آخر موعد لشراء: ${newItem.text}`,
-                    scheduledFor: dayOfReminder.toISOString(),
-                    itemId: newItem.id
-                });
-
-                // Reminder day before (8 AM)
-                const dayBefore = new Date(deadlineDate);
-                dayBefore.setDate(dayBefore.getDate() - 1);
-                dayBefore.setHours(8, 0, 0, 0);
-                if (dayBefore > now) {
-                    reminders.push({
-                        id: `shop-${newItem.id}-before`,
-                        type: 'shopping',
-                        title: `🛒 تذكير: ${newItem.text}`,
-                        message: `غداً آخر موعد لشراء: ${newItem.text}`,
-                        scheduledFor: dayBefore.toISOString(),
-                        itemId: newItem.id
-                    });
-                }
-                localStorage.setItem('baraka_reminders', JSON.stringify(reminders));
-            } catch (e) {
-                console.error("Error adding reminders", e);
-            }
-        }
-
+        // Optimistic Update
         const updated = [newItem, ...items];
-        await persistItems(updated);
+        setItems(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        // Sync
+        await syncToSupabase('insert', {
+            id: newItem.id,
+            text: newItem.text,
+            quantity: newItem.quantity,
+            unit: newItem.unit,
+            completed: newItem.completed,
+            deadline: newItem.deadline,
+            created_at: newItem.createdAt
+        });
+
         return newItem;
     };
 
     const updateItem = async (id: string, updates: Partial<ShoppingItem>) => {
         const updated = items.map(item => item.id === id ? { ...item, ...updates } : item);
-        await persistItems(updated);
+        setItems(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+        // Map updates to DB columns (camelCase to snake_case if needed, but DB is simple)
+        // Our DB cols: text, quantity, unit, completed, deadline, created_at.
+        // Updates might contain these keys.
+        const dbUpdates: any = {};
+        if (updates.text !== undefined) dbUpdates.text = updates.text;
+        if (updates.quantity !== undefined) dbUpdates.quantity = updates.quantity;
+        if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
+        if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
+        if (updates.deadline !== undefined) dbUpdates.deadline = updates.deadline;
+
+        if (Object.keys(dbUpdates).length > 0) {
+            await syncToSupabase('update', dbUpdates, id);
+        }
     };
 
     const deleteItem = async (id: string) => {
         const updated = items.filter(item => item.id !== id);
-        await persistItems(updated);
+        setItems(updated);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        await syncToSupabase('delete', null, id);
     };
 
     const toggleItem = async (id: string) => {
@@ -205,7 +152,10 @@ export const useShoppingList = () => {
     };
 
     const reorderItems = async (newItems: ShoppingItem[]) => {
-        await persistItems(newItems);
+        setItems(newItems);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+        // Reordering not fully supported in simple DB without 'order' column.
+        // For now, we just save local.
     };
 
     return {

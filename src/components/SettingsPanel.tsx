@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Share } from '@capacitor/share';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
+import AcademicManager from '@/components/AcademicManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,6 +33,9 @@ import {
     Smartphone, // Added icon
     Users, // Added icon
     GraduationCap, // Academic icon
+    ChevronUp,
+    ChevronDown,
+    LayoutDashboard,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -321,10 +325,114 @@ const SettingsPanel = () => {
         toast({ title: "تم تحديث سرعة الشريط" });
     };
 
+    // --- Layout Customization State ---
+    const DEFAULT_SECTIONS_ORDER = [
+        'notifications', 'new_muslims', 'sync', 'finance',
+        'storage', 'security', 'routines', 'academic', 'about'
+    ];
+
+    const [sectionsOrder, setSectionsOrder] = useState<string[]>(() => {
+        const saved = localStorage.getItem('baraka_settings_order');
+        return saved ? JSON.parse(saved) : DEFAULT_SECTIONS_ORDER;
+    });
+
+    const [presets, setPresets] = useState<any[]>(() => {
+        const saved = localStorage.getItem('baraka_layout_presets');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const [newPresetName, setNewPresetName] = useState('');
+
+    const savePreset = (name: string) => {
+        if (!name.trim()) return;
+        const newPreset = { id: Date.now().toString(), name, order: sectionsOrder, dashboardOrder: dashboardSectionsOrder };
+        const updated = [...presets, newPreset];
+        setPresets(updated);
+        localStorage.setItem('baraka_layout_presets', JSON.stringify(updated));
+        setNewPresetName('');
+        toast({ title: "✅ تم حفظ وضع الترتيب", description: name });
+    };
+
+    const loadPreset = (preset: any) => {
+        if (preset.order) {
+            setSectionsOrder(preset.order);
+            localStorage.setItem('baraka_settings_order', JSON.stringify(preset.order));
+        }
+        if (preset.dashboardOrder) {
+            setDashboardSectionsOrder(preset.dashboardOrder);
+            localStorage.setItem('baraka_dashboard_order', JSON.stringify(preset.dashboardOrder));
+            window.dispatchEvent(new Event('dashboardOrderChanged'));
+        }
+        toast({ title: "🚀 تم تفعيل وضع الترتيب", description: preset.name });
+    };
+
+    const deletePreset = (id: string) => {
+        const updated = presets.filter(p => p.id !== id);
+        setPresets(updated);
+        localStorage.setItem('baraka_layout_presets', JSON.stringify(updated));
+    };
+
+    const reorderSection = (index: number, direction: 'up' | 'down') => {
+        const newOrder = [...sectionsOrder];
+        const nextIndex = direction === 'up' ? index - 1 : index + 1;
+        if (nextIndex < 0 || nextIndex >= newOrder.length) return;
+        [newOrder[index], newOrder[nextIndex]] = [newOrder[nextIndex], newOrder[index]];
+        setSectionsOrder(newOrder);
+        localStorage.setItem('baraka_settings_order', JSON.stringify(newOrder));
+    };
+
+    // --- Dashboard Layout Customization ---
+    // Note: 'stats' and 'quick_actions' are FIXED and not included here
+    const DEFAULT_DASHBOARD_ORDER = [
+        'daily_report', 'parking', 'notes', 'shopping', 'calendar', 'progress', 'routines'
+    ];
+
+    const DASHBOARD_SECTIONS_DATA = [
+        { id: 'daily_report', title: 'التقرير اليومي', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { id: 'parking', title: 'موقف السيارة', icon: Circle, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { id: 'notes', title: 'الملاحظات السريعة', icon: FileText, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+        { id: 'shopping', title: 'قائمة التسوق', icon: ShoppingCart, color: 'text-pink-600', bg: 'bg-pink-50' },
+        { id: 'calendar', title: 'التقويم والمواعيد', icon: RefreshCw, color: 'text-orange-600', bg: 'bg-orange-50' },
+        { id: 'progress', title: 'إحصائيات التقدم', icon: RefreshCw, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { id: 'routines', title: 'الأوضاع الدائمة', icon: RefreshCw, color: 'text-teal-600', bg: 'bg-teal-50' },
+    ];
+
+    const [dashboardSectionsOrder, setDashboardSectionsOrder] = useState<string[]>(() => {
+        const saved = localStorage.getItem('baraka_dashboard_order');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Validate: ensure all default sections exist
+                const validIds = DEFAULT_DASHBOARD_ORDER;
+                const hasAllSections = validIds.every(id => parsed.includes(id));
+                if (hasAllSections && parsed.length === validIds.length) {
+                    return parsed;
+                }
+                // Reset if corrupted
+                localStorage.removeItem('baraka_dashboard_order');
+            } catch {
+                localStorage.removeItem('baraka_dashboard_order');
+            }
+        }
+        return DEFAULT_DASHBOARD_ORDER;
+    });
+
+    const reorderDashboardSection = (index: number, direction: 'up' | 'down') => {
+        const newOrder = [...dashboardSectionsOrder];
+        const nextIndex = direction === 'up' ? index - 1 : index + 1;
+        if (nextIndex < 0 || nextIndex >= newOrder.length) return;
+        [newOrder[index], newOrder[nextIndex]] = [newOrder[nextIndex], newOrder[index]];
+        setDashboardSectionsOrder(newOrder);
+        localStorage.setItem('baraka_dashboard_order', JSON.stringify(newOrder));
+        window.dispatchEvent(new Event('dashboardOrderChanged'));
+    };
+
+    const [layoutTab, setLayoutTab] = useState<'dashboard' | 'settings'>('dashboard');
+
 
     const [activeSection, setActiveSection] = useState<string | null>(null);
 
-    const SETTINGS_SECTIONS = [
+    const SETTINGS_SECTIONS_DATA = [
         {
             id: 'notifications',
             title: 'التنبيهات',
@@ -406,6 +514,9 @@ const SettingsPanel = () => {
             description: 'معلومات الإصدار'
         }
     ];
+
+    // Use fixed order (no more dynamic ordering)
+    const SETTINGS_SECTIONS = SETTINGS_SECTIONS_DATA;
 
     return (
         <div className="space-y-6 pb-20">
@@ -563,6 +674,28 @@ const SettingsPanel = () => {
                                     className="w-full"
                                 />
                                 <p className="text-[10px] text-gray-400 text-center">كم دقيقة قبل الموعد تريد التنبيه؟</p>
+                            </div>
+
+                            <div className="h-px bg-gray-100 my-4" />
+
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <Label className="text-xs">سرعة شريط المعلومات (التيكر)</Label>
+                                    <span className="text-xs font-bold text-orange-600">المستوى {reminders.tickerSpeed || 5}</span>
+                                </div>
+                                <Slider
+                                    defaultValue={[reminders.tickerSpeed || 5]}
+                                    max={10}
+                                    min={1}
+                                    step={1}
+                                    onValueChange={(vals) => setTickerSpeed(vals[0])}
+                                    className="w-full"
+                                />
+                                <div className="flex justify-between text-[8px] text-gray-400 px-1">
+                                    <span>بطيء جدًا</span>
+                                    <span>متوسط</span>
+                                    <span>سريع جدًا</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1373,6 +1506,17 @@ const SettingsPanel = () => {
                     <NewMuslimsManager />
                 </DialogContent>
             </Dialog>
+
+            {/* Academic Research Dialog */}
+            <Dialog open={activeSection === 'academic'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent
+                    className="max-w-7xl max-h-[95vh] overflow-y-auto w-full p-0"
+                    onInteractOutside={(e) => e.preventDefault()}
+                >
+                    <AcademicManager />
+                </DialogContent>
+            </Dialog>
+
 
         </div >
     );

@@ -12,7 +12,7 @@ import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
     CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
     Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings,
-    GraduationCap, Users
+    GraduationCap, Users, Search
 } from 'lucide-react';
 
 interface QuickActionsGridProps {
@@ -22,9 +22,10 @@ interface QuickActionsGridProps {
     onOpenVoiceRecorder?: () => void;
     latestParking?: any;
     onNavigateToTab?: (tabId: string) => void;
+    onOpenSearch?: () => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -553,6 +554,12 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             <div className="grid grid-cols-7 gap-2 mb-2">
                 {[
                     {
+                        icon: Search,
+                        label: 'بحث',
+                        color: 'bg-indigo-100 text-indigo-600',
+                        action: () => onOpenSearch?.()
+                    },
+                    {
                         icon: FileText,
                         label: 'ملاحظة',
                         color: 'bg-yellow-100 text-yellow-600',
@@ -568,7 +575,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
                     { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
-                    { icon: Timer, label: 'مؤقت', color: 'bg-indigo-100 text-indigo-600', action: () => onOpenTimer?.() },
+                    { icon: Timer, label: 'مؤقت', color: 'bg-orange-100 text-orange-600', action: () => onOpenTimer?.() },
                     { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
                 ].map((item, idx) => (
                     <button

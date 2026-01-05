@@ -25,57 +25,121 @@ const FinancialGoals: React.FC = () => {
     const [selectedGoal, setSelectedGoal] = useState<FinancialGoal | null>(null);
     const { toast } = useToast();
 
+    // Fetch Goals
+    const fetchGoals = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase
+                    .from('financial_goals')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+
+                if (error) throw error;
+                if (data) {
+                    const mapped: FinancialGoal[] = data.map((g: any) => ({
+                        id: g.id,
+                        name: g.name,
+                        target: g.target,
+                        current: g.current,
+                        currency: g.currency,
+                        deadline: g.deadline
+                    }));
+                    setGoals(mapped);
+                    localStorage.setItem('baraka_financial_goals', JSON.stringify(mapped));
+                }
+            } else {
+                const saved = localStorage.getItem('baraka_financial_goals');
+                if (saved) setGoals(JSON.parse(saved));
+            }
+        } catch (error) {
+            console.error('Error fetching goals:', error);
+        }
+    };
+
     useEffect(() => {
-        loadGoals();
+        fetchGoals();
     }, []);
 
-    const loadGoals = () => {
-        const data = JSON.parse(localStorage.getItem('baraka_financial_goals') || '[]');
-        setGoals(data);
-    };
-
-    const saveGoals = (newGoals: FinancialGoal[]) => {
-        localStorage.setItem('baraka_financial_goals', JSON.stringify(newGoals));
-        setGoals(newGoals);
-    };
-
-    const addGoal = () => {
+    const addGoal = async () => {
         if (!newGoal.name || !newGoal.target) return;
 
-        const goal: FinancialGoal = {
-            id: Date.now().toString(),
+        const goalLocal: FinancialGoal = {
+            id: crypto.randomUUID(),
             name: newGoal.name,
             target: parseFloat(newGoal.target),
             current: 0,
             currency: newGoal.currency,
         };
 
-        saveGoals([...goals, goal]);
+        // Optimistic
+        setGoals(prev => [...prev, goalLocal]);
         setNewGoal({ name: '', target: '', currency: 'ARS' });
         setShowAddDialog(false);
-        toast({ title: '✅ تم إضافة الهدف', description: newGoal.name });
+
+        // Sync
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { error } = await supabase.from('financial_goals').insert({
+                id: goalLocal.id,
+                user_id: user.id,
+                name: goalLocal.name,
+                target: goalLocal.target,
+                current: 0,
+                currency: goalLocal.currency
+            });
+            if (error) {
+                toast({ title: 'خطأ', description: 'فشل حفظ الهدف', variant: 'destructive' });
+            } else {
+                toast({ title: '✅ تم إضافة الهدف', description: goalLocal.name });
+            }
+        }
     };
 
-    const addToGoal = () => {
+    const addToGoal = async () => {
         if (!selectedGoal || !addAmount) return;
 
         const amount = parseFloat(addAmount);
-        const updated = goals.map(g =>
+        const updatedGoals = goals.map(g =>
             g.id === selectedGoal.id
                 ? { ...g, current: g.current + amount }
                 : g
         );
 
-        saveGoals(updated);
+        setGoals(updatedGoals);
         setAddAmount('');
         setSelectedGoal(null);
-        toast({ title: '💰 تمت الإضافة', description: `تم إضافة ${amount} ${selectedGoal.currency}` });
+
+        // Sync
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const newCurrent = selectedGoal.current + amount;
+            const { error } = await supabase
+                .from('financial_goals')
+                .update({ current: newCurrent })
+                .eq('id', selectedGoal.id);
+
+            if (error) {
+                toast({ title: 'خطأ', description: 'فشل تحديث الهدف', variant: 'destructive' });
+            } else {
+                toast({ title: '💰 تمت الإضافة', description: `تم إضافة ${amount} ${selectedGoal.currency}` });
+            }
+        }
     };
 
-    const deleteGoal = (id: string) => {
-        saveGoals(goals.filter(g => g.id !== id));
-        toast({ title: '🗑️ تم الحذف' });
+    const deleteGoal = async (id: string) => {
+        setGoals(prev => prev.filter(g => g.id !== id));
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await supabase.from('financial_goals').delete().eq('id', id);
+            toast({ title: '🗑️ تم الحذف' });
+        }
     };
+
+    // Keep saveGoals used internally if needed, or remove. 
+    // We replaced usage with direct state + sync.
+    // getProgress helper stays the same.
 
     const getProgress = (current: number, target: number) => {
         return Math.min((current / target) * 100, 100);
