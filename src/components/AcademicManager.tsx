@@ -180,89 +180,71 @@ export default function AcademicManager() {
     const [formatPainterActive, setFormatPainterActive] = useState(false);
     const [painterStyles, setPainterStyles] = useState<any>(null);
     const [pageSize, setPageSize] = useState<'A4' | 'A5' | 'Letter'>('A4');
-    const [currentPage, setCurrentPage] = useState(1);
+    const [pages, setPages] = useState<string[]>(['']); // Array of page contents
+    const [activePageIndex, setActivePageIndex] = useState(0);
 
     // Page dimensions in mm (converted to pixels at 96 DPI)
     const pageSizes = {
-        A4: { width: 210, height: 297, pxHeight: 1123 }, // 297mm * 3.78
-        A5: { width: 148, height: 210, pxHeight: 794 },
-        Letter: { width: 216, height: 279, pxHeight: 1056 }
+        A4: { width: 210, height: 297, pxHeight: 1000 },
+        A5: { width: 148, height: 210, pxHeight: 700 },
+        Letter: { width: 216, height: 279, pxHeight: 950 }
     };
 
     // Editor refs
-    const editorRef = useRef<HTMLDivElement>(null);
+    const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const pdfInputRef = useRef<HTMLInputElement>(null);
     const lastEditingNodeId = useRef<string | null>(null);
     const pagesContainerRef = useRef<HTMLDivElement>(null);
 
+    // Alias for compatibility
+    const editorRef = { current: pageRefs.current[activePageIndex] || null };
+    const currentPage = pages.length;
+
     // Initialize editor content when editingNode changes
     useEffect(() => {
-        if (editingNode && editorRef.current) {
+        if (editingNode && pageRefs.current[0]) {
             const currentId = editingNode.chapterId || editingNode.taskId || '';
             if (lastEditingNodeId.current !== currentId) {
-                editorRef.current.innerHTML = draftContent;
+                // Load content into first page
+                setPages([draftContent || '']);
+                setActivePageIndex(0);
                 lastEditingNodeId.current = currentId;
             }
         }
     }, [editingNode, draftContent]);
 
-    // Auto-pagination: Check if content exceeds page height and insert page breaks
-    useEffect(() => {
-        if (!editorRef.current) return;
+    // Function to add a new page
+    const addNewPage = () => {
+        setPages(prev => [...prev, '']);
+        setActivePageIndex(pages.length);
+        toast({ title: `✅ تم إضافة صفحة ${pages.length + 1}` });
+    };
 
-        const checkPageOverflow = () => {
-            const editor = editorRef.current;
-            if (!editor) return;
+    // Function to check if content overflows and auto-create new page
+    const handlePageInput = (index: number, content: string) => {
+        const newPages = [...pages];
+        newPages[index] = content;
+        setPages(newPages);
 
-            // Page height in pixels (A4 = ~1000px content area after margins)
-            const pageContentHeight = pageSize === 'A4' ? 1000 : pageSize === 'A5' ? 700 : 950;
-            const contentHeight = editor.scrollHeight;
-            const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageContentHeight));
+        // Also update draftContent with all pages combined
+        const allContent = newPages.join('<div style="page-break-after:always;"></div>');
+        setDraftContent(allContent);
+    };
 
-            if (calculatedPages !== currentPage) {
-                setCurrentPage(calculatedPages);
+    // Check for overflow and create new page automatically
+    const checkOverflowAndPaginate = (pageIndex: number) => {
+        const pageRef = pageRefs.current[pageIndex];
+        if (!pageRef) return;
+
+        const maxHeight = pageSizes[pageSize].pxHeight;
+        if (pageRef.scrollHeight > maxHeight + 50) {
+            // Content overflows, need to create new page
+            if (pageIndex === pages.length - 1) {
+                // Only auto-add if it's the last page
+                addNewPage();
             }
-
-            // Add visual page indicators
-            const existingIndicators = editor.querySelectorAll('.page-indicator');
-            existingIndicators.forEach(el => el.remove());
-
-            if (calculatedPages > 1) {
-                for (let i = 1; i < calculatedPages; i++) {
-                    const indicator = document.createElement('div');
-                    indicator.className = 'page-indicator';
-                    indicator.style.cssText = `
-                        position: absolute;
-                        left: 0;
-                        right: 0;
-                        top: ${i * pageContentHeight}px;
-                        height: 40px;
-                        background: linear-gradient(to bottom, transparent, #e5e7eb 20%, #e5e7eb 80%, transparent);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        pointer-events: none;
-                        z-index: 5;
-                    `;
-                    indicator.innerHTML = `<span style="background:#f1f5f9;padding:4px 16px;border-radius:4px;font-size:11px;color:#64748b;border:1px dashed #94a3b8;">صفحة ${i + 1} ─ فاصل طباعة</span>`;
-                    editor.appendChild(indicator);
-                }
-            }
-        };
-
-        // Use MutationObserver to watch for content changes
-        const observer = new MutationObserver(checkPageOverflow);
-        observer.observe(editorRef.current, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-
-        // Initial check
-        checkPageOverflow();
-
-        return () => observer.disconnect();
-    }, [pageSize, currentPage]);
+        }
+    };
 
     // Toggle folder open/close
     const toggleFolder = (phaseId: string) => {
@@ -1684,90 +1666,100 @@ export default function AcademicManager() {
                                 </Button>
                             </div>
 
-                            {/* Page Area */}
-                            <div className="flex-1 flex justify-center">
-                                <div ref={pagesContainerRef} style={{ transform: `scale(${editorZoom / 100})`, transformOrigin: 'top center' }} className="transition-transform duration-200">
-                                    {/* Dynamic Page Size */}
-                                    <div
-                                        className="bg-white shadow-2xl relative"
-                                        style={{
-                                            width: `${pageSizes[pageSize].width}mm`,
-                                            minHeight: `${pageSizes[pageSize].height}mm`,
-                                            padding: '25mm',
-                                            direction: 'rtl',
-                                            boxShadow: '0 25px 80px rgba(0,0,0,0.35)'
-                                        }}
-                                    >
-                                        {/* Editable Content */}
-                                        <div
-                                            ref={editorRef}
-                                            id="editor-content"
-                                            contentEditable={true}
-                                            suppressContentEditableWarning={true}
-                                            className="outline-none text-justify min-h-[200mm] focus:outline-none"
-                                            dir="rtl"
-                                            onInput={(e) => setDraftContent(e.currentTarget.innerHTML)}
-                                            onKeyDown={(e) => {
-                                                // Keyboard shortcuts
-                                                if (e.ctrlKey || e.metaKey) {
-                                                    switch (e.key.toLowerCase()) {
-                                                        case 'b':
-                                                            e.preventDefault();
-                                                            document.execCommand('bold');
-                                                            break;
-                                                        case 'i':
-                                                            e.preventDefault();
-                                                            document.execCommand('italic');
-                                                            break;
-                                                        case 'u':
-                                                            e.preventDefault();
-                                                            document.execCommand('underline');
-                                                            break;
-                                                        case 's':
-                                                            e.preventDefault();
-                                                            // Save
-                                                            if (editingNode) {
-                                                                const targetPhaseId = editingNode.phaseId;
-                                                                const targetId = editingNode.chapterId || editingNode.taskId;
-                                                                if (targetPhaseId && targetId) {
-                                                                    if (editingNode.chapterId) {
-                                                                        updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: draftContent, tags: draftTags });
-                                                                    } else if (editingNode.taskId) {
-                                                                        updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: draftContent, tags: draftTags });
+                            {/* Page Area - Multiple Pages */}
+                            <div className="flex-1 flex flex-col items-center gap-8 py-4">
+                                <div ref={pagesContainerRef} style={{ transform: `scale(${editorZoom / 100})`, transformOrigin: 'top center' }} className="transition-transform duration-200 flex flex-col gap-8">
+                                    {pages.map((pageContent, pageIndex) => (
+                                        <div key={pageIndex} className="relative">
+                                            {/* Page Separator Label */}
+                                            {pageIndex > 0 && (
+                                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-500 bg-slate-200 px-3 py-1 rounded-full">
+                                                    ── صفحة {pageIndex + 1} ──
+                                                </div>
+                                            )}
+                                            {/* A4 Page Box */}
+                                            <div
+                                                className={`bg-white shadow-2xl relative cursor-text ${activePageIndex === pageIndex ? 'ring-2 ring-indigo-400' : ''}`}
+                                                style={{
+                                                    width: `${pageSizes[pageSize].width}mm`,
+                                                    minHeight: `${pageSizes[pageSize].height}mm`,
+                                                    maxHeight: `${pageSizes[pageSize].height}mm`,
+                                                    padding: '20mm',
+                                                    direction: 'rtl',
+                                                    boxShadow: '0 25px 80px rgba(0,0,0,0.35)',
+                                                    overflow: 'hidden'
+                                                }}
+                                                onClick={() => setActivePageIndex(pageIndex)}
+                                            >
+                                                {/* Editable Content */}
+                                                <div
+                                                    ref={el => pageRefs.current[pageIndex] = el}
+                                                    id={`editor-page-${pageIndex}`}
+                                                    contentEditable={true}
+                                                    suppressContentEditableWarning={true}
+                                                    dangerouslySetInnerHTML={{ __html: pageContent }}
+                                                    className="outline-none text-justify h-full focus:outline-none overflow-hidden"
+                                                    dir="rtl"
+                                                    onFocus={() => setActivePageIndex(pageIndex)}
+                                                    onInput={(e) => {
+                                                        handlePageInput(pageIndex, e.currentTarget.innerHTML);
+                                                        // Check for overflow
+                                                        setTimeout(() => checkOverflowAndPaginate(pageIndex), 100);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.ctrlKey || e.metaKey) {
+                                                            switch (e.key.toLowerCase()) {
+                                                                case 'b': e.preventDefault(); document.execCommand('bold'); break;
+                                                                case 'i': e.preventDefault(); document.execCommand('italic'); break;
+                                                                case 'u': e.preventDefault(); document.execCommand('underline'); break;
+                                                                case 's':
+                                                                    e.preventDefault();
+                                                                    if (editingNode) {
+                                                                        const targetPhaseId = editingNode.phaseId;
+                                                                        const targetId = editingNode.chapterId || editingNode.taskId;
+                                                                        if (targetPhaseId && targetId) {
+                                                                            if (editingNode.chapterId) {
+                                                                                updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: draftContent, tags: draftTags });
+                                                                            } else if (editingNode.taskId) {
+                                                                                updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: draftContent, tags: draftTags });
+                                                                            }
+                                                                            toast({ title: "✅ تم الحفظ (Ctrl+S)" });
+                                                                        }
                                                                     }
-                                                                    toast({ title: "✅ تم الحفظ (Ctrl+S)" });
-                                                                }
+                                                                    break;
+                                                                case 'z':
+                                                                    e.preventDefault();
+                                                                    document.execCommand(e.shiftKey ? 'redo' : 'undo');
+                                                                    break;
+                                                                case 'y': e.preventDefault(); document.execCommand('redo'); break;
                                                             }
-                                                            break;
-                                                        case 'z':
-                                                            if (e.shiftKey) {
-                                                                e.preventDefault();
-                                                                document.execCommand('redo');
-                                                            } else {
-                                                                e.preventDefault();
-                                                                document.execCommand('undo');
-                                                            }
-                                                            break;
-                                                        case 'y':
-                                                            e.preventDefault();
-                                                            document.execCommand('redo');
-                                                            break;
-                                                    }
-                                                }
-                                            }}
-                                            style={{
-                                                fontFamily: 'Traditional Arabic, serif',
-                                                fontSize: '18px',
-                                                lineHeight: lineSpacing,
-                                                textAlign: 'justify',
-                                                direction: 'rtl',
-                                                unicodeBidi: 'bidi-override',
-                                                caretColor: '#d97706'
-                                            }}
-                                        />
-                                        {/* Page Number */}
-                                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-400">- 1 -</div>
-                                    </div>
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        fontFamily: 'Traditional Arabic, serif',
+                                                        fontSize: '18px',
+                                                        lineHeight: lineSpacing,
+                                                        textAlign: 'justify',
+                                                        direction: 'rtl',
+                                                        unicodeBidi: 'bidi-override',
+                                                        caretColor: '#d97706',
+                                                        minHeight: `calc(${pageSizes[pageSize].height}mm - 40mm)`
+                                                    }}
+                                                />
+                                                {/* Page Number */}
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-gray-400">- {pageIndex + 1} -</div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Add Page Button */}
+                                    <button
+                                        onClick={addNewPage}
+                                        className="w-full py-4 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        إضافة صفحة جديدة
+                                    </button>
                                 </div>
                             </div>
 
