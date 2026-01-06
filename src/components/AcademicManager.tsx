@@ -206,7 +206,7 @@ export default function AcademicManager() {
         }
     }, [editingNode, draftContent]);
 
-    // Auto-pagination: Check if content exceeds page height
+    // Auto-pagination: Check if content exceeds page height and insert page breaks
     useEffect(() => {
         if (!editorRef.current) return;
 
@@ -214,12 +214,39 @@ export default function AcademicManager() {
             const editor = editorRef.current;
             if (!editor) return;
 
-            const pageHeight = pageSizes[pageSize].pxHeight - 100; // Subtract margins
+            // Page height in pixels (A4 = ~1000px content area after margins)
+            const pageContentHeight = pageSize === 'A4' ? 1000 : pageSize === 'A5' ? 700 : 950;
             const contentHeight = editor.scrollHeight;
-            const calculatedPages = Math.ceil(contentHeight / pageHeight);
+            const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageContentHeight));
 
             if (calculatedPages !== currentPage) {
-                setCurrentPage(Math.max(1, calculatedPages));
+                setCurrentPage(calculatedPages);
+            }
+
+            // Add visual page indicators
+            const existingIndicators = editor.querySelectorAll('.page-indicator');
+            existingIndicators.forEach(el => el.remove());
+
+            if (calculatedPages > 1) {
+                for (let i = 1; i < calculatedPages; i++) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'page-indicator';
+                    indicator.style.cssText = `
+                        position: absolute;
+                        left: 0;
+                        right: 0;
+                        top: ${i * pageContentHeight}px;
+                        height: 40px;
+                        background: linear-gradient(to bottom, transparent, #e5e7eb 20%, #e5e7eb 80%, transparent);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        pointer-events: none;
+                        z-index: 5;
+                    `;
+                    indicator.innerHTML = `<span style="background:#f1f5f9;padding:4px 16px;border-radius:4px;font-size:11px;color:#64748b;border:1px dashed #94a3b8;">صفحة ${i + 1} ─ فاصل طباعة</span>`;
+                    editor.appendChild(indicator);
+                }
             }
         };
 
