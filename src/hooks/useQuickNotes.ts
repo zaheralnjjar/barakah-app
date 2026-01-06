@@ -219,6 +219,16 @@ export const useQuickNotes = () => {
                 return 0;
             });
             saveNoteToStorage(updated);
+        },
+        // Update existing note content completely
+        updateNote: (index: number, content: string) => {
+            if (index < 0 || index >= notesHistory.length) return;
+            const updated = [...notesHistory];
+            updated[index] = {
+                ...updated[index],
+                content: content,
+            };
+            saveNoteToStorage(updated);
         }
     };
 };

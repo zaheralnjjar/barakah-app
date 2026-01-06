@@ -68,6 +68,10 @@ export interface ResearchChapter {
     status: 'pending' | 'in_progress' | 'completed';
     tasks: ResearchTask[];
     tags?: string[];
+    startDate?: string;
+    endDate?: string;
+    parentId?: string;
+    color?: string;
 }
 
 export interface ResearchPhase {
@@ -79,6 +83,8 @@ export interface ResearchPhase {
     chapters: ResearchChapter[];
     tasks: ResearchTask[];
     tags?: string[];
+    color?: string;
+    order?: number;
 }
 
 export interface ResearchCircle {
@@ -103,18 +109,71 @@ export interface ResearchMaterial {
     tags?: string[];
 }
 
+import { useQuickNotes } from '@/hooks/useQuickNotes';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 export interface ResearchProject {
-    id?: string; // Optional for new creation
+    id: string;
     title: string;
     description: string;
     supervisor: string;
     institution: string;
-    startDate: string;
-    deadline: string;
+    startDate?: string;
+    deadline?: string;
     phases: ResearchPhase[];
     researchCircles: ResearchCircle[];
     materials: ResearchMaterial[];
+    references: any[]; // Placeholder for now
 }
+
+function SortablePhaseItem({ id, children }: { id: string; children: React.ReactNode }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : 'auto',
+        position: 'relative' as const,
+        touchAction: 'none'
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-start gap-1 group/sortable">
+            {/* Drag Handle */}
+            <div {...attributes} {...listeners} className="mt-2 cursor-grab active:cursor-grabbing text-white/20 hover:text-white/60 p-1 transition-colors">
+                <GripVertical className="w-4 h-4" />
+            </div>
+            {/* Content */}
+            <div className="flex-1">
+                {children}
+            </div>
+        </div>
+    );
+}
+
 
 const STORAGE_KEYS = {
     PROJECT: 'my_research_project_v2',
@@ -158,6 +217,8 @@ export default function AcademicManager() {
 
     // Drafting State
     const [editingNode, setEditingNode] = useState<{ phaseId: string, chapterId?: string, taskId?: string } | null>(null);
+    const [editingNote, setEditingNote] = useState<{ id: number; originContent: string } | null>(null);
+    const { updateNote } = useQuickNotes();
     const [draftContent, setDraftContent] = useState('');
     const [draftTags, setDraftTags] = useState<string[]>([]);
     const [selectedForExport, setSelectedForExport] = useState<Set<string>>(new Set());
@@ -236,96 +297,121 @@ export default function AcademicManager() {
         toast({ title: `✅ تم إضافة صفحة ${newIndex + 1}` });
     };
 
+    // Ref to keep track of pages for sync operations
+    const pagesRef = useRef<string[]>(pages);
+    useEffect(() => {
+        pagesRef.current = pages;
+    }, [pages]);
+
     // Function to check if content overflows and auto-create new page
     const handlePageInput = (index: number, content: string) => {
-        const newPages = [...pages];
+        const newPages = [...pagesRef.current];
         newPages[index] = content;
+
+        // Optimistically update state
         setPages(newPages);
 
         // Also update draftContent with all pages combined
         const allContent = newPages.join('<div style="page-break-after:always;"></div>');
         setDraftContent(allContent);
+
+        // Debounce pagination to avoid heavy calc on every keystroke
+        if (pagintationTimeoutRef.current) clearTimeout(pagintationTimeoutRef.current);
+        pagintationTimeoutRef.current = setTimeout(() => {
+            checkOverflowAndPaginate(index, newPages);
+        }, 500);
     };
 
+    const pagintationTimeoutRef = useRef<NodeJS.Timeout>();
+
     // Auto-distribute content across pages when overflow detected
-    const checkOverflowAndPaginate = (pageIndex: number) => {
-        const pageRef = pageRefs.current[pageIndex];
-        if (!pageRef) return;
-
+    const checkOverflowAndPaginate = (startPageIndex: number, currentPages: string[]) => {
         const maxHeight = pageSizes[pageSize].pxHeight - 80; // Subtract padding
+        let updatedPages = [...currentPages];
+        let hasChanges = false;
 
-        // Check if content exceeds page height
-        if (pageRef.scrollHeight > maxHeight) {
-            const content = pageRef.innerHTML;
+        // Limit iterations to prevent freezing
+        const maxPagesToCheck = 50;
 
-            // Split content by paragraphs, divs, or line breaks
-            const elements = content.split(/(<\/p>|<\/div>|<br\s*\/?>)/gi);
+        // Create temporary div to measure content height
+        const measureDiv = document.createElement('div');
+        measureDiv.style.cssText = `
+            position: absolute;
+            visibility: hidden;
+            width: ${pageSizes[pageSize].width}mm; 
+            font-family: 'Traditional Arabic', serif;
+            font-size: 18px;
+            line-height: ${lineSpacing};
+            padding: 20mm;
+            direction: rtl;
+            box-sizing: border-box;
+        `;
+        document.body.appendChild(measureDiv);
 
-            let currentContent = '';
-            let overflowContent = '';
-            let overflow = false;
+        try {
+            for (let i = startPageIndex; i < updatedPages.length && i < startPageIndex + maxPagesToCheck; i++) {
+                const content = updatedPages[i];
+                measureDiv.innerHTML = content;
 
-            // Create temporary div to measure content height
-            const measureDiv = document.createElement('div');
-            measureDiv.style.cssText = `
-                position: absolute;
-                visibility: hidden;
-                width: ${pageSizes[pageSize].width - 40}mm;
-                font-family: 'Traditional Arabic', serif;
-                font-size: 18px;
-                line-height: ${lineSpacing};
-                padding: 20mm;
-            `;
-            document.body.appendChild(measureDiv);
+                if (measureDiv.scrollHeight > maxHeight) {
+                    // Overflow detected
+                    hasChanges = true;
 
-            // Iterate through elements and find split point
-            for (let i = 0; i < elements.length; i++) {
-                const element = elements[i];
-                if (!element || element.trim() === '') continue;
+                    // Split content
+                    // Use a range-based approach or word-by-word backward check for better precision?
+                    // Current Paragraph split is coarse but safer.
 
-                if (!overflow) {
-                    measureDiv.innerHTML = currentContent + element;
+                    const elements = content.split(/(<\/p>|<\/div>|<br\s*\/?>)/gi);
+                    let fitContent = '';
+                    let moveContent = '';
+                    let overflowDetected = false;
 
-                    if (measureDiv.scrollHeight > maxHeight) {
-                        // This element causes overflow - start putting in next page
-                        overflow = true;
-                        overflowContent = element;
+                    measureDiv.innerHTML = '';
+
+                    for (const el of elements) {
+                        if (!el) continue;
+
+                        if (!overflowDetected) {
+                            const prevHtml = measureDiv.innerHTML;
+                            measureDiv.innerHTML += el;
+
+                            if (measureDiv.scrollHeight > maxHeight) {
+                                overflowDetected = true;
+                                // Revert last addition
+                                measureDiv.innerHTML = prevHtml;
+                                // Using prevHtml is safer for 'fitContent'
+                                fitContent = prevHtml;
+                                moveContent = el;
+                            }
+                        } else {
+                            moveContent += el;
+                        }
+                    }
+
+                    if (overflowDetected && moveContent) {
+                        updatedPages[i] = fitContent;
+                        if (i === updatedPages.length - 1) {
+                            updatedPages.push(moveContent);
+                        } else {
+                            updatedPages[i + 1] = moveContent + (updatedPages[i + 1] || '');
+                        }
+
+                        // Continue loop to check next page
                     } else {
-                        currentContent += element;
+                        // Could not split? (Single giant element?)
+                        // If we can't split, we might be stuck. 
+                        // For now, leave it overflowing to avoid infinite loop of empty moves.
                     }
-                } else {
-                    overflowContent += element;
                 }
             }
-
+        } finally {
             document.body.removeChild(measureDiv);
+        }
 
-            // Only proceed if we have overflow content
-            if (overflowContent.trim()) {
-                const newPages = [...pages];
-                newPages[pageIndex] = currentContent;
-
-                // Add new page with overflow content
-                if (pageIndex === pages.length - 1) {
-                    newPages.push(overflowContent);
-                } else {
-                    // Prepend to existing next page
-                    newPages[pageIndex + 1] = overflowContent + (newPages[pageIndex + 1] || '');
-                }
-
-                setPages(newPages);
-
-                // Update draftContent with all pages
-                const allContent = newPages.join('<div style="page-break-after:always;"></div>');
-                setDraftContent(allContent);
-
-                // Recursively check the next page after a delay
-                setTimeout(() => {
-                    if (pageIndex + 1 < newPages.length) {
-                        checkOverflowAndPaginate(pageIndex + 1);
-                    }
-                }, 150);
-            }
+        if (hasChanges) {
+            setPages(updatedPages);
+            const allContent = updatedPages.join('<div style="page-break-after:always;"></div>');
+            setDraftContent(allContent);
         }
     };
 
@@ -1783,9 +1869,9 @@ export default function AcademicManager() {
                                                                     break;
                                                                 case 'z':
                                                                     e.preventDefault();
-                                                                    document.execCommand(e.shiftKey ? 'redo' : 'undo');
+                                                                    document.execCommand(e.shiftKey ? 'redo' : 'undo', false);
                                                                     break;
-                                                                case 'y': e.preventDefault(); document.execCommand('redo'); break;
+                                                                case 'y': e.preventDefault(); document.execCommand('redo', false); break;
                                                                 case '=':
                                                                 case '+': e.preventDefault(); setEditorZoom(z => Math.min(200, z + 10)); break;
                                                                 case '-': e.preventDefault(); setEditorZoom(z => Math.max(50, z - 10)); break;
@@ -1980,6 +2066,19 @@ mark { background-color: #ffff00; }
                                         <X className="w-3 h-3 ml-1" /> إلغاء
                                     </Button>
                                     <Button size="sm" className="h-8 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={() => {
+                                        if (editingNote) {
+                                            const content = editorRef.current?.innerHTML || draftContent;
+                                            updateNote(editingNote.id, content);
+                                            setEditingNote(null);
+                                            // Optional: clear pages or keep them?
+                                            // User might want to continue or go back.
+                                            // Usually clearing is safer to avoid confusion.
+                                            setPages(['']);
+                                            setDraftContent('');
+                                            toast({ title: "✅ تم حفظ الملاحظة وتحديثها" });
+                                            return;
+                                        }
+
                                         if (editingNode) {
                                             const targetPhaseId = editingNode.phaseId;
                                             const targetId = editingNode.chapterId || editingNode.taskId;
@@ -2378,7 +2477,15 @@ mark { background-color: #ffff00; }
             <Dialog open={isQuickNotesOpen} onOpenChange={setIsQuickNotesOpen}>
                 <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
                     <div className="flex-1 overflow-hidden p-4">
-                        <QuickNotes />
+                        <QuickNotes onEditInMainEditor={(note) => {
+                            setEditingNote({ id: note.id, originContent: note.content });
+                            setPages([note.content]);
+                            setDraftContent(note.content);
+                            setIsQuickNotesOpen(false);
+                            // Set editingNode to null to avoid conflict
+                            setEditingNode(null);
+                            toast({ title: "تم فتح الملاحظة في المحرر" });
+                        }} />
                     </div>
                 </DialogContent>
             </Dialog>

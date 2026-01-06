@@ -183,6 +183,13 @@ export const AcademicService = {
         if (error) throw error;
     },
 
+    async reorderPhases(updates: { id: string, order_index: number }[]): Promise<void> {
+        const { error } = await supabase
+            .from('academic_phases')
+            .upsert(updates.map(u => ({ id: u.id, order_index: u.order_index }))); // upsert updates existing rows based on PK
+        if (error) throw error;
+    },
+
     // --- Chapters ---
     async getChapters(phaseId: string): Promise<ResearchChapter[]> {
         const { data, error } = await supabase

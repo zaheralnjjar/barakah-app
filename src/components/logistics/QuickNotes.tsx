@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff, Search, Bold, Italic, Underline, X } from 'lucide-react';
+import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff, Search, Bold, Italic, Underline, X, Maximize2 } from 'lucide-react';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,7 +20,8 @@ const NoteItemComponent: React.FC<{
     note: NoteItem;
     onSelect: (note: NoteItem) => void;
     onTogglePin: (e: React.MouseEvent, index: number) => void;
-}> = ({ note, onSelect, onTogglePin }) => {
+    onEditInMainEditor?: (note: { id: number, content: string }) => void;
+}> = ({ note, onSelect, onTogglePin, onEditInMainEditor }) => {
     return (
         <div
             onClick={() => onSelect(note)}
@@ -40,9 +41,24 @@ const NoteItemComponent: React.FC<{
                         ? 'text-amber-600 bg-amber-100 opacity-100'
                         : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500 opacity-0 group-hover:opacity-100'}
                 `}
+                title={note.isPinned ? "إلغاء التثبيت" : "تثبيت"}
             >
                 {note.isPinned ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
             </button>
+
+            {/* Edit in Main Editor Button */}
+            {onEditInMainEditor && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEditInMainEditor({ id: note.id, content: note.content });
+                    }}
+                    className="absolute bottom-2 left-2 p-1.5 rounded-full text-indigo-400 hover:bg-indigo-50 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all z-10"
+                    title="تعديل في المحرر الكامل"
+                >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+            )}
 
             <div className="flex items-start gap-2">
                 <StickyNote className={`w-5 h-5 shrink-0 mt-0.5 ${note.isPinned ? 'text-amber-600' : 'text-gray-400 group-hover:text-emerald-500'}`} />
@@ -59,7 +75,7 @@ const NoteItemComponent: React.FC<{
     );
 };
 
-export const QuickNotes = () => {
+export const QuickNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note: { id: number, content: string }) => void }) => {
     const { notesHistory, archiveNote, deleteHistoryItem, togglePin } = useQuickNotes();
     const { toast } = useToast();
     const [selectedNote, setSelectedNote] = useState<NoteItem | null>(null);
