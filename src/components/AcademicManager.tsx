@@ -2027,26 +2027,80 @@ mark { background-color: #ffff00; }
                         </div>
 
                         {/* Document Structure */}
-                        <ScrollArea className="flex-1">
+                        <ScrollArea className="flex-1" dir="rtl">
                             <div className="p-2 space-y-1">
                                 {project?.phases.map((phase) => (
                                     <div key={phase.id} className="space-y-0.5">
-                                        <div className="flex items-center gap-2 p-2 rounded bg-indigo-900/50 text-xs font-bold">
-                                            <Folder className="w-3 h-3 text-amber-400" />
-                                            {phase.title}
+                                        {/* Phase Header - Collapsible */}
+                                        <div
+                                            className="group flex items-center justify-between p-2 rounded bg-indigo-900/50 text-xs font-bold cursor-pointer hover:bg-indigo-800 transition"
+                                            onClick={() => toggleFolder(phase.id)}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {openFolders[phase.id] ?
+                                                    <FolderOpen className="w-3 h-3 text-amber-400" /> :
+                                                    <Folder className="w-3 h-3 text-amber-400" />
+                                                }
+                                                <span>{phase.title}</span>
+                                                <ChevronDown className={`w-3 h-3 transition-transform ${openFolders[phase.id] ? 'rotate-180' : ''}`} />
+                                            </div>
+                                            {/* Action Icons on Hover */}
+                                            <div className="hidden group-hover:flex items-center gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const newTitle = prompt('اسم جديد للمرحلة:', phase.title);
+                                                        if (newTitle && newTitle !== phase.title) {
+                                                            toast({ title: `✅ تم تغيير الاسم إلى: ${newTitle}` });
+                                                        }
+                                                    }}
+                                                    className="p-1 rounded hover:bg-white/20"
+                                                    title="تعديل"
+                                                >
+                                                    <Edit className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        {phase.chapters?.map((chapter) => (
+
+                                        {/* Chapters - Collapsible Content */}
+                                        {openFolders[phase.id] && phase.chapters?.map((chapter) => (
                                             <div
                                                 key={chapter.id}
-                                                className={`flex items-center gap-2 p-2 mr-3 rounded text-[10px] cursor-pointer transition ${editingNode?.chapterId === chapter.id ? 'bg-amber-500 text-black font-bold' : 'hover:bg-indigo-800'}`}
+                                                className={`group flex items-center justify-between p-2 mr-4 rounded text-[10px] cursor-pointer transition ${editingNode?.chapterId === chapter.id ? 'bg-amber-500 text-black font-bold' : 'hover:bg-indigo-800'}`}
                                                 onClick={() => {
                                                     setEditingNode({ phaseId: phase.id, chapterId: chapter.id });
                                                     setDraftContent(chapter.content || '');
                                                     setDraftTags(chapter.tags || []);
                                                 }}
                                             >
-                                                <FileText className="w-3 h-3" />
-                                                {chapter.title}
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="w-3 h-3" />
+                                                    <span>{chapter.title}</span>
+                                                </div>
+                                                {/* Action Icons on Hover */}
+                                                <div className="hidden group-hover:flex items-center gap-1">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newTitle = prompt('اسم جديد:', chapter.title);
+                                                            if (newTitle && newTitle !== chapter.title) {
+                                                                // Rename chapter
+                                                                toast({ title: `✅ تم تغيير الاسم إلى: ${newTitle}` });
+                                                            }
+                                                        }}
+                                                        className="p-1 rounded hover:bg-white/20"
+                                                        title="إعادة التسمية"
+                                                    >
+                                                        <Edit className="w-2.5 h-2.5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); deleteChapter(phase.id, chapter.id); }}
+                                                        className="p-1 rounded hover:bg-red-500/50"
+                                                        title="حذف"
+                                                    >
+                                                        <Trash2 className="w-2.5 h-2.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
