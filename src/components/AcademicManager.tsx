@@ -231,17 +231,84 @@ export default function AcademicManager() {
         setDraftContent(allContent);
     };
 
-    // Check for overflow and create new page automatically
+    // Auto-distribute content across pages when overflow detected
     const checkOverflowAndPaginate = (pageIndex: number) => {
         const pageRef = pageRefs.current[pageIndex];
         if (!pageRef) return;
 
-        const maxHeight = pageSizes[pageSize].pxHeight;
-        if (pageRef.scrollHeight > maxHeight + 50) {
-            // Content overflows, need to create new page
-            if (pageIndex === pages.length - 1) {
-                // Only auto-add if it's the last page
-                addNewPage();
+        const maxHeight = pageSizes[pageSize].pxHeight - 80; // Subtract padding
+
+        // Check if content exceeds page height
+        if (pageRef.scrollHeight > maxHeight) {
+            const content = pageRef.innerHTML;
+
+            // Split content by paragraphs, divs, or line breaks
+            const elements = content.split(/(<\/p>|<\/div>|<br\s*\/?>)/gi);
+
+            let currentContent = '';
+            let overflowContent = '';
+            let overflow = false;
+
+            // Create temporary div to measure content height
+            const measureDiv = document.createElement('div');
+            measureDiv.style.cssText = `
+                position: absolute;
+                visibility: hidden;
+                width: ${pageSizes[pageSize].width - 40}mm;
+                font-family: 'Traditional Arabic', serif;
+                font-size: 18px;
+                line-height: ${lineSpacing};
+                padding: 20mm;
+            `;
+            document.body.appendChild(measureDiv);
+
+            // Iterate through elements and find split point
+            for (let i = 0; i < elements.length; i++) {
+                const element = elements[i];
+                if (!element || element.trim() === '') continue;
+
+                if (!overflow) {
+                    measureDiv.innerHTML = currentContent + element;
+
+                    if (measureDiv.scrollHeight > maxHeight) {
+                        // This element causes overflow - start putting in next page
+                        overflow = true;
+                        overflowContent = element;
+                    } else {
+                        currentContent += element;
+                    }
+                } else {
+                    overflowContent += element;
+                }
+            }
+
+            document.body.removeChild(measureDiv);
+
+            // Only proceed if we have overflow content
+            if (overflowContent.trim()) {
+                const newPages = [...pages];
+                newPages[pageIndex] = currentContent;
+
+                // Add new page with overflow content
+                if (pageIndex === pages.length - 1) {
+                    newPages.push(overflowContent);
+                } else {
+                    // Prepend to existing next page
+                    newPages[pageIndex + 1] = overflowContent + (newPages[pageIndex + 1] || '');
+                }
+
+                setPages(newPages);
+
+                // Update draftContent with all pages
+                const allContent = newPages.join('<div style="page-break-after:always;"></div>');
+                setDraftContent(allContent);
+
+                // Recursively check the next page after a delay
+                setTimeout(() => {
+                    if (pageIndex + 1 < newPages.length) {
+                        checkOverflowAndPaginate(pageIndex + 1);
+                    }
+                }, 150);
             }
         }
     };
@@ -1296,16 +1363,14 @@ export default function AcademicManager() {
                         }}
                     />
 
-                    {/* Sidebar Toggle Button - Floating (when sidebar is hidden) */}
-                    {!sidebarVisible && (
-                        <button
-                            onClick={() => setSidebarVisible(true)}
-                            className="fixed right-4 top-1/2 -translate-y-1/2 z-[100] bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110 animate-pulse"
-                            title="إظهار الشريط الجانبي"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                    )}
+                    {/* Sidebar Toggle Button - Always visible at top right */}
+                    <button
+                        onClick={() => setSidebarVisible(!sidebarVisible)}
+                        className="fixed right-4 top-20 z-[100] bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg shadow-xl transition-all hover:scale-105"
+                        title={sidebarVisible ? "إخفاء الشريط الجانبي" : "إظهار الشريط الجانبي"}
+                    >
+                        {sidebarVisible ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    </button>
 
                     {/* Main Editor Area */}
                     <div className="flex-1 flex flex-col overflow-hidden">
