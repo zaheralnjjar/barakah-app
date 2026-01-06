@@ -1797,6 +1797,10 @@ export default function AcademicManager() {
                                                                     document.execCommand(e.shiftKey ? 'redo' : 'undo');
                                                                     break;
                                                                 case 'y': e.preventDefault(); document.execCommand('redo'); break;
+                                                                case '=':
+                                                                case '+': e.preventDefault(); setEditorZoom(z => Math.min(200, z + 10)); break;
+                                                                case '-': e.preventDefault(); setEditorZoom(z => Math.max(50, z - 10)); break;
+                                                                case '0': e.preventDefault(); setEditorZoom(100); break;
                                                             }
                                                         }
                                                     }}
@@ -1806,9 +1810,10 @@ export default function AcademicManager() {
                                                         lineHeight: lineSpacing,
                                                         textAlign: 'justify',
                                                         direction: 'rtl',
-                                                        unicodeBidi: 'bidi-override',
+                                                        unicodeBidi: 'embed',
                                                         caretColor: '#d97706',
-                                                        minHeight: `calc(${pageSizes[pageSize].height}mm - 40mm)`
+                                                        minHeight: `calc(${pageSizes[pageSize].height}mm - 40mm)`,
+                                                        writingMode: 'horizontal-tb'
                                                     }}
                                                 />
                                                 {/* Page Number */}
