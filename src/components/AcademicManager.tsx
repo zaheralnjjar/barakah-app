@@ -170,6 +170,7 @@ export default function AcademicManager() {
     const [newChapterTitle, setNewChapterTitle] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+    const [isSearchEditorOpen, setIsSearchEditorOpen] = useState(false);
 
     // Editor state
     const [editorZoom, setEditorZoom] = useState(100);
@@ -216,8 +217,22 @@ export default function AcademicManager() {
     // Function to add a new page
     const addNewPage = () => {
         setPages(prev => [...prev, '']);
-        setActivePageIndex(pages.length);
-        toast({ title: `✅ تم إضافة صفحة ${pages.length + 1}` });
+        const newIndex = pages.length;
+        setActivePageIndex(newIndex);
+        setTimeout(() => {
+            const pageEl = document.getElementById(`editor-page-${newIndex}`);
+            if (pageEl) {
+                pageEl.focus();
+                // Move cursor to start
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.setStart(pageEl, 0);
+                range.collapse(true);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+            }
+        }, 50);
+        toast({ title: `✅ تم إضافة صفحة ${newIndex + 1}` });
     };
 
     // Function to check if content overflows and auto-create new page
@@ -1441,6 +1456,66 @@ export default function AcademicManager() {
                                     </SelectContent>
                                 </Select>
                                 <div className="w-px h-6 bg-white/20" />
+                                {/* New Page */}
+                                <Button
+                                    variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white"
+                                    title="إضافة صفحة جديدة (Ctrl+Enter)"
+                                    onClick={addNewPage}
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </Button>
+                                {/* Insert Table */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إدراج جدول" onClick={() => {
+                                    const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                    document.execCommand('insertHTML', false, table);
+                                    toast({ title: "✅ تم إدراج جدول" });
+                                }}><LayoutGrid className="w-4 h-4" /></Button>
+                                {/* Footnote */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة حاشية" onClick={() => {
+                                    const content = editorRef.current?.innerHTML || '';
+                                    const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
+                                    document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
+                                    const activePageRef = pageRefs.current[activePageIndex];
+                                    if (activePageRef) {
+                                        let section = activePageRef.querySelector('.footnotes-section');
+                                        if (!section) {
+                                            const footnotesSection = document.createElement('div');
+                                            footnotesSection.className = 'footnotes-section';
+                                            footnotesSection.style.cssText = 'margin-top:40px;padding-top:15px;border-top:2px dashed #d97706;';
+                                            footnotesSection.innerHTML = '<p style="font-weight:bold;color:#d97706;font-size:16px;margin-bottom:10px;">📝 الحواشي</p>';
+                                            activePageRef.appendChild(footnotesSection);
+                                            section = footnotesSection;
+                                        }
+                                        if (section) {
+                                            const newFootnote = document.createElement('p');
+                                            newFootnote.className = 'footnote-item';
+                                            newFootnote.style.cssText = 'font-size:14px;color:#666;';
+                                            newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
+                                            section.appendChild(newFootnote);
+                                        }
+                                    }
+                                    toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
+                                }}><Footprints className="w-4 h-4" /></Button>
+                                {/* Comment */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة تعليق" onClick={() => {
+                                    const selection = window.getSelection();
+                                    if (selection && selection.toString().trim()) {
+                                        const selectedText = selection.toString();
+                                        const comment = prompt('أدخل تعليقك:');
+                                        if (comment) {
+                                            document.execCommand('insertHTML', false, `<mark style="background:linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);padding:2px 4px;border-radius:2px;cursor:help;" title="💬 ${comment}">${selectedText}</mark>`);
+                                            toast({ title: "✅ تم إضافة التعليق" });
+                                        }
+                                    } else {
+                                        toast({ title: "⚠️ حدد نصاً أولاً" });
+                                    }
+                                }}><MessageSquare className="w-4 h-4" /></Button>
+                                {/* Insert PDF */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إدراج PDF" onClick={() => pdfInputRef.current?.click()}><FileUp className="w-4 h-4" /></Button>
+                                {/* Search Editor Button */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="محرر البحث" onClick={() => setIsSearchEditorOpen(true)}><FileText className="w-4 h-4" /></Button>
+
+                                <div className="w-px h-6 bg-white/20" />
                                 {/* Format Painter */}
                                 <Button
                                     variant={formatPainterActive ? "default" : "ghost"}
@@ -1641,95 +1716,94 @@ export default function AcademicManager() {
 
                         {/* Page Container with Bottom Toolbar */}
                         <div className="flex-1 bg-gradient-to-br from-amber-100/60 via-stone-200 to-slate-300 overflow-auto flex flex-col items-center p-8 pb-20 relative">
-                            {/* Bottom Floating Toolbar - Separate Buttons */}
-                            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex flex-row gap-3 z-40 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-slate-200">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-indigo-50 hover:border-indigo-300"
-                                    title="إضافة صفحة جديدة"
-                                    onClick={() => {
-                                        const pageBreak = `<div style="page-break-after:always;margin:40px 0;text-align:center;"><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/><span style="background:#f1f5f9;padding:4px 12px;border-radius:4px;font-size:12px;color:#64748b;">── فاصل صفحات ──</span><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/></div><p>&nbsp;</p>`;
-                                        document.execCommand('insertHTML', false, pageBreak);
-                                        toast({ title: "✅ تم إضافة صفحة جديدة" });
-                                    }}
-                                >
-                                    <Plus className="w-5 h-5 text-indigo-600" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-emerald-50 hover:border-emerald-300"
-                                    title="إدراج جدول"
-                                    onClick={() => {
-                                        const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
-                                        document.execCommand('insertHTML', false, table);
-                                        toast({ title: "✅ تم إدراج جدول" });
-                                    }}
-                                >
-                                    <LayoutGrid className="w-5 h-5 text-emerald-600" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-amber-50 hover:border-amber-300"
-                                    title="إضافة حاشية"
-                                    onClick={() => {
-                                        const content = editorRef.current?.innerHTML || '';
-                                        const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
-                                        document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
-                                        if (editorRef.current && !editorRef.current.querySelector('.footnotes-section')) {
-                                            const footnotesSection = document.createElement('div');
-                                            footnotesSection.className = 'footnotes-section';
-                                            footnotesSection.style.cssText = 'margin-top:40px;padding-top:20px;border-top:2px dashed #ccc;';
-                                            footnotesSection.innerHTML = `<p style="font-weight:bold;color:#6366f1;margin-bottom:10px;">── الحواشي ──</p><p class="footnote-item" style="font-size:14px;color:#666;">[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span></p>`;
-                                            editorRef.current.appendChild(footnotesSection);
-                                        } else if (editorRef.current) {
-                                            const section = editorRef.current.querySelector('.footnotes-section');
-                                            if (section) {
-                                                const newFootnote = document.createElement('p');
-                                                newFootnote.className = 'footnote-item';
-                                                newFootnote.style.cssText = 'font-size:14px;color:#666;';
-                                                newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
-                                                section.appendChild(newFootnote);
-                                            }
+                            {/* Tools moved to top toolbar */}
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-indigo-50 hover:border-indigo-300"
+                                title="إضافة صفحة جديدة"
+                                onClick={() => {
+                                    const pageBreak = `<div style="page-break-after:always;margin:40px 0;text-align:center;"><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/><span style="background:#f1f5f9;padding:4px 12px;border-radius:4px;font-size:12px;color:#64748b;">── فاصل صفحات ──</span><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/></div><p>&nbsp;</p>`;
+                                    document.execCommand('insertHTML', false, pageBreak);
+                                    toast({ title: "✅ تم إضافة صفحة جديدة" });
+                                }}
+                            >
+                                <Plus className="w-5 h-5 text-indigo-600" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-emerald-50 hover:border-emerald-300"
+                                title="إدراج جدول"
+                                onClick={() => {
+                                    const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                    document.execCommand('insertHTML', false, table);
+                                    toast({ title: "✅ تم إدراج جدول" });
+                                }}
+                            >
+                                <LayoutGrid className="w-5 h-5 text-emerald-600" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-amber-50 hover:border-amber-300"
+                                title="إضافة حاشية"
+                                onClick={() => {
+                                    const content = editorRef.current?.innerHTML || '';
+                                    const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
+                                    document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
+                                    if (editorRef.current && !editorRef.current.querySelector('.footnotes-section')) {
+                                        const footnotesSection = document.createElement('div');
+                                        footnotesSection.className = 'footnotes-section';
+                                        footnotesSection.style.cssText = 'margin-top:40px;padding-top:20px;border-top:2px dashed #ccc;';
+                                        footnotesSection.innerHTML = `<p style="font-weight:bold;color:#6366f1;margin-bottom:10px;">── الحواشي ──</p><p class="footnote-item" style="font-size:14px;color:#666;">[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span></p>`;
+                                        editorRef.current.appendChild(footnotesSection);
+                                    } else if (editorRef.current) {
+                                        const section = editorRef.current.querySelector('.footnotes-section');
+                                        if (section) {
+                                            const newFootnote = document.createElement('p');
+                                            newFootnote.className = 'footnote-item';
+                                            newFootnote.style.cssText = 'font-size:14px;color:#666;';
+                                            newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
+                                            section.appendChild(newFootnote);
                                         }
-                                        toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
-                                    }}
-                                >
-                                    <Footprints className="w-5 h-5 text-amber-600" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-rose-50 hover:border-rose-300"
-                                    title="إضافة تعليق"
-                                    onClick={() => {
-                                        const selection = window.getSelection();
-                                        if (selection && selection.toString().trim()) {
-                                            const selectedText = selection.toString();
-                                            const comment = prompt('أدخل تعليقك:');
-                                            if (comment) {
-                                                document.execCommand('insertHTML', false, `<mark style="background:linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);padding:2px 4px;border-radius:2px;cursor:help;" title="💬 ${comment}">${selectedText}</mark>`);
-                                                toast({ title: "✅ تم إضافة التعليق" });
-                                            }
-                                        } else {
-                                            toast({ title: "⚠️ حدد نصاً أولاً" });
+                                    }
+                                    toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
+                                }}
+                            >
+                                <Footprints className="w-5 h-5 text-amber-600" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-rose-50 hover:border-rose-300"
+                                title="إضافة تعليق"
+                                onClick={() => {
+                                    const selection = window.getSelection();
+                                    if (selection && selection.toString().trim()) {
+                                        const selectedText = selection.toString();
+                                        const comment = prompt('أدخل تعليقك:');
+                                        if (comment) {
+                                            document.execCommand('insertHTML', false, `<mark style="background:linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);padding:2px 4px;border-radius:2px;cursor:help;" title="💬 ${comment}">${selectedText}</mark>`);
+                                            toast({ title: "✅ تم إضافة التعليق" });
                                         }
-                                    }}
-                                >
-                                    <MessageSquare className="w-5 h-5 text-rose-600" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-purple-50 hover:border-purple-300"
-                                    title="إدراج PDF"
-                                    onClick={() => pdfInputRef.current?.click()}
-                                >
-                                    <FileUp className="w-5 h-5 text-purple-600" />
-                                </Button>
-                            </div>
+                                    } else {
+                                        toast({ title: "⚠️ حدد نصاً أولاً" });
+                                    }
+                                }}
+                            >
+                                <MessageSquare className="w-5 h-5 text-rose-600" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+                                title="إدراج PDF"
+                                onClick={() => pdfInputRef.current?.click()}
+                            >
+                                <FileUp className="w-5 h-5 text-purple-600" />
+                            </Button>
+
 
                             {/* Page Area - Multiple Pages */}
                             <div className="flex-1 flex flex-col items-center gap-8 py-4">
