@@ -14,7 +14,8 @@ const mapProjectFromDB = (row: any): ResearchProject => ({
     deadline: row.deadline,
     phases: [],
     researchCircles: [],
-    materials: []
+    materials: [],
+    references: []
 });
 
 export const AcademicService = {
@@ -137,14 +138,16 @@ export const AcademicService = {
         return phases;
     },
 
-    async createPhase(projectId: string, title: string, orderIndex: number): Promise<ResearchPhase> {
+    async createPhase(projectId: string, title: string, orderIndex: number, startDate?: string, endDate?: string): Promise<ResearchPhase> {
         const { data, error } = await supabase
             .from('academic_phases')
             .insert({
                 project_id: projectId,
                 title,
                 order_index: orderIndex,
-                status: 'pending'
+                status: 'pending',
+                start_date: startDate,
+                end_date: endDate
             })
             .select()
             .single();
@@ -173,7 +176,8 @@ export const AcademicService = {
                 title: updates.title,
                 status: updates.status,
                 start_date: updates.startDate,
-                end_date: updates.endDate
+                end_date: updates.endDate,
+                color: updates.color
             })
             .eq('id', id);
         if (error) throw error;
@@ -185,30 +189,37 @@ export const AcademicService = {
             .from('academic_chapters')
             .select('*')
             .eq('phase_id', phaseId)
-            .order('order_index', { ascending: true });
+            .order('created_at', { ascending: true });
 
         if (error) throw error;
 
-        return (data || []).map(row => ({
-            id: row.id,
-            title: row.title,
-            description: row.description,
-            content: row.content, // Crucial for editing
-            status: row.status as any,
+        return (data || []).map(ch => ({
+            id: ch.id,
+            title: ch.title,
+            description: ch.description,
+            content: ch.content,
+            status: ch.status as any,
+            startDate: ch.start_date,
+            endDate: ch.end_date,
             tasks: [],
-            tags: row.tags // New field
+            tags: ch.tags || [],
+            parentId: ch.parent_id,
+            color: ch.color
         }));
     },
 
-    async createChapter(phaseId: string, title: string, content: string = ''): Promise<ResearchChapter> {
+    async createChapter(phaseId: string, title: string, content: string = '', tags: string[] = [], startDate?: string, endDate?: string, parentId?: string): Promise<ResearchChapter> {
         const { data, error } = await supabase
             .from('academic_chapters')
             .insert({
                 phase_id: phaseId,
                 title,
                 content,
-                status: 'pending',
-                tags: []
+                status: 'draft',
+                tags: tags,
+                start_date: startDate,
+                end_date: endDate,
+                parent_id: parentId
             })
             .select()
             .single();
@@ -220,8 +231,12 @@ export const AcademicService = {
             description: data.description,
             content: data.content,
             status: data.status as any,
+            startDate: data.start_date,
+            endDate: data.end_date,
             tasks: [],
-            tags: []
+            tags: data.tags,
+            parentId: data.parent_id,
+            color: data.color
         };
     },
 
@@ -232,7 +247,11 @@ export const AcademicService = {
                 title: updates.title,
                 content: updates.content,
                 status: updates.status,
-                tags: updates.tags
+                tags: updates.tags,
+                start_date: updates.startDate,
+                end_date: updates.endDate,
+                parent_id: updates.parentId,
+                color: updates.color
             })
             .eq('id', id);
         if (error) throw error;

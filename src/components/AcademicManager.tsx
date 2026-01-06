@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     GraduationCap, BookOpen, Calendar, Clock, Plus, Edit, Trash2,
     CheckCircle, FileText, Target, BookMarked, Award, TrendingUp,
-    PenTool, Timer, Star, ChevronDown, ChevronUp, GripVertical, X,
+    PenTool, Timer, Star, ChevronDown, ChevronUp, ChevronRight, GripVertical, X,
     LayoutList, LayoutDashboard, Download, StickyNote, Library,
     History, Users as UsersIcon, Link as LinkIcon, Settings, Sparkles,
-    Printer, Bold, Italic, Underline, Palette, Type, AlignLeft, AlignCenter, AlignRight,
+    Printer, Bold, Italic, Underline, Strikethrough, Palette, Type, AlignLeft, AlignCenter, AlignRight,
     Share2, Pencil, Trash, FileUp, Copy, Square, Circle, Minus, RectangleHorizontal,
-    Folder, FolderOpen, CheckSquare
+    Folder, FolderOpen, CheckSquare, Undo, Redo, AlignJustify, LayoutGrid, MessageSquare, Footprints
 } from 'lucide-react';
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
@@ -171,6 +171,72 @@ export default function AcademicManager() {
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
+    // Editor state
+    const [editorZoom, setEditorZoom] = useState(100);
+    const [lineSpacing, setLineSpacing] = useState(1.8);
+    const [showComments, setShowComments] = useState(false);
+    const [sidebarVisible, setSidebarVisible] = useState(true);
+    const [sidebarPinned, setSidebarPinned] = useState(false);
+    const [formatPainterActive, setFormatPainterActive] = useState(false);
+    const [painterStyles, setPainterStyles] = useState<any>(null);
+    const [pageSize, setPageSize] = useState<'A4' | 'A5' | 'Letter'>('A4');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Page dimensions in mm (converted to pixels at 96 DPI)
+    const pageSizes = {
+        A4: { width: 210, height: 297, pxHeight: 1123 }, // 297mm * 3.78
+        A5: { width: 148, height: 210, pxHeight: 794 },
+        Letter: { width: 216, height: 279, pxHeight: 1056 }
+    };
+
+    // Editor refs
+    const editorRef = useRef<HTMLDivElement>(null);
+    const pdfInputRef = useRef<HTMLInputElement>(null);
+    const lastEditingNodeId = useRef<string | null>(null);
+    const pagesContainerRef = useRef<HTMLDivElement>(null);
+
+    // Initialize editor content when editingNode changes
+    useEffect(() => {
+        if (editingNode && editorRef.current) {
+            const currentId = editingNode.chapterId || editingNode.taskId || '';
+            if (lastEditingNodeId.current !== currentId) {
+                editorRef.current.innerHTML = draftContent;
+                lastEditingNodeId.current = currentId;
+            }
+        }
+    }, [editingNode, draftContent]);
+
+    // Auto-pagination: Check if content exceeds page height
+    useEffect(() => {
+        if (!editorRef.current) return;
+
+        const checkPageOverflow = () => {
+            const editor = editorRef.current;
+            if (!editor) return;
+
+            const pageHeight = pageSizes[pageSize].pxHeight - 100; // Subtract margins
+            const contentHeight = editor.scrollHeight;
+            const calculatedPages = Math.ceil(contentHeight / pageHeight);
+
+            if (calculatedPages !== currentPage) {
+                setCurrentPage(Math.max(1, calculatedPages));
+            }
+        };
+
+        // Use MutationObserver to watch for content changes
+        const observer = new MutationObserver(checkPageOverflow);
+        observer.observe(editorRef.current, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+
+        // Initial check
+        checkPageOverflow();
+
+        return () => observer.disconnect();
+    }, [pageSize, currentPage]);
+
     // Toggle folder open/close
     const toggleFolder = (phaseId: string) => {
         setOpenFolders(prev => {
@@ -291,9 +357,16 @@ export default function AcademicManager() {
 
     const deleteChapterMutation = useMutation({
         mutationFn: AcademicService.deleteChapter,
-        onSuccess: () => {
+        onSuccess: (_data, deletedId) => {
             queryClient.invalidateQueries({ queryKey: ['academic-projects'] });
+            // Close editor if the deleted chapter was being edited
+            if (editingNode?.chapterId === deletedId) {
+                setEditingNode(null);
+            }
             toast({ title: "🗑️ تم حذف الصندوق" });
+        },
+        onError: (error) => {
+            toast({ title: "❌ خطأ في الحذف", description: String(error) });
         }
     });
 
@@ -1189,67 +1262,720 @@ export default function AcademicManager() {
 
             {/* --- Dialogs --- */}
 
-            {/* Editor Dialog */}
+            {/* Editor Dialog - Full Screen Professional Layout */}
             <GlobalSearch />
-            <Dialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
-                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-0 shadow-2xl">
-                    <div className="bg-slate-900 p-6 text-white flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-3">
-                            <PenTool className="w-5 h-5 text-amber-500" />
-                            <div>
-                                <h2 className="text-lg font-black leading-none">محرر البحث الذكي</h2>
-                                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest leading-none">
-                                    {getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'جاري التحميل...'}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <span className="block text-[10px] text-slate-500 font-bold uppercase">عدد الكلمات</span>
-                                <span className="font-black text-amber-400">{draftContent.split(/\s+/).filter(Boolean).length}</span>
-                            </div>
-                            <Button variant="ghost" size="icon" onClick={() => setEditingNode(null)} className="hover:bg-white/10 rounded-full text-white"><X className="w-6 h-6" /></Button>
-                        </div>
-                    </div>
-                    <div className="flex-1 bg-white p-6 md:p-12">
-                        <Textarea
-                            className="w-full h-full text-xl leading-[1.8] border-0 focus:ring-0 p-0 resize-none arabic-body placeholder:text-gray-200"
-                            placeholder="ابدأ بكتابة مسودة بحثك هنا..."
-                            value={draftContent}
-                            onChange={(e) => setDraftContent(e.target.value)}
-                            autoFocus
-                        />
-                        <div className="mt-4">
-                            <Label htmlFor="draft-tags" className="font-bold text-gray-700 text-xs">الوسوم (افصل بينها بفاصلة)</Label>
-                            <Input
-                                id="draft-tags"
-                                value={draftTags.join(', ')}
-                                onChange={(e) => setDraftTags(e.target.value.split(',').map(tag => tag.trim()))}
-                                placeholder="مثال: فقه, تاريخ, منهجية"
-                                className="text-right"
-                            />
-                        </div>
-                    </div>
-                    <div className="p-6 bg-slate-50 border-t flex justify-end gap-3">
-                        <Button variant="outline" onClick={() => setEditingNode(null)} className="h-12 px-6 rounded-2xl font-bold border-gray-200">إلغاء</Button>
-                        <Button className="h-12 px-8 rounded-2xl font-black bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-100" onClick={() => {
-                            if (editingNode) {
-                                const targetPhaseId = editingNode.phaseId;
-                                const targetId = editingNode.chapterId || editingNode.taskId;
-                                if (!targetPhaseId || !targetId) return;
-
-                                if (editingNode.chapterId) {
-                                    updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: draftContent, tags: draftTags });
-                                } else if (editingNode.taskId) {
-                                    updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: draftContent, tags: draftTags });
-                                }
-                                setEditingNode(null);
-                                toast({ title: "✅ تم حفظ المسودة" });
+            {editingNode && (
+                <div className="fixed inset-0 z-[200] bg-slate-800 flex flex-row-reverse animate-in fade-in">
+                    {/* Hidden PDF Input */}
+                    <input
+                        type="file"
+                        ref={pdfInputRef}
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                toast({ title: `تم تحميل: ${file.name}`, description: "سيتم استخراج النص من PDF" });
+                                // For now just show the file name - full PDF parsing would require a library
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    document.execCommand('insertHTML', false, `<p style="color:#6366f1;font-style:italic;">[محتوى PDF: ${file.name}]</p>`);
+                                };
+                                reader.readAsText(file);
                             }
-                        }}>حفظ التغييرات</Button>
+                            e.target.value = '';
+                        }}
+                    />
+
+                    {/* Sidebar Toggle Button - Floating */}
+                    {!sidebarVisible && (
+                        <button
+                            onClick={() => setSidebarVisible(true)}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
+                            title="إظهار الشريط الجانبي"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    )}
+
+                    {/* Main Editor Area */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Full-Width Toolbar - 2 Rows */}
+                        <div className="bg-gradient-to-b from-indigo-900 to-slate-800 p-3 shrink-0 border-b border-indigo-700" dir="rtl">
+                            {/* Row 1: Undo/Redo, Font, Size, Zoom, Spacing, Format Painter */}
+                            <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="تراجع" onClick={() => document.execCommand('undo')}><Undo className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إعادة" onClick={() => document.execCommand('redo')}><Redo className="w-4 h-4" /></Button>
+                                <div className="w-px h-6 bg-white/20" />
+                                {/* Arabic Fonts */}
+                                <Select defaultValue="Traditional Arabic" onValueChange={(val) => document.execCommand("fontName", false, val)}>
+                                    <SelectTrigger className="w-40 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue placeholder="خط عربي" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Traditional Arabic">Traditional Arabic (تقليدي)</SelectItem>
+                                        <SelectItem value="Amiri">Amiri (أميري)</SelectItem>
+                                        <SelectItem value="Cairo">Cairo (القاهرة)</SelectItem>
+                                        <SelectItem value="Tajawal">Tajawal (تجوّل)</SelectItem>
+                                        <SelectItem value="Almarai">Almarai (المراعي)</SelectItem>
+                                        <SelectItem value="Noto Naskh Arabic">Noto Naskh Arabic</SelectItem>
+                                        <SelectItem value="Scheherazade New">Scheherazade New</SelectItem>
+                                        <SelectItem value="Reem Kufi">Reem Kufi (ريم كوفي)</SelectItem>
+                                        <SelectItem value="Aref Ruqaa">Aref Ruqaa (عارف رقعة)</SelectItem>
+                                        <SelectItem value="El Messiri">El Messiri (المسيري)</SelectItem>
+                                        <SelectItem value="Mada">Mada (مدى)</SelectItem>
+                                        <SelectItem value="Lemonada">Lemonada (ليموناضة)</SelectItem>
+                                        <SelectItem value="Katibeh">Katibeh (كاتبة)</SelectItem>
+                                        <SelectItem value="Harmattan">Harmattan</SelectItem>
+                                        <SelectItem value="Lateef">Lateef</SelectItem>
+                                        <SelectItem value="Mirza">Mirza</SelectItem>
+                                        <SelectItem value="Arial">Arial</SelectItem>
+                                        <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {/* Font Size */}
+                                <Select defaultValue="14" onValueChange={(val) => document.execCommand('fontSize', false, val)}>
+                                    <SelectTrigger className="w-14 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue placeholder="14" /></SelectTrigger>
+                                    <SelectContent>
+                                        {[10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72].map(s => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <div className="w-px h-6 bg-white/20" />
+                                {/* Zoom Control */}
+                                <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
+                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-white/70" onClick={() => setEditorZoom(Math.max(50, editorZoom - 10))}><Minus className="w-3 h-3" /></Button>
+                                    <span className="text-xs text-white/80 w-10 text-center">{editorZoom}%</span>
+                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-white/70" onClick={() => setEditorZoom(Math.min(200, editorZoom + 10))}><Plus className="w-3 h-3" /></Button>
+                                </div>
+                                {/* Page Size Selector */}
+                                <Select value={pageSize} onValueChange={(val: 'A4' | 'A5' | 'Letter') => setPageSize(val)}>
+                                    <SelectTrigger className="w-16 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="A4">A4</SelectItem>
+                                        <SelectItem value="A5">A5</SelectItem>
+                                        <SelectItem value="Letter">Letter</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {/* Page Counter */}
+                                <span className="text-xs text-white/60 px-2">صفحة {currentPage}</span>
+                                {/* Line Spacing */}
+                                <Select value={String(lineSpacing)} onValueChange={(val) => setLineSpacing(parseFloat(val))}>
+                                    <SelectTrigger className="w-14 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">1.0</SelectItem>
+                                        <SelectItem value="1.5">1.5</SelectItem>
+                                        <SelectItem value="1.8">1.8</SelectItem>
+                                        <SelectItem value="2">2.0</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <div className="w-px h-6 bg-white/20" />
+                                {/* Format Painter */}
+                                <Button
+                                    variant={formatPainterActive ? "default" : "ghost"}
+                                    size="sm"
+                                    className={`h-8 px-2 text-xs ${formatPainterActive ? 'bg-amber-500 text-black' : 'text-white/70 hover:text-white'}`}
+                                    onClick={() => {
+                                        if (!formatPainterActive) {
+                                            const selection = window.getSelection();
+                                            if (selection && selection.rangeCount > 0) {
+                                                const node = selection.anchorNode?.parentElement;
+                                                if (node) {
+                                                    setPainterStyles({
+                                                        fontFamily: window.getComputedStyle(node).fontFamily,
+                                                        fontSize: window.getComputedStyle(node).fontSize,
+                                                        color: window.getComputedStyle(node).color,
+                                                        fontWeight: window.getComputedStyle(node).fontWeight,
+                                                        fontStyle: window.getComputedStyle(node).fontStyle,
+                                                    });
+                                                    setFormatPainterActive(true);
+                                                    toast({ title: "✓ تم نسخ التنسيق. حدد نصاً لتطبيقه." });
+                                                }
+                                            }
+                                        } else {
+                                            setFormatPainterActive(false);
+                                        }
+                                    }}
+                                    title="ناسخ التنسيق"
+                                >
+                                    <Pencil className="w-3 h-3 ml-1" /> ناسخ التنسيق
+                                </Button>
+                            </div>
+                            {/* Row 2: Text Formatting */}
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                                {/* Bold, Italic, Underline, Strikethrough */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('bold')} title="غامق"><Bold className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('italic')} title="مائل"><Italic className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('underline')} title="تسطير"><Underline className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('strikeThrough')} title="يتوسطه خط"><Strikethrough className="w-4 h-4" /></Button>
+                                <div className="w-px h-6 bg-white/20 mx-1" />
+                                {/* Text Color & Highlight */}
+                                <div className="flex items-center gap-1 bg-white/10 rounded px-1">
+                                    <Type className="w-3 h-3 text-white/50" />
+                                    <input type="color" className="w-6 h-6 rounded cursor-pointer border-0" onChange={(e) => document.execCommand('foreColor', false, e.target.value)} title="لون النص" />
+                                </div>
+                                <div className="flex items-center gap-1 bg-white/10 rounded px-1">
+                                    <Palette className="w-3 h-3 text-white/50" />
+                                    <input type="color" className="w-6 h-6 rounded cursor-pointer border-0" defaultValue="#FFFF00" onChange={(e) => document.execCommand('hiliteColor', false, e.target.value)} title="تمييز" />
+                                </div>
+                                <div className="w-px h-6 bg-white/20 mx-1" />
+                                {/* Alignment */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyRight')} title="محاذاة يمين"><AlignRight className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyCenter')} title="توسيط"><AlignCenter className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyLeft')} title="محاذاة يسار"><AlignLeft className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyFull')} title="ضبط"><AlignJustify className="w-4 h-4" /></Button>
+                                <div className="w-px h-6 bg-white/20 mx-1" />
+                                {/* Lists - Fixed RTL */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => {
+                                    document.execCommand('insertHTML', false, '<ul style="list-style-type:disc;padding-right:20px;margin:8px 0;direction:rtl;"><li>عنصر جديد</li></ul>');
+                                }} title="قائمة نقطية"><LayoutList className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => {
+                                    document.execCommand('insertHTML', false, '<ol style="list-style-type:decimal;padding-right:20px;margin:8px 0;direction:rtl;"><li>عنصر أول</li></ol>');
+                                }} title="قائمة مرقمة"><LayoutGrid className="w-4 h-4" /></Button>
+                                <div className="w-px h-6 bg-white/20 mx-1" />
+
+                                {/* Table with dropdown for row/column operations */}
+                                <div className="relative group">
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" title="جدول">
+                                        <LayoutGrid className="w-3 h-3 ml-1" /> جدول ▾
+                                    </Button>
+                                    <div className="absolute top-full right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[140px]">
+                                        <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
+                                            const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                            document.execCommand('insertHTML', false, table);
+                                            toast({ title: "✅ تم إدراج جدول 3×2" });
+                                        }}>➕ إدراج جدول جديد</button>
+                                        <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
+                                            const sel = window.getSelection();
+                                            const cell = sel?.anchorNode?.parentElement?.closest('td');
+                                            if (cell) {
+                                                const row = cell.parentElement as HTMLTableRowElement;
+                                                const table = row?.parentElement;
+                                                if (table) {
+                                                    const newRow = row.cloneNode(true) as HTMLTableRowElement;
+                                                    Array.from(newRow.cells).forEach(c => c.innerHTML = '&nbsp;');
+                                                    row.after(newRow);
+                                                    toast({ title: "✅ تم إضافة صف" });
+                                                }
+                                            } else {
+                                                toast({ title: "⚠️ ضع المؤشر داخل الجدول أولاً" });
+                                            }
+                                        }}>➕ إضافة صف</button>
+                                        <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
+                                            const sel = window.getSelection();
+                                            const cell = sel?.anchorNode?.parentElement?.closest('td');
+                                            if (cell && cell.parentElement) {
+                                                const row = cell.parentElement as HTMLTableRowElement;
+                                                if (row.parentElement && row.parentElement.children.length > 1) {
+                                                    row.remove();
+                                                    toast({ title: "✅ تم حذف الصف" });
+                                                } else {
+                                                    toast({ title: "⚠️ لا يمكن حذف آخر صف" });
+                                                }
+                                            }
+                                        }}>➖ حذف صف</button>
+                                        <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
+                                            const sel = window.getSelection();
+                                            const cell = sel?.anchorNode?.parentElement?.closest('td') as HTMLTableCellElement;
+                                            if (cell) {
+                                                const table = cell.closest('table');
+                                                if (table) {
+                                                    const cellIndex = cell.cellIndex;
+                                                    Array.from(table.rows).forEach(row => {
+                                                        const newCell = row.insertCell(cellIndex + 1);
+                                                        newCell.style.cssText = 'border:1px solid #6366f1;padding:12px;';
+                                                        newCell.innerHTML = '&nbsp;';
+                                                    });
+                                                    toast({ title: "✅ تم إضافة عمود" });
+                                                }
+                                            }
+                                        }}>➕ إضافة عمود</button>
+                                        <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
+                                            const sel = window.getSelection();
+                                            const cell = sel?.anchorNode?.parentElement?.closest('td') as HTMLTableCellElement;
+                                            if (cell) {
+                                                const table = cell.closest('table');
+                                                if (table && table.rows[0].cells.length > 1) {
+                                                    const cellIndex = cell.cellIndex;
+                                                    Array.from(table.rows).forEach(row => row.deleteCell(cellIndex));
+                                                    toast({ title: "✅ تم حذف العمود" });
+                                                } else {
+                                                    toast({ title: "⚠️ لا يمكن حذف آخر عمود" });
+                                                }
+                                            }
+                                        }}>➖ حذف عمود</button>
+                                    </div>
+                                </div>
+
+                                {/* PDF Insert */}
+                                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-rose-400 hover:bg-rose-500/20" onClick={() => pdfInputRef.current?.click()} title="إدراج PDF"><FileUp className="w-3 h-3 ml-1" /> PDF</Button>
+
+                                {/* Footnote - Enhanced with bottom section */}
+                                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                    const content = editorRef.current?.innerHTML || '';
+                                    const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
+                                    // Add marker in text
+                                    document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
+                                    // Check if footnotes section exists, if not create it
+                                    if (editorRef.current && !editorRef.current.querySelector('.footnotes-section')) {
+                                        const footnotesSection = document.createElement('div');
+                                        footnotesSection.className = 'footnotes-section';
+                                        footnotesSection.style.cssText = 'margin-top:40px;padding-top:20px;border-top:2px dashed #ccc;';
+                                        footnotesSection.innerHTML = `<p style="font-weight:bold;color:#6366f1;margin-bottom:10px;">── الحواشي ──</p><p class="footnote-item" style="font-size:14px;color:#666;">[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span></p>`;
+                                        editorRef.current.appendChild(footnotesSection);
+                                    } else if (editorRef.current) {
+                                        const section = editorRef.current.querySelector('.footnotes-section');
+                                        if (section) {
+                                            const newFootnote = document.createElement('p');
+                                            newFootnote.className = 'footnote-item';
+                                            newFootnote.style.cssText = 'font-size:14px;color:#666;';
+                                            newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
+                                            section.appendChild(newFootnote);
+                                        }
+                                    }
+                                    toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
+                                }} title="حاشية"><Footprints className="w-3 h-3 ml-1" /> حاشية</Button>
+
+                                {/* Page Break - Creates independent pages */}
+                                <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                    const pageBreak = `<div style="page-break-after:always;margin:40px 0;text-align:center;"><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/><span style="background:#f1f5f9;padding:4px 12px;border-radius:4px;font-size:12px;color:#64748b;">── فاصل صفحات ──</span><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/></div><p>&nbsp;</p>`;
+                                    document.execCommand('insertHTML', false, pageBreak);
+                                    // Scroll to the new page
+                                    setTimeout(() => {
+                                        const sel = window.getSelection();
+                                        if (sel && sel.focusNode) {
+                                            (sel.focusNode as HTMLElement).scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+                                        }
+                                    }, 100);
+                                    toast({ title: "✅ تم إضافة صفحة جديدة" });
+                                }} title="فاصل صفحات"><Minus className="w-3 h-3 ml-1" /> صفحة جديدة</Button>
+
+                                {/* Add Comment */}
+                                <Button variant="ghost" size="sm" className={`h-8 px-2 text-xs ${showComments ? 'text-amber-400 bg-amber-500/20' : 'text-white/70 hover:text-white'}`} onClick={() => {
+                                    const selection = window.getSelection();
+                                    if (selection && selection.toString().trim()) {
+                                        const selectedText = selection.toString();
+                                        const comment = prompt('أدخل تعليقك:');
+                                        if (comment) {
+                                            document.execCommand('insertHTML', false, `<mark style="background:linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);padding:2px 4px;border-radius:2px;cursor:help;" title="💬 ${comment}">${selectedText}</mark>`);
+                                            toast({ title: "✅ تم إضافة التعليق" });
+                                        }
+                                    } else {
+                                        setShowComments(!showComments);
+                                        toast({ title: showComments ? "تم إخفاء التعليقات" : "حدد نصاً لإضافة تعليق" });
+                                    }
+                                }} title="إضافة تعليق"><MessageSquare className="w-3 h-3 ml-1" /> تعليق</Button>
+                            </div>
+                        </div>
+
+                        {/* Page Container with Bottom Toolbar */}
+                        <div className="flex-1 bg-gradient-to-br from-amber-100/60 via-stone-200 to-slate-300 overflow-auto flex flex-col items-center p-8 pb-20 relative">
+                            {/* Bottom Floating Toolbar - Separate Buttons */}
+                            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 flex flex-row gap-3 z-40 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-slate-200">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-indigo-50 hover:border-indigo-300"
+                                    title="إضافة صفحة جديدة"
+                                    onClick={() => {
+                                        const pageBreak = `<div style="page-break-after:always;margin:40px 0;text-align:center;"><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/><span style="background:#f1f5f9;padding:4px 12px;border-radius:4px;font-size:12px;color:#64748b;">── فاصل صفحات ──</span><hr style="border:none;border-top:2px dashed #d97706;margin:20px 0;"/></div><p>&nbsp;</p>`;
+                                        document.execCommand('insertHTML', false, pageBreak);
+                                        toast({ title: "✅ تم إضافة صفحة جديدة" });
+                                    }}
+                                >
+                                    <Plus className="w-5 h-5 text-indigo-600" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-emerald-50 hover:border-emerald-300"
+                                    title="إدراج جدول"
+                                    onClick={() => {
+                                        const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                        document.execCommand('insertHTML', false, table);
+                                        toast({ title: "✅ تم إدراج جدول" });
+                                    }}
+                                >
+                                    <LayoutGrid className="w-5 h-5 text-emerald-600" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-amber-50 hover:border-amber-300"
+                                    title="إضافة حاشية"
+                                    onClick={() => {
+                                        const content = editorRef.current?.innerHTML || '';
+                                        const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
+                                        document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
+                                        if (editorRef.current && !editorRef.current.querySelector('.footnotes-section')) {
+                                            const footnotesSection = document.createElement('div');
+                                            footnotesSection.className = 'footnotes-section';
+                                            footnotesSection.style.cssText = 'margin-top:40px;padding-top:20px;border-top:2px dashed #ccc;';
+                                            footnotesSection.innerHTML = `<p style="font-weight:bold;color:#6366f1;margin-bottom:10px;">── الحواشي ──</p><p class="footnote-item" style="font-size:14px;color:#666;">[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span></p>`;
+                                            editorRef.current.appendChild(footnotesSection);
+                                        } else if (editorRef.current) {
+                                            const section = editorRef.current.querySelector('.footnotes-section');
+                                            if (section) {
+                                                const newFootnote = document.createElement('p');
+                                                newFootnote.className = 'footnote-item';
+                                                newFootnote.style.cssText = 'font-size:14px;color:#666;';
+                                                newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
+                                                section.appendChild(newFootnote);
+                                            }
+                                        }
+                                        toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
+                                    }}
+                                >
+                                    <Footprints className="w-5 h-5 text-amber-600" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-rose-50 hover:border-rose-300"
+                                    title="إضافة تعليق"
+                                    onClick={() => {
+                                        const selection = window.getSelection();
+                                        if (selection && selection.toString().trim()) {
+                                            const selectedText = selection.toString();
+                                            const comment = prompt('أدخل تعليقك:');
+                                            if (comment) {
+                                                document.execCommand('insertHTML', false, `<mark style="background:linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);padding:2px 4px;border-radius:2px;cursor:help;" title="💬 ${comment}">${selectedText}</mark>`);
+                                                toast({ title: "✅ تم إضافة التعليق" });
+                                            }
+                                        } else {
+                                            toast({ title: "⚠️ حدد نصاً أولاً" });
+                                        }
+                                    }}
+                                >
+                                    <MessageSquare className="w-5 h-5 text-rose-600" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="w-10 h-10 bg-white shadow-lg border-slate-200 hover:bg-purple-50 hover:border-purple-300"
+                                    title="إدراج PDF"
+                                    onClick={() => pdfInputRef.current?.click()}
+                                >
+                                    <FileUp className="w-5 h-5 text-purple-600" />
+                                </Button>
+                            </div>
+
+                            {/* Page Area */}
+                            <div className="flex-1 flex justify-center">
+                                <div ref={pagesContainerRef} style={{ transform: `scale(${editorZoom / 100})`, transformOrigin: 'top center' }} className="transition-transform duration-200">
+                                    {/* Dynamic Page Size */}
+                                    <div
+                                        className="bg-white shadow-2xl relative"
+                                        style={{
+                                            width: `${pageSizes[pageSize].width}mm`,
+                                            minHeight: `${pageSizes[pageSize].height}mm`,
+                                            padding: '25mm',
+                                            direction: 'rtl',
+                                            boxShadow: '0 25px 80px rgba(0,0,0,0.35)'
+                                        }}
+                                    >
+                                        {/* Editable Content */}
+                                        <div
+                                            ref={editorRef}
+                                            id="editor-content"
+                                            contentEditable={true}
+                                            suppressContentEditableWarning={true}
+                                            className="outline-none text-justify min-h-[200mm] focus:outline-none"
+                                            dir="rtl"
+                                            onInput={(e) => setDraftContent(e.currentTarget.innerHTML)}
+                                            onKeyDown={(e) => {
+                                                // Keyboard shortcuts
+                                                if (e.ctrlKey || e.metaKey) {
+                                                    switch (e.key.toLowerCase()) {
+                                                        case 'b':
+                                                            e.preventDefault();
+                                                            document.execCommand('bold');
+                                                            break;
+                                                        case 'i':
+                                                            e.preventDefault();
+                                                            document.execCommand('italic');
+                                                            break;
+                                                        case 'u':
+                                                            e.preventDefault();
+                                                            document.execCommand('underline');
+                                                            break;
+                                                        case 's':
+                                                            e.preventDefault();
+                                                            // Save
+                                                            if (editingNode) {
+                                                                const targetPhaseId = editingNode.phaseId;
+                                                                const targetId = editingNode.chapterId || editingNode.taskId;
+                                                                if (targetPhaseId && targetId) {
+                                                                    if (editingNode.chapterId) {
+                                                                        updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: draftContent, tags: draftTags });
+                                                                    } else if (editingNode.taskId) {
+                                                                        updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: draftContent, tags: draftTags });
+                                                                    }
+                                                                    toast({ title: "✅ تم الحفظ (Ctrl+S)" });
+                                                                }
+                                                            }
+                                                            break;
+                                                        case 'z':
+                                                            if (e.shiftKey) {
+                                                                e.preventDefault();
+                                                                document.execCommand('redo');
+                                                            } else {
+                                                                e.preventDefault();
+                                                                document.execCommand('undo');
+                                                            }
+                                                            break;
+                                                        case 'y':
+                                                            e.preventDefault();
+                                                            document.execCommand('redo');
+                                                            break;
+                                                    }
+                                                }
+                                            }}
+                                            style={{
+                                                fontFamily: 'Traditional Arabic, serif',
+                                                fontSize: '18px',
+                                                lineHeight: lineSpacing,
+                                                textAlign: 'justify',
+                                                direction: 'rtl',
+                                                unicodeBidi: 'bidi-override',
+                                                caretColor: '#d97706'
+                                            }}
+                                        />
+                                        {/* Page Number */}
+                                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-400">- 1 -</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Bar - Unified with all actions */}
+                            <div className="p-2 bg-slate-800 border-t border-slate-600 flex justify-between items-center shrink-0" dir="rtl">
+                                {/* Right side - Action icons */}
+                                <div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={async () => {
+                                        const textContent = draftContent.replace(/<[^>]*>/g, '');
+                                        if (navigator.share) {
+                                            try {
+                                                await navigator.share({
+                                                    title: getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة',
+                                                    text: textContent.substring(0, 500),
+                                                });
+                                            } catch { /* cancelled */ }
+                                        } else {
+                                            navigator.clipboard.writeText(textContent);
+                                            toast({ title: "✅ تم النسخ للمشاركة" });
+                                        }
+                                    }} title="مشاركة">
+                                        <Share2 className="w-4 h-4 ml-1" />
+                                        <span className="hidden sm:inline">مشاركة</span>
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                        const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
+                                        const content = editorRef.current?.innerHTML || draftContent;
+                                        const printWindow = window.open('', '_blank');
+                                        if (printWindow) {
+                                            printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>
+@page { size: ${pageSize}; margin: 20mm; }
+* { box-sizing: border-box; }
+body { 
+    font-family: 'Traditional Arabic', 'Arial', serif; 
+    font-size: 14pt; 
+    line-height: ${lineSpacing}; 
+    direction: rtl; 
+    text-align: justify;
+    margin: 0;
+    padding: 20px;
+}
+h1, h2, h3 { text-align: center; margin: 20px 0; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+td, th { border: 1px solid #333; padding: 10px; text-align: right; }
+th { background: #f5f5f5; }
+.footnotes-section { 
+    margin-top: 40px; 
+    padding-top: 15px; 
+    border-top: 2px dashed #666; 
+    font-size: 12pt;
+}
+.footnote-marker { color: #d97706; font-weight: bold; }
+mark { background-color: #fef3c7; padding: 2px 4px; }
+ul, ol { padding-right: 25px; margin: 10px 0; }
+@media print {
+    body { padding: 0; }
+}
+</style>
+</head>
+<body>${content}</body>
+</html>`);
+                                            printWindow.document.close();
+                                            setTimeout(() => { printWindow.print(); }, 500);
+                                        }
+                                    }} title="تصدير PDF">
+                                        <FileText className="w-4 h-4 ml-1" />
+                                        <span className="hidden sm:inline">PDF</span>
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                        const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
+                                        const content = editorRef.current?.innerHTML || draftContent;
+                                        const docContent = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>${title}</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+@page { size: ${pageSize}; margin: 2.5cm; }
+body { 
+    font-family: 'Traditional Arabic', 'Arial', serif; 
+    font-size: 14pt; 
+    line-height: 1.8; 
+    direction: rtl; 
+    text-align: justify;
+    mso-bidi-font-family: 'Traditional Arabic';
+}
+table { border-collapse: collapse; width: 100%; }
+td, th { border: 1px solid #000; padding: 8px; }
+.footnotes-section { margin-top: 30pt; padding-top: 10pt; border-top: 1px solid #ccc; }
+mark { background-color: #ffff00; }
+</style>
+</head>
+<body>${content}</body>
+</html>`;
+                                        const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8' });
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `${title}.doc`;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        URL.revokeObjectURL(url);
+                                        toast({ title: "✅ تم تصدير Word", description: "افتح الملف في Microsoft Word" });
+                                    }} title="تصدير Word">
+                                        <FileUp className="w-4 h-4 ml-1" />
+                                        <span className="hidden sm:inline">Word</span>
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                        const textContent = draftContent.replace(/<[^>]*>/g, '');
+                                        navigator.clipboard.writeText(textContent);
+                                        toast({ title: "✅ تم النسخ", description: `${textContent.split(/\s+/).filter(Boolean).length} كلمة` });
+                                    }} title="نسخ">
+                                        <Copy className="w-4 h-4 ml-1" />
+                                        <span className="hidden sm:inline">نسخ</span>
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
+                                        window.print();
+                                    }} title="طباعة">
+                                        <Printer className="w-4 h-4 ml-1" />
+                                        <span className="hidden sm:inline">طباعة</span>
+                                    </Button>
+                                </div>
+
+                                {/* Center - Word count */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400">كلمات: <span className="text-amber-400 font-bold">{draftContent.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length}</span></span>
+                                    {!sidebarVisible && (
+                                        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-indigo-400" onClick={() => setSidebarVisible(true)}>
+                                            <LayoutList className="w-3 h-3 ml-1" /> الهيكل
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {/* Left side - Cancel & Save */}
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-600 text-slate-300 hover:bg-slate-700" onClick={() => setEditingNode(null)}>
+                                        <X className="w-3 h-3 ml-1" /> إلغاء
+                                    </Button>
+                                    <Button size="sm" className="h-8 px-4 text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={() => {
+                                        if (editingNode) {
+                                            const targetPhaseId = editingNode.phaseId;
+                                            const targetId = editingNode.chapterId || editingNode.taskId;
+                                            if (!targetPhaseId || !targetId) return;
+                                            if (editingNode.chapterId) {
+                                                updateTaskContentMutation.mutate({ phaseId: targetPhaseId, chapterId: targetId, content: editorRef.current?.innerHTML || draftContent, tags: draftTags });
+                                            } else if (editingNode.taskId) {
+                                                updateTaskContentMutation.mutate({ phaseId: targetPhaseId, taskId: targetId, content: editorRef.current?.innerHTML || draftContent, tags: draftTags });
+                                            }
+                                            setEditingNode(null);
+                                            toast({ title: "✅ تم الحفظ" });
+                                        }
+                                    }}>
+                                        <CheckCircle className="w-3 h-3 ml-1" /> حفظ
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+
+                    {/* Sidebar on Right - Document Structure */}
+                    <div className={`bg-indigo-950 text-white flex flex-col shrink-0 transition-all duration-300 ${sidebarVisible ? 'w-[250px]' : 'w-0 overflow-hidden'}`}>
+                        {/* Sidebar Header with Pin */}
+                        <div className="p-3 border-b border-indigo-800 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Folder className="w-4 h-4 text-amber-400" />
+                                <span className="font-bold text-sm">الهيكل البحثي</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-6 w-6 ${sidebarPinned ? 'text-amber-400' : 'text-white/40'} hover:text-amber-400`}
+                                    onClick={() => setSidebarPinned(!sidebarPinned)}
+                                    title={sidebarPinned ? 'إلغاء التثبيت' : 'تثبيت الشريط'}
+                                >
+                                    <Star className={`w-3 h-3 ${sidebarPinned ? 'fill-amber-400' : ''}`} />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-white/60 hover:text-white" onClick={() => setSidebarVisible(false)}>
+                                    <ChevronRight className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Document Structure */}
+                        <ScrollArea className="flex-1">
+                            <div className="p-2 space-y-1">
+                                {project?.phases.map((phase) => (
+                                    <div key={phase.id} className="space-y-0.5">
+                                        <div className="flex items-center gap-2 p-2 rounded bg-indigo-900/50 text-xs font-bold">
+                                            <Folder className="w-3 h-3 text-amber-400" />
+                                            {phase.title}
+                                        </div>
+                                        {phase.chapters?.map((chapter) => (
+                                            <div
+                                                key={chapter.id}
+                                                className={`flex items-center gap-2 p-2 mr-3 rounded text-[10px] cursor-pointer transition ${editingNode?.chapterId === chapter.id ? 'bg-amber-500 text-black font-bold' : 'hover:bg-indigo-800'}`}
+                                                onClick={() => {
+                                                    setEditingNode({ phaseId: phase.id, chapterId: chapter.id });
+                                                    setDraftContent(chapter.content || '');
+                                                    setDraftTags(chapter.tags || []);
+                                                }}
+                                            >
+                                                <FileText className="w-3 h-3" />
+                                                {chapter.title}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+
+                        {/* Sidebar Footer - Simplified */}
+                        <div className="p-3 border-t border-indigo-800 text-center">
+                            <p className="text-[10px] text-white/40">انقر على أي فصل للتحرير</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* Setup Project Dialog */}
             <Dialog open={isSetupOpen} onOpenChange={setIsSetupOpen}>

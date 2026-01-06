@@ -43,6 +43,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     // 3. Header Timer Logic (Remaining vs Elapsed)
     const [showElapsedHeader, setShowElapsedHeader] = useState(false);
     const [elapsedSincePrev, setElapsedSincePrev] = useState('');
+    const [expandFinance, setExpandFinance] = useState(true);
 
     useEffect(() => {
         if (!prayerTimes.length || !nextPrayer) return;
@@ -86,7 +87,8 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     };
 
     // 4. States for Collapsibility
-    const [expandFinance, setExpandFinance] = useState(false); // Default collapsed
+    // 4. States for Collapsibility
+    // expandFinance declared above
 
     // 5. Calculations
     const dailyLimitARS = dailyLimit || 0;
@@ -103,9 +105,9 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     const remainingDaily = dailyLimitARS - todayExpense;
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
-            {/* 1. Prayer Times Card */}
-            <Card className="border-0 shadow-sm bg-white overflow-hidden">
+        <div className="flex flex-col gap-3">
+            {/* 1. Prayer Times Card - Full Width */}
+            <Card className="w-full border-0 shadow-sm bg-white overflow-hidden">
                 <CardContent className="p-0">
                     {/* Header (Next Prayer) */}
                     <div
@@ -197,8 +199,8 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                 </CardContent>
             </Card>
 
-            {/* 2. Financial Summary Card (Collapsible) */}
-            <Card className="border-0 shadow-sm bg-white overflow-hidden transition-all duration-300">
+            {/* 2. Financial Summary Card - Full Width */}
+            <Card className="w-full border-0 shadow-sm bg-white overflow-hidden transition-all duration-300">
                 <CardContent className="p-0">
                     {/* Header (Collapsible Trigger) */}
                     <div

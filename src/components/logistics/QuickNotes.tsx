@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff } from 'lucide-react';
+import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff, Search, Bold, Italic, Underline, X } from 'lucide-react';
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -68,6 +68,8 @@ export const QuickNotes = () => {
     const [showAll, setShowAll] = useState(false);
     const [newNote, setNewNote] = useState({ title: '', content: '' });
     const [editNote, setEditNote] = useState({ title: '', content: '' });
+    const [searchQuery, setSearchQuery] = useState('');
+    const noteEditorRef = useRef<HTMLDivElement>(null);
 
     // Convert NoteData objects to NoteItem format
     const notes: NoteItem[] = notesHistory.map((note, idx) => {
@@ -80,9 +82,13 @@ export const QuickNotes = () => {
             isPinned: note.isPinned
         };
     });
-    // Notes are already sorted by pinned status in the hook, but let's trust the hook.
 
-    const displayedNotes = showAll ? notes : notes.slice(0, 6);
+    // Filter notes by search query
+    const filteredNotes = searchQuery.trim()
+        ? notes.filter(n => n.title.includes(searchQuery) || n.content.includes(searchQuery))
+        : notes;
+
+    const displayedNotes = showAll ? filteredNotes : filteredNotes.slice(0, 6);
 
     const handleAddNote = () => {
         if (!newNote.content) {
@@ -174,8 +180,27 @@ export const QuickNotes = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
+                {/* Search Bar */}
+                <div className="relative mb-3">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                        placeholder="بحث في الملاحظات..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pr-10 text-right text-sm"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
                 {/* Note Grid */}
-                {notes.length > 0 ? (
+                {filteredNotes.length > 0 ? (
                     <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {displayedNotes.map((note) => (

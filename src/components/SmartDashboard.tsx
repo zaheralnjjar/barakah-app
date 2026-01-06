@@ -20,8 +20,9 @@ import { searchLocation } from '@/services/GeocodingService';
 // Icons
 import {
     CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, MapPin,
-    GraduationCap, Users
+    GraduationCap, Users, LayoutGrid
 } from 'lucide-react';
+
 
 import NewMuslimsManager from './NewMuslims/NewMuslimsManager';
 import AcademicManager from './AcademicManager';
@@ -84,6 +85,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [showAcademicDialog, setShowAcademicDialog] = useState(false);
     const [showNewMuslimsDialog, setShowNewMuslimsDialog] = useState(false);
     const [showPomodoroTimer, setShowPomodoroTimer] = useState(false);
+    const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
 
     const { saveParking } = useLocations();
 
@@ -154,57 +156,93 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
             {/* 1. Header - Fixed */}
             <DashboardHeader />
 
-            {/* 2. Prayer Times - Always Expanded (in HeaderStrip) */}
-            <DashboardHeaderStrip />
+            {/* Outer Container with 3% margin on sides */}
+            <div className="mx-[3%] mt-2 w-[94%]">
+                {/* Main Layout Container - 70/30 split when widgets active */}
+                <div className={`flex flex-col ${activeWidgets.length > 0 ? 'lg:flex-row-reverse' : ''} gap-4`}>
+                    {/* Main Content Area - 70% on desktop when widgets active */}
+                    <div className={`${activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full'} space-y-4`}>
+                        {/* 2. Prayer Times */}
+                        <DashboardHeaderStrip />
 
-            <div className="px-3 sm:px-4 space-y-4 max-w-4xl mx-auto mt-2 w-full">
+                        {/* 3. Quick Actions Icons - Always Expanded */}
+                        <QuickActionsGrid
+                            onOpenAddDialog={setShowAddDialog}
+                            onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
+                            onOpenVoiceRecorder={onOpenVoiceRecorder}
+                            onNavigateToTab={onNavigateToTab}
+                            onOpenSearch={() => setIsSearchOpen(true)}
+                            onQuickParking={handleQuickParking}
+                            onOpenAcademic={() => setShowAcademicDialog(true)}
+                            onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
+                            onActivateWidgets={(widgets: string[]) => setActiveWidgets(widgets)}
+                            activeWidgets={activeWidgets}
+                        />
 
-                {/* 3. Quick Actions Icons - Always Expanded */}
-                <QuickActionsGrid
-                    onOpenAddDialog={setShowAddDialog}
-                    onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
-                    onOpenVoiceRecorder={onOpenVoiceRecorder}
-                    onNavigateToTab={onNavigateToTab}
-                    onOpenSearch={() => setIsSearchOpen(true)}
-                    onQuickParking={handleQuickParking}
-                    onOpenAcademic={() => setShowAcademicDialog(true)}
-                    onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
-                />
+                        {/* 5. Quick Notes - Collapsible */}
+                        <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
+                            <DashboardNotes />
+                        </CollapsibleSection>
 
-                {/* 5. Quick Notes - Collapsible */}
-                <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
-                    <DashboardNotes />
-                </CollapsibleSection>
+                        {/* Shopping List - Collapsible */}
+                        {shoppingItems.length > 0 && (
+                            <CollapsibleSection title="قائمة التسوق" icon={ShoppingCart} defaultOpen={false} badge={shoppingItems.length}>
+                                <DashboardShopping />
+                            </CollapsibleSection>
+                        )}
 
-                {/* Shopping List - Collapsible */}
-                {shoppingItems.length > 0 && (
-                    <CollapsibleSection title="قائمة التسوق" icon={ShoppingCart} defaultOpen={false} badge={shoppingItems.length}>
-                        <DashboardShopping />
-                    </CollapsibleSection>
-                )}
+                        {/* 8. Calendar & Appointments - Collapsible */}
+                        <CollapsibleSection title="التقويم والمواعيد" icon={CalendarPlus} defaultOpen={false}>
+                            <DashboardCalendar
+                                tasks={tasks}
+                                appointments={appointments}
+                                habits={habits}
+                                medications={medications}
+                                prayerTimes={prayerTimes}
+                                onNavigateToTab={onNavigateToTab}
+                                weekStartDate={weekStartDate}
+                                setWeekStartDate={setWeekStartDate}
+                                refetch={refetch}
+                            />
+                        </CollapsibleSection>
 
-                {/* 8. Calendar & Appointments - Collapsible */}
-                <CollapsibleSection title="التقويم والمواعيد" icon={CalendarPlus} defaultOpen={false}>
-                    <DashboardCalendar
-                        tasks={tasks}
-                        appointments={appointments}
-                        habits={habits}
-                        medications={medications}
-                        prayerTimes={prayerTimes}
-                        onNavigateToTab={onNavigateToTab}
-                        weekStartDate={weekStartDate}
-                        setWeekStartDate={setWeekStartDate}
-                        refetch={refetch}
-                    />
-                </CollapsibleSection>
+                        {/* 9. Routine Modes - Collapsible */}
+                        <CollapsibleSection title="الأوضاع الدائمة" icon={Target} defaultOpen={false}>
+                            <RoutineModesWidget />
+                        </CollapsibleSection>
 
-                {/* 9. Routine Modes - Collapsible */}
-                <CollapsibleSection title="الأوضاع الدائمة" icon={Target} defaultOpen={false}>
-                    <RoutineModesWidget />
-                </CollapsibleSection>
+                        {/* Pomodoro Timer (Hidden Trigger) */}
+                        <PomodoroTimer hideTrigger={true} />
+                    </div>
 
-                {/* Pomodoro Timer (Hidden Trigger) */}
-                <PomodoroTimer hideTrigger={true} />
+                    {/* Tools Panel - 30% on desktop, full width below on mobile */}
+                    {activeWidgets.length > 0 && (
+                        <aside className="w-full lg:w-[30%] lg:sticky lg:top-4 lg:self-start">
+                            <div className="bg-white border-2 border-teal-100 rounded-2xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-left-5">
+                                <div className="bg-gradient-to-r from-teal-500 to-emerald-500 p-3 flex items-center justify-between sticky top-0 z-10">
+                                    <span className="text-white text-sm font-bold flex items-center gap-2">
+                                        <LayoutGrid className="w-4 h-4" />
+                                        أدواتك المختارة ({activeWidgets.length})
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setActiveWidgets([])}
+                                        className="text-white hover:bg-white/20 h-6 px-2 text-[10px]"
+                                    >
+                                        إغلاق ✕
+                                    </Button>
+                                </div>
+                                <iframe
+                                    src={`${window.location.pathname}#/widget?type=${activeWidgets.join(',')}`}
+                                    className="w-full border-0"
+                                    style={{ height: `${Math.min(600, 150 + activeWidgets.length * 120)}px` }}
+                                    title="Active Widgets"
+                                />
+                            </div>
+                        </aside>
+                    )}
+                </div>
             </div>
 
             {/* === DIALOGS === */}
@@ -488,51 +526,66 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 </DialogContent>
             </Dialog>
 
-            {/* Academic Dialog */}
-            <Dialog open={showAcademicDialog} onOpenChange={setShowAcademicDialog}>
-                <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
-                        <DialogTitle className="flex items-center gap-2 text-purple-700">
-                            <GraduationCap className="w-5 h-5" />
-                            القسم الأكاديمي
-                        </DialogTitle>
+            {/* Academic Full Screen Overlay */}
+            {showAcademicDialog && (
+                <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
+                    <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 rounded-xl text-purple-700">
+                                <GraduationCap className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">القسم الأكاديمي</h2>
+                                <p className="text-xs text-gray-500">منصة إعداد البحوث الأكاديمية</p>
+                            </div>
+                        </div>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             onClick={() => setShowAcademicDialog(false)}
-                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
+                            className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
                         >
-                            ✕
+                            إغلاق الشاشة ✕
                         </Button>
-                    </DialogHeader>
-                    <div className="p-2 sm:p-4 overflow-x-hidden">
-                        <AcademicManager />
                     </div>
-                </DialogContent>
-            </Dialog>
+                    <div className="flex-1 overflow-y-auto bg-gray-50/30">
+                        <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
+                            <AcademicManager />
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            {/* New Muslims Dialog */}
-            <Dialog open={showNewMuslimsDialog} onOpenChange={setShowNewMuslimsDialog}>
-                <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
-                            <Users className="w-5 h-5" />
-                            رعاية المهتدين الجدد
-                        </DialogTitle>
+            {/* New Muslims Full Screen Overlay */}
+            {showNewMuslimsDialog && (
+                <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
+                    <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
+                                <Users className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">رعاية المهتدين الجدد</h2>
+                                <p className="text-xs text-gray-500">متابعة شؤون الطلاب والمهتدين</p>
+                            </div>
+                        </div>
                         <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
                             onClick={() => setShowNewMuslimsDialog(false)}
-                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
+                            className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
                         >
-                            ✕
+                            إغلاق الشاشة ✕
                         </Button>
-                    </DialogHeader>
-                    <div className="p-2 sm:p-4 overflow-x-hidden">
-                        <NewMuslimsManager />
                     </div>
-                </DialogContent>
-            </Dialog>
+                    <div className="flex-1 overflow-y-auto bg-gray-50/30">
+                        <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
+                            <NewMuslimsManager />
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div >
     );
 };

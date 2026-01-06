@@ -25,9 +25,11 @@ interface QuickActionsGridProps {
     onOpenSearch?: () => void;
     onOpenAcademic?: () => void;
     onOpenNewMuslims?: () => void;
+    onActivateWidgets?: (widgets: string[]) => void;
+    activeWidgets?: string[];
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenAcademic, onOpenNewMuslims }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenAcademic, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -199,10 +201,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     ];
 
     const openWidgetInline = () => {
-        setInlineWidgetTypes(selectedWidgets);
-        setShowInlineWidget(true);
-        setShowWidgetMenu(false);
-        setSelectedWidgets([]);
+        if (onActivateWidgets) {
+            onActivateWidgets(selectedWidgets);
+            setShowWidgetMenu(false);
+            setSelectedWidgets([]);
+        } else {
+            setInlineWidgetTypes(selectedWidgets);
+            setShowInlineWidget(true);
+            setShowWidgetMenu(false);
+            setSelectedWidgets([]);
+        }
     };
 
     // Execute shortcut action
