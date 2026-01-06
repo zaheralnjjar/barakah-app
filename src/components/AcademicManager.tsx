@@ -26,6 +26,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { saveAs } from 'file-saver';
 
 import { useToast } from '@/hooks/use-toast';
+import { QuickNotes } from '@/components/logistics/QuickNotes';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -170,7 +171,7 @@ export default function AcademicManager() {
     const [newChapterTitle, setNewChapterTitle] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
-    const [isSearchEditorOpen, setIsSearchEditorOpen] = useState(false);
+    const [isQuickNotesOpen, setIsQuickNotesOpen] = useState(false);
 
     // Editor state
     const [editorZoom, setEditorZoom] = useState(100);
@@ -1512,8 +1513,8 @@ export default function AcademicManager() {
                                 }}><MessageSquare className="w-4 h-4" /></Button>
                                 {/* Insert PDF */}
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إدراج PDF" onClick={() => pdfInputRef.current?.click()}><FileUp className="w-4 h-4" /></Button>
-                                {/* Search Editor Button */}
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="محرر البحث" onClick={() => setIsSearchEditorOpen(true)}><FileText className="w-4 h-4" /></Button>
+                                {/* Search Editor Button - Quick Notes */}
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="محرر البحث / ملاحظات سريعة" onClick={() => setIsQuickNotesOpen(true)}><StickyNote className="w-4 h-4" /></Button>
 
                                 <div className="w-px h-6 bg-white/20" />
                                 {/* Format Painter */}
@@ -1875,6 +1876,10 @@ export default function AcademicManager() {
                                                                 case '+': e.preventDefault(); setEditorZoom(z => Math.min(200, z + 10)); break;
                                                                 case '-': e.preventDefault(); setEditorZoom(z => Math.max(50, z - 10)); break;
                                                                 case '0': e.preventDefault(); setEditorZoom(100); break;
+                                                                case 'm':
+                                                                    e.preventDefault();
+                                                                    setIsQuickNotesOpen(true);
+                                                                    break;
                                                             }
                                                         }
                                                     }}
@@ -2452,6 +2457,14 @@ mark { background-color: #ffff00; }
                                 setIsNewChapterOpen(false);
                             }
                         }} className="w-full bg-indigo-600">إضافة</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* Quick Notes Dialog */}
+            <Dialog open={isQuickNotesOpen} onOpenChange={setIsQuickNotesOpen}>
+                <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
+                    <div className="flex-1 overflow-hidden p-4">
+                        <QuickNotes />
                     </div>
                 </DialogContent>
             </Dialog>
