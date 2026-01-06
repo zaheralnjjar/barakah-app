@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     GraduationCap, BookOpen, Calendar, Clock, Plus, Edit, Trash2,
     CheckCircle, FileText, Target, BookMarked, Award, TrendingUp,
-    PenTool, Timer, Star, ChevronDown, ChevronUp, ChevronRight, GripVertical, X,
+    PenTool, Timer, Star, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, GripVertical, X,
     LayoutList, LayoutDashboard, Download, StickyNote, Library,
     History, Users as UsersIcon, Link as LinkIcon, Settings, Sparkles,
     Printer, Bold, Italic, Underline, Strikethrough, Palette, Type, AlignLeft, AlignCenter, AlignRight,
@@ -1296,14 +1296,14 @@ export default function AcademicManager() {
                         }}
                     />
 
-                    {/* Sidebar Toggle Button - Floating */}
+                    {/* Sidebar Toggle Button - Floating (when sidebar is hidden) */}
                     {!sidebarVisible && (
                         <button
                             onClick={() => setSidebarVisible(true)}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
+                            className="fixed right-4 top-1/2 -translate-y-1/2 z-[100] bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110 animate-pulse"
                             title="إظهار الشريط الجانبي"
                         >
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronLeft className="w-5 h-5" />
                         </button>
                     )}
 
@@ -1786,7 +1786,8 @@ export default function AcademicManager() {
                                     </Button>
                                     <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
                                         const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
-                                        const content = editorRef.current?.innerHTML || draftContent;
+                                        // Collect content from all pages for multi-page export
+                                        const content = pages.join('<div style="page-break-after:always;margin:40px 0;"></div>') || draftContent;
                                         const printWindow = window.open('', '_blank');
                                         if (printWindow) {
                                             printWindow.document.write(`<!DOCTYPE html>
@@ -1835,7 +1836,8 @@ ul, ol { padding-right: 25px; margin: 10px 0; }
                                     </Button>
                                     <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
                                         const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
-                                        const content = editorRef.current?.innerHTML || draftContent;
+                                        // Collect content from all pages for Word export
+                                        const content = pages.join('<br style="page-break-after:always;">') || draftContent;
                                         const docContent = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
