@@ -20,8 +20,9 @@ import { searchLocation } from '@/services/GeocodingService';
 // Icons
 import {
     CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, MapPin,
-    GraduationCap, Users, LayoutGrid
+    GraduationCap, Users, LayoutGrid, Calendar as CalendarIcon
 } from 'lucide-react';
+
 
 
 import NewMuslimsManager from './NewMuslims/NewMuslimsManager';
@@ -79,6 +80,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     // State
     const [weekStartDate, setWeekStartDate] = useState(new Date());
     const [currentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isParkingSectionOpen, setIsParkingSectionOpen] = useState(false);
@@ -86,6 +88,40 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [showNewMuslimsDialog, setShowNewMuslimsDialog] = useState(false);
     const [showPomodoroTimer, setShowPomodoroTimer] = useState(false);
     const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
+    const [routineVisibleSections, setRoutineVisibleSections] = useState<string[]>(['notes', 'shopping', 'calendar']);
+
+    // Listen for active routine changes and apply settings
+    useEffect(() => {
+        const applyRoutineSettings = () => {
+            try {
+                const activeRoutinesStr = localStorage.getItem('baraka_active_routines');
+                const routinesStr = localStorage.getItem('baraka_routines');
+                if (activeRoutinesStr && routinesStr) {
+                    const activeRoutines = JSON.parse(activeRoutinesStr);
+                    const routines = JSON.parse(routinesStr);
+                    if (activeRoutines.length > 0) {
+                        const activeRoutine = routines.find((r: any) => r.id === activeRoutines[0].routineId);
+                        if (activeRoutine?.settings) {
+                            setRoutineVisibleSections(activeRoutine.settings.visibleSections || ['notes', 'shopping', 'calendar']);
+                            setActiveWidgets(activeRoutine.settings.activeWidgets || []);
+                        }
+                    } else {
+                        // No active routine - show all sections
+                        setRoutineVisibleSections(['notes', 'shopping', 'calendar']);
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading routine settings', e);
+            }
+        };
+
+        applyRoutineSettings(); // Initial load
+        window.addEventListener('routines-updated', applyRoutineSettings);
+        return () => window.removeEventListener('routines-updated', applyRoutineSettings);
+    }, []);
+
+    // Helper to check if a section should be visible
+    const isSectionVisible = (sectionId: string) => routineVisibleSections.includes(sectionId);
 
     const { saveParking } = useLocations();
 
@@ -196,9 +232,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         {/* 8. Calendar & Appointments - Collapsible */}
                         {isSectionVisible('calendar') && (
                             <CollapsibleSection title="التقويم والمواعيد" icon={CalendarIcon}>
-                                <CalendarIntegrationWidget
-                                    selectedDate={selectedDate}
-                                    setSelectedDate={setSelectedDate}
+                                <DashboardCalendar
+                                    tasks={tasks}
+                                    appointments={appointments}
+                                    habits={habits}
+                                    medications={medications}
+                                    prayerTimes={prayerTimes}
+                                    onNavigateToTab={onNavigateToTab}
                                     weekStartDate={weekStartDate}
                                     setWeekStartDate={setWeekStartDate}
                                     refetch={refetch}
