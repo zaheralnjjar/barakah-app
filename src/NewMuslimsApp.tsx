@@ -104,7 +104,7 @@ const NewMuslimsApp: React.FC = () => {
                     </Button>
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         <Users className="w-6 h-6" />
-                        مركز رعاية المهتدين
+                        هداية
                     </h1>
                     <div className="w-10" /> {/* Spacer for balance */}
                 </div>

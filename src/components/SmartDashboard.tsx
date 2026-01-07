@@ -606,7 +606,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                     <Users className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-gray-900">رعاية المهتدين الجدد</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">هداية</h2>
                                     <p className="text-xs text-gray-500">متابعة شؤون الطلاب والمهتدين</p>
                                 </div>
                             </div>

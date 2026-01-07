@@ -443,7 +443,7 @@ const SettingsPanel = () => {
         },
         {
             id: 'new_muslims',
-            title: 'رعاية المهتدين',
+            title: 'هداية',
             icon: Users,
             color: 'text-emerald-600',
             bg: 'bg-emerald-50',
@@ -1506,7 +1506,7 @@ const SettingsPanel = () => {
                     <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
                         <DialogTitle className="flex items-center gap-2 text-emerald-700">
                             <Users className="w-5 h-5" />
-                            رعاية المهتدين الجدد
+                            هداية
                         </DialogTitle>
                         <Button
                             variant="ghost"

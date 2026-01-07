@@ -156,7 +156,7 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, 
                 { id: 'settings', title: 'الإعدادات', tab: 'settings', keywords: ['settings', 'config', 'اعدادات', 'ضبط'] },
                 { id: 'finance', title: 'المالية والمصاريف', tab: 'finance', keywords: ['money', 'expense', 'malia', 'مالية', 'فلوس'] },
                 { id: 'academic', title: 'القسم الأكاديمي', action: 'academic', keywords: ['academic', 'research', 'bahth', 'بحث', 'اكاديمي'] },
-                { id: 'newmuslims', title: 'المهتدين الجدد', action: 'newmuslims', keywords: ['new', 'muslims', 'student', 'students', 'طلاب', 'مهتدين'] },
+                { id: 'newmuslims', title: 'هداية', action: 'newmuslims', keywords: ['new', 'muslims', 'student', 'students', 'طلاب', 'مهتدين'] },
             ];
 
             staticPages.forEach(page => {

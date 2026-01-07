@@ -116,7 +116,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     // Available Actions (25+ options)
     const AVAILABLE_ACTIONS = [
         { id: 'show_academic_research', name: 'البحث العلمي', icon: GraduationCap, category: 'info', description: 'الانتقال إلى قسم البحث العلمي' },
-        { id: 'show_new_muslims', name: 'المهتدين الجدد', icon: Users, category: 'info', description: 'الانتقال إلى قسم المهتدين الجدد' },
+        { id: 'show_new_muslims', name: 'هداية', icon: Users, category: 'info', description: 'الانتقال إلى قسم هداية' },
 
         // Information Display
         { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },

@@ -264,7 +264,7 @@ const DEFAULT_PROTOCOL: StudyProtocol = {
 };
 
 const DEFAULT_TEMPLATES: MessageTemplates = {
-    welcome: "السلام عليكم {name}! نرحب بك في مركز رعاية المهتدين. نحن هنا لخدمتك.",
+    welcome: "السلام عليكم {name}! نرحب بك في هداية. نحن هنا لخدمتك.",
     reminder: "السلام عليكم {name}. تذكير: لديك موعد درس غداً. ننتظرك!"
 };
 
@@ -1919,7 +1919,7 @@ const NewMuslimsManager = () => {
                                 <Users className="w-6 h-6 sm:w-8 sm:h-8" />
                             </span>
                             <div>
-                                <h1 className="text-xl sm:text-3xl font-bold text-gray-800">مركز رعاية المهتدين</h1>
+                                <h1 className="text-xl sm:text-3xl font-bold text-gray-800">هداية</h1>
                                 <p className="text-xs sm:text-sm text-gray-500">الإدارة المتكاملة لشؤون المسلمين الجدد</p>
                             </div>
                         </div>
