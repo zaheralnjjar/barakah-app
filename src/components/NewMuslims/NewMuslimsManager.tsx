@@ -2059,10 +2059,10 @@ const NewMuslimsManager = () => {
                     </div>
 
                     <Tabs defaultValue="students" className="w-full">
-                        <TabsList className="bg-white p-1 border shadow-sm rounded-lg mb-4 w-full justify-start">
-                            <TabsTrigger value="students" className="flex-1 max-w-[200px] data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">قائمة المهتدين</TabsTrigger>
-                            <TabsTrigger value="calendar" className="flex-1 max-w-[200px]">التقويم والمواعيد</TabsTrigger>
-                            <TabsTrigger value="reports" className="flex-1 max-w-[200px]">التقارير والإحصائيات</TabsTrigger>
+                        <TabsList className="bg-white p-1 border shadow-sm rounded-lg mb-4 w-full justify-start overflow-x-auto flex-nowrap">
+                            <TabsTrigger value="students" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">قائمة المهتدين</TabsTrigger>
+                            <TabsTrigger value="calendar" className="flex-shrink-0 text-xs sm:text-sm">التقويم</TabsTrigger>
+                            <TabsTrigger value="reports" className="flex-shrink-0 text-xs sm:text-sm">الإحصائيات</TabsTrigger>
                         </TabsList>
 
                         {/* 1. Students List Tab */}
@@ -2162,21 +2162,23 @@ const NewMuslimsManager = () => {
                                                             checked={selectedStudentIds.includes(student.id)}
                                                             onCheckedChange={() => toggleSelectStudent(student.id)}
                                                         />
-                                                        <div onClick={() => setSelectedStudent(student)} className="flex items-center gap-4 cursor-pointer">
-                                                            <Avatar className="w-12 h-12 border border-gray-100 group-hover:border-emerald-200">
+                                                        <div onClick={() => setSelectedStudent(student)} className="flex items-center gap-3 cursor-pointer min-w-0 flex-1">
+                                                            <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border border-gray-100 group-hover:border-emerald-200 flex-shrink-0">
                                                                 <AvatarImage src={`https://ui-avatars.com/api/?name=${student.fullName}&background=f1f5f9&color=64748b`} />
                                                                 <AvatarFallback>{student.arabicName?.[0]}</AvatarFallback>
                                                             </Avatar>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <h4 className="font-bold text-gray-800 group-hover:text-emerald-700 transition-colors">
-                                                                        {student.arabicName}
-                                                                    </h4>
-                                                                    <span className="text-xs text-gray-400">({student.fullName})</span>
+                                                            <div className="min-w-0 flex-1">
+                                                                {/* الاسم - سطر واحد */}
+                                                                <h4 className="font-bold text-sm sm:text-base text-gray-800 group-hover:text-emerald-700 transition-colors truncate">
+                                                                    {student.arabicName || student.fullName}
+                                                                </h4>
+                                                                {/* تاريخ الإسلام */}
+                                                                <div className="text-[10px] sm:text-xs text-emerald-600">
+                                                                    أسلم: {student.conversionDate || 'غير محدد'}
                                                                 </div>
-                                                                <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                                                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {student.nationality}</span>
-                                                                    <LevelBadge level={student.level} />
+                                                                {/* الجنسية */}
+                                                                <div className="text-[10px] sm:text-xs text-gray-400 truncate">
+                                                                    {student.nationality || 'غير محدد'}
                                                                 </div>
                                                             </div>
                                                         </div>

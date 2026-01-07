@@ -33,7 +33,7 @@ export const useQuickNotes = () => {
         } catch { return []; }
     });
 
-    // Load from Supabase on mount
+    // Load from Supabase on mount - CLOUD FIRST for sync
     useEffect(() => {
         const loadFromCloud = async () => {
             try {
@@ -50,20 +50,36 @@ export const useQuickNotes = () => {
                     try {
                         // Try to parse as JSON array (new format)
                         const parsed = JSON.parse(data.quick_notes);
-                        if (Array.isArray(parsed)) {
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            // السحابة لديها بيانات - استخدمها (الأولوية للسحابة)
                             setNotesHistory(parsed);
                             localStorage.setItem('baraka_notes_history', JSON.stringify(parsed));
                             return;
                         }
                     } catch (e) {
-                        // If parse fails or not array, treat as legacy single string note
-                        // Only verify if we don't have better local data? 
-                        // For now, let's append it or set it if local is empty? 
-                        // Simpler: Just convert it to a note object if local is empty
-                        if (notesHistory.length === 0) {
+                        // If parse fails, treat as legacy single string note
+                        if (data.quick_notes.length > 0) {
                             const note = { content: data.quick_notes, isSecure: false, createdAt: new Date().toISOString() };
                             setNotesHistory([note]);
                             localStorage.setItem('baraka_notes_history', JSON.stringify([note]));
+                            return;
+                        }
+                    }
+                }
+
+                // إذا لم تكن هناك بيانات في السحابة، جرب localStorage
+                const localData = localStorage.getItem('baraka_notes_history');
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setNotesHistory(parsed);
+                        // مزامنة localStorage إلى السحابة
+                        const { data: { user: currentUser } } = await supabase.auth.getUser();
+                        if (currentUser) {
+                            await supabase.from(TABLES.logistics).update({
+                                quick_notes: JSON.stringify(parsed),
+                                updated_at: new Date().toISOString()
+                            }).eq('user_id', currentUser.id);
                         }
                     }
                 }

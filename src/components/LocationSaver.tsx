@@ -280,23 +280,35 @@ const LocationSaver: React.FC = () => {
 
     const navigateTo = (loc: SavedLocation, e?: React.MouseEvent) => {
         e?.stopPropagation();
-        const query = loc.address ? encodeURIComponent(loc.address) : `${loc.latitude},${loc.longitude}`;
-        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+        // استخدام العنوان (اسم الشارع والرقم) بدلاً من الإحداثيات
+        if (loc.address && loc.address.length > 5) {
+            // فتح Google Maps بالعنوان النصي للبحث
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`, '_blank');
+        } else {
+            // احتياطي: استخدام الإحداثيات
+            window.open(`https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`, '_blank');
+        }
     };
 
-    const shareLocation = (loc: SavedLocation, e: React.MouseEvent) => {
+    const shareLocation = async (loc: SavedLocation, e: React.MouseEvent) => {
         e.stopPropagation();
-        const query = loc.address ? encodeURIComponent(loc.address) : `${loc.latitude},${loc.longitude}`;
-        const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        // إنشاء نص المشاركة بالعنوان وليس الرابط
+        const shareText = `📍 ${loc.name}\n${loc.address || 'موقع محفوظ'}`;
+
+        // فتح قائمة المشاركة مباشرة (WhatsApp, Telegram, etc)
         if (navigator.share) {
-            navigator.share({
-                title: loc.name,
-                text: `موقعي: ${loc.name}`,
-                url: url,
-            }).catch(() => { });
+            try {
+                await navigator.share({
+                    title: loc.name,
+                    text: shareText,
+                });
+            } catch (err) {
+                // المستخدم ألغى أو لا يدعم
+                console.log('Share cancelled');
+            }
         } else {
-            navigator.clipboard.writeText(url);
-            toast({ title: '📋 تم نسخ الرابط' });
+            // احتياطي: فتح WhatsApp مباشرة
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
         }
     };
 
