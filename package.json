@@ -9,6 +9,8 @@
     "build": "vite build",
     "build:dev": "VITE_ENABLE_ROUTE_MESSAGING=true vite build --mode development --sourcemap",
     "build:map": "VITE_ENABLE_ROUTE_MESSAGING=true vite build --sourcemap",
+    "build:newmuslims": "vite build --config vite.config.newmuslims.ts",
+    "android:newmuslims": "npm run build:newmuslims && npx cap sync android --config capacitor.config.newmuslims.ts && cd android-newmuslims && ./gradlew assembleDebug && cd ..",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview:dev": "npm run build:dev && npm run preview",
