@@ -64,7 +64,7 @@ const LocationSaver: React.FC = () => {
     const [formImages, setFormImages] = useState<string[]>([]); // New
 
     const [capturedPosition, setCapturedPosition] = useState<GeolocationPosition | null>(null);
-    const [approxAddress, setApproxAddress] = useState<string>('');
+    const [formAddress, setFormAddress] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -161,17 +161,14 @@ const LocationSaver: React.FC = () => {
             const position = await getCurrentLocation();
             setCapturedPosition(position);
 
-            // Default Name strategy
             let initialName = '';
 
-            // Try to get address for name auto-fill
             try {
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&accept-language=ar`
                 );
                 const data = await response.json();
 
-                // Construct a focused address (Street + Number)
                 const road = data.address?.road || '';
                 const houseNumber = data.address?.house_number || '';
                 const suburb = data.address?.suburb || data.address?.neighbourhood || '';
@@ -184,11 +181,11 @@ const LocationSaver: React.FC = () => {
                     initialName = `موقع ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
                 }
 
-                setApproxAddress(data.display_name || 'العنوان غير متوفر');
+                setFormAddress(data.display_name || 'العنوان غير متوفر');
 
             } catch {
                 initialName = `موقع ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
-                setApproxAddress('تعذر جلب العنوان الدقيق');
+                setFormAddress('تعذر جلب العنوان الدقيق');
             }
 
             setFormName(initialName);
@@ -211,8 +208,9 @@ const LocationSaver: React.FC = () => {
             name: formName.trim(),
             type: formType,
             latitude: capturedPosition.coords.latitude,
+
             longitude: capturedPosition.coords.longitude,
-            address: approxAddress,
+            address: formAddress,
             image: formImages.length > 0 ? formImages[0] : (formImage || undefined),
             images: formImages.length > 0 ? formImages : (formImage ? [formImage] : []),
             createdAt: new Date().toISOString(),
@@ -226,7 +224,9 @@ const LocationSaver: React.FC = () => {
         setCapturedPosition(null);
         setFormImage('');
         setFormImages([]);
-        setApproxAddress('');
+        setFormImage('');
+        setFormImages([]);
+        setFormAddress('');
         toast({ title: '✅ تم حفظ الموقع بنجاح' });
     };
 
@@ -236,7 +236,9 @@ const LocationSaver: React.FC = () => {
         setFormName(loc.name);
         setFormType(loc.type);
         setFormImage(loc.image || '');
+        setFormImage(loc.image || '');
         setFormImages(loc.images || (loc.image ? [loc.image] : []));
+        setFormAddress(loc.address || '');
         setIsEditDialogOpen(true);
     };
 
@@ -249,6 +251,7 @@ const LocationSaver: React.FC = () => {
                     ...loc,
                     name: formName.trim(),
                     type: formType,
+                    address: formAddress,
                     images: formImages,
                     image: formImages.length > 0 ? formImages[0] : undefined
                 }
@@ -277,12 +280,14 @@ const LocationSaver: React.FC = () => {
 
     const navigateTo = (loc: SavedLocation, e?: React.MouseEvent) => {
         e?.stopPropagation();
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${loc.latitude},${loc.longitude}`, '_blank');
+        const query = loc.address ? encodeURIComponent(loc.address) : `${loc.latitude},${loc.longitude}`;
+        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
     };
 
     const shareLocation = (loc: SavedLocation, e: React.MouseEvent) => {
         e.stopPropagation();
-        const url = `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`;
+        const query = loc.address ? encodeURIComponent(loc.address) : `${loc.latitude},${loc.longitude}`;
+        const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
         if (navigator.share) {
             navigator.share({
                 title: loc.name,
@@ -414,19 +419,23 @@ const LocationSaver: React.FC = () => {
                             <DialogTitle className="arabic-title text-right">تأكيد حفظ الموقع</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                            {/* Address Info Display */}
+                            {/* Address Info Display - Editable */}
                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-2">
-                                <p className="text-xs text-blue-600 font-bold mb-1 arabic-body">العنوان التقريبي:</p>
-                                <p className="text-sm text-gray-700">{approxAddress}</p>
+                                <p className="text-xs text-blue-600 font-bold mb-1 arabic-body">العنوان (الشارع والبناء):</p>
+                                <Input
+                                    value={formAddress}
+                                    onChange={(e) => setFormAddress(e.target.value)}
+                                    className="h-8 text-sm bg-white"
+                                />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm arabic-body">اسم المكان (الشارع والرقم)</label>
+                                <label className="text-sm arabic-body">اسم المكان المميز</label>
                                 <Input
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
                                     className="text-right font-medium"
-                                    placeholder="اسم المكان"
+                                    placeholder="مثلاً: شركة X، منزل Y"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -522,6 +531,14 @@ const LocationSaver: React.FC = () => {
                                 <Input
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
+                                    className="text-right"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm arabic-body">العنوان</label>
+                                <Input
+                                    value={formAddress}
+                                    onChange={(e) => setFormAddress(e.target.value)}
                                     className="text-right"
                                 />
                             </div>
