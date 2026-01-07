@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, StickyNote, Calendar } from 'lucide-react';
+import { Users, StickyNote, Calendar, Mic } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
 import { QuickNotes } from '@/components/logistics/QuickNotes';
 import AppointmentManager from '@/components/AppointmentManager';
+import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { Toaster } from '@/components/ui/toaster';
 
 const NewMuslimsApp: React.FC = () => {
     const [activeTab, setActiveTab] = useState('newmuslims');
+    const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50" dir="rtl">
@@ -24,7 +27,7 @@ const NewMuslimsApp: React.FC = () => {
 
             {/* Main Content */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <div className="p-4 pb-20 space-y-4">
+                <div className="p-4 pb-24 space-y-4">
                     <TabsContent value="newmuslims" className="mt-0">
                         <NewMuslimsManager />
                     </TabsContent>
@@ -37,6 +40,15 @@ const NewMuslimsApp: React.FC = () => {
                         <AppointmentManager />
                     </TabsContent>
                 </div>
+
+                {/* Floating Voice Record Button */}
+                <Button
+                    onClick={() => setIsVoiceRecorderOpen(true)}
+                    className="fixed bottom-20 left-4 w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 shadow-lg z-50 flex items-center justify-center"
+                    size="icon"
+                >
+                    <Mic className="w-6 h-6 text-white" />
+                </Button>
 
                 {/* Bottom Navigation */}
                 <TabsList className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t shadow-lg rounded-none grid grid-cols-3 gap-0">
@@ -64,9 +76,20 @@ const NewMuslimsApp: React.FC = () => {
                 </TabsList>
             </Tabs>
 
+            {/* Voice Note Recorder Dialog */}
+            <VoiceNoteRecorder
+                isOpen={isVoiceRecorderOpen}
+                onClose={() => setIsVoiceRecorderOpen(false)}
+                onSaveToActivities={(text) => {
+                    console.log('Voice note saved:', text);
+                    setIsVoiceRecorderOpen(false);
+                }}
+            />
+
             <Toaster />
         </div>
     );
 };
 
 export default NewMuslimsApp;
+
