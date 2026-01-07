@@ -1,240 +1,143 @@
 import React, { useState, useEffect } from 'react';
+import { Settings, ChevronDown, ChevronUp, Play, Trash2, Calendar as CalendarIcon, Check, Plus, X, Pencil, Wallet, Timer, CheckSquare, StickyNote, ShoppingCart, Clock, LayoutGrid } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Settings, ChevronDown, ChevronUp, Play, Trash2, Calendar as CalendarIcon, Check, Plus, X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
-interface RoutineModesWidgetProps {
-    className?: string;
-}
-
-export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ className }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [routines, setRoutines] = useState<any[]>([]);
-    const [activeRoutines, setActiveRoutines] = useState<any[]>([]);
-    const [showCalendar, setShowCalendar] = useState<string | null>(null); // ID of routine being activated
-    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-        from: undefined,
-        to: undefined,
-    });
-
-    // Editor State (mirrored from SettingsPanel)
-    const [editingRoutine, setEditingRoutine] = useState<any>(null);
-    const [routineItemText, setRoutineItemText] = useState('');
-    const [routineItemType, setRoutineItemType] = useState<'task' | 'appointment' | 'habit' | 'medication'>('task');
-    const [routineItemTime, setRoutineItemTime] = useState('');
-    const [routineItemRepeat, setRoutineItemRepeat] = useState<'daily' | 'weekly' | 'custom' | 'once'>('daily');
-    const [routineItemDays, setRoutineItemDays] = useState<{ [day: string]: string }>({});
-
-    // Create new routine state - simplified, triggers editor
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newRoutineName, setNewRoutineName] = useState('');
-
+export const RoutineModesWidget = ({ className }: { className?: string }) => {
     const { toast } = useToast();
 
-    const DAYS_OF_WEEK = [
-        { id: 'sun', name: 'الأحد' },
-        { id: 'mon', name: 'الاثنين' },
-        { id: 'tue', name: 'الثلاثاء' },
-        { id: 'wed', name: 'الأربعاء' },
-        { id: 'thu', name: 'الخميس' },
-        { id: 'fri', name: 'الجمعة' },
-        { id: 'sat', name: 'السبت' }
+    // State
+    const [routines, setRoutines] = useState<any[]>([]);
+    const [activeRoutines, setActiveRoutines] = useState<any[]>([]);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [newRoutineName, setNewRoutineName] = useState('');
+    const [editingRoutine, setEditingRoutine] = useState<any>(null);
+
+    // Item Form State
+    const [routineItemText, setRoutineItemText] = useState('');
+    const [routineItemType, setRoutineItemType] = useState('tasks');
+    const [routineItemTime, setRoutineItemTime] = useState('');
+    const [routineItemRepeat, setRoutineItemRepeat] = useState('daily');
+    const [routineItemDays, setRoutineItemDays] = useState<any>({});
+
+    // Activation State
+    const [showCalendar, setShowCalendar] = useState<string | null>(null);
+    const [dateRange, setDateRange] = useState<any>({});
+
+    // Dashboard Customization State
+    const [routineVisibleSections, setRoutineVisibleSections] = useState<string[]>(['notes', 'shopping', 'calendar']);
+    const [routineActiveWidgets, setRoutineActiveWidgets] = useState<string[]>([]);
+
+    // Constants
+    const DASHBOARD_SECTIONS = [
+        { id: 'notes', label: 'الملاحظات السريعة', icon: StickyNote },
+        { id: 'shopping', label: 'قائمة التسوق', icon: ShoppingCart },
+        { id: 'calendar', label: 'التقويم والمواعيد', icon: CalendarIcon },
     ];
 
+    const SIDEBAR_WIDGETS = [
+        { id: 'finance', label: 'المالية', icon: Wallet },
+        { id: 'prayer', label: 'الصلاة', icon: Clock },
+        { id: 'tasks', label: 'المهام', icon: CheckSquare },
+        { id: 'pomodoro', label: 'بومودورو', icon: Timer },
+    ];
+
+    const DAYS_OF_WEEK = [
+        { id: 'sun', name: 'الأحد' }, { id: 'mon', name: 'الاثنين' }, { id: 'tue', name: 'الثلاثاء' },
+        { id: 'wed', name: 'الأربعاء' }, { id: 'thu', name: 'الخميس' }, { id: 'fri', name: 'الجمعة' }, { id: 'sat', name: 'السبت' }
+    ];
+
+    // Load Data
     useEffect(() => {
-        loadRoutines();
-        // Listen for updates
+        const loadRoutines = () => {
+            try {
+                const saved = localStorage.getItem('baraka_routines');
+                if (saved) setRoutines(JSON.parse(saved));
+
+                const savedActive = localStorage.getItem('baraka_active_routines');
+                if (savedActive) {
+                    // Check for expired routines
+                    const active = JSON.parse(savedActive);
+                    const now = new Date();
+                    const valid = active.filter((r: any) => new Date(r.endDate) >= now);
+                    // If we filtered out expired ones, update local storage
+                    if (valid.length !== active.length) {
+                        localStorage.setItem('baraka_active_routines', JSON.stringify(valid));
+                        window.dispatchEvent(new Event('routines-updated'));
+                    }
+                    setActiveRoutines(valid);
+                } else {
+                    setActiveRoutines([]);
+                }
+            } catch (e) {
+                console.error("Error loading routines", e);
+            }
+        };
+
+        loadRoutines(); // Initial load
         window.addEventListener('routines-updated', loadRoutines);
-        return () => window.removeEventListener('routines-updated', loadRoutines);
+
+        // Interval to check for expiration
+        const interval = setInterval(loadRoutines, 60000);
+
+        return () => {
+            window.removeEventListener('routines-updated', loadRoutines);
+            clearInterval(interval);
+        };
     }, []);
 
-    const loadRoutines = () => {
-        const savedRoutines = JSON.parse(localStorage.getItem('baraka_routines') || '[]');
-        const savedActive = JSON.parse(localStorage.getItem('baraka_active_routines') || '[]');
-        setRoutines(savedRoutines);
-        setActiveRoutines(savedActive);
-    };
-
-    const deleteRoutine = (id: string, e?: React.MouseEvent) => {
-        e?.stopPropagation();
-
-        // 1. Delete associated tasks
-        const tasks = JSON.parse(localStorage.getItem('baraka_tasks') || '[]');
-        const updatedTasks = tasks.filter((t: any) => t.routineId !== id);
-        if (tasks.length !== updatedTasks.length) {
-            localStorage.setItem('baraka_tasks', JSON.stringify(updatedTasks));
-            window.dispatchEvent(new Event('tasks-updated'));
-        }
-
-        // 2. Delete associated appointments
-        const appts = JSON.parse(localStorage.getItem('baraka_appointments') || '[]');
-        const updatedAppts = appts.filter((a: any) => a.routineId !== id);
-        if (appts.length !== updatedAppts.length) {
-            localStorage.setItem('baraka_appointments', JSON.stringify(updatedAppts));
-            window.dispatchEvent(new Event('appointments-updated'));
-        }
-
-        // 3. Delete associated active routine entries
-        const activeRoutinesList = JSON.parse(localStorage.getItem('baraka_active_routines') || '[]');
-        const updatedActive = activeRoutinesList.filter((ar: any) => ar.routineId !== id);
-        localStorage.setItem('baraka_active_routines', JSON.stringify(updatedActive));
-        setActiveRoutines(updatedActive);
-
-        // 4. Delete the routine itself
-        const updated = routines.filter(r => r.id !== id);
-        localStorage.setItem('baraka_routines', JSON.stringify(updated));
-        setRoutines(updated);
-
-        // Also close editor if deleting the currently edited one
-        if (editingRoutine?.id === id) {
-            setEditingRoutine(null);
-        }
-        window.dispatchEvent(new Event('routines-updated'));
-        toast({ title: '🗑️ تم حذف القالب', description: 'تم حذف القالب وجميع الأحداث المرتبطة به' });
-    };
-
+    // Actions
     const activateRoutine = (routine: any) => {
-        if (!dateRange.from || !dateRange.to) {
-            toast({ title: '❌ الرجاء تحديد فترة التفعيل', variant: 'destructive' });
-            return;
-        }
-
-        const startDate = new Date(dateRange.from);
-        const endDate = new Date(dateRange.to);
-        endDate.setHours(23, 59, 59, 999); // Include the last day fully
-
-        // Track new items for summary
-        let tasksCreated = 0;
-        let appointmentsCreated = 0;
-
-        // Load existing data
-        const existingTasks = JSON.parse(localStorage.getItem('baraka_tasks') || '[]');
-        const existingAppointments = JSON.parse(localStorage.getItem('baraka_appointments') || '[]');
-        const newTasks: any[] = [];
-        const newAppointments: any[] = [];
-
-        // Loop through dates
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            const dateStr = format(d, 'yyyy-MM-dd');
-
-            // Map standard day names to our custom IDs
-            const getDayId = (date: Date) => {
-                const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-                return map[date.getDay()];
-            };
-            const currentDayId = getDayId(d);
-
-            routine.items.forEach((item: any) => {
-                let shouldAdd = false;
-                let itemTime = item.time;
-
-                // Check recurrence
-                if (item.repeat === 'daily') {
-                    shouldAdd = true;
-                } else if (item.repeat === 'weekly') {
-                    if (d.getDay() === startDate.getDay()) {
-                        shouldAdd = true;
-                    }
-                } else if (item.repeat === 'custom') {
-                    if (item.customDays && item.customDays[currentDayId]) {
-                        shouldAdd = true;
-                        itemTime = item.customDays[currentDayId];
-                    }
-                } else if (item.repeat === 'once') {
-                    if (d.getTime() === startDate.getTime()) {
-                        shouldAdd = true;
-                    }
-                }
-
-                if (shouldAdd) {
-                    if (item.type === 'task' || item.type === 'habit' || item.type === 'medication') {
-                        // Create Task
-                        const newTask = {
-                            id: crypto.randomUUID(),
-                            title: `${item.type === 'medication' ? '💊 ' : item.type === 'habit' ? '❤️ ' : ''}${item.text}`,
-                            description: `Generated from routine: ${routine.name}`,
-                            deadline: dateStr,
-                            time: itemTime,
-                            completed: false,
-                            progress: 0,
-                            priority: 'medium',
-                            type: 'task',
-                            subtasks: [],
-                            routineId: routine.id
-                        };
-                        newTasks.push(newTask);
-                        tasksCreated++;
-                    } else if (item.type === 'appointment') {
-                        // Create Appointment
-                        const newAppt = {
-                            id: crypto.randomUUID(),
-                            title: item.text,
-                            date: dateStr,
-                            time: itemTime || '09:00',
-                            notes: `Generated from routine: ${routine.name}`,
-                            is_completed: false,
-                            routineId: routine.id
-                        };
-                        newAppointments.push(newAppt);
-                        appointmentsCreated++;
-                    }
-                }
-            });
-        }
-
-        // Save generated items
-        if (newTasks.length > 0) {
-            const updatedTasks = [...existingTasks, ...newTasks];
-            localStorage.setItem('baraka_tasks', JSON.stringify(updatedTasks));
-            window.dispatchEvent(new Event('tasks-updated'));
-        }
-
-        if (newAppointments.length > 0) {
-            const updatedAppts = [...existingAppointments, ...newAppointments];
-            localStorage.setItem('baraka_appointments', JSON.stringify(updatedAppts));
-            window.dispatchEvent(new Event('appointments-updated'));
-        }
+        if (!dateRange.from || !dateRange.to) return;
 
         const newActive = {
             id: Date.now().toString(),
             routineId: routine.id,
             name: routine.name,
-            startDate: dateRange.from.toISOString(),
-            endDate: dateRange.to.toISOString(),
-            items: routine.items
+            startDate: dateRange.from,
+            endDate: dateRange.to
         };
 
         const updatedActive = [...activeRoutines, newActive];
         localStorage.setItem('baraka_active_routines', JSON.stringify(updatedActive));
         setActiveRoutines(updatedActive);
-
         setShowCalendar(null);
-        setDateRange({ from: undefined, to: undefined });
-
-        toast({
-            title: '✅ تم تفعيل الوضع وتوليد العناصر',
-            description: `تمت جدولة ${tasksCreated} مهمة و ${appointmentsCreated} موعد للفترة المحددة.`
-        });
+        setDateRange({});
+        toast({ title: '✅ تم تفعيل الوضع', description: `تم تفعيل ${routine.name} بنجاح` });
+        window.dispatchEvent(new Event('routines-updated'));
     };
 
     const deactivateRoutine = (activeId: string) => {
         const updated = activeRoutines.filter(r => r.id !== activeId);
         localStorage.setItem('baraka_active_routines', JSON.stringify(updated));
         setActiveRoutines(updated);
-        toast({ title: '⏹️ تم إيقاف الوضع' });
+        toast({ title: 'تم إيقاف الوضع' });
+        window.dispatchEvent(new Event('routines-updated'));
+    };
+
+    const deleteRoutine = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (confirm('هل أنت متأكد من حذف هذا القالب؟')) {
+            const updated = routines.filter(r => r.id !== id);
+            setRoutines(updated);
+            localStorage.setItem('baraka_routines', JSON.stringify(updated));
+            window.dispatchEvent(new Event('routines-updated'));
+            toast({ title: 'تم الحذف' });
+        }
     };
 
     const createRoutine = () => {
@@ -243,7 +146,11 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
         const newRoutine = {
             id: Date.now().toString(),
             name: newRoutineName,
-            items: []
+            items: [],
+            settings: {
+                visibleSections: ['notes', 'shopping', 'calendar'],
+                activeWidgets: []
+            }
         };
 
         const updated = [...routines, newRoutine];
@@ -251,23 +158,42 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
         setRoutines(updated);
         setNewRoutineName('');
         setIsCreateOpen(false);
-        setEditingRoutine(newRoutine); // Simply open editor for new routine
-        toast({ title: '✨ تم إنشاء القالب', description: 'يمكنك الآن إضافة العناصر' });
+
+        // Open editor
+        setRoutineVisibleSections(['notes', 'shopping', 'calendar']);
+        setRoutineActiveWidgets([]);
+        setEditingRoutine(newRoutine);
+
+        toast({ title: '✨ تم إنشاء القالب', description: 'يمكنك الآن إضافة العناصر وتخصيص الواجهة' });
         window.dispatchEvent(new Event('routines-updated'));
     };
 
     const saveEditedRoutine = (updatedRoutine: any) => {
-        const routineIdx = routines.findIndex(r => r.id === updatedRoutine.id);
+        const fullUpdatedRoutine = {
+            ...updatedRoutine,
+            settings: {
+                visibleSections: routineVisibleSections,
+                activeWidgets: routineActiveWidgets
+            }
+        };
+
+        const routineIdx = routines.findIndex(r => r.id === fullUpdatedRoutine.id);
         const updatedRoutines = [...routines];
         if (routineIdx >= 0) {
-            updatedRoutines[routineIdx] = updatedRoutine;
+            updatedRoutines[routineIdx] = fullUpdatedRoutine;
         } else {
-            updatedRoutines.push(updatedRoutine);
+            updatedRoutines.push(fullUpdatedRoutine);
         }
         localStorage.setItem('baraka_routines', JSON.stringify(updatedRoutines));
         setRoutines(updatedRoutines);
-        setEditingRoutine(updatedRoutine); // Keep editing
+        setEditingRoutine(fullUpdatedRoutine); // Keep editing
         window.dispatchEvent(new Event('routines-updated'));
+    };
+
+    const handleEditClick = (routine: any) => {
+        setEditingRoutine(routine);
+        setRoutineVisibleSections(routine.settings?.visibleSections || ['notes', 'shopping', 'calendar']);
+        setRoutineActiveWidgets(routine.settings?.activeWidgets || []);
     };
 
     return (
@@ -346,6 +272,80 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
                                     </Button>
                                 </div>
 
+                                {/* Customization Logic */}
+                                <div className="bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200 space-y-3">
+                                    <h5 className="text-xs font-bold text-gray-700 flex items-center gap-1">
+                                        <LayoutGrid className="w-3 h-3" />
+                                        تخصيص الواجهة
+                                    </h5>
+
+                                    {/* Section Selection */}
+                                    <div>
+                                        <p className="text-[10px] text-gray-500 mb-2">الأقسام المرئية في الشاشة الرئيسية:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {DASHBOARD_SECTIONS.map(section => {
+                                                const isSelected = routineVisibleSections.includes(section.id);
+                                                return (
+                                                    <button
+                                                        key={section.id}
+                                                        onClick={() => {
+                                                            const newValue = isSelected
+                                                                ? routineVisibleSections.filter(id => id !== section.id)
+                                                                : [...routineVisibleSections, section.id];
+                                                            setRoutineVisibleSections(newValue);
+                                                            // Auto save settings
+                                                            const updated = { ...editingRoutine, settings: { ...editingRoutine.settings, visibleSections: newValue, activeWidgets: routineActiveWidgets } };
+                                                            saveEditedRoutine(updated);
+                                                        }}
+                                                        className={cn(
+                                                            "flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] border transition-colors",
+                                                            isSelected
+                                                                ? "bg-purple-100 border-purple-200 text-purple-700"
+                                                                : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                        )}
+                                                    >
+                                                        <section.icon className="w-3 h-3" />
+                                                        {section.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Sidebar Widgets Selection */}
+                                    <div>
+                                        <p className="text-[10px] text-gray-500 mb-2">الأدوات الجانبية (تفتح تلقائياً):</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {SIDEBAR_WIDGETS.map(widget => {
+                                                const isSelected = routineActiveWidgets.includes(widget.id);
+                                                return (
+                                                    <button
+                                                        key={widget.id}
+                                                        onClick={() => {
+                                                            const newValue = isSelected
+                                                                ? routineActiveWidgets.filter(id => id !== widget.id)
+                                                                : [...routineActiveWidgets, widget.id];
+                                                            setRoutineActiveWidgets(newValue);
+                                                            // Auto save settings
+                                                            const updated = { ...editingRoutine, settings: { ...editingRoutine.settings, visibleSections: routineVisibleSections, activeWidgets: newValue } };
+                                                            saveEditedRoutine(updated);
+                                                        }}
+                                                        className={cn(
+                                                            "flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] border transition-colors",
+                                                            isSelected
+                                                                ? "bg-teal-100 border-teal-200 text-teal-700"
+                                                                : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                        )}
+                                                    >
+                                                        <widget.icon className="w-3 h-3" />
+                                                        {widget.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Items List */}
                                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                                     <h5 className="text-xs font-bold text-gray-500">العناصر ({editingRoutine.items?.length || 0})</h5>
@@ -353,9 +353,9 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
                                         editingRoutine.items.map((item: any, idx: number) => (
                                             <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border">
                                                 <span className={`text-[10px] px-2 py-0.5 rounded ${item.type === 'task' ? 'bg-blue-100 text-blue-700' :
-                                                    item.type === 'appointment' ? 'bg-orange-100 text-orange-700' :
-                                                        item.type === 'habit' ? 'bg-pink-100 text-pink-700' :
-                                                            'bg-cyan-100 text-cyan-700'
+                                                        item.type === 'appointment' ? 'bg-orange-100 text-orange-700' :
+                                                            item.type === 'habit' ? 'bg-pink-100 text-pink-700' :
+                                                                'bg-cyan-100 text-cyan-700'
                                                     }`}>
                                                     {item.type === 'task' ? 'مهمة' :
                                                         item.type === 'appointment' ? 'موعد' :
@@ -406,7 +406,7 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
                                                 onChange={(e) => setRoutineItemType(e.target.value as any)}
                                                 className="w-full h-8 text-xs border rounded-md px-1 bg-white"
                                             >
-                                                <option value="task">مهمة</option>
+                                                <option value="tasks">مهمة</option>
                                                 <option value="appointment">موعد</option>
                                                 <option value="habit">عادة</option>
                                                 <option value="medication">دواء</option>
@@ -600,7 +600,7 @@ export const RoutineModesWidget: React.FC<RoutineModesWidgetProps> = ({ classNam
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-7 w-7 p-0 text-gray-500 hover:bg-gray-100"
-                                                            onClick={() => setEditingRoutine(routine)}
+                                                            onClick={() => handleEditClick(routine)}
                                                             title="تعديل القالب"
                                                         >
                                                             <Pencil className="w-3 h-3" />

@@ -1287,32 +1287,66 @@ const NewMuslimsManager = () => {
                     const { data: { user } } = await supabase.auth.getUser();
                     if (!user) return;
 
-                    const supabaseRecords = validStudents.map(s => ({
-                        full_name: s.fullName,
-                        arabic_name: s.arabicName || null,
-                        phone: s.phone || null,
-                        nationality: s.nationality || null,
-                        gender: s.gender || 'male',
-                        birth_date: s.birthDate || null,
-                        address: s.address || null,
-                        conversion_date: s.conversionDate || null,
-                        status: 'active',
-                        level: 'beginner',
-                        witness_sheikh: s.witnessSheikh || null,
-                        occupation: s.occupation || null,
-                        education: s.education || null,
-                        national_id: s.nationalId || null,
-                        available_days: s.availableDays || [],
-                        user_id: user.id
-                    }));
 
+                    // Fetch one row to verify valid columns
+                    let validColumns: string[] | null = null;
+                    try {
+                        const { data: sampleRow, error: sampleError } = await supabase.from('new_muslims').select('*').limit(1);
+                        if (!sampleError && sampleRow && sampleRow.length > 0) {
+                            validColumns = Object.keys(sampleRow[0]);
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch schema sample", e);
+                    }
+
+                    // Fallback to strict safe columns if dynamic check fails or table is empty
+                    // excluding witness_sheikh and available_days as they are likely culprits
+                    if (!validColumns) {
+                        validColumns = ['full_name', 'arabic_name', 'phone', 'nationality', 'gender', 'conversion_date', 'status', 'level', 'address', 'occupation', 'education', 'national_id', 'user_id'];
+                    }
+
+                    const supabaseRecords = validStudents.map(s => {
+                        const rawRecord: any = {
+                            full_name: s.fullName,
+                            arabic_name: s.arabicName || null,
+                            phone: s.phone || null,
+                            nationality: s.nationality || null,
+                            gender: s.gender || 'male',
+                            birth_date: s.birthDate || null,
+                            address: s.address || null,
+                            conversion_date: s.conversionDate || null,
+                            status: 'active',
+                            level: 'beginner',
+                            witness_sheikh: s.witnessSheikh || null,
+                            occupation: s.occupation || null,
+                            education: s.education || null,
+                            national_id: s.nationalId || null,
+                            available_days: s.availableDays || [],
+                            user_id: user.id
+                        };
+
+                        // Filter strictly based on validColumns
+                        const filteredRecord: any = {};
+                        Object.keys(rawRecord).forEach(key => {
+                            if (validColumns!.includes(key)) {
+                                filteredRecord[key] = rawRecord[key];
+                            }
+                        });
+                        return filteredRecord;
+                    });
+
+
+                    // Use Upsert instead of Insert to handle duplicates (requires 'id' or consistent unique key, 
+                    // but since we don't have IDs here, we rely on Insert. 
+                    // If phone is unique, this might fail, but displaying error is handled below)
                     const { error } = await supabase.from('new_muslims').insert(supabaseRecords);
                     if (error) {
                         console.error('Supabase insert error:', error);
                         toast({
-                            title: "تحذير",
-                            description: "تم الحفظ محلياً لكن فشل الحفظ في قاعدة البيانات",
-                            variant: "destructive"
+                            title: "خطأ في المزامنة",
+                            description: `فشل الحفظ في السحابة: ${error.message || 'خطأ غير معروف'}. تحقق من الاتصال أو الصلاحيات.`,
+                            variant: "destructive",
+                            duration: 5000
                         });
                     } else {
                         toast({
@@ -1331,7 +1365,7 @@ const NewMuslimsManager = () => {
             } else {
                 toast({
                     title: "لم يتم العثور على بيانات صالحة",
-                    description: "تأكد من وجود عمود 'Nombre completo' في الملف وأنه يحتوي على أسماء",
+                    description: "تأكد من وجود عمود 'الاسم' أو 'Nombre completo' في الملف وأنه يحتوي على بيانات",
                     variant: "destructive"
                 });
             }
@@ -2082,7 +2116,7 @@ const NewMuslimsManager = () => {
                                 <CardContent>
                                     {/* Action Bar */}
                                     {selectedStudentIds.length > 0 && (
-                                        <div className="flex items-center gap-2 mb-4 p-2 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in">
+                                        <div className="flex items-center gap-2 mb-4 p-2 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in overflow-x-auto whitespace-nowrap hide-scrollbar">
                                             <span className="text-sm font-bold text-emerald-800 px-2">{selectedStudentIds.length} طالب محدد</span>
                                             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 gap-1 h-8" onClick={handleBulkWhatsapp}>
                                                 <MessageCircle className="w-4 h-4" /> مراسلة

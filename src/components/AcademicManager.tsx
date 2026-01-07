@@ -2208,7 +2208,7 @@ mark { background-color: #ffff00; }
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <FileText className="w-3 h-3" />
-                                                        <span>{chapter.title}</span>
+                                                        <span className="line-clamp-2 text-ellipsis overflow-hidden leading-tight">{chapter.title}</span>
                                                     </div>
                                                     {/* Action Icons on Hover */}
                                                     <div className="hidden group-hover:flex items-center gap-1">

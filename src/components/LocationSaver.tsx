@@ -136,68 +136,62 @@ const LocationSaver: React.FC = () => {
         }
     };
 
-    // Replace localStorage effect with DB sync effect
-    // We only want to sync when locations change due to USER ACTION, not initial load.
-    // However, React effects run on mount. So we need to be careful not to overwrite DB with empty array if fetch is slow.
-    // Better pattern: Call updateLocationsInDB directly in add/edit/delete functions instead of useEffect.
 
-    const getCurrentLocation = useCallback(async (): Promise<GeolocationPosition> => {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('المتصفح لا يدعم الموقع'));
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0,
-            });
-        });
-    }, []);
-
-    const handleQuickSave = async () => {
-        setIsLoading(true);
+    const fetchAddress = async (lat: number, lng: number) => {
         try {
-            const position = await getCurrentLocation();
-            setCapturedPosition(position);
-
-            let initialName = '';
-
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&accept-language=ar`
-                );
-                const data = await response.json();
-
-                const road = data.address?.road || '';
-                const houseNumber = data.address?.house_number || '';
-                const suburb = data.address?.suburb || data.address?.neighbourhood || '';
-
-                if (road) {
-                    initialName = `${road} ${houseNumber}`.trim();
-                } else if (suburb) {
-                    initialName = suburb;
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+            const data = await res.json();
+            if (data && data.display_name) {
+                const addr = data.address;
+                let formattedAddr = '';
+                if (addr.road || addr.pedestrian || addr.street) {
+                    formattedAddr = addr.road || addr.pedestrian || addr.street;
+                    if (addr.house_number) formattedAddr += ` ${addr.house_number}`;
                 } else {
-                    initialName = `موقع ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
+                    formattedAddr = data.display_name.split(',')[0];
                 }
+                setFormAddress(formattedAddr);
 
-                setFormAddress(data.display_name || 'العنوان غير متوفر');
-
-            } catch {
-                initialName = `موقع ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
-                setFormAddress('تعذر جلب العنوان الدقيق');
+                // Also update name if it's generic
+                if (formName.startsWith('موقع')) {
+                    setFormName(formattedAddr);
+                }
+            } else {
+                setFormAddress('العنوان غير متوفر');
             }
-
-            setFormName(initialName);
-            setFormType('other');
-            setIsAddDialogOpen(true);
-
-        } catch (error: any) {
-            console.error(error);
-            toast({ title: 'خطأ', description: error.message || 'فشل تحديد الموقع', variant: 'destructive' });
-        } finally {
-            setIsLoading(false);
+        } catch (e) {
+            console.error("Failed to fetch address", e);
+            setFormAddress('تعذر جلب العنوان');
         }
+    };
+
+    const handleQuickSave = () => {
+        if (!navigator.geolocation) {
+            alert('الجيولوكيشن غير مدعوم');
+            return;
+        }
+
+        toast({ title: "جاري تحديد الموقع...", duration: 1000 });
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setCapturedPosition(position);
+                // Initial name/address placeholder
+                const defaultName = `موقع ${new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
+                setFormName(defaultName);
+                setFormType('other');
+                setFormAddress('جاري جلب العنوان...');
+                setIsAddDialogOpen(true);
+
+                // Fetch Address
+                fetchAddress(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+                console.error(error);
+                toast({ title: 'فشل تحديد الموقع', description: error.message, variant: 'destructive' });
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
     };
 
     const confirmSaveLocation = () => {

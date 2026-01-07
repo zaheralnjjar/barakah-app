@@ -180,36 +180,34 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         />
 
                         {/* 5. Quick Notes - Collapsible */}
-                        <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
-                            <DashboardNotes />
-                        </CollapsibleSection>
+                        {isSectionVisible('notes') && (
+                            <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
+                                <DashboardNotes />
+                            </CollapsibleSection>
+                        )}
 
                         {/* Shopping List - Collapsible */}
-                        {shoppingItems.length > 0 && (
+                        {isSectionVisible('shopping') && (
                             <CollapsibleSection title="قائمة التسوق" icon={ShoppingCart} defaultOpen={false} badge={shoppingItems.length}>
                                 <DashboardShopping />
                             </CollapsibleSection>
                         )}
 
                         {/* 8. Calendar & Appointments - Collapsible */}
-                        <CollapsibleSection title="التقويم والمواعيد" icon={CalendarPlus} defaultOpen={false}>
-                            <DashboardCalendar
-                                tasks={tasks}
-                                appointments={appointments}
-                                habits={habits}
-                                medications={medications}
-                                prayerTimes={prayerTimes}
-                                onNavigateToTab={onNavigateToTab}
-                                weekStartDate={weekStartDate}
-                                setWeekStartDate={setWeekStartDate}
-                                refetch={refetch}
-                            />
-                        </CollapsibleSection>
+                        {isSectionVisible('calendar') && (
+                            <CollapsibleSection title="التقويم والمواعيد" icon={CalendarIcon}>
+                                <CalendarIntegrationWidget
+                                    selectedDate={selectedDate}
+                                    setSelectedDate={setSelectedDate}
+                                    weekStartDate={weekStartDate}
+                                    setWeekStartDate={setWeekStartDate}
+                                    refetch={refetch}
+                                />
+                            </CollapsibleSection>
+                        )}
 
                         {/* 9. Routine Modes - Collapsible */}
-                        <CollapsibleSection title="الأوضاع الدائمة" icon={Target} defaultOpen={false}>
-                            <RoutineModesWidget />
-                        </CollapsibleSection>
+                        <RoutineModesWidget />
 
                         {/* Pomodoro Timer (Hidden Trigger) */}
                         <PomodoroTimer hideTrigger={true} />
@@ -527,64 +525,68 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
             </Dialog>
 
             {/* Academic Full Screen Overlay */}
-            {showAcademicDialog && (
-                <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
-                    <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-purple-100 rounded-xl text-purple-700">
-                                <GraduationCap className="w-6 h-6" />
+            {
+                showAcademicDialog && (
+                    <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
+                        <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-100 rounded-xl text-purple-700">
+                                    <GraduationCap className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">القسم الأكاديمي</h2>
+                                    <p className="text-xs text-gray-500">منصة إعداد البحوث الأكاديمية</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">القسم الأكاديمي</h2>
-                                <p className="text-xs text-gray-500">منصة إعداد البحوث الأكاديمية</p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowAcademicDialog(false)}
+                                className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
+                            >
+                                إغلاق الشاشة ✕
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto bg-gray-50/30">
+                            <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
+                                <AcademicManager />
                             </div>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowAcademicDialog(false)}
-                            className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
-                        >
-                            إغلاق الشاشة ✕
-                        </Button>
                     </div>
-                    <div className="flex-1 overflow-y-auto bg-gray-50/30">
-                        <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
-                            <AcademicManager />
-                        </div>
-                    </div>
-                </div>
-            )}
+                )
+            }
 
             {/* New Muslims Full Screen Overlay */}
-            {showNewMuslimsDialog && (
-                <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
-                    <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
-                                <Users className="w-6 h-6" />
+            {
+                showNewMuslimsDialog && (
+                    <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
+                        <div className="sticky top-0 z-[110] bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700">
+                                    <Users className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">رعاية المهتدين الجدد</h2>
+                                    <p className="text-xs text-gray-500">متابعة شؤون الطلاب والمهتدين</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">رعاية المهتدين الجدد</h2>
-                                <p className="text-xs text-gray-500">متابعة شؤون الطلاب والمهتدين</p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowNewMuslimsDialog(false)}
+                                className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
+                            >
+                                إغلاق الشاشة ✕
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto bg-gray-50/30">
+                            <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
+                                <NewMuslimsManager />
                             </div>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowNewMuslimsDialog(false)}
-                            className="rounded-xl border-red-100 text-red-600 hover:bg-red-50 gap-2"
-                        >
-                            إغلاق الشاشة ✕
-                        </Button>
                     </div>
-                    <div className="flex-1 overflow-y-auto bg-gray-50/30">
-                        <div className="w-full max-w-[1800px] mx-auto px-4 md:px-8 py-4">
-                            <NewMuslimsManager />
-                        </div>
-                    </div>
-                </div>
-            )}
+                )
+            }
 
         </div >
     );

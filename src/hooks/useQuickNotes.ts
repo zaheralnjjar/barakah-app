@@ -3,11 +3,18 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TABLES } from '@/lib/tableNames';
 
+export type NoteType = 'quick' | 'main' | 'voice';
+
 export interface NoteData {
+    id?: string; // unique ID for easier updates
+    title?: string; // Optional title
     content: string;
+    type: NoteType;
     isSecure?: boolean;
     isPinned?: boolean;
     createdAt?: string;
+    updatedAt?: string;
+    tags?: string[];
 }
 
 // Rotating colors for note entries (emoji circles for visual distinction)
@@ -27,7 +34,16 @@ export const useQuickNotes = () => {
             const raw = localStorage.getItem('baraka_notes_history') || '[]';
             const parsed = JSON.parse(raw);
             return parsed.map((item: any) => {
-                if (typeof item === 'string') return { content: item, isSecure: false };
+                // Migration for legacy string items
+                if (typeof item === 'string') return {
+                    content: item,
+                    type: 'quick',
+                    isSecure: false,
+                    createdAt: new Date().toISOString()
+                };
+                // Migration for objects without type
+                if (!item.type) item.type = 'quick';
+                if (!item.id) item.id = crypto.randomUUID();
                 return item;
             });
         } catch { return []; }
@@ -48,38 +64,33 @@ export const useQuickNotes = () => {
 
                 if (data?.quick_notes) {
                     try {
-                        // Try to parse as JSON array (new format)
                         const parsed = JSON.parse(data.quick_notes);
                         if (Array.isArray(parsed) && parsed.length > 0) {
-                            // السحابة لديها بيانات - استخدمها (الأولوية للسحابة)
-                            setNotesHistory(parsed);
-                            localStorage.setItem('baraka_notes_history', JSON.stringify(parsed));
+                            // Migrate cloud data if needed
+                            const migrated = parsed.map((item: any) => {
+                                if (typeof item === 'string') return { content: item, type: 'quick', isSecure: false, createdAt: new Date().toISOString(), id: crypto.randomUUID() };
+                                if (!item.type) item.type = 'quick';
+                                if (!item.id) item.id = crypto.randomUUID();
+                                return item;
+                            });
+
+                            setNotesHistory(migrated);
+                            localStorage.setItem('baraka_notes_history', JSON.stringify(migrated));
                             return;
                         }
                     } catch (e) {
-                        // If parse fails, treat as legacy single string note
+                        // Legacy single string fallback
                         if (data.quick_notes.length > 0) {
-                            const note = { content: data.quick_notes, isSecure: false, createdAt: new Date().toISOString() };
+                            const note: NoteData = {
+                                id: crypto.randomUUID(),
+                                content: data.quick_notes,
+                                type: 'quick',
+                                isSecure: false,
+                                createdAt: new Date().toISOString()
+                            };
                             setNotesHistory([note]);
                             localStorage.setItem('baraka_notes_history', JSON.stringify([note]));
                             return;
-                        }
-                    }
-                }
-
-                // إذا لم تكن هناك بيانات في السحابة، جرب localStorage
-                const localData = localStorage.getItem('baraka_notes_history');
-                if (localData) {
-                    const parsed = JSON.parse(localData);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        setNotesHistory(parsed);
-                        // مزامنة localStorage إلى السحابة
-                        const { data: { user: currentUser } } = await supabase.auth.getUser();
-                        if (currentUser) {
-                            await supabase.from(TABLES.logistics).update({
-                                quick_notes: JSON.stringify(parsed),
-                                updated_at: new Date().toISOString()
-                            }).eq('user_id', currentUser.id);
                         }
                     }
                 }
@@ -109,28 +120,32 @@ export const useQuickNotes = () => {
         }
     };
 
+    // Add new note
+    const addNote = (content: string, type: NoteType = 'quick', title?: string, isSecure = false) => {
+        if (!content.trim() && !title?.trim()) return;
+
+        const newNote: NoteData = {
+            id: crypto.randomUUID(),
+            title,
+            content,
+            type,
+            isSecure,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        const updated = [newNote, ...notesHistory];
+        saveNoteToStorage(updated);
+        toast({ title: 'تم حفظ الملاحظة ✅' });
+    };
+
     // Legacy support wrapper
     const saveNote = async (note: string) => {
-        // Treat as saving a single quick note to index 0?
-        // Or just appending? The current UI uses this for the single note view.
-        // Let's assume we update the first note or create one.
-        // Actually, let's keep it simple: If using old UI, just update index 0
-        const updated = [...notesHistory];
-        if (updated.length > 0) {
-            updated[0].content = note;
-            updated[0].createdAt = new Date().toISOString();
-        } else {
-            updated.push({ content: note, isSecure: false, createdAt: new Date().toISOString() });
-        }
-        await saveNoteToStorage(updated);
-        toast({ title: 'تم الحفط ✅' });
+        addNote(note, 'quick');
     };
 
     const archiveNote = (note: string, isSecure = false) => {
-        if (!note.trim()) return;
-        const newNote: NoteData = { content: note, isSecure, createdAt: new Date().toISOString() };
-        const updated = [newNote, ...notesHistory];
-        saveNoteToStorage(updated);
+        addNote(note, 'quick', undefined, isSecure);
         toast({ title: 'تمت الأرشفة' });
     };
 
@@ -148,19 +163,45 @@ export const useQuickNotes = () => {
         saveNoteToStorage(updated);
     };
 
-    const restoreHistoryItem = (note: string) => {
-        // Not really used in new logic, but kept for compatibility
-        // Maybe copy to clipboard or just do nothing
+    const updateNote = (index: number, content: string, title?: string) => {
+        if (index < 0 || index >= notesHistory.length) return;
+        const updated = [...notesHistory];
+        updated[index] = {
+            ...updated[index],
+            content: content,
+            title: title !== undefined ? title : updated[index].title,
+            updatedAt: new Date().toISOString()
+        };
+        saveNoteToStorage(updated);
     };
+
+    // Update by ID (safer)
+    const updateNoteById = (id: string, updates: Partial<NoteData>) => {
+        const index = notesHistory.findIndex(n => n.id === id);
+        if (index === -1) return;
+
+        const updated = [...notesHistory];
+        updated[index] = { ...updated[index], ...updates, updatedAt: new Date().toISOString() };
+        saveNoteToStorage(updated);
+    }
+
+    const deleteNoteById = (id: string) => {
+        const updated = notesHistory.filter(n => n.id !== id);
+        saveNoteToStorage(updated);
+    }
 
     return {
         notesHistory,
-        saveNote,
-        archiveNote,
+        saveNote, // legacy
+        addNote, // new
+        archiveNote, // legacy name, acting as add
         toggleSecure,
-        deleteHistoryItem,
-        restoreHistoryItem,
+        deleteHistoryItem, // legacy index based
+        updateNote, // legacy index based
+        updateNoteById, // new ID based
+        deleteNoteById, // new ID based
         saveNoteToStorage,
+
         // Append text to a fixed "أنشطة" (Activities) note
         appendToActivitiesNote: (text: string) => {
             const timestamp = new Date().toLocaleString('ar-SA', {
@@ -170,43 +211,34 @@ export const useQuickNotes = () => {
 
             // Find existing "أنشطة" note
             const activitiesIndex = notesHistory.findIndex(
-                n => n.content.startsWith('أنشطة\n') || n.content.startsWith('أنشطة:')
+                n => n.title === 'أنشطة' || n.content.startsWith('أنشطة\n') || n.content.startsWith('أنشطة:')
             );
 
             if (activitiesIndex >= 0) {
-                // Append to existing note with separator line and color
+                // Append to existing note
                 const existing = notesHistory[activitiesIndex];
                 const updated = [...notesHistory];
                 const color = getNextColor(existing.content);
                 const separator = '\n━━━━━━━━━━━━━━━━━━━━━━\n';
                 const entry = `${separator}${color} [${timestamp}]\n${text}`;
+
                 updated[activitiesIndex] = {
                     ...existing,
                     content: existing.content + entry,
-                    createdAt: new Date().toISOString()
+                    updatedAt: new Date().toISOString()
                 };
                 saveNoteToStorage(updated);
             } else {
-                // Create new "أنشطة" note with first color
+                // Create new "أنشطة" note
                 const color = NOTE_COLORS[0];
                 const entry = `${color} [${timestamp}] ${text}`;
-                const newNote: NoteData = {
-                    content: `أنشطة:\n${entry}`,
-                    isSecure: false,
-                    createdAt: new Date().toISOString()
-                };
-                saveNoteToStorage([newNote, ...notesHistory]);
+                addNote(`أنشطة:\n${entry}`, 'quick', 'أنشطة');
             }
         },
-        // Update existing note by index with separator and color
+
         appendToNote: (noteIndex: number, text: string) => {
             if (noteIndex < 0 || noteIndex >= notesHistory.length) return;
-
-            const timestamp = new Date().toLocaleString('ar-SA', {
-                dateStyle: 'short',
-                timeStyle: 'short'
-            });
-
+            const timestamp = new Date().toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' });
             const existing = notesHistory[noteIndex];
             const updated = [...notesHistory];
             const color = getNextColor(existing.content);
@@ -216,11 +248,11 @@ export const useQuickNotes = () => {
             updated[noteIndex] = {
                 ...existing,
                 content: existing.content + entry,
-                createdAt: new Date().toISOString()
+                updatedAt: new Date().toISOString()
             };
             saveNoteToStorage(updated);
         },
-        // Toggle pin status for a note (pinned notes appear first)
+
         togglePin: (noteIndex: number) => {
             if (noteIndex < 0 || noteIndex >= notesHistory.length) return;
             const updated = [...notesHistory];
@@ -234,16 +266,6 @@ export const useQuickNotes = () => {
                 if (!a.isPinned && b.isPinned) return 1;
                 return 0;
             });
-            saveNoteToStorage(updated);
-        },
-        // Update existing note content completely
-        updateNote: (index: number, content: string) => {
-            if (index < 0 || index >= notesHistory.length) return;
-            const updated = [...notesHistory];
-            updated[index] = {
-                ...updated[index],
-                content: content,
-            };
             saveNoteToStorage(updated);
         }
     };

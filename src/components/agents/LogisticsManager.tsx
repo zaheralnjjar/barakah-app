@@ -51,7 +51,8 @@ import { TaskSection } from '@/components/logistics/TaskSection';
 import { TaskStats } from '@/components/logistics/TaskStats';
 import { HabitTracker } from '@/components/logistics/HabitTracker';
 import { MedicationManager } from '@/components/logistics/MedicationManager';
-import { QuickNotes } from '@/components/logistics/QuickNotes';
+// import { QuickNotes } from '@/components/logistics/QuickNotes'; // Replaced
+import { UnifiedNotesHub } from '@/components/logistics/UnifiedNotesHub';
 import { DailyChecklist } from '@/components/logistics/DailyChecklist';
 import AppointmentManager from '@/components/AppointmentManager';
 
@@ -83,12 +84,12 @@ const LogisticsManager = () => {
 
   // Collapsible sections state
   const [sectionsExpanded, setSectionsExpanded] = useState<Record<string, boolean>>({
-    shopping: true,
-    habits: true,
-    medications: true,
-    tasks: true,
-    checklist: true,
-    appointments: true
+    shopping: false,
+    habits: false,
+    medications: false,
+    tasks: false,
+    checklist: false,
+    appointments: false
   });
 
   const toggleSection = (section: string) => {
@@ -599,7 +600,6 @@ const LogisticsManager = () => {
                           ...medData,
                           customTimes: { ...medData.customTimes, [key]: e.target.value }
                         })}
-                        className="flex-1"
                       />
                     </div>
                   ))}
@@ -745,33 +745,88 @@ const LogisticsManager = () => {
         </div>
 
         {/* Column 2 & 3: Tasks and Appointments */}
-        <div className="lg:col-span-2 space-y-6">
-          <TaskSection
-            tasks={taskHook.tasks}
-            appointments={apptHook.appointments}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            onEditTask={startEditTask}
-            onDeleteTask={taskHook.deleteMainTask}
-            onShareTask={handleShareTask}
-            onDeleteAppointment={apptHook.deleteAppointment}
-            onAddSubtask={taskHook.addSubtask}
-            onToggleSubtask={taskHook.toggleSubtask}
-            onDeleteSubtask={taskHook.deleteSubtask}
-            pomodoro={{
-              active: pomodoro.pomodoroActive,
-              time: pomodoro.pomodoroTime,
-              taskId: pomodoro.pomodoroTaskId,
-              start: pomodoro.startPomodoro,
-              stop: pomodoro.stopPomodoro,
-              format: pomodoro.formatTime
-            }}
-          />
+        <div className="lg:col-span-2 space-y-4">
 
-          {/* Daily Checklist & Appointments Side by Side */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <DailyChecklist />
-            <AppointmentManager />
+          {/* Tasks & Projects Section */}
+          <Card className="border-0 shadow-sm overflow-hidden">
+            <div
+              className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer hover:bg-blue-100 transition-colors"
+              onClick={() => toggleSection('tasks')}
+            >
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold text-gray-700">المهام والمشاريع</span>
+              </div>
+              {sectionsExpanded.tasks ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </div>
+            {sectionsExpanded.tasks && (
+              <CardContent className="p-0 pt-2">
+                <TaskSection
+                  tasks={taskHook.tasks}
+                  appointments={apptHook.appointments}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  onEditTask={startEditTask}
+                  onDeleteTask={taskHook.deleteMainTask}
+                  onShareTask={handleShareTask}
+                  onDeleteAppointment={apptHook.deleteAppointment}
+                  onAddSubtask={taskHook.addSubtask}
+                  onToggleSubtask={taskHook.toggleSubtask}
+                  onDeleteSubtask={taskHook.deleteSubtask}
+                  pomodoro={{
+                    active: pomodoro.pomodoroActive,
+                    time: pomodoro.pomodoroTime,
+                    taskId: pomodoro.pomodoroTaskId,
+                    start: pomodoro.startPomodoro,
+                    stop: pomodoro.stopPomodoro,
+                    format: pomodoro.formatTime
+                  }}
+                />
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Daily Checklist & Appointments Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            {/* Daily Checklist */}
+            <Card className="border-0 shadow-sm overflow-hidden h-fit">
+              <div
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-green-50 cursor-pointer hover:bg-emerald-100 transition-colors"
+                onClick={() => toggleSection('checklist')}
+              >
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm font-bold text-gray-700">القائمة اليومية</span>
+                </div>
+                {sectionsExpanded.checklist ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </div>
+              {sectionsExpanded.checklist && (
+                <CardContent className="p-0">
+                  <DailyChecklist />
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Appointments Manager */}
+            <Card className="border-0 shadow-sm overflow-hidden h-fit">
+              <div
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-violet-50 to-purple-50 cursor-pointer hover:bg-violet-100 transition-colors"
+                onClick={() => toggleSection('appointments')}
+              >
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4 text-violet-600" />
+                  <span className="text-sm font-bold text-gray-700">إدارة المواعيد</span>
+                </div>
+                {sectionsExpanded.appointments ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </div>
+              {sectionsExpanded.appointments && (
+                <CardContent className="p-0">
+                  <AppointmentManager />
+                </CardContent>
+              )}
+            </Card>
+
           </div>
         </div>
 
