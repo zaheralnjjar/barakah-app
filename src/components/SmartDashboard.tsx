@@ -42,7 +42,7 @@ import DashboardCalendar from './dashboard/DashboardCalendar';
 import { CollapsibleSection } from './dashboard/CollapsibleSection';
 
 // Refactored Widgets
-import { DashboardNotes } from './dashboard/widgets/DashboardNotes';
+import { QuickNotes } from '@/components/logistics/QuickNotes';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
@@ -218,7 +218,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         {/* 5. Quick Notes - Collapsible */}
                         {isSectionVisible('notes') && (
                             <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
-                                <DashboardNotes />
+                                <QuickNotes />
                             </CollapsibleSection>
                         )}
 
@@ -232,6 +232,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         {/* 8. Calendar & Appointments - Collapsible */}
                         {isSectionVisible('calendar') && (
                             <CollapsibleSection title="التقويم والمواعيد" icon={CalendarIcon}>
+
                                 <DashboardCalendar
                                     tasks={tasks}
                                     appointments={appointments}

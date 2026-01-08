@@ -342,3 +342,72 @@ export const generateStudentProfile = (student: any, communications: any[], less
 
     doc.save(`${student.fullName}-profile.pdf`);
 };
+
+export const generateProtocolPDF = (protocol: any, studentName?: string) => {
+    const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 167, 69); // Green
+    doc.text('خطة التعليم والمناهج', 105, 20, { align: 'center' });
+
+    if (studentName) {
+        doc.setFontSize(14);
+        doc.setTextColor(100);
+        doc.text(`الطالب: ${studentName}`, 105, 30, { align: 'center' });
+    }
+
+    doc.setFontSize(10);
+    doc.text(`تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}`, 105, 40, { align: 'center' });
+
+    let yPos = 50;
+
+    // Stages
+    if (protocol && protocol.stages) {
+        protocol.stages.forEach((stage: any) => {
+            // Stage Title
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, yPos - 5, 182, 10, 'F');
+            doc.setFontSize(14);
+            doc.setTextColor(0);
+            doc.text(stage.name, 190, yPos + 2, { align: 'right' });
+            yPos += 10;
+
+            if (stage.items && stage.items.length > 0) {
+                const body = stage.items.map((item: any) => [
+                    item.deadline || '-',
+                    item.name
+                ]);
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [['الموعد', 'المهمة']],
+                    body: body,
+                    theme: 'grid',
+                    headStyles: { fillColor: [40, 167, 69], halign: 'right' },
+                    styles: { halign: 'right', font: 'helvetica' }, // Note: arabic font issue likely
+                    margin: { left: 14, right: 14 }
+                });
+
+                yPos = (doc as any).lastAutoTable.finalY + 15;
+            } else {
+                doc.setFontSize(10);
+                doc.setTextColor(150);
+                doc.text('لا توجد مهام', 190, yPos + 5, { align: 'right' });
+                yPos += 15;
+            }
+
+            // Page break check
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 30;
+            }
+        });
+    }
+
+    doc.save(`education-plan-${studentName || 'general'}.pdf`);
+};

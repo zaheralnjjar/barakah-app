@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { NotificationManager } from '@/services/NotificationManager';
-import { generatePDF, generateStudentReport, generateStudentProfile } from '@/utils/pdfGenerator';
+import { generatePDF, generateStudentReport, generateStudentProfile, generateProtocolPDF } from '@/utils/pdfGenerator';
+import { useHidayaSettings } from '@/hooks/useHidayaSettings';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
@@ -346,9 +347,8 @@ const NewMuslimsManager = () => {
     const [studyProtocol, setStudyProtocol] = useState<StudyProtocol>(() =>
         loadFromStorage(STORAGE_KEYS.PROTOCOL, DEFAULT_PROTOCOL)
     );
-    const [templates, setTemplates] = useState<MessageTemplates>(() =>
-        loadFromStorage(STORAGE_KEYS.TEMPLATES, DEFAULT_TEMPLATES)
-    );
+    // Use Global Settings
+    const { templates } = useHidayaSettings();
 
     // --- UI State ---
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -361,11 +361,11 @@ const NewMuslimsManager = () => {
     const [sortOption, setSortOption] = useState<'name' | 'date_new' | 'date_old' | 'gender' | 'nationality'>('date_new');
     const [isBulkMessageOpen, setIsBulkMessageOpen] = useState(false);
     const [bulkMessageText, setBulkMessageText] = useState('');
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+    // const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Moved to Global Settings
     const [isTextImportOpen, setIsTextImportOpen] = useState(false);
     const [importText, setImportText] = useState('');
     const [stagedStudents, setStagedStudents] = useState<Partial<Student>[]>([]);
-    const [isCertificateOpen, setIsCertificateOpen] = useState(false);
     const [certData, setCertData] = useState<{ name: string; date: string; sheikh: string; studentId: string } | null>(null);
     const [isProtocolOpen, setIsProtocolOpen] = useState(false); // New: Protocol customization dialog
     const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'progress' | 'communications' | 'materials' | 'lessons'>('info');
@@ -514,16 +514,8 @@ const NewMuslimsManager = () => {
                     })));
                 }
 
-                // 8. Fetch Templates
-                const { data: tplData } = await supabase.from('message_templates').select('*');
-                if (tplData && tplData.length > 0) {
-                    const newTemplates = { ...DEFAULT_TEMPLATES };
-                    tplData.forEach((t: any) => {
-                        if (t.category === 'welcome') newTemplates.welcome = t.content;
-                        if (t.category === 'reminder') newTemplates.reminder = t.content;
-                    });
-                    setTemplates(newTemplates);
-                }
+                // 8. Fetch Templates - Handled by useHidayaSettings Hook
+
 
                 // 9. Fetch Protocol
                 const { data: protoData } = await supabase.from('study_protocol').select('*').single();
@@ -545,7 +537,6 @@ const NewMuslimsManager = () => {
 
         fetchAllData();
     }, []);
-    React.useEffect(() => { saveToStorage(STORAGE_KEYS.TEMPLATES, templates); }, [templates]);
 
     // Sync Protocol with Selected Student
     React.useEffect(() => {
@@ -1037,33 +1028,8 @@ const NewMuslimsManager = () => {
         }
     };
 
-    const saveTemplates = async (newTemplates: MessageTemplates) => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
 
-            // Delete existing and re-insert? Or upsert?
-            // Since there are only 2, let's upsert by category.
-            const tpls = [
-                { user_id: user.id, category: 'welcome', content: newTemplates.welcome },
-                { user_id: user.id, category: 'reminder', content: newTemplates.reminder }
-            ];
 
-            // In Supabase, upsert needs a constraint. 
-            // Better to just plain loop or use a unique constraint on (user_id, category).
-            // Let's use a simple loop for now as it's just 2 items.
-            for (const t of tpls) {
-                await supabase.from('message_templates')
-                    .upsert(t, { onConflict: 'user_id,category' });
-            }
-
-            setTemplates(newTemplates);
-            toast({ title: "تم الحفظ", description: "تم تحديث قوالب الرسائل" });
-        } catch (e: any) {
-            console.error("Error saving templates", e);
-            toast({ title: "خطأ", description: "فشل حفظ القوالب", variant: "destructive" });
-        }
-    };
 
     // --- Get Student Communications ---
     const getStudentCommunications = (studentId: string) => {
@@ -1928,10 +1894,8 @@ const NewMuslimsManager = () => {
                                 <Printer className="w-4 h-4" />
                                 <span className="hidden sm:inline">تقارير</span>
                             </Button>
-                            <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={() => setIsSettingsOpen(true)}>
-                                <Settings className="w-4 h-4" />
-                                <span className="hidden sm:inline">الإعدادات</span>
-                            </Button>
+
+
                             <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={() => setIsProtocolOpen(true)}>
                                 <ClipboardList className="w-4 h-4" />
                                 <span className="hidden sm:inline">خطة التعليم</span>
@@ -2347,7 +2311,6 @@ const NewMuslimsManager = () => {
                     </Tabs>
                 </div>
             )}
-
             {/* Registration Dialog */}
             {/* Registration Dialog - Functional Form */}
             <Dialog open={isRegOpen} onOpenChange={setIsRegOpen}>
@@ -2553,49 +2516,74 @@ const NewMuslimsManager = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Protocol Management Dialog (The Missing Feature) */}
+            {/* Protocol Management Dialog (Redesigned for Mobile) */}
             <Dialog open={isProtocolOpen} onOpenChange={setIsProtocolOpen}>
-                <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden">
-                    <DialogHeader className="p-6 pb-2">
-                        <DialogTitle className="flex justify-between items-center">
+                <DialogContent className="w-full h-full md:max-w-4xl md:h-[85vh] md:rounded-lg rounded-none flex flex-col p-0 overflow-hidden bg-gray-50/50">
+                    <DialogHeader className="p-4 bg-white border-b sticky top-0 z-10">
+                        <DialogTitle className="flex justify-between items-center text-right">
                             <div className="flex items-center gap-2">
-                                <ClipboardList className="w-5 h-5 text-emerald-600" />
-                                <span>خطة التعليم والمناهج (Education Plan)</span>
+                                <div className="p-2 bg-emerald-100 rounded-full">
+                                    <ClipboardList className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-base font-bold text-gray-800">خطة التعليم</span>
+                                    {selectedStudent && (
+                                        <span className="text-[10px] text-emerald-600 font-normal">
+                                            الطالب: {selectedStudent.arabicName || selectedStudent.fullName}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            {selectedStudent && (
-                                <Badge variant="outline" className="text-emerald-700 bg-emerald-50">
-                                    تخصيص لـ: {selectedStudent.arabicName || selectedStudent.fullName}
-                                </Badge>
-                            )}
+
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 gap-1 text-xs"
+                                    onClick={() => {
+                                        toast({ title: "جاري تصدير الملف..." });
+                                        generateProtocolPDF(studyProtocol, selectedStudent?.arabicName || selectedStudent?.fullName);
+                                    }}
+                                >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">PDF</span>
+                                </Button>
+                            </div>
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="text-xs hidden sm:block">
                             {selectedStudent
-                                ? "يتم الآن تعديل الخطة الخاصة بهذا الطالب فقط. التغييرات لن تؤثر على بقية الطلاب."
-                                : "إدارة الخطة الدراسية العامة. التغييرات هنا ستطبق على الطلاب الجدد."}
+                                ? "يتم الآن تعديل الخطة الخاصة بهذا الطالب فقط."
+                                : "إدارة الخطة الدراسية العامة."}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-auto p-6 pt-2 bg-gray-50/50">
-                        <Tabs defaultValue={String(studyProtocol.stages[0]?.id)}>
-                            <TabsList className="w-full justify-start overflow-x-auto">
-                                {studyProtocol.stages.map(stage => (
-                                    <TabsTrigger key={stage.id} value={String(stage.id)} className="gap-2">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
-                                            {stage.id}
-                                        </div>
-                                        {stage.name}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
+                    <div className="flex-1 overflow-auto p-0 sm:p-4">
+                        <Tabs defaultValue={String(studyProtocol.stages[0]?.id)} className="w-full flex-1 flex flex-col">
+                            <div className="bg-white border-b px-4 py-2 sticky top-0 z-10 shadow-sm">
+                                <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto bg-transparent p-0 gap-2 scrollbar-hide">
+                                    {studyProtocol.stages.map(stage => (
+                                        <TabsTrigger
+                                            key={stage.id}
+                                            value={String(stage.id)}
+                                            className="gap-2 flex-shrink-0 border rounded-full px-4 py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 bg-white text-gray-600"
+                                        >
+                                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-current">
+                                                {stage.id}
+                                            </div>
+                                            {stage.name}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </div>
 
                             {studyProtocol.stages.map(stage => (
-                                <TabsContent key={stage.id} value={String(stage.id)} className="mt-4 space-y-4">
-                                    <div className="bg-white p-4 rounded-lg border shadow-sm">
-                                        <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                <TabsContent key={stage.id} value={String(stage.id)} className="flex-1 p-3 sm:p-0 mt-0 space-y-3">
+                                    <div className="bg-white p-3 rounded-lg border shadow-sm">
+                                        <div className="flex justify-between items-center mb-3 border-b pb-2">
+                                            <h4 className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
                                                 <BookOpen className="w-4 h-4 text-emerald-500" />
-                                                محتوى المرحلة: {stage.name}
-                                            </h3>
+                                                <span>{stage.name}</span>
+                                            </h4>
                                             <Button size="sm" variant="outline" onClick={() => {
                                                 const name = prompt("اسم الدرس/المهمة:");
                                                 if (name) addProtocolItem(stage.id, name, "");
@@ -2866,54 +2854,7 @@ const NewMuslimsManager = () => {
             </Dialog>
 
             {/* Settings Dialog */}
-            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>⚙️ الإعدادات</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-6 py-4">
-                        <div className="space-y-3">
-                            <h4 className="font-medium text-gray-700">📨 قوالب الرسائل</h4>
-                            <div className="space-y-2">
-                                <Label>رسالة الترحيب</Label>
-                                <Textarea
-                                    value={templates.welcome}
-                                    onChange={(e) => setTemplates(prev => ({ ...prev, welcome: e.target.value }))}
-                                    className="text-sm"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>رسالة التذكير</Label>
-                                <Textarea
-                                    value={templates.reminder}
-                                    onChange={(e) => setTemplates(prev => ({ ...prev, reminder: e.target.value }))}
-                                    className="text-sm"
-                                />
-                            </div>
-                            <p className="text-xs text-gray-500">استخدم {'{name}'} لإدراج اسم الطالب تلقائياً</p>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => saveTemplates(templates)}>
-                                <Save className="w-4 h-4 mr-2" /> حفظ الإعدادات
-                            </Button>
-                        </div>
-                        <div className="space-y-3">
-                            <h4 className="font-medium text-gray-700">🗑️ إدارة البيانات</h4>
-                            <Button variant="destructive" size="sm" onClick={() => {
-                                if (confirm('هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع!')) {
-                                    setStudents([]);
-                                    setCommunications([]);
-                                    setLessons([]);
-                                    setExams([]);
-                                    toast({ title: "تم الحذف", description: "تم مسح جميع البيانات" });
-                                }
-                            }}>
-                                🗑️ مسح جميع البيانات
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Settings Dialog Removed - Moved to Global Settings Tab */}
 
             {/* Certificate Dialog */}
             <Dialog open={isCertificateOpen} onOpenChange={setIsCertificateOpen}>
@@ -3026,7 +2967,7 @@ const NewMuslimsManager = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

@@ -156,7 +156,6 @@ function cdnPrefixImages(): Plugin {
           const rel = nodePath.relative(dir, full).split(nodePath.sep).join('/');
           const canonical = '/' + rel; // '/images/...'
           imageSet.add(canonical);
-          // also add variant without leading slash for safety
           imageSet.add(canonical.slice(1)); // 'images/...'
         }
       }
@@ -211,7 +210,7 @@ export default defineConfig(({ mode }) => {
     base: './',
     server: {
       host: "::",
-      port: 8080,
+      port: 5173,
     },
     plugins: [
       react(),

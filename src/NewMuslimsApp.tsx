@@ -5,16 +5,21 @@ import { Input } from '@/components/ui/input';
 import { Users, StickyNote, Calendar, Mic, Settings, LogOut, RefreshCw, User, Mail, Lock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
-import { QuickNotes } from '@/components/logistics/QuickNotes';
-import AppointmentManager from '@/components/AppointmentManager';
+import { HidayaNotes } from '@/components/logistics/HidayaNotes';
+import HidayaAppointmentManager from '@/components/HidayaAppointmentManager';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
-import { GlobalSearchDialog } from '@/components/GlobalSearchDialog';
+import { HidayaGlobalSearchDialog } from '@/components/HidayaGlobalSearchDialog';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
+import { useHidayaNotes } from '@/hooks/useHidayaNotes';
+import { useHidayaTranslation } from '@/hooks/useHidayaTranslation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Globe } from 'lucide-react';
+import { HidayaSettings } from '@/components/NewMuslims/HidayaSettings';
 const NewMuslimsApp: React.FC = () => {
     const { toast } = useToast();
+    const { t, language, changeLanguage, isRTL } = useHidayaTranslation();
     const [activeTab, setActiveTab] = useState('newmuslims');
     const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -28,6 +33,9 @@ const NewMuslimsApp: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+
+    // Hooks
+    const { addNote } = useHidayaNotes();
 
     // Long press handling for sync
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -293,7 +301,7 @@ const NewMuslimsApp: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50" dir="rtl">
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50" dir={isRTL ? 'rtl' : 'ltr'}>
             {/* Header */}
             <header className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 shadow-lg">
                 <div className="flex items-center justify-between">
@@ -307,7 +315,7 @@ const NewMuslimsApp: React.FC = () => {
                     </Button>
                     <h1 className="text-xl font-bold flex items-center gap-2">
                         <Users className="w-6 h-6" />
-                        هداية
+                        {t('hidaya')}
                     </h1>
                     <div className="w-10" /> {/* Spacer for balance */}
                 </div>
@@ -323,12 +331,13 @@ const NewMuslimsApp: React.FC = () => {
                         <NewMuslimsManager />
                     </TabsContent>
 
-                    <TabsContent value="notes" className="mt-0">
-                        <QuickNotes />
+                    <TabsContent value="notes" className="arabic-body">
+                        <HidayaNotes />
+
                     </TabsContent>
 
                     <TabsContent value="calendar" className="mt-0">
-                        <AppointmentManager />
+                        <HidayaAppointmentManager />
                     </TabsContent>
 
                     <TabsContent value="settings" className="mt-0">
@@ -396,12 +405,15 @@ const NewMuslimsApp: React.FC = () => {
                                 </CardContent>
                             </Card>
 
+                            {/* Hidaya Settings (Templates & Data) */}
+                            <HidayaSettings />
+
                             {/* Sync Card */}
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <RefreshCw className="w-5 h-5" />
-                                        المزامنة
+                                        {t('sync')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -449,21 +461,21 @@ const NewMuslimsApp: React.FC = () => {
                         className="flex flex-col items-center gap-1 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 rounded-none h-full"
                     >
                         <Users className="w-5 h-5" />
-                        <span className="text-xs">هداية</span>
+                        <span className="text-xs">{t('hidaya')}</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="notes"
                         className="flex flex-col items-center gap-1 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 rounded-none h-full"
                     >
                         <StickyNote className="w-5 h-5" />
-                        <span className="text-xs">الملاحظات</span>
+                        <span className="text-xs">{t('notes')}</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="calendar"
                         className="flex flex-col items-center gap-1 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 rounded-none h-full"
                     >
                         <Calendar className="w-5 h-5" />
-                        <span className="text-xs">المواعيد</span>
+                        <span className="text-xs">{t('appointments')}</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="settings"
@@ -475,7 +487,7 @@ const NewMuslimsApp: React.FC = () => {
                         onMouseLeave={handleSettingsLongPressEnd}
                     >
                         <Settings className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-                        <span className="text-xs">الإعدادات</span>
+                        <span className="text-xs">{t('settings')}</span>
                     </TabsTrigger>
                 </TabsList>
             </Tabs>
@@ -485,19 +497,17 @@ const NewMuslimsApp: React.FC = () => {
                 isOpen={isVoiceRecorderOpen}
                 onClose={() => setIsVoiceRecorderOpen(false)}
                 onSaveToActivities={(text) => {
-                    console.log('Voice note saved:', text);
+                    addNote(text, 'voice');
                     setIsVoiceRecorderOpen(false);
                 }}
             />
 
             {/* Global Search Dialog */}
-            <GlobalSearchDialog
+            <HidayaGlobalSearchDialog
                 isOpen={isSearchOpen}
                 onClose={() => setIsSearchOpen(false)}
-                onNavigateToTab={(tab) => {
-                    setActiveTab(tab);
-                    setIsSearchOpen(false);
-                }}
+                onNavigateToTab={activeTab => setActiveTab(activeTab)}
+                onOpenNewMuslims={() => setActiveTab('newmuslims')}
             />
 
             <Toaster />
