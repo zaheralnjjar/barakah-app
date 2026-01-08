@@ -25,6 +25,7 @@ import { generatePDF, generateStudentReport, generateStudentProfile, generatePro
 import { useHidayaSettings } from '@/hooks/useHidayaSettings';
 import { useHidayaTranslation } from '@/hooks/useHidayaTranslation';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -368,7 +369,20 @@ const NewMuslimsManager = () => {
     const [isTextImportOpen, setIsTextImportOpen] = useState(false);
     const [importText, setImportText] = useState('');
     const [stagedStudents, setStagedStudents] = useState<Partial<Student>[]>([]);
-    const [certData, setCertData] = useState<{ name: string; date: string; sheikh: string; studentId: string } | null>(null);
+    const [certData, setCertData] = useState<{
+        name: string;
+        date: string;
+        sheikh: string;
+        studentId: string;
+        customTitle?: string;
+        customBody1?: string;
+        customBody2?: string;
+        customShahada?: string;
+        customShahadaTranslation?: string;
+        customDateLabel?: string;
+        customSheikhLabel?: string;
+        customFooter?: string;
+    } | null>(null);
     const [isProtocolOpen, setIsProtocolOpen] = useState(false); // New: Protocol customization dialog
     const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'progress' | 'communications' | 'materials' | 'lessons'>('info');
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
@@ -1122,7 +1136,15 @@ const NewMuslimsManager = () => {
             studentId: student.id,
             name: student.arabicName || student.fullName,
             date: student.conversionDate,
-            sheikh: student.witnessSheikh || ''
+            sheikh: student.witnessSheikh || '',
+            customTitle: '',
+            customBody1: '',
+            customBody2: '',
+            customShahada: '',
+            customShahadaTranslation: '',
+            customDateLabel: '',
+            customSheikhLabel: '',
+            customFooter: ''
         });
         setIsCertificateOpen(true);
     };
@@ -2900,24 +2922,71 @@ const NewMuslimsManager = () => {
             {/* Settings Dialog Removed - Moved to Global Settings Tab */}
 
             {/* Certificate Dialog */}
+            {/* Certificate Dialog */}
             <Dialog open={isCertificateOpen} onOpenChange={setIsCertificateOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>📜 {t('print_certificate_title')}</DialogTitle>
+                        <DialogDescription>{t('certificate_customization_desc') || "تخصيص محتوى الشهادة (اترك الحقول فارغة لاستخدام الافتراضي)"}</DialogDescription>
                     </DialogHeader>
                     {certData && (
                         <div className="space-y-4 py-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>{t('student_name')}</Label>
+                                    <Input value={certData.name} onChange={(e) => setCertData({ ...certData, name: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>{t('conversion_date_label')}</Label>
+                                    <Input type="date" value={certData.date} onChange={(e) => setCertData({ ...certData, date: e.target.value })} />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label>{t('witness_sheikh')}</Label>
+                                    <Input value={certData.sheikh} onChange={(e) => setCertData({ ...certData, sheikh: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <Separator className="my-4" />
+                            <h4 className="font-bold text-sm text-gray-700">تخصيص النصوص (إختياري)</h4>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>عنوان الشهادة</Label>
+                                    <Input placeholder="شهادة اعتناق الإسلام" value={certData.customTitle} onChange={(e) => setCertData({ ...certData, customTitle: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>نص التذييل</Label>
+                                    <Input placeholder="Islamic Center..." value={certData.customFooter} onChange={(e) => setCertData({ ...certData, customFooter: e.target.value })} />
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
-                                <Label>{t('student_name')}</Label>
-                                <Input value={certData.name} onChange={(e) => setCertData({ ...certData, name: e.target.value })} />
+                                <Label>النص الافتتاحي (يشهد المركز أن...)</Label>
+                                <Input placeholder="يشهد مركز ... أن السيد/ة" value={certData.customBody1} onChange={(e) => setCertData({ ...certData, customBody1: e.target.value })} />
                             </div>
                             <div className="space-y-2">
-                                <Label>{t('conversion_date_label')}</Label>
-                                <Input type="date" value={certData.date} onChange={(e) => setCertData({ ...certData, date: e.target.value })} />
+                                <Label>نص الاسلام (قد اعتنق الإسلام...)</Label>
+                                <Input placeholder="قد اعتنق الإسلام ونطق بالشهادتين" value={certData.customBody2} onChange={(e) => setCertData({ ...certData, customBody2: e.target.value })} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>تسمية "التاريخ"</Label>
+                                    <Input placeholder="التاريخ:" value={certData.customDateLabel} onChange={(e) => setCertData({ ...certData, customDateLabel: e.target.value })} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>تسمية "الشيخ"</Label>
+                                    <Input placeholder="الشيخ الشاهد:" value={certData.customSheikhLabel} onChange={(e) => setCertData({ ...certData, customSheikhLabel: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>نص الشهادتين (عربي)</Label>
+                                <Textarea className="min-h-[60px]" placeholder="أشهد أن لا إله إلا الله..." value={certData.customShahada} onChange={(e) => setCertData({ ...certData, customShahada: e.target.value })} dir="rtl" />
                             </div>
                             <div className="space-y-2">
-                                <Label>{t('witness_sheikh')}</Label>
-                                <Input value={certData.sheikh} onChange={(e) => setCertData({ ...certData, sheikh: e.target.value })} />
+                                <Label>ترجمة الشهادتين</Label>
+                                <Textarea className="min-h-[60px]" placeholder="Ashadu an la ilaha illa Allah..." value={certData.customShahadaTranslation} onChange={(e) => setCertData({ ...certData, customShahadaTranslation: e.target.value })} dir="ltr" />
                             </div>
                         </div>
                     )}
@@ -2928,7 +2997,15 @@ const NewMuslimsManager = () => {
                             generateCertificatePDF({
                                 name: certData.name,
                                 date: certData.date,
-                                sheikh: certData.sheikh
+                                sheikh: certData.sheikh,
+                                customTitle: certData.customTitle,
+                                customBody1: certData.customBody1,
+                                customBody2: certData.customBody2,
+                                customShahada: certData.customShahada,
+                                customShahadaTranslation: certData.customShahadaTranslation,
+                                customDateLabel: certData.customDateLabel,
+                                customSheikhLabel: certData.customSheikhLabel,
+                                customFooter: certData.customFooter
                             }, language);
                             setIsCertificateOpen(false);
                             toast({ title: t('certificate'), description: t('certificate_pdf_generated') });
