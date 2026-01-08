@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import NewMuslimsApp from './NewMuslimsApp';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
+import '@fontsource/amiri';
 
 const queryClient = new QueryClient({
     defaultOptions: {

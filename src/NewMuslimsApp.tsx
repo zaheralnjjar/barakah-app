@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Users, StickyNote, Calendar, Mic, Settings, LogOut, RefreshCw, User, Mail, Lock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
-import StudentView from '@/components/NewMuslims/StudentView';
+
 import { HidayaNotes } from '@/components/logistics/HidayaNotes';
 import HidayaAppointmentManager from '@/components/HidayaAppointmentManager';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
@@ -29,7 +29,7 @@ const NewMuslimsApp: React.FC = () => {
     const [user, setUser] = useState<any>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>('login');
-    const [userRole, setUserRole] = useState<'supervisor' | 'student'>('supervisor');
+    const [userRole, setUserRole] = useState<'supervisor'>('supervisor');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,17 +59,7 @@ const NewMuslimsApp: React.FC = () => {
     }, []);
 
     // List of approved supervisor emails - only these can access supervisor mode
-    const APPROVED_SUPERVISORS = [
-        'admin@hidaya.com',
-        'zaher@hidaya.com',
-        // Add more approved supervisor emails here
-    ];
 
-    const isSupervisorApproved = (email: string) => {
-        return APPROVED_SUPERVISORS.some(approved =>
-            email.toLowerCase() === approved.toLowerCase()
-        );
-    };
 
     const handleLogin = async () => {
         if (!email || !password) {
@@ -82,41 +72,13 @@ const NewMuslimsApp: React.FC = () => {
         if (error) {
             toast({ title: 'فشل تسجيل الدخول', description: error.message, variant: 'destructive' });
         } else {
-            // If trying to login as supervisor but not approved, force student mode
-            if (userRole === 'supervisor' && !isSupervisorApproved(email)) {
-                setUserRole('student');
-                toast({
-                    title: language === 'ar' ? 'تنبيه' : 'Aviso',
-                    description: language === 'ar'
-                        ? 'حسابك غير مصرح كمشرف. تم تحويلك لوضع الطالب.'
-                        : 'Tu cuenta no está autorizada como supervisor. Se cambió a modo estudiante.',
-                    variant: 'destructive'
-                });
-            } else {
-                toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك!' });
-            }
+            toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك!' });
             setEmail('');
             setPassword('');
         }
     };
 
-    const handleGoogleSignIn = async () => {
-        setIsLoading(true);
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin
-            }
-        });
-        setIsLoading(false);
-        if (error) {
-            toast({
-                title: language === 'ar' ? 'فشل تسجيل الدخول' : 'Error de inicio de sesión',
-                description: error.message,
-                variant: 'destructive'
-            });
-        }
-    };
+
 
     const handleSignup = async () => {
         if (!email || !password) {
@@ -246,26 +208,6 @@ const NewMuslimsApp: React.FC = () => {
                         </div>
                         <CardTitle className="text-2xl">{t('hidaya')}</CardTitle>
                         <p className="text-gray-500 text-sm">{t('app_subtitle')}</p>
-
-                        {/* Role Selection */}
-                        <div className="flex justify-center gap-2 mt-4">
-                            <Button
-                                size="sm"
-                                variant={userRole === 'supervisor' ? 'default' : 'outline'}
-                                onClick={() => setUserRole('supervisor')}
-                                className={userRole === 'supervisor' ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                            >
-                                👨‍🏫 {t('supervisor')}
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={userRole === 'student' ? 'default' : 'outline'}
-                                onClick={() => setUserRole('student')}
-                                className={userRole === 'student' ? 'bg-green-600 hover:bg-green-700' : ''}
-                            >
-                                📚 {t('student_role')}
-                            </Button>
-                        </div>
                     </CardHeader>
                     <CardContent>
                         {authMode === 'login' && (
@@ -298,33 +240,7 @@ const NewMuslimsApp: React.FC = () => {
                                     {isLoading ? t('loading') : t('login')}
                                 </Button>
 
-                                {/* Divider */}
-                                <div className="relative my-4">
-                                    <div className="absolute inset-0 flex items-center">
-                                        <span className="w-full border-t" />
-                                    </div>
-                                    <div className="relative flex justify-center text-xs uppercase">
-                                        <span className="bg-white px-2 text-gray-500">
-                                            {language === 'ar' ? 'أو' : 'o'}
-                                        </span>
-                                    </div>
-                                </div>
 
-                                {/* Google Sign-In */}
-                                <Button
-                                    variant="outline"
-                                    onClick={handleGoogleSignIn}
-                                    className="w-full gap-2"
-                                    disabled={isLoading}
-                                >
-                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                                    </svg>
-                                    {language === 'ar' ? 'تسجيل بـ Google' : 'Iniciar con Google'}
-                                </Button>
 
                                 <div className="flex justify-between text-sm">
                                     {/* Only supervisors can create new accounts */}
@@ -427,22 +343,12 @@ const NewMuslimsApp: React.FC = () => {
                     </CardContent>
                 </Card>
                 <Toaster />
-            </div>
+            </div >
         );
     }
 
     // Show StudentView for students
-    if (userRole === 'student') {
-        return (
-            <StudentView
-                userEmail={user.email}
-                onLogout={async () => {
-                    await supabase.auth.signOut();
-                    setUserRole('supervisor'); // Reset to default
-                }}
-            />
-        );
-    }
+
 
     // Supervisor view - full access
     return (

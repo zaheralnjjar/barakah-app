@@ -1,18 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-    appId: 'com.barakah.newmuslims',
-    appName: 'هداية',
-    webDir: 'dist-newmuslims',
+    appId: 'com.barakah.app',
+    appName: 'Barakah',
+    webDir: 'dist',
     android: {
-        path: 'android-newmuslims'
+        path: 'android'
     },
     plugins: {
-        GoogleAuth: {
-            scopes: ['profile', 'email'],
-            serverClientId: '869098637321-s4iif2e10hnsrd91ua0in06b783t5i16.apps.googleusercontent.com',
-            forceCodeForRefreshToken: true,
-        },
     },
 };
 
