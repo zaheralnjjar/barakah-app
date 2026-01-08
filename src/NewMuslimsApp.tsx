@@ -21,8 +21,11 @@ const NewMuslimsApp: React.FC = () => {
 
     // Auth state
     const [user, setUser] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -33,6 +36,7 @@ const NewMuslimsApp: React.FC = () => {
         // Check current session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
+            setAuthLoading(false);
         });
 
         // Listen for auth changes
@@ -57,6 +61,49 @@ const NewMuslimsApp: React.FC = () => {
             toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك!' });
             setEmail('');
             setPassword('');
+        }
+    };
+
+    const handleSignup = async () => {
+        if (!email || !password) {
+            toast({ title: 'خطأ', description: 'يرجى إدخال البريد وكلمة المرور', variant: 'destructive' });
+            return;
+        }
+        if (password !== confirmPassword) {
+            toast({ title: 'خطأ', description: 'كلمات المرور غير متطابقة', variant: 'destructive' });
+            return;
+        }
+        if (password.length < 6) {
+            toast({ title: 'خطأ', description: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل', variant: 'destructive' });
+            return;
+        }
+        setIsLoading(true);
+        const { error } = await supabase.auth.signUp({ email, password });
+        setIsLoading(false);
+        if (error) {
+            toast({ title: 'فشل إنشاء الحساب', description: error.message, variant: 'destructive' });
+        } else {
+            toast({ title: 'تم إنشاء الحساب بنجاح', description: 'تحقق من بريدك الإلكتروني لتفعيل الحساب' });
+            setAuthMode('login');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!email) {
+            toast({ title: 'خطأ', description: 'يرجى إدخال البريد الإلكتروني', variant: 'destructive' });
+            return;
+        }
+        setIsLoading(true);
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        setIsLoading(false);
+        if (error) {
+            toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+        } else {
+            toast({ title: 'تم الإرسال', description: 'تحقق من بريدك الإلكتروني لإعادة تعيين كلمة المرور' });
+            setAuthMode('login');
         }
     };
 
@@ -88,6 +135,162 @@ const NewMuslimsApp: React.FC = () => {
             longPressTimer.current = null;
         }
     };
+
+    // Loading state
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center" dir="rtl">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-emerald-600">جاري التحميل...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Auth Gate - show login/signup/reset if not logged in
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center p-4" dir="rtl">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Users className="w-10 h-10 text-white" />
+                        </div>
+                        <CardTitle className="text-2xl">هداية</CardTitle>
+                        <p className="text-gray-500 text-sm">إدارة ومتابعة الطلاب الجدد</p>
+                    </CardHeader>
+                    <CardContent>
+                        {authMode === 'login' && (
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="email"
+                                        placeholder="البريد الإلكتروني"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="password"
+                                        placeholder="كلمة المرور"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={handleLogin}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'جاري التحميل...' : 'تسجيل الدخول'}
+                                </Button>
+                                <div className="flex justify-between text-sm">
+                                    <button
+                                        onClick={() => setAuthMode('signup')}
+                                        className="text-emerald-600 hover:underline"
+                                    >
+                                        إنشاء حساب جديد
+                                    </button>
+                                    <button
+                                        onClick={() => setAuthMode('reset')}
+                                        className="text-gray-500 hover:underline"
+                                    >
+                                        نسيت كلمة المرور؟
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {authMode === 'signup' && (
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="email"
+                                        placeholder="البريد الإلكتروني"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="password"
+                                        placeholder="كلمة المرور"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="password"
+                                        placeholder="تأكيد كلمة المرور"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={handleSignup}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'جاري الإنشاء...' : 'إنشاء حساب'}
+                                </Button>
+                                <button
+                                    onClick={() => setAuthMode('login')}
+                                    className="w-full text-center text-sm text-emerald-600 hover:underline"
+                                >
+                                    لديك حساب؟ تسجيل الدخول
+                                </button>
+                            </div>
+                        )}
+
+                        {authMode === 'reset' && (
+                            <div className="space-y-4">
+                                <p className="text-sm text-gray-600 text-center">
+                                    أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور
+                                </p>
+                                <div className="relative">
+                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Input
+                                        type="email"
+                                        placeholder="البريد الإلكتروني"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="pr-10"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={handleResetPassword}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}
+                                </Button>
+                                <button
+                                    onClick={() => setAuthMode('login')}
+                                    className="w-full text-center text-sm text-emerald-600 hover:underline"
+                                >
+                                    العودة لتسجيل الدخول
+                                </button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Toaster />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50" dir="rtl">
@@ -221,7 +424,7 @@ const NewMuslimsApp: React.FC = () => {
                             <Card>
                                 <CardContent className="pt-6">
                                     <div className="text-center text-gray-500 text-sm">
-                                        <p>مركز رعاية المهتدين</p>
+                                        <p>هداية</p>
                                         <p>الإصدار 1.0.0</p>
                                     </div>
                                 </CardContent>
@@ -246,7 +449,7 @@ const NewMuslimsApp: React.FC = () => {
                         className="flex flex-col items-center gap-1 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-600 rounded-none h-full"
                     >
                         <Users className="w-5 h-5" />
-                        <span className="text-xs">المهتدين</span>
+                        <span className="text-xs">هداية</span>
                     </TabsTrigger>
                     <TabsTrigger
                         value="notes"
