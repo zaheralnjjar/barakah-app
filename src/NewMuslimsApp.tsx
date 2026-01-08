@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Users, StickyNote, Calendar, Mic, Settings, LogOut, RefreshCw, User, Mail, Lock, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
+import StudentView from '@/components/NewMuslims/StudentView';
 import { HidayaNotes } from '@/components/logistics/HidayaNotes';
 import HidayaAppointmentManager from '@/components/HidayaAppointmentManager';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
@@ -28,6 +29,7 @@ const NewMuslimsApp: React.FC = () => {
     const [user, setUser] = useState<any>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>('login');
+    const [userRole, setUserRole] = useState<'supervisor' | 'student'>('supervisor');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,8 +39,9 @@ const NewMuslimsApp: React.FC = () => {
     // Hooks
     const { addNote } = useHidayaNotes();
 
-    // Long press handling for sync
+    // Long press handling for sync and voice notes
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const notesLongPressTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         // Check current session
@@ -55,20 +58,63 @@ const NewMuslimsApp: React.FC = () => {
         return () => subscription.unsubscribe();
     }, []);
 
+    // List of approved supervisor emails - only these can access supervisor mode
+    const APPROVED_SUPERVISORS = [
+        'admin@hidaya.com',
+        'zaher@hidaya.com',
+        // Add more approved supervisor emails here
+    ];
+
+    const isSupervisorApproved = (email: string) => {
+        return APPROVED_SUPERVISORS.some(approved =>
+            email.toLowerCase() === approved.toLowerCase()
+        );
+    };
+
     const handleLogin = async () => {
         if (!email || !password) {
             toast({ title: 'خطأ', description: 'يرجى إدخال البريد وكلمة المرور', variant: 'destructive' });
             return;
         }
         setIsLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         setIsLoading(false);
         if (error) {
             toast({ title: 'فشل تسجيل الدخول', description: error.message, variant: 'destructive' });
         } else {
-            toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك!' });
+            // If trying to login as supervisor but not approved, force student mode
+            if (userRole === 'supervisor' && !isSupervisorApproved(email)) {
+                setUserRole('student');
+                toast({
+                    title: language === 'ar' ? 'تنبيه' : 'Aviso',
+                    description: language === 'ar'
+                        ? 'حسابك غير مصرح كمشرف. تم تحويلك لوضع الطالب.'
+                        : 'Tu cuenta no está autorizada como supervisor. Se cambió a modo estudiante.',
+                    variant: 'destructive'
+                });
+            } else {
+                toast({ title: 'تم تسجيل الدخول بنجاح', description: 'مرحباً بك!' });
+            }
             setEmail('');
             setPassword('');
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        setIsLoading(true);
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        setIsLoading(false);
+        if (error) {
+            toast({
+                title: language === 'ar' ? 'فشل تسجيل الدخول' : 'Error de inicio de sesión',
+                description: error.message,
+                variant: 'destructive'
+            });
         }
     };
 
@@ -144,6 +190,20 @@ const NewMuslimsApp: React.FC = () => {
         }
     };
 
+    // Long press on notes tab to open voice recorder
+    const handleNotesLongPressStart = () => {
+        notesLongPressTimer.current = setTimeout(() => {
+            setIsVoiceRecorderOpen(true);
+        }, 500); // 500ms long press for voice
+    };
+
+    const handleNotesLongPressEnd = () => {
+        if (notesLongPressTimer.current) {
+            clearTimeout(notesLongPressTimer.current);
+            notesLongPressTimer.current = null;
+        }
+    };
+
     // Loading state
     if (authLoading) {
         return (
@@ -159,36 +219,75 @@ const NewMuslimsApp: React.FC = () => {
     // Auth Gate - show login/signup/reset if not logged in
     if (!user) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center p-4" dir="rtl">
+            <div className={`min-h-screen bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center p-4`} dir={isRTL ? 'rtl' : 'ltr'}>
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
+                        {/* Language Toggle */}
+                        <div className="flex justify-center gap-2 mb-4">
+                            <Button
+                                size="sm"
+                                variant={language === 'ar' ? 'default' : 'outline'}
+                                onClick={() => changeLanguage('ar')}
+                                className={language === 'ar' ? 'bg-emerald-600' : ''}
+                            >
+                                العربية
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={language === 'es' ? 'default' : 'outline'}
+                                onClick={() => changeLanguage('es')}
+                                className={language === 'es' ? 'bg-emerald-600' : ''}
+                            >
+                                Español
+                            </Button>
+                        </div>
                         <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Users className="w-10 h-10 text-white" />
                         </div>
-                        <CardTitle className="text-2xl">هداية</CardTitle>
-                        <p className="text-gray-500 text-sm">إدارة ومتابعة الطلاب الجدد</p>
+                        <CardTitle className="text-2xl">{t('hidaya')}</CardTitle>
+                        <p className="text-gray-500 text-sm">{t('app_subtitle')}</p>
+
+                        {/* Role Selection */}
+                        <div className="flex justify-center gap-2 mt-4">
+                            <Button
+                                size="sm"
+                                variant={userRole === 'supervisor' ? 'default' : 'outline'}
+                                onClick={() => setUserRole('supervisor')}
+                                className={userRole === 'supervisor' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                            >
+                                👨‍🏫 {t('supervisor')}
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={userRole === 'student' ? 'default' : 'outline'}
+                                onClick={() => setUserRole('student')}
+                                className={userRole === 'student' ? 'bg-green-600 hover:bg-green-700' : ''}
+                            >
+                                📚 {t('student_role')}
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {authMode === 'login' && (
                             <div className="space-y-4">
                                 <div className="relative">
-                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Mail className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="email"
-                                        placeholder="البريد الإلكتروني"
+                                        placeholder={t('email')}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <div className="relative">
-                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Lock className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="password"
-                                        placeholder="كلمة المرور"
+                                        placeholder={t('password')}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <Button
@@ -196,20 +295,52 @@ const NewMuslimsApp: React.FC = () => {
                                     className="w-full bg-emerald-600 hover:bg-emerald-700"
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'جاري التحميل...' : 'تسجيل الدخول'}
+                                    {isLoading ? t('loading') : t('login')}
                                 </Button>
+
+                                {/* Divider */}
+                                <div className="relative my-4">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t" />
+                                    </div>
+                                    <div className="relative flex justify-center text-xs uppercase">
+                                        <span className="bg-white px-2 text-gray-500">
+                                            {language === 'ar' ? 'أو' : 'o'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Google Sign-In */}
+                                <Button
+                                    variant="outline"
+                                    onClick={handleGoogleSignIn}
+                                    className="w-full gap-2"
+                                    disabled={isLoading}
+                                >
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                    </svg>
+                                    {language === 'ar' ? 'تسجيل بـ Google' : 'Iniciar con Google'}
+                                </Button>
+
                                 <div className="flex justify-between text-sm">
-                                    <button
-                                        onClick={() => setAuthMode('signup')}
-                                        className="text-emerald-600 hover:underline"
-                                    >
-                                        إنشاء حساب جديد
-                                    </button>
+                                    {/* Only supervisors can create new accounts */}
+                                    {userRole === 'supervisor' && (
+                                        <button
+                                            onClick={() => setAuthMode('signup')}
+                                            className="text-emerald-600 hover:underline"
+                                        >
+                                            {t('create_account')}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => setAuthMode('reset')}
                                         className="text-gray-500 hover:underline"
                                     >
-                                        نسيت كلمة المرور؟
+                                        {t('forgot_password')}
                                     </button>
                                 </div>
                             </div>
@@ -218,33 +349,33 @@ const NewMuslimsApp: React.FC = () => {
                         {authMode === 'signup' && (
                             <div className="space-y-4">
                                 <div className="relative">
-                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Mail className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="email"
-                                        placeholder="البريد الإلكتروني"
+                                        placeholder={t('email')}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <div className="relative">
-                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Lock className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="password"
-                                        placeholder="كلمة المرور"
+                                        placeholder={t('password')}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <div className="relative">
-                                    <Lock className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Lock className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="password"
-                                        placeholder="تأكيد كلمة المرور"
+                                        placeholder={t('confirm_password')}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <Button
@@ -252,13 +383,13 @@ const NewMuslimsApp: React.FC = () => {
                                     className="w-full bg-emerald-600 hover:bg-emerald-700"
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'جاري الإنشاء...' : 'إنشاء حساب'}
+                                    {isLoading ? t('loading') : t('signup')}
                                 </Button>
                                 <button
                                     onClick={() => setAuthMode('login')}
                                     className="w-full text-center text-sm text-emerald-600 hover:underline"
                                 >
-                                    لديك حساب؟ تسجيل الدخول
+                                    {t('back_to_login')}
                                 </button>
                             </div>
                         )}
@@ -266,16 +397,16 @@ const NewMuslimsApp: React.FC = () => {
                         {authMode === 'reset' && (
                             <div className="space-y-4">
                                 <p className="text-sm text-gray-600 text-center">
-                                    أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور
+                                    {t('reset_password')}
                                 </p>
                                 <div className="relative">
-                                    <Mail className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                    <Mail className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-3 w-4 h-4 text-gray-400`} />
                                     <Input
                                         type="email"
-                                        placeholder="البريد الإلكتروني"
+                                        placeholder={t('email')}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="pr-10"
+                                        className={isRTL ? 'pr-10' : 'pl-10'}
                                     />
                                 </div>
                                 <Button
@@ -283,13 +414,13 @@ const NewMuslimsApp: React.FC = () => {
                                     className="w-full bg-emerald-600 hover:bg-emerald-700"
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'جاري الإرسال...' : 'إرسال رابط إعادة التعيين'}
+                                    {isLoading ? t('loading') : t('send_reset_link')}
                                 </Button>
                                 <button
                                     onClick={() => setAuthMode('login')}
                                     className="w-full text-center text-sm text-emerald-600 hover:underline"
                                 >
-                                    العودة لتسجيل الدخول
+                                    {t('back_to_login')}
                                 </button>
                             </div>
                         )}
@@ -300,6 +431,20 @@ const NewMuslimsApp: React.FC = () => {
         );
     }
 
+    // Show StudentView for students
+    if (userRole === 'student') {
+        return (
+            <StudentView
+                userEmail={user.email}
+                onLogout={async () => {
+                    await supabase.auth.signOut();
+                    setUserRole('supervisor'); // Reset to default
+                }}
+            />
+        );
+    }
+
+    // Supervisor view - full access
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50" dir={isRTL ? 'rtl' : 'ltr'}>
             {/* Header */}
@@ -427,7 +572,7 @@ const NewMuslimsApp: React.FC = () => {
                                         {isSyncing ? 'جاري المزامنة...' : 'مزامنة البيانات الآن'}
                                     </Button>
                                     <p className="text-xs text-gray-500 text-center mt-2">
-                                        أو اضغط باستمرار على أيقونة الإعدادات
+                                        اضغط باستمرار للمزامنة السريعة
                                     </p>
                                 </CardContent>
                             </Card>
@@ -445,15 +590,6 @@ const NewMuslimsApp: React.FC = () => {
                     </TabsContent>
                 </div>
 
-                {/* Floating Voice Record Button */}
-                <Button
-                    onClick={() => setIsVoiceRecorderOpen(true)}
-                    className="fixed bottom-20 left-4 w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 shadow-lg z-50 flex items-center justify-center"
-                    size="icon"
-                >
-                    <Mic className="w-6 h-6 text-white" />
-                </Button>
-
                 {/* Bottom Navigation */}
                 <TabsList className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t shadow-lg rounded-none grid grid-cols-4 gap-0">
                     <TabsTrigger
@@ -466,6 +602,11 @@ const NewMuslimsApp: React.FC = () => {
                     <TabsTrigger
                         value="notes"
                         className="flex flex-col items-center gap-1 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-600 rounded-none h-full"
+                        onTouchStart={handleNotesLongPressStart}
+                        onTouchEnd={handleNotesLongPressEnd}
+                        onMouseDown={handleNotesLongPressStart}
+                        onMouseUp={handleNotesLongPressEnd}
+                        onMouseLeave={handleNotesLongPressEnd}
                     >
                         <StickyNote className="w-5 h-5" />
                         <span className="text-xs">{t('notes')}</span>

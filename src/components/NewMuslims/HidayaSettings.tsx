@@ -53,23 +53,6 @@ export const HidayaSettings: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Danger Zone */}
-            <Card className="border-red-100 bg-red-50/10">
-                <CardHeader>
-                    <CardTitle className="text-base text-red-600 flex items-center gap-2">
-                        <Trash2 className="w-5 h-5" />
-                        منطقة الخطر
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Button variant="destructive" className="w-full" onClick={clearAllData}>
-                        مسح جميع البيانات
-                    </Button>
-                    <p className="text-xs text-red-400 text-center mt-2">
-                        سيتم حذف جميع الطلاب والملاحظات والمواعيد.
-                    </p>
-                </CardContent>
-            </Card>
         </div>
     );
 };

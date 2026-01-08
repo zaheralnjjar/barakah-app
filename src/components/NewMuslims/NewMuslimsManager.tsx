@@ -17,12 +17,13 @@ import {
     Search, Plus, ChevronRight, ChevronDown, User, Phone, MapPin,
     GraduationCap, Clock, Award, MoreVertical, FileText,
     MessageCircle, Download, Share2, Printer, History, Flag,
-    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info, Save
+    Filter, ArrowUpDown, Check, Settings, Copy, Edit, Trash2, ClipboardList, Info, Save, UserPlus, Target
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { NotificationManager } from '@/services/NotificationManager';
-import { generatePDF, generateStudentReport, generateStudentProfile, generateProtocolPDF } from '@/utils/pdfGenerator';
+import { generatePDF, generateStudentReport, generateStudentProfile, generateProtocolPDF, generateCertificatePDF } from '@/utils/pdfGenerator';
 import { useHidayaSettings } from '@/hooks/useHidayaSettings';
+import { useHidayaTranslation } from '@/hooks/useHidayaTranslation';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
@@ -63,14 +64,14 @@ type NewMuslimsRow = {
 };
 
 const MILESTONES_CONFIG: Record<MilestoneKey, { label: string; icon: string; order: number }> = {
-    shahada: { label: 'نطق الشهادة', icon: '🕌', order: 1 },
-    fatiha: { label: 'حفظ الفاتحة', icon: '📖', order: 2 },
-    wudu: { label: 'تعلم الوضوء', icon: '💧', order: 3 },
-    salah: { label: 'تعلم الصلاة', icon: '🙏', order: 4 },
-    basics: { label: 'أساسيات الإسلام', icon: '📚', order: 5 },
-    quran_reading: { label: 'قراءة القرآن', icon: '📕', order: 6 },
-    fasting: { label: 'الصيام', icon: '🌙', order: 7 },
-    zakat: { label: 'الزكاة والصدقة', icon: '💰', order: 8 },
+    shahada: { label: 'stage_shahada', icon: '🕌', order: 1 },
+    fatiha: { label: 'stage_fatiha', icon: '📖', order: 2 },
+    wudu: { label: 'stage_wudu', icon: '💧', order: 3 },
+    salah: { label: 'stage_salah', icon: '🙏', order: 4 },
+    basics: { label: 'stage_basics', icon: '📚', order: 5 },
+    quran_reading: { label: 'stage_quran_reading', icon: '📕', order: 6 },
+    fasting: { label: 'stage_fasting', icon: '🌙', order: 7 },
+    zakat: { label: 'stage_zakat', icon: '💰', order: 8 },
 };
 
 // --- Types ---
@@ -285,23 +286,24 @@ const MOCK_STUDENTS: Student[] = [];
 const MOCK_APPOINTMENTS: Appointment[] = [];
 
 const ATTENDANCE_DATA = [
-    { name: 'السبت', count: 0 },
-    { name: 'الأحد', count: 0 },
-    { name: 'الاثنين', count: 0 },
-    { name: 'الثلاثاء', count: 0 },
-    { name: 'الأربعاء', count: 0 },
-    { name: 'الخميس', count: 0 },
-    { name: 'الجمعة', count: 0 },
+    { name: 'saturday', count: 0 },
+    { name: 'sunday', count: 0 },
+    { name: 'monday', count: 0 },
+    { name: 'tuesday', count: 0 },
+    { name: 'wednesday', count: 0 },
+    { name: 'thursday', count: 0 },
+    { name: 'friday', count: 0 },
 ];
 
 const STATUS_DATA = [
-    { name: 'نشط', value: 0, color: '#10B981' }, // Emerald
-    { name: 'خريج', value: 0, color: '#F59E0B' }, // Amber
-    { name: 'غير نشط', value: 0, color: '#6B7280' }, // Gray
+    { name: 'active', value: 0, color: '#10B981' }, // Emerald
+    { name: 'graduated', value: 0, color: '#F59E0B' }, // Amber
+    { name: 'inactive', value: 0, color: '#6B7280' }, // Gray
 ];
 
 const NewMuslimsManager = () => {
     const { toast } = useToast();
+    const { t, language } = useHidayaTranslation();
 
     // --- Helper: Load from localStorage ---
     const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
@@ -593,6 +595,42 @@ const NewMuslimsManager = () => {
     });
 
     const uniqueNationalities = Array.from(new Set(students.map(s => s.nationality)));
+
+    // --- Stats Calculation ---
+    const stats = {
+        activeStudents: students.filter(s => s.status === 'active').length,
+        newThisMonth: students.filter(s => {
+            if (!s.conversionDate) return false;
+            const convDate = new Date(s.conversionDate);
+            const now = new Date();
+            return convDate.getMonth() === now.getMonth() && convDate.getFullYear() === now.getFullYear();
+        }).length,
+        graduated: students.filter(s => s.status === 'graduated').length,
+        completionRate: students.length > 0
+            ? Math.round(students.reduce((acc, s) => acc + (s.progress || 0), 0) / students.length)
+            : 0
+    };
+
+    // --- Excel Export ---
+    const handleExportExcel = () => {
+        const data = students.map(s => ({
+            'الاسم': s.arabicName || s.fullName,
+            'الهاتف': s.phone,
+            'الجنسية': s.nationality,
+            'تاريخ الإسلام': s.conversionDate,
+            'الحالة': s.status === 'active' ? 'نشط' : s.status === 'graduated' ? 'خريج' : 'غير نشط',
+            'المستوى': s.level === 'beginner' ? 'مبتدئ' : s.level === 'elementary' ? 'ابتدائي' : s.level === 'intermediate' ? 'متوسط' : 'متقدم',
+            'التقدم': (s.progress || 0) + '%',
+            'العنوان': s.address || '',
+            'المهنة': s.occupation || '',
+            'الشيخ المشهّد': s.witnessSheikh || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'الطلاب');
+        XLSX.writeFile(wb, `hidaya_students_${new Date().toISOString().split('T')[0]}.xlsx`);
+        toast({ title: "تم التصدير", description: `تم تصدير ${data.length} طالب إلى ملف Excel` });
+    };
 
     // --- Bulk Actions ---
     const toggleSelectStudent = (id: string) => {
@@ -1179,7 +1217,7 @@ const NewMuslimsManager = () => {
         const studentsToExport = selectedStudentIds.length > 0
             ? students.filter(s => selectedStudentIds.includes(s.id))
             : students;
-        generateStudentReport(studentsToExport);
+        generateStudentReport(studentsToExport, language);
     };
 
     // --- Excel Import ---
@@ -1448,7 +1486,7 @@ const NewMuslimsManager = () => {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Flag className="w-5 h-5 text-emerald-600" />
-                                        رحلة الطالب (Journey Map)
+                                        {t('journey_map')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -1493,14 +1531,14 @@ const NewMuslimsManager = () => {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Award className="w-5 h-5 text-amber-500" />
-                                        الشهادات والإنجازات
+                                        {t('certificates_achievements')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex gap-4 overflow-x-auto pb-2">
                                         <div className="min-w-[200px] border rounded-lg p-3 bg-gradient-to-br from-emerald-50 to-white text-center cursor-pointer hover:shadow-md transition-all">
                                             <Award className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                                            <h4 className="font-bold text-emerald-800 text-sm">شهادة الإسلام</h4>
+                                            <h4 className="font-bold text-emerald-800 text-sm">{t('islam_certificate')}</h4>
                                             <p className="text-[10px] text-gray-500 mb-2">{student.conversionDate}</p>
                                             <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={() => handlePrintCertificate(student)}>
                                                 <Printer className="w-3 h-3 ml-1" /> تصدير PDF / طباعة
@@ -1527,45 +1565,45 @@ const NewMuslimsManager = () => {
                                         معلومات أساسية
                                         <Button size="sm" variant="ghost" className="gap-2" onClick={() => handlePrintProfile(student)}>
                                             <Printer className="w-4 h-4" />
-                                            <span className="text-xs">تصدير ملف الطالب (PDF)</span>
+                                            <span className="text-xs">{t('export_student_file')}</span>
                                         </Button>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div className="flex justify-between border-b pb-2">
-                                        <span className="text-sm text-gray-500">رقم الهوية</span>
+                                        <span className="text-sm text-gray-500">{t('national_id')}</span>
                                         <span className="text-sm font-medium">{student.nationalId || '-'}</span>
                                     </div>
                                     <div className="flex justify-between border-b pb-2">
-                                        <span className="text-sm text-gray-500">التصنيف</span>
+                                        <span className="text-sm text-gray-500">{t('status')}</span>
                                         <StatusBadge status={student.status} />
                                     </div>
                                     <div className="flex justify-between border-b pb-2">
-                                        <span className="text-sm text-gray-500">المستوى</span>
+                                        <span className="text-sm text-gray-500">{t('level')}</span>
                                         <LevelBadge level={student.level} />
                                     </div>
                                     <div className="flex justify-between border-b pb-2">
-                                        <span className="text-sm text-gray-500">الجنسية</span>
+                                        <span className="text-sm text-gray-500">{t('nationality')}</span>
                                         <span className="text-sm font-medium">{student.nationality}</span>
                                     </div>
                                     <div className="flex justify-between border-b pb-2">
-                                        <span className="text-sm text-gray-500">الجنس</span>
-                                        <span className="text-sm font-medium">{student.gender === 'male' ? 'ذكر' : 'أنثى'}</span>
+                                        <span className="text-sm text-gray-500">{t('gender')}</span>
+                                        <span className="text-sm font-medium">{student.gender === 'male' ? t('male') : t('female')}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-2">
-                                        <span className="text-sm text-gray-500">الداعية المختص</span>
+                                        <span className="text-sm text-gray-500">{t('assigned_sheikh')}</span>
                                         {student.assignedSheikh ? (
                                             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                                                 {student.assignedSheikh}
                                             </Badge>
                                         ) : (
                                             <Button size="sm" variant="ghost" className="h-6 text-xs text-blue-600" onClick={() => {
-                                                const sheikh = prompt("أدخل اسم الداعية/المعلم:");
+                                                const sheikh = prompt(t('enter_sheikh_name'));
                                                 if (sheikh) {
                                                     setStudents(prev => prev.map(s => s.id === student.id ? { ...s, assignedSheikh: sheikh } : s));
                                                 }
                                             }}>
-                                                <Plus className="w-3 h-3 ml-1" /> تعيين
+                                                <Plus className="w-3 h-3 ml-1" /> {t('assign')}
                                             </Button>
                                         )}
                                     </div>
@@ -1577,7 +1615,7 @@ const NewMuslimsManager = () => {
                                 <CardHeader className="pb-2">
                                     <CardTitle className="flex justify-between items-center text-sm">
                                         <span className="flex items-center gap-2 text-emerald-800">
-                                            🎯 مراحل التعلم
+                                            🎯 {t('learning_stages')}
                                         </span>
                                         <div className="flex items-center gap-1">
                                             <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
@@ -1588,9 +1626,9 @@ const NewMuslimsManager = () => {
                                                 variant="ghost"
                                                 className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
                                                 onClick={() => {
-                                                    if (confirm('هل تريد تصفير جميع المراحل؟')) {
+                                                    if (confirm(t('confirm_reset_stages'))) {
                                                         updateStudent(student.id, { milestones: {} as Record<MilestoneKey, boolean>, progress: 0 });
-                                                        toast({ title: "تم التصفير", description: "تم إعادة ضبط جميع المراحل" });
+                                                        toast({ title: t('reset_done'), description: t('stages_reset_desc') });
                                                     }
                                                 }}
                                             >
@@ -1630,7 +1668,7 @@ const NewMuslimsManager = () => {
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-sm">{milestone.icon}</span>
                                                                 <span className={`text-xs font-medium truncate ${isCompleted ? 'text-emerald-800' : 'text-gray-600'}`}>
-                                                                    {milestone.label}
+                                                                    {t(milestone.label)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -1715,12 +1753,15 @@ const NewMuslimsManager = () => {
                             {/* Quick Add Buttons */}
                             <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
                                 <Button size="sm" variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100" onClick={() => {
+                                    const formattedPhone = formatPhoneForWhatsapp(student.phone);
+                                    window.open(`https://wa.me/${formattedPhone}`, '_blank');
                                     addCommunication(student.id, 'whatsapp', 'تم إرسال رسالة عبر واتساب', 'sent');
                                     toast({ title: "✅ تم التسجيل", description: "مراسلة واتساب" });
                                 }}>
                                     📱 واتساب
                                 </Button>
                                 <Button size="sm" variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100" onClick={() => {
+                                    window.open(`tel:${student.phone}`, '_self');
                                     addCommunication(student.id, 'call', 'تم الاتصال هاتفياً', 'sent');
                                     toast({ title: "✅ تم التسجيل", description: "مكالمة هاتفية" });
                                 }}>
@@ -1733,6 +1774,7 @@ const NewMuslimsManager = () => {
                                     🏠 زيارة
                                 </Button>
                                 <Button size="sm" variant="outline" className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100" onClick={() => {
+                                    window.open(`sms:${student.phone}`, '_self');
                                     addCommunication(student.id, 'sms', 'تم إرسال رسالة نصية', 'sent');
                                     toast({ title: "✅ تم التسجيل", description: "رسالة نصية" });
                                 }}>
@@ -1885,20 +1927,20 @@ const NewMuslimsManager = () => {
                                 <Users className="w-6 h-6 sm:w-8 sm:h-8" />
                             </span>
                             <div>
-                                <h1 className="text-xl sm:text-3xl font-bold text-gray-800">هداية</h1>
-                                <p className="text-xs sm:text-sm text-gray-500">الإدارة المتكاملة لشؤون المسلمين الجدد</p>
+                                <h1 className="text-xl sm:text-3xl font-bold text-gray-800">{t('hidaya')}</h1>
+                                <p className="text-xs sm:text-sm text-gray-500">{t('app_subtitle')}</p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={handlePrintReport}>
                                 <Printer className="w-4 h-4" />
-                                <span className="hidden sm:inline">تقارير</span>
+                                <span className="hidden sm:inline">{t('print')}</span>
                             </Button>
 
 
                             <Button variant="outline" size="sm" className="gap-1 text-xs sm:text-sm" onClick={() => setIsProtocolOpen(true)}>
                                 <ClipboardList className="w-4 h-4" />
-                                <span className="hidden sm:inline">خطة التعليم</span>
+                                <span className="hidden sm:inline">{t('study_plan')}</span>
                             </Button>
                             <div className="relative">
                                 <Input
@@ -1914,7 +1956,7 @@ const NewMuslimsManager = () => {
                             </div>
                             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 gap-1 text-xs sm:text-sm" onClick={() => setIsRegOpen(true)}>
                                 <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">تسجيل جديد</span>
+                                <span className="hidden sm:inline">{t('add_new_student')}</span>
                             </Button>
                         </div>
                     </div>
@@ -1924,8 +1966,8 @@ const NewMuslimsManager = () => {
                         <Card className="bg-white hover:border-emerald-200 transition-all cursor-pointer">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium mb-1">إجمالي الطلاب</p>
-                                    <h3 className="text-3xl font-bold text-gray-800">45</h3>
+                                    <p className="text-sm text-gray-500 font-medium mb-1">{t('total_students')}</p>
+                                    <h3 className="text-3xl font-bold text-gray-800">{students.length}</h3>
                                 </div>
                                 <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
                                     <Users className="w-6 h-6" />
@@ -1935,8 +1977,8 @@ const NewMuslimsManager = () => {
                         <Card className="bg-white hover:border-emerald-200 transition-all cursor-pointer">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium mb-1">الطلاب النشطين</p>
-                                    <h3 className="text-3xl font-bold text-emerald-600">23</h3>
+                                    <p className="text-sm text-gray-500 font-medium mb-1">{t('active_students')}</p>
+                                    <h3 className="text-3xl font-bold text-emerald-600">{stats.activeStudents}</h3>
                                 </div>
                                 <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600">
                                     <CheckCircle2 className="w-6 h-6" />
@@ -1946,7 +1988,7 @@ const NewMuslimsManager = () => {
                         <Card className="bg-white hover:border-emerald-200 transition-all cursor-pointer">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium mb-1">مواعيد اليوم</p>
+                                    <p className="text-sm text-gray-500 font-medium mb-1">{t('today_appointments')}</p>
                                     <h3 className="text-3xl font-bold text-amber-600">8</h3>
                                 </div>
                                 <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
@@ -1957,8 +1999,8 @@ const NewMuslimsManager = () => {
                         <Card className="bg-white hover:border-emerald-200 transition-all cursor-pointer">
                             <CardContent className="p-4 flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500 font-medium mb-1">الخريجين</p>
-                                    <h3 className="text-3xl font-bold text-purple-600">12</h3>
+                                    <p className="text-sm text-gray-500 font-medium mb-1">{t('graduates')}</p>
+                                    <h3 className="text-3xl font-bold text-purple-600">{stats.graduated}</h3>
                                 </div>
                                 <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-600">
                                     <Award className="w-6 h-6" />
@@ -1971,13 +2013,13 @@ const NewMuslimsManager = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <Card className="bg-emerald-50 border-emerald-100 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <p className="text-xs text-emerald-600 font-bold mb-1">إجمالي المهتدين</p>
+                                <p className="text-xs text-emerald-600 font-bold mb-1">{t('total_students')}</p>
                                 <p className="text-2xl font-black text-emerald-800">{students.length}</p>
                             </CardContent>
                         </Card>
                         <Card className="bg-blue-50 border-blue-100 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <p className="text-xs text-blue-600 font-bold mb-1">الجدد (هذا الشهر)</p>
+                                <p className="text-xs text-blue-600 font-bold mb-1">{t('monthly_converts')}</p>
                                 <p className="text-2xl font-black text-blue-800">
                                     {students.filter(s => new Date(s.conversionDate).getMonth() === new Date().getMonth()).length}
                                 </p>
@@ -1985,7 +2027,7 @@ const NewMuslimsManager = () => {
                         </Card>
                         <Card className="bg-amber-50 border-amber-100 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <p className="text-xs text-amber-600 font-bold mb-1">يحتاجون متابعة</p>
+                                <p className="text-xs text-amber-600 font-bold mb-1">{t('needs_followup')}</p>
                                 <p className="text-2xl font-black text-amber-800">
                                     {students.filter(s => s.status === 'active' && (!s.lastVisit || s.lastVisit.includes('يوم'))).length}
                                 </p>
@@ -1993,7 +2035,7 @@ const NewMuslimsManager = () => {
                         </Card>
                         <Card className="bg-purple-50 border-purple-100 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <p className="text-xs text-purple-600 font-bold mb-1">الخريجين</p>
+                                <p className="text-xs text-purple-600 font-bold mb-1">{t('graduates')}</p>
                                 <p className="text-2xl font-black text-purple-800">
                                     {students.filter(s => s.status === 'graduated').length}
                                 </p>
@@ -2007,7 +2049,7 @@ const NewMuslimsManager = () => {
                         <div className="md:col-span-2 relative">
                             <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
                             <Input
-                                placeholder="بحث بالاسم، الهاتف..."
+                                placeholder={t('search_students')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pr-9"
@@ -2020,10 +2062,10 @@ const NewMuslimsManager = () => {
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value as any)}
                         >
-                            <option value="all">كل الحالات</option>
-                            <option value="active">🌟 نشط</option>
-                            <option value="inactive">💤 غير نشط</option>
-                            <option value="graduated">🎓 خريج</option>
+                            <option value="all">{t('all')}</option>
+                            <option value="active">🌟 {t('active')}</option>
+                            <option value="inactive">💤 {t('inactive')}</option>
+                            <option value="graduated">🎓 {t('graduated')}</option>
                         </select>
 
                         {/* Nationality Filter */}
@@ -2032,7 +2074,7 @@ const NewMuslimsManager = () => {
                             value={nationalityFilter}
                             onChange={(e) => setNationalityFilter(e.target.value)}
                         >
-                            <option value="all">كل الجنسيات</option>
+                            <option value="all">{t('nationality')}</option>
                             {uniqueNationalities.filter(Boolean).map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
 
@@ -2042,7 +2084,7 @@ const NewMuslimsManager = () => {
                             value={uniFilter}
                             onChange={(e) => setUniFilter(e.target.value)}
                         >
-                            <option value="">كل التخصصات</option>
+                            <option value="">{t('education')}</option>
                             {students.map(s => s.education).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).map(u => <option key={u} value={u}>{u}</option>)}
                         </select>
 
@@ -2052,15 +2094,15 @@ const NewMuslimsManager = () => {
                             className={`w-full ${attentionFilter ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'text-gray-500'}`}
                             onClick={() => setAttentionFilter(!attentionFilter)}
                         >
-                            {attentionFilter ? '⚠️ يحتاج متابعة' : '✔️ الكل بخير'}
+                            {attentionFilter ? `⚠️ ${t('needs_followup')}` : `✔️ ${t('all')}`}
                         </Button>
                     </div>
 
                     <Tabs defaultValue="students" className="w-full">
                         <TabsList className="bg-white p-1 border shadow-sm rounded-lg mb-4 w-full justify-start overflow-x-auto flex-nowrap">
-                            <TabsTrigger value="students" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">قائمة المهتدين</TabsTrigger>
-                            <TabsTrigger value="calendar" className="flex-shrink-0 text-xs sm:text-sm">التقويم</TabsTrigger>
-                            <TabsTrigger value="reports" className="flex-shrink-0 text-xs sm:text-sm">الإحصائيات</TabsTrigger>
+                            <TabsTrigger value="students" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700">{t('students_list')}</TabsTrigger>
+                            <TabsTrigger value="calendar" className="flex-shrink-0 text-xs sm:text-sm">{t('calendar')}</TabsTrigger>
+                            <TabsTrigger value="reports" className="flex-shrink-0 text-xs sm:text-sm">{t('statistics')}</TabsTrigger>
                         </TabsList>
 
                         {/* 1. Students List Tab */}
@@ -2070,7 +2112,7 @@ const NewMuslimsManager = () => {
                                     <div className="relative">
                                         <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                                         <Input
-                                            placeholder="بحث بالاسم، الجنسية، أو رقم الهاتف..."
+                                            placeholder={t('search_placeholder')}
                                             className="pr-9"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -2081,24 +2123,24 @@ const NewMuslimsManager = () => {
                                     {/* Action Bar */}
                                     {selectedStudentIds.length > 0 && (
                                         <div className="flex items-center gap-2 mb-4 p-2 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in overflow-x-auto whitespace-nowrap hide-scrollbar">
-                                            <span className="text-sm font-bold text-emerald-800 px-2">{selectedStudentIds.length} طالب محدد</span>
+                                            <span className="text-sm font-bold text-emerald-800 px-2">{selectedStudentIds.length} {t('selected_students')}</span>
                                             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 gap-1 h-8" onClick={handleBulkWhatsapp}>
-                                                <MessageCircle className="w-4 h-4" /> مراسلة
+                                                <MessageCircle className="w-4 h-4" /> {t('message')}
                                             </Button>
                                             <Button size="sm" variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 gap-1 h-8" onClick={() => setIsApptOpen(true)}>
-                                                <CalendarIcon className="w-4 h-4" /> جدولة درس
+                                                <CalendarIcon className="w-4 h-4" /> {t('schedule_lesson')}
                                             </Button>
                                             <Button size="sm" variant="outline" className="border-purple-200 text-purple-600 hover:bg-purple-50 gap-1 h-8" onClick={handlePrintReport}>
-                                                <Printer className="w-4 h-4" /> تصدير PDF
+                                                <Printer className="w-4 h-4" /> {t('export_pdf')}
                                             </Button>
                                             <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 gap-1 h-8" onClick={() => {
-                                                if (confirm(`هل تريد حذف ${selectedStudentIds.length} طالب محدد؟`)) {
+                                                if (confirm(`${t('confirm_delete')} ${selectedStudentIds.length} ${t('confirm_delete_suffix')}`)) {
                                                     setStudents(prev => prev.filter(s => !selectedStudentIds.includes(s.id)));
                                                     setSelectedStudentIds([]);
-                                                    toast({ title: "تم الحذف ✅", description: `تم حذف ${selectedStudentIds.length} طالب` });
+                                                    toast({ title: "تم الحذف ✅", description: `${t('student_deleted')}` });
                                                 }
                                             }}>
-                                                <Trash2 className="w-4 h-4" /> حذف
+                                                <Trash2 className="w-4 h-4" /> {t('delete')}
                                             </Button>
                                             <Button size="sm" variant="ghost" className="text-gray-500 h-8" onClick={() => setSelectedStudentIds([])}>
                                                 ✕
@@ -2111,14 +2153,14 @@ const NewMuslimsManager = () => {
                                         <Select value={sortOption} onValueChange={(v: any) => setSortOption(v)}>
                                             <SelectTrigger className="w-[160px] h-9">
                                                 <ArrowUpDown className="w-3 h-3 ml-2 text-gray-500" />
-                                                <SelectValue placeholder="الترتيب" />
+                                                <SelectValue placeholder={t('sort')} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="date_new">الأحدث إسلاماً</SelectItem>
-                                                <SelectItem value="date_old">الأقدم إسلاماً</SelectItem>
-                                                <SelectItem value="name">الاسم (أبجدي)</SelectItem>
-                                                <SelectItem value="gender">الجنس</SelectItem>
-                                                <SelectItem value="nationality">الجنسية</SelectItem>
+                                                <SelectItem value="date_new">{t('newest_islam')}</SelectItem>
+                                                <SelectItem value="date_old">{t('oldest_islam')}</SelectItem>
+                                                <SelectItem value="name">{t('name_alphabetical')}</SelectItem>
+                                                <SelectItem value="gender">{t('gender')}</SelectItem>
+                                                <SelectItem value="nationality">{t('nationality')}</SelectItem>
                                             </SelectContent>
                                         </Select>
 
@@ -2172,11 +2214,11 @@ const NewMuslimsManager = () => {
                                                                 </h4>
                                                                 {/* تاريخ الإسلام */}
                                                                 <div className="text-[10px] sm:text-xs text-emerald-600">
-                                                                    أسلم: {student.conversionDate || 'غير محدد'}
+                                                                    {t('conversion_date')}: {student.conversionDate || t('not_specified')}
                                                                 </div>
                                                                 {/* الجنسية */}
                                                                 <div className="text-[10px] sm:text-xs text-gray-400 truncate">
-                                                                    {student.nationality || 'غير محدد'}
+                                                                    {student.nationality || t('not_specified')}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2190,20 +2232,20 @@ const NewMuslimsManager = () => {
                                                             </div>
                                                         </div>
                                                         {/* Quick Actions */}
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" title="واتساب" onClick={(e) => { e.stopPropagation(); handleWhatsapp(student, 'welcome'); }}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" title={t('whatsapp')} onClick={(e) => { e.stopPropagation(); handleWhatsapp(student, 'welcome'); }}>
                                                             <MessageCircle className="w-4 h-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" title="طباعة" onClick={(e) => { e.stopPropagation(); handlePrintProfile(student); }}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" title={t('print')} onClick={(e) => { e.stopPropagation(); handlePrintProfile(student); }}>
                                                             <Printer className="w-4 h-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-purple-600 hover:bg-purple-50" title="مشاركة" onClick={(e) => {
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-purple-600 hover:bg-purple-50" title={t('share')} onClick={(e) => {
                                                             e.stopPropagation();
                                                             navigator.clipboard.writeText(`${student.arabicName || student.fullName}\nWhatsApp: ${student.phone}\nNationality: ${student.nationality}`);
-                                                            toast({ title: "تم النسخ", description: "تم نسخ معلومات الطالب" });
+                                                            toast({ title: t('copied'), description: t('student_info_copied') });
                                                         }}>
                                                             <Share2 className="w-4 h-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-red-50 hover:text-red-600" title="حذف" onClick={(e) => { e.stopPropagation(); if (confirm('هل تريد حذف هذا الطالب؟')) deleteStudent(student.id); }}>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:bg-red-50 hover:text-red-600" title={t('delete')} onClick={(e) => { e.stopPropagation(); if (confirm(t('confirm_delete_student'))) deleteStudent(student.id); }}>
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>
                                                         <Button variant="ghost" size="icon" className="text-gray-400 group-hover:text-emerald-600" onClick={() => setSelectedStudent(student)}>
@@ -2224,8 +2266,8 @@ const NewMuslimsManager = () => {
                                 <Card className="md:col-span-2 border-none shadow-sm">
                                     <CardHeader>
                                         <CardTitle className="flex justify-between items-center">
-                                            <span>المواعيد المجدولة</span>
-                                            <Button size="sm" onClick={() => setIsApptOpen(true)}>+ موعد جديد</Button>
+                                            <span>{t('scheduled_appointments')}</span>
+                                            <Button size="sm" onClick={() => setIsApptOpen(true)}>+ {t('add_appointment')}</Button>
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -2238,16 +2280,16 @@ const NewMuslimsManager = () => {
                                                     </div>
                                                     <div className="mr-4 flex-1">
                                                         <h4 className="font-bold text-gray-800">{appt.type}</h4>
-                                                        <p className="text-sm text-gray-500">مع الطالب: {appt.studentName}</p>
+                                                        <p className="text-sm text-gray-500">{t('with_student')}: {appt.studentName}</p>
                                                     </div>
-                                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50">إلغاء</Button>
+                                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50">{t('cancel')}</Button>
                                                 </div>
                                             ))}
                                         </div>
                                     </CardContent>
                                 </Card>
                                 <Card className="border-none shadow-sm bg-emerald-50">
-                                    <CardHeader><CardTitle className="text-emerald-800 text-sm">التذكيرات التلقائية</CardTitle></CardHeader>
+                                    <CardHeader><CardTitle className="text-emerald-800 text-sm">{t('automated_reminders')}</CardTitle></CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="flex gap-2 items-start text-sm text-emerald-700">
                                             <CheckCircle2 className="w-4 h-4 mt-0.5" />
@@ -2256,7 +2298,7 @@ const NewMuslimsManager = () => {
                                         <div className="flex gap-2 items-start text-sm text-emerald-700">
                                             <History className="w-4 h-4 mt-0.5" />
                                             <p>الطالب "ريكاردو" غائب منذ أسبوعين. هل تود إرسال رسالة تفقد؟</p>
-                                            <Button size="sm" variant="outline" className="h-6 text-xs bg-white">إرسال</Button>
+                                            <Button size="sm" variant="outline" className="h-6 text-xs bg-white">{t('send')}</Button>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -2268,14 +2310,14 @@ const NewMuslimsManager = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="text-sm text-gray-500">الحضور الأسبوعي</CardTitle>
+                                        <CardTitle className="text-sm text-gray-500">{t('weekly_attendance')}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="h-[250px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={ATTENDANCE_DATA}>
-                                                <XAxis dataKey="name" fontSize={12} />
+                                                <XAxis dataKey="name" fontSize={12} tickFormatter={(val) => t(val)} />
                                                 <YAxis fontSize={12} />
-                                                <Tooltip />
+                                                <Tooltip labelFormatter={(val) => t(val)} />
                                                 <Bar dataKey="count" fill="#10B981" radius={[4, 4, 0, 0]} />
                                             </BarChart>
                                         </ResponsiveContainer>
@@ -2283,7 +2325,7 @@ const NewMuslimsManager = () => {
                                 </Card>
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle className="text-sm text-gray-500">توزيع الطلاب حسب الحالة</CardTitle>
+                                        <CardTitle className="text-sm text-gray-500">{t('student_status_distribution')}</CardTitle>
                                     </CardHeader>
                                     <CardContent className="h-[250px] flex items-center justify-center">
                                         <ResponsiveContainer width="100%" height="100%">
@@ -2301,7 +2343,7 @@ const NewMuslimsManager = () => {
                                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip />
+                                                <Tooltip formatter={(value, name, props) => [value, t(props.payload.name)]} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </CardContent>
@@ -2318,9 +2360,9 @@ const NewMuslimsManager = () => {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-2xl">
                             <User className="w-6 h-6 text-emerald-600" />
-                            تسجيل مهتدي جديد / Nuevo Musulmán
+                            {t('register_new_student')}
                         </DialogTitle>
-                        <DialogDescription>أدخل بيانات المسلم الجديد / Ingrese los datos</DialogDescription>
+                        <DialogDescription>{t('enter_student_data')}</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={(e) => {
                         e.preventDefault();
@@ -2332,7 +2374,7 @@ const NewMuslimsManager = () => {
                             fullName: formData.get('fullName') as string || 'Unknown',
                             arabicName: formData.get('arabicName') as string || '',
                             phone: (formData.get('whatsapp') as string || '').replace(/\D/g, ''),
-                            nationality: formData.get('nationality') as string || 'غير محدد',
+                            nationality: formData.get('nationality') as string || t('not_specified'),
                             nationalId: formData.get('dni') as string || '',
                             address: formData.get('city') as string || '',
                             occupation: formData.get('trabajo') as string || '',
@@ -2352,23 +2394,23 @@ const NewMuslimsManager = () => {
                             {/* Row 1: Names */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="fullName">الاسم الكامل / Nombre Completo *</Label>
-                                    <Input id="fullName" name="fullName" placeholder="Nombre completo..." required />
+                                    <Label htmlFor="fullName">{t('full_name')} *</Label>
+                                    <Input id="fullName" name="fullName" placeholder={t('full_name')} required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="arabicName">الاسم العربي / Nombre Árabe</Label>
-                                    <Input id="arabicName" name="arabicName" placeholder="عبدالله..." />
+                                    <Label htmlFor="arabicName">{t('arabic_name')}</Label>
+                                    <Input id="arabicName" name="arabicName" placeholder={t('arabic_name')} />
                                 </div>
                             </div>
 
                             {/* Row 2: Age & City */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="age">العمر / Edad</Label>
+                                    <Label htmlFor="age">{t('age')}</Label>
                                     <Input id="age" name="age" type="number" placeholder="30" />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="city">المدينة / Ciudad donde vives</Label>
+                                    <Label htmlFor="city">{t('city')}</Label>
                                     <Input id="city" name="city" placeholder="Buenos Aires..." />
                                 </div>
                             </div>
@@ -2376,11 +2418,11 @@ const NewMuslimsManager = () => {
                             {/* Row 3: WhatsApp & DNI */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="whatsapp">واتساب / WhatsApp *</Label>
+                                    <Label htmlFor="whatsapp">{t('whatsapp')} *</Label>
                                     <Input id="whatsapp" name="whatsapp" placeholder="1159612728" required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="dni">رقم الهوية / DNI</Label>
+                                    <Label htmlFor="dni">{t('national_id')}</Label>
                                     <Input id="dni" name="dni" placeholder="30037039" />
                                 </div>
                             </div>
@@ -2388,11 +2430,11 @@ const NewMuslimsManager = () => {
                             {/* Row 4: Work & Education */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="trabajo">العمل / Trabajo</Label>
+                                    <Label htmlFor="trabajo">{t('work')}</Label>
                                     <Input id="trabajo" name="trabajo" placeholder="Coaching-Comercial..." />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="estudio">الدراسة / Estudio</Label>
+                                    <Label htmlFor="estudio">{t('study')}</Label>
                                     <Input id="estudio" name="estudio" placeholder="Secundario, Universidad..." />
                                 </div>
                             </div>
@@ -2400,18 +2442,18 @@ const NewMuslimsManager = () => {
                             {/* Row 5: Nationality & Gender */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="nationality">الجنسية / Nacionalidad</Label>
+                                    <Label htmlFor="nationality">{t('nationality')}</Label>
                                     <Input id="nationality" name="nationality" placeholder="Argentino..." />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>الجنس / Género</Label>
+                                    <Label>{t('gender')}</Label>
                                     <Select name="gender" defaultValue="male">
                                         <SelectTrigger>
-                                            <SelectValue placeholder="اختر / Seleccionar" />
+                                            <SelectValue placeholder={t('select')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="male">ذكر / Masculino</SelectItem>
-                                            <SelectItem value="female">أنثى / Femenino</SelectItem>
+                                            <SelectItem value="male">{t('male')}</SelectItem>
+                                            <SelectItem value="female">{t('female')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -2420,20 +2462,20 @@ const NewMuslimsManager = () => {
                             {/* Row 6: Conversion Date & Sheikh */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="conversionDate">تاريخ الإسلام / Fecha cuando abrazo *</Label>
+                                    <Label htmlFor="conversionDate">{t('conversion_date')} *</Label>
                                     <Input id="conversionDate" name="conversionDate" type="date" required />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="sheikh">الشيخ الشاهد / Con el Sheij</Label>
+                                    <Label htmlFor="sheikh">{t('witness_sheikh')}</Label>
                                     <Input id="sheikh" name="sheikh" placeholder="Zaher..." />
                                 </div>
                             </div>
                         </div>
 
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsRegOpen(false)}>إلغاء / Cancelar</Button>
+                            <Button type="button" variant="outline" onClick={() => setIsRegOpen(false)}>{t('cancel')}</Button>
                             <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                                <Plus className="w-4 h-4 mr-2" /> حفظ البيانات / Guardar
+                                <Plus className="w-4 h-4 mr-2" /> {t('save_data')}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -2444,13 +2486,13 @@ const NewMuslimsManager = () => {
             <Dialog open={isApptOpen} onOpenChange={setIsApptOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>حجز موعد درس / متابعة</DialogTitle>
+                        <DialogTitle>{t('book_appointment')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>الطالب</Label>
+                            <Label>{t('student')}</Label>
                             <Select onValueChange={(val) => setNewApptData({ ...newApptData, studentId: val })}>
-                                <SelectTrigger><SelectValue placeholder="اختر الطالب" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t('select_student')} /></SelectTrigger>
                                 <SelectContent>
                                     {students.map(s => (
                                         <SelectItem key={s.id} value={s.id}>{s.arabicName || s.fullName}</SelectItem>
@@ -2460,7 +2502,7 @@ const NewMuslimsManager = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>التاريخ</Label>
+                                <Label>{t('date')}</Label>
                                 <Input
                                     type="date"
                                     value={newApptData.date}
@@ -2468,7 +2510,7 @@ const NewMuslimsManager = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>الوقت</Label>
+                                <Label>{t('time')}</Label>
                                 <Input
                                     type="time"
                                     value={newApptData.time}
@@ -2477,29 +2519,29 @@ const NewMuslimsManager = () => {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label>نوع الموعد</Label>
+                            <Label>{t('appointment_type')}</Label>
                             <Select onValueChange={(val) => setNewApptData({ ...newApptData, type: val })}>
-                                <SelectTrigger><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={t('select_type')} /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="درس قرآن">درس قرآن</SelectItem>
-                                    <SelectItem value="فقه">فقه (وضوء/صلاة)</SelectItem>
-                                    <SelectItem value="عقيدة">عقيدة</SelectItem>
-                                    <SelectItem value="متابعة">متابعة دينية</SelectItem>
-                                    <SelectItem value="اجتماعي">زيارة اجتماعية</SelectItem>
+                                    <SelectItem value="درس قرآن">{t('lesson_quran')}</SelectItem>
+                                    <SelectItem value="فقه">{t('fiqh')}</SelectItem>
+                                    <SelectItem value="عقيدة">{t('aqidah')}</SelectItem>
+                                    <SelectItem value="متابعة">{t('followup')}</SelectItem>
+                                    <SelectItem value="اجتماعي">{t('social_visit')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>ملاحظات إضافية</Label>
+                            <Label>{t('additional_notes')}</Label>
                             <Textarea
-                                placeholder="ملاحظات حول الموعد..."
+                                placeholder={t('additional_notes')}
                                 value={newApptData.notes}
                                 onChange={(e) => setNewApptData({ ...newApptData, notes: e.target.value })}
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsApptOpen(false)}>إلغاء</Button>
+                        <Button variant="outline" onClick={() => setIsApptOpen(false)}>{t('cancel')}</Button>
                         <Button
                             onClick={() => {
                                 if (newApptData.studentId && newApptData.date && newApptData.time) {
@@ -2510,7 +2552,7 @@ const NewMuslimsManager = () => {
                             }}
                             className="bg-blue-600 hover:bg-blue-700"
                         >
-                            تأكيد الحجز
+                            {t('confirm_booking')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -2526,10 +2568,10 @@ const NewMuslimsManager = () => {
                                     <ClipboardList className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-base font-bold text-gray-800">خطة التعليم</span>
+                                    <span className="text-base font-bold text-gray-800">{t('education_plan')}</span>
                                     {selectedStudent && (
                                         <span className="text-[10px] text-emerald-600 font-normal">
-                                            الطالب: {selectedStudent.arabicName || selectedStudent.fullName}
+                                            {t('student')}: {selectedStudent.arabicName || selectedStudent.fullName}
                                         </span>
                                     )}
                                 </div>
@@ -2541,8 +2583,8 @@ const NewMuslimsManager = () => {
                                     variant="outline"
                                     className="h-8 gap-1 text-xs"
                                     onClick={() => {
-                                        toast({ title: "جاري تصدير الملف..." });
-                                        generateProtocolPDF(studyProtocol, selectedStudent?.arabicName || selectedStudent?.fullName);
+                                        toast({ title: t('exporting_file') });
+                                        generateProtocolPDF(studyProtocol, selectedStudent?.arabicName || selectedStudent?.fullName, language);
                                     }}
                                 >
                                     <Printer className="w-3.5 h-3.5" />
@@ -2552,25 +2594,26 @@ const NewMuslimsManager = () => {
                         </DialogTitle>
                         <DialogDescription className="text-xs hidden sm:block">
                             {selectedStudent
-                                ? "يتم الآن تعديل الخطة الخاصة بهذا الطالب فقط."
-                                : "إدارة الخطة الدراسية العامة."}
+                                ? t('editing_specific_plan')
+                                : t('managing_general_plan')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="flex-1 overflow-auto p-0 sm:p-4">
                         <Tabs defaultValue={String(studyProtocol.stages[0]?.id)} className="w-full flex-1 flex flex-col">
-                            <div className="bg-white border-b px-4 py-2 sticky top-0 z-10 shadow-sm">
-                                <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto bg-transparent p-0 gap-2 scrollbar-hide">
+                            {/* Compact grid layout for mobile - shows all 3 stages */}
+                            <div className="bg-white border-b px-2 py-2 sticky top-0 z-10 shadow-sm">
+                                <TabsList className="w-full grid grid-cols-3 h-auto bg-gray-100 p-1 rounded-lg gap-1">
                                     {studyProtocol.stages.map(stage => (
                                         <TabsTrigger
                                             key={stage.id}
                                             value={String(stage.id)}
-                                            className="gap-2 flex-shrink-0 border rounded-full px-4 py-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 bg-white text-gray-600"
+                                            className="flex flex-col items-center gap-1 py-2 px-1 text-xs data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-md"
                                         >
-                                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-current">
-                                                {stage.id}
-                                            </div>
-                                            {stage.name}
+                                            <span className="text-lg">{stage.id === 1 ? '🏗️' : stage.id === 2 ? '🏛️' : '🎓'}</span>
+                                            <span className="text-[10px] leading-tight text-center">
+                                                {stage.id === 1 ? t('stage_foundation') : stage.id === 2 ? t('stage_building') : t('stage_empowerment')}
+                                            </span>
                                         </TabsTrigger>
                                     ))}
                                 </TabsList>
@@ -2582,20 +2625,20 @@ const NewMuslimsManager = () => {
                                         <div className="flex justify-between items-center mb-3 border-b pb-2">
                                             <h4 className="font-semibold text-sm sm:text-base text-gray-800 flex items-center gap-2">
                                                 <BookOpen className="w-4 h-4 text-emerald-500" />
-                                                <span>{stage.name}</span>
+                                                <span>{language === 'ar' ? stage.name : stage.id === 1 ? t('stage_foundation') : stage.id === 2 ? t('stage_building') : t('stage_empowerment')}</span>
                                             </h4>
                                             <Button size="sm" variant="outline" onClick={() => {
-                                                const name = prompt("اسم الدرس/المهمة:");
+                                                const name = prompt(`${t('add_item')}:`);
                                                 if (name) addProtocolItem(stage.id, name, "");
                                             }}>
-                                                <Plus className="w-4 h-4 mr-1" /> إضافة عنصر
+                                                <Plus className="w-4 h-4 mr-1" /> {t('add_item')}
                                             </Button>
                                         </div>
 
                                         <div className="space-y-2">
                                             {stage.items.length === 0 ? (
                                                 <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-                                                    لا توجد مهام في هذه المرحلة
+                                                    {t('no_items_in_stage')}
                                                 </div>
                                             ) : (
                                                 stage.items.map((item, idx) => (
@@ -2860,109 +2903,37 @@ const NewMuslimsManager = () => {
             <Dialog open={isCertificateOpen} onOpenChange={setIsCertificateOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>📜 طباعة شهادة الإسلام</DialogTitle>
+                        <DialogTitle>📜 {t('print_certificate_title')}</DialogTitle>
                     </DialogHeader>
                     {certData && (
                         <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                                <Label>اسم المهتدي</Label>
+                                <Label>{t('student_name')}</Label>
                                 <Input value={certData.name} onChange={(e) => setCertData({ ...certData, name: e.target.value })} />
                             </div>
                             <div className="space-y-2">
-                                <Label>تاريخ إعلان الإسلام</Label>
+                                <Label>{t('conversion_date_label')}</Label>
                                 <Input type="date" value={certData.date} onChange={(e) => setCertData({ ...certData, date: e.target.value })} />
                             </div>
                             <div className="space-y-2">
-                                <Label>الشيخ الشاهد</Label>
+                                <Label>{t('witness_sheikh')}</Label>
                                 <Input value={certData.sheikh} onChange={(e) => setCertData({ ...certData, sheikh: e.target.value })} />
                             </div>
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCertificateOpen(false)}>Cancelar</Button>
+                        <Button variant="outline" onClick={() => setIsCertificateOpen(false)}>{t('cancel')}</Button>
                         <Button className="bg-emerald-600" onClick={() => {
                             if (!certData) return;
-                            const printWindow = window.open('', '_blank');
-                            if (printWindow) {
-                                printWindow.document.write(`
-                                    <html dir="ltr">
-                                    <head>
-                                        <title>Certificado de Islam - ${certData.name}</title>
-                                        <style>
-                                            @page { size: A4 landscape; margin: 0; }
-                                            body { font-family: 'Georgia', 'Times New Roman', serif; margin: 0; padding: 40px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-                                            .certificate { background: white; border: 8px double #10B981; padding: 60px; text-align: center; max-width: 850px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); position: relative; }
-                                            .logo-area { margin-bottom: 20px; }
-                                            .center-name { color: #059669; font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-                                            .center-location { color: #6b7280; font-size: 14px; margin-bottom: 30px; }
-                                            .header { color: #10B981; font-size: 38px; font-weight: bold; margin-bottom: 15px; letter-spacing: 2px; }
-                                            .bismillah { font-size: 24px; color: #059669; margin-bottom: 25px; font-family: 'Traditional Arabic', 'Amiri', serif; }
-                                            .body-text { font-size: 20px; line-height: 1.8; color: #374151; margin: 25px 0; }
-                                            .name { font-size: 34px; color: #10B981; font-weight: bold; margin: 20px 0; border-bottom: 2px solid #10B981; display: inline-block; padding: 0 30px 10px; }
-                                            .shahada { font-size: 22px; color: #1f2937; margin: 20px 40px; padding: 15px; background: #f0fdf4; border-radius: 8px; font-family: 'Traditional Arabic', 'Amiri', serif; direction: rtl; }
-                                            .details { display: flex; justify-content: space-around; margin-top: 40px; }
-                                            .detail-item { text-align: center; }
-                                            .detail-label { font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; }
-                                            .detail-value { font-size: 17px; font-weight: bold; color: #1f2937; margin-top: 5px; }
-                                            .footer { margin-top: 40px; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
-                                            .verse { font-size: 16px; color: #059669; font-style: italic; margin-top: 25px; }
-                                            .signature-area { display: flex; justify-content: space-between; margin-top: 50px; padding: 0 40px; }
-                                            .signature-box { text-align: center; width: 200px; }
-                                            .signature-line { border-top: 1px solid #374151; margin-top: 60px; padding-top: 5px; font-size: 12px; color: #6b7280; }
-                                        </style>
-                                    </head>
-                                    <body>
-                                        <div class="certificate">
-                                            <div class="logo-area">
-                                                <div class="center-name">🕌 Centro Cultural Islámico Rey Fahd</div>
-                                                <div class="center-location">República Argentina - Buenos Aires</div>
-                                            </div>
-                                            <div class="bismillah">بسم الله الرحمن الرحيم</div>
-                                            <div class="header">CERTIFICADO DE CONVERSIÓN AL ISLAM</div>
-                                            <div class="body-text">
-                                                Por medio del presente se certifica que
-                                            </div>
-                                            <div class="name">${certData.name}</div>
-                                            <div class="body-text">
-                                                ha pronunciado la Shahada (Testimonio de Fe) y ha abrazado el Islam,<br>
-                                                declarando su fe en un único Dios (Alá) y en Muhammad como Su Mensajero.
-                                            </div>
-                                            <div class="shahada">
-                                                أشهد أن لا إله إلا الله وأشهد أن محمداً عبده ورسوله
-                                            </div>
-                                            <div class="body-text" style="font-size: 16px; color: #6b7280;">
-                                                "Atestiguo que no hay más dios que Alá y atestiguo que Muhammad es Su siervo y Mensajero"
-                                            </div>
-                                            <div class="details">
-                                                <div class="detail-item">
-                                                    <div class="detail-label">Fecha de Conversión</div>
-                                                    <div class="detail-value">${new Date(certData.date).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                                                </div>
-                                                <div class="detail-item">
-                                                    <div class="detail-label">Testigo / Sheikh</div>
-                                                    <div class="detail-value">${certData.sheikh || 'No especificado'}</div>
-                                                </div>
-                                            </div>
-                                            <div class="signature-area">
-                                                <div class="signature-box">
-                                                    <div class="signature-line">Firma del Converso</div>
-                                                </div>
-                                                <div class="signature-box">
-                                                    <div class="signature-line">Firma del Testigo</div>
-                                                </div>
-                                            </div>
-                                            <div class="verse">"إِنَّ الدِّينَ عِندَ اللَّهِ الْإِسْلَامُ"<br><span style="font-size: 14px;">"Ciertamente, la religión ante Alá es el Islam" (Corán 3:19)</span></div>
-                                            <div class="footer">Centro Cultural Islámico Rey Fahd - Av. Intendente Bullrich 55, Buenos Aires, Argentina</div>
-                                        </div>
-                                    </body>
-                                    </html>
-                                `);
-                                printWindow.document.close();
-                                printWindow.print();
-                                setIsCertificateOpen(false);
-                            }
+                            generateCertificatePDF({
+                                name: certData.name,
+                                date: certData.date,
+                                sheikh: certData.sheikh
+                            }, language);
+                            setIsCertificateOpen(false);
+                            toast({ title: t('certificate'), description: t('certificate_pdf_generated') });
                         }}>
-                            🖨️ Imprimir Certificado
+                            📄 {t('print')} PDF
                         </Button>
                     </DialogFooter>
                 </DialogContent>
