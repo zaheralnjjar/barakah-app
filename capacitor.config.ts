@@ -1,14 +1,14 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-    appId: 'com.barakah.app',
-    appName: 'Barakah',
+    appId: 'com.barakah.life',
+    appName: 'البركة',
     webDir: 'dist',
     android: {
         path: 'android'
     },
-    plugins: {
-    },
+
+    plugins: {},
 };
 
 export default config;
