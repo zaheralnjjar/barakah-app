@@ -40,28 +40,33 @@ type MilestoneKey = 'shahada' | 'fatiha' | 'wudu' | 'salah' | 'basics' | 'quran_
 
 type NewMuslimsRow = {
     id: number | string;
-    full_name: string;
-    arabic_name: string | null;
-    phone: string | null;
-    nationality: string | null;
-    gender: 'male' | 'female';
-    conversion_date: string | null;
+    user_id: string;
+
+    // Excel columns (matching header names exactly)
+    foto: string | null;
+    con_el_sheij: string | null;
+    fecha_cuando: string | null;
+    nacionalidad: string | null;
+    dni: string | null;
+    estudio: string | null;
+    trabajo: string | null;
+    whatsapp: string | null;
+    que_dias_tiene: string | null;
+    ciudad_donde: string | null;
+    edad: string | null;
+    nombre_completo: string;
+
+    // Status & Progress
     status: 'active' | 'inactive' | 'graduated' | null;
     level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null;
     progress: number | null;
-    address: string | null;
-    national_id: string | null;
-    occupation: string | null;
-    education: string | null;
-    birth_date: string | null;
-    last_visit: string | null;
-    witness_sheikh: string | null;
-    current_stage?: number | null;
-    available_days?: string[] | null;
-    custom_protocol?: any | null;
-    milestones?: any | null;
-    notes?: string | null;
-    user_id: string;
+    current_stage: number | null;
+
+    // Additional
+    notes: string | null;
+    available_days: string[] | null;
+    custom_protocol: any | null;
+    milestones: any | null;
 };
 
 const MILESTONES_CONFIG: Record<MilestoneKey, { label: string; icon: string; order: number }> = {
@@ -412,21 +417,21 @@ const NewMuslimsManager = () => {
                 if (studentsData) {
                     fetchedStudents = (studentsData as NewMuslimsRow[]).map((d) => ({
                         id: d.id?.toString(),
-                        fullName: d.full_name,
-                        arabicName: d.arabic_name,
-                        phone: d.phone,
-                        nationality: d.nationality || '',
-                        gender: d.gender || 'male',
-                        conversionDate: d.conversion_date || new Date().toISOString().split('T')[0],
+                        fullName: d.nombre_completo,
+                        phone: d.whatsapp || '',
+                        nationality: d.nacionalidad || '',
+                        gender: 'male' as const,
+                        conversionDate: d.fecha_cuando || new Date().toISOString().split('T')[0],
                         status: d.status || 'active',
                         level: d.level || 'beginner',
                         progress: d.progress || 0,
-                        address: d.address || '',
-                        nationalId: d.national_id || '',
-                        occupation: d.occupation || '',
-                        education: d.education || '',
-                        witnessSheikh: d.notes ? (d.notes.match(/Sheikh: (.*?),/) || [])[1] : '',
-                        lastVisit: d.last_visit || 'جديد',
+                        address: d.ciudad_donde || '',
+                        nationalId: d.dni || '',
+                        occupation: d.trabajo || '',
+                        education: d.estudio || '',
+                        witnessSheikh: d.con_el_sheij || '',
+                        lastVisit: 'جديد',
+                        availableDays: d.que_dias_tiene ? d.que_dias_tiene.split(',').map(s => s.trim()) : [],
                     }));
                     setStudents(fetchedStudents);
                 }
@@ -1210,17 +1215,16 @@ const NewMuslimsManager = () => {
                 if (data) {
                     const newStudents: Student[] = (data as NewMuslimsRow[]).map((d) => ({
                         id: d.id.toString(),
-                        fullName: d.full_name,
-                        arabicName: d.arabic_name,
-                        phone: d.phone,
-                        nationality: d.nationality,
-                        gender: d.gender,
-                        conversionDate: d.conversion_date,
-                        status: d.status,
-                        level: d.level,
-                        progress: d.progress,
-                        lastVisit: d.last_visit,
-                        availableDays: []
+                        fullName: d.nombre_completo,
+                        phone: d.whatsapp || '',
+                        nationality: d.nacionalidad || '',
+                        gender: 'male' as const,
+                        conversionDate: d.fecha_cuando || new Date().toISOString().split('T')[0],
+                        status: d.status || 'active',
+                        level: d.level || 'beginner',
+                        progress: d.progress || 0,
+                        lastVisit: 'جديد',
+                        availableDays: d.que_dias_tiene ? d.que_dias_tiene.split(',').map(s => s.trim()) : []
                     }));
                     setStudents(prev => [...prev, ...newStudents]);
                     setStagedStudents([]);
@@ -1274,29 +1278,67 @@ const NewMuslimsManager = () => {
                 const ageStr = getCol('Edad', 'Age', 'العمر');
                 const age = parseInt(ageStr);
                 const birthYear = !isNaN(age) ? new Date().getFullYear() - age : null;
-                const birthDate = birthYear ? `${birthYear}-01-01` : '';
                 const fullName = getCol('Nombre completo', 'nombre completo', 'Name', 'الاسم', 'Nombre', 'nombre');
+
+                const formatDateToISO = (val: any): string | null => {
+                    if (!val) return null;
+                    try {
+                        let date: Date | null = null;
+                        if (typeof val === 'number') {
+                            // Excel serial date
+                            date = new Date(Math.round((val - 25569) * 86400 * 1000));
+                        } else if (typeof val === 'string') {
+                            const clean = val.trim();
+                            if (clean.includes('-') && clean.split('-')[0].length === 2 && parseInt(clean.split('-')[2]) > 1900) {
+                                // DD-MM-YYYY
+                                const parts = clean.split('-');
+                                date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                            } else if (clean.includes('/')) {
+                                // DD/MM/YYYY
+                                const parts = clean.split('/');
+                                if (parts[2].length === 4) date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                                else date = new Date(val); // Try standard parser
+                            } else {
+                                date = new Date(val);
+                            }
+                        }
+
+                        if (date && !isNaN(date.getTime())) {
+                            return date.toISOString().split('T')[0];
+                        }
+                    } catch (e) {
+                        console.warn("Date parse error", val);
+                    }
+                    return null;
+                };
+
+                const conversionDateRaw = getCol('Fecha cuando abrazo e', 'Fecha cuando abrazo', 'fecha cuando abrazo', 'Date', 'تاريخ الإسلام', 'Fecha', 'conversion_date');
+                const conversionDate = formatDateToISO(conversionDateRaw) || new Date().toISOString().split('T')[0];
+
+                // Also parsing birthDate properly
+                const birthDateRaw = getCol('BirthDate', 'تاريخ الميلاد', 'Fecha Nacimiento', 'birth_date', 'Fecha de nacimiento');
+                const birthDate = birthDateRaw ? formatDateToISO(birthDateRaw) : (birthYear ? `${birthYear}-01-01` : null);
 
                 return {
                     id: `excel-${Date.now()}-${index}`,
                     fullName: fullName || 'Unknown',
-                    arabicName: getCol('ArabicName', 'الاسم العربي', 'Nombre árabe') || fullName || '',
+                    arabicName: getCol('ArabicName', 'الاسم العربي', 'Nombre árabe', 'arabic_name', 'nombre árabe') || fullName || '',
                     status: 'active' as const,
                     level: 'beginner' as const,
                     lastVisit: 'جديد',
                     progress: 0,
                     currentStage: 1,
-                    phone: getCol('WhatsApp', 'whatsapp', 'Phone', 'رقم الهاتف', 'Teléfono', 'Telefono').replace(/\D/g, ''),
-                    address: getCol('Ciudad donde vives', 'ciudad', 'City', 'المدينة', 'Ciudad'),
-                    nationality: getCol('Nacionalidad', 'nacionalidad', 'Nationality', 'الجنسية') || 'غير محدد',
-                    nationalId: getCol('Dni', 'DNI', 'dni', 'NationalID', 'الهوية', 'ID'),
-                    conversionDate: getCol('Fecha cuando abrazo e', 'Fecha cuando abrazo', 'fecha cuando abrazo', 'Date', 'تاريخ الإسلام', 'Fecha') || new Date().toISOString().split('T')[0],
-                    birthDate: birthDate || getCol('BirthDate', 'تاريخ الميلاد', 'Fecha Nacimiento'),
-                    occupation: getCol('Trabajo', 'trabajo', 'Occupation', 'العمل', 'Ocupación'),
-                    education: getCol('Estudio', 'estudio', 'Education', 'الدراسة', 'Educación'),
-                    witnessSheikh: getCol('Con el sheij', 'Con el shiej', 'con el sheij', 'Sheikh', 'الشيخ', 'Testigo'),
-                    gender: (['F', 'f', 'أنثى', 'Femenino', 'femenino'].includes(getCol('Gender', 'Sexo', 'الجنس', 'Género'))) ? 'female' as const : 'male' as const,
-                    availableDays: getCol('Days', 'الأيام', 'Días').split(',').map((d: string) => d.trim()).filter(Boolean),
+                    phone: getCol('WhatsApp', 'whatsapp', 'Phone', 'رقم الهاتف', 'Teléfono', 'Telefono', 'phone').replace(/\D/g, ''),
+                    address: getCol('Ciudad donde vives', 'ciudad', 'City', 'المدينة', 'Ciudad', 'address', 'direccion'),
+                    nationality: getCol('Nacionalidad', 'nacionalidad', 'Nationality', 'الجنسية', 'nationality', 'pais') || 'غير محدد',
+                    nationalId: getCol('Dni', 'DNI', 'dni', 'NationalID', 'الهوية', 'ID', 'national_id', 'NIE', 'nie'),
+                    conversionDate: conversionDate,
+                    birthDate: birthDate || undefined,
+                    occupation: getCol('Trabajo', 'trabajo', 'Occupation', 'العمل', 'Ocupación', 'occupation', 'profesion'),
+                    education: getCol('Estudio', 'estudio', 'Education', 'الدراسة', 'Educación', 'education'),
+                    witnessSheikh: getCol('Con el sheij', 'Con el shiej', 'con el sheij', 'Sheikh', 'الشيخ', 'Testigo', 'witness_sheikh'),
+                    gender: (['F', 'f', 'أنثى', 'Femenino', 'femenino', 'female'].includes(getCol('Gender', 'Sexo', 'الجنس', 'Género', 'gender'))) ? 'female' as const : 'male' as const,
+                    availableDays: getCol('Days', 'الأيام', 'Días', 'available_days').split(',').map((d: string) => d.trim()).filter(Boolean),
                 };
             });
 
@@ -1326,28 +1368,33 @@ const NewMuslimsManager = () => {
                     }
 
                     // Fallback to strict safe columns if dynamic check fails or table is empty
-                    // excluding witness_sheikh and available_days as they are likely culprits
+                    // Updated to match exact Excel column names
                     if (!validColumns) {
-                        validColumns = ['full_name', 'arabic_name', 'phone', 'nationality', 'gender', 'conversion_date', 'status', 'level', 'address', 'occupation', 'education', 'national_id', 'user_id'];
+                        validColumns = [
+                            'nombre_completo', 'whatsapp', 'nacionalidad', 'dni', 'edad',
+                            'ciudad_donde', 'estudio', 'trabajo',
+                            'fecha_cuando', 'con_el_sheij', 'que_dias_tiene',
+                            'status', 'level', 'progress', 'current_stage',
+                            'notes', 'available_days', 'custom_protocol', 'milestones', 'user_id'
+                        ];
                     }
 
                     const supabaseRecords = validStudents.map(s => {
                         const rawRecord: any = {
-                            full_name: s.fullName,
-                            arabic_name: s.arabicName || null,
-                            phone: s.phone || null,
-                            nationality: s.nationality || null,
-                            gender: s.gender || 'male',
-                            birth_date: s.birthDate || null,
-                            address: s.address || null,
-                            conversion_date: s.conversionDate || null,
+                            nombre_completo: s.fullName,
+                            whatsapp: s.phone || null,
+                            nacionalidad: s.nationality || null,
+                            dni: s.nationalId || null,
+                            ciudad_donde: s.address || null,
+                            estudio: s.education || null,
+                            trabajo: s.occupation || null,
+                            fecha_cuando: s.conversionDate || null,
+                            con_el_sheij: s.witnessSheikh || null,
+                            que_dias_tiene: s.availableDays?.join(', ') || null,
                             status: 'active',
                             level: 'beginner',
-                            witness_sheikh: s.witnessSheikh || null,
-                            occupation: s.occupation || null,
-                            education: s.education || null,
-                            national_id: s.nationalId || null,
-                            available_days: s.availableDays || [],
+                            progress: 0,
+                            current_stage: 1,
                             user_id: user.id
                         };
 
