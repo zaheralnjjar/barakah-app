@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/NotificationBell';
 import HolidaysDialog from '@/components/HolidaysDialog';
 import { useAppStore } from '@/stores/useAppStore';
+import { useCloudSync } from '@/hooks/useCloudSync';
+import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 import { Timer, Play } from 'lucide-react';
 
 interface DashboardHeaderProps {
@@ -35,6 +37,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
     ];
 
     const { appointments, tasks } = useAppStore();
+    const { isSyncing, lastSync, isOnline, pendingActions, failedActions, syncNow } = useCloudSync();
 
     const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', {
         year: 'numeric',
@@ -138,8 +141,17 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 {/* Normal Header */}
                 <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-3 shadow-sm border border-emerald-100 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                        {/* Notification Bell - Right Side (First in RTL) */}
-                        <div className="flex items-center">
+                        {/* Notification Bell and Sync Status - Right Side (First in RTL) */}
+                        <div className="flex items-center gap-1">
+                            <SyncStatusIndicator
+                                isOnline={isOnline}
+                                isSyncing={isSyncing}
+                                lastSync={lastSync}
+                                pendingActions={pendingActions}
+                                failedActions={failedActions}
+                                onSyncClick={() => syncNow()}
+                                compact
+                            />
                             <NotificationBell />
                         </div>
 

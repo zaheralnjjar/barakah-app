@@ -32,6 +32,7 @@ import { useCloudSync } from '@/hooks/useCloudSync';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
+import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
 // Section types for reordering
 type SectionId = 'newmuslims' | 'academic';
@@ -75,7 +76,7 @@ const Index = () => {
   const { appendToActivitiesNote } = useQuickNotes();
 
   // Sync Hooks
-  const { syncNow } = useCloudSync();
+  const { syncNow, isSyncing, lastSync, isOnline, pendingActions, failedActions } = useCloudSync();
   useWidgetSync(); // Keep for background sync if needed
   useLocalNotifications();
 
