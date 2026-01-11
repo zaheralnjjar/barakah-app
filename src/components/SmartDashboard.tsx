@@ -215,6 +215,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             activeWidgets={activeWidgets}
                         />
 
+                        {/* 4. Parking Widget - Dynamic */}
+                        <DashboardParking />
+
                         {/* 5. Quick Notes - Collapsible */}
                         {isSectionVisible('notes') && (
                             <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>

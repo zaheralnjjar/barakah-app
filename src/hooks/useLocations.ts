@@ -218,23 +218,17 @@ export const useLocations = () => {
     }, [locations, toast]);
 
     // Quick save parking
-    const saveParking = useCallback(async (): Promise<SavedLocation | null> => {
+    const saveParking = useCallback(async (customLocation?: { lat: number, lng: number, address?: string, name?: string }): Promise<SavedLocation | null> => {
         return new Promise((resolve) => {
-            if (!navigator.geolocation) {
-                toast({ title: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
-                resolve(null);
-                return;
-            }
+            const processLocation = async (latitude: number, longitude: number) => {
+                const now = new Date();
+                // Compact date format: DD.MM HH:MM
+                const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    const now = new Date();
-                    // Compact date format: DD.MM HH:MM
-                    const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                let streetAddress = customLocation?.address || 'موقف';
 
-                    // Fetch street address
-                    let streetAddress = 'موقف';
+                // If address not provided, fetch it
+                if (!customLocation?.address) {
                     try {
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
                         const data = await res.json();
@@ -247,30 +241,45 @@ export const useLocations = () => {
                     } catch (e) {
                         console.log('Could not fetch address for parking');
                     }
+                }
 
-                    const title = `${streetAddress} ${dateTimeStr}`;
+                const title = customLocation?.name ? `${customLocation.name} ${dateTimeStr}` : `${streetAddress} ${dateTimeStr}`;
 
-                    const location = await saveLocation(title, latitude, longitude, {
-                        category: 'parking',
-                        type: 'parking'
-                    });
+                const location = await saveLocation(title, latitude, longitude, {
+                    category: 'parking',
+                    type: 'parking',
+                    address: streetAddress // Save specific address for potential specific usage
+                });
 
-                    toast({
-                        title: '🅿️ تم حفظ موقف السيارة',
-                        description: title
-                    });
-                    resolve(location);
-                },
-                (err) => {
-                    toast({
-                        title: 'تعذر تحديد الموقع',
-                        description: err.message,
-                        variant: 'destructive'
-                    });
+                toast({
+                    title: '🅿️ تم حفظ موقف السيارة',
+                    description: title
+                });
+                resolve(location);
+            };
+
+            if (customLocation) {
+                processLocation(customLocation.lat, customLocation.lng);
+            } else {
+                if (!navigator.geolocation) {
+                    toast({ title: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
                     resolve(null);
-                },
-                { enableHighAccuracy: true }
-            );
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => processLocation(pos.coords.latitude, pos.coords.longitude),
+                    (err) => {
+                        toast({
+                            title: 'تعذر تحديد الموقع',
+                            description: err.message,
+                            variant: 'destructive'
+                        });
+                        resolve(null);
+                    },
+                    { enableHighAccuracy: true }
+                );
+            }
         });
     }, [saveLocation, toast]);
 

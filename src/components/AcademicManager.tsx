@@ -247,6 +247,7 @@ export default function AcademicManager() {
     const [pageSize, setPageSize] = useState<'A4' | 'A5' | 'Letter'>('A4');
     const [pages, setPages] = useState<string[]>(['']); // Array of page contents
     const [activePageIndex, setActivePageIndex] = useState(0);
+    const [textDirection, setTextDirection] = useState<'rtl' | 'ltr' | 'auto'>('auto');
 
     // Page dimensions in mm (converted to pixels at 96 DPI)
     const pageSizes = {
@@ -1512,7 +1513,7 @@ export default function AcademicManager() {
                         <div className="flex-1 flex flex-col overflow-hidden">
                             {/* Full-Width Toolbar - 2 Rows */}
                             {!isAndroid && (
-                                <div className="bg-gradient-to-b from-indigo-900 to-slate-800 p-3 shrink-0 border-b border-indigo-700" dir="rtl">
+                                <div className="bg-gradient-to-b from-indigo-900 to-slate-800 p-3 shrink-0 border-b border-indigo-700 sticky top-[45px] z-40" dir="rtl">
                                     {/* Row 1: Undo/Redo, Font, Size, Zoom, Spacing, Format Painter */}
                                     <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="تراجع" onClick={() => document.execCommand('undo')}><Undo className="w-4 h-4" /></Button>
@@ -1686,6 +1687,11 @@ export default function AcademicManager() {
                                             <Palette className="w-3 h-3 text-white/50" />
                                             <input type="color" className="w-6 h-6 rounded cursor-pointer border-0" defaultValue="#FFFF00" onChange={(e) => document.execCommand('hiliteColor', false, e.target.value)} title="تمييز" />
                                         </div>
+                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        {/* Text Direction */}
+                                        <Button variant={textDirection === 'rtl' ? 'secondary' : 'ghost'} size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => setTextDirection('rtl')} title="يمين-يسار"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12h-8" /><path d="M21 7h-8" /><path d="M21 17h-8" /><path d="M10 7v10" /><path d="M6 7v10" /></svg></Button>
+                                        <Button variant={textDirection === 'ltr' ? 'secondary' : 'ghost'} size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => setTextDirection('ltr')} title="يسار-يمين"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h8" /><path d="M3 7h8" /><path d="M3 17h8" /><path d="M14 7v10" /><path d="M18 7v10" /></svg></Button>
+                                        <Button variant={textDirection === 'auto' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 p-0 text-white/70 hover:text-white text-xs font-bold" onClick={() => setTextDirection('auto')} title="تلقائي">Auto</Button>
                                         <div className="w-px h-6 bg-white/20 mx-1" />
                                         {/* Alignment */}
                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyRight')} title="محاذاة يمين"><AlignRight className="w-4 h-4" /></Button>
@@ -1875,7 +1881,7 @@ export default function AcademicManager() {
                                                         suppressContentEditableWarning={true}
                                                         dangerouslySetInnerHTML={{ __html: pageContent }}
                                                         className="outline-none text-justify h-full focus:outline-none overflow-hidden"
-                                                        dir="rtl"
+                                                        dir={textDirection}
                                                         onFocus={() => setActivePageIndex(pageIndex)}
                                                         onInput={(e) => {
                                                             handlePageInput(pageIndex, e.currentTarget.innerHTML);
@@ -1885,9 +1891,9 @@ export default function AcademicManager() {
                                                         onKeyDown={(e) => {
                                                             if (e.ctrlKey || e.metaKey) {
                                                                 switch (e.key.toLowerCase()) {
-                                                                    case 'b': e.preventDefault(); document.execCommand('bold'); break;
-                                                                    case 'i': e.preventDefault(); document.execCommand('italic'); break;
-                                                                    case 'u': e.preventDefault(); document.execCommand('underline'); break;
+                                                                    case 'b': e.preventDefault(); document.execCommand('bold', false, null as any); break;
+                                                                    case 'i': e.preventDefault(); document.execCommand('italic', false, null as any); break;
+                                                                    case 'u': e.preventDefault(); document.execCommand('underline', false, null as any); break;
                                                                     case 's':
                                                                         e.preventDefault();
                                                                         if (editingNode) {

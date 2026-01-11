@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { useLocations } from '@/hooks/useLocations'; // Added import
 import {
     MapPin,
     Search,
@@ -49,9 +50,10 @@ interface LocationMarkerProps {
     setPosition: (pos: L.LatLng) => void;
     onSave: (addressName: string, addressDetails: string | undefined, position: { lat: number; lng: number }) => void;
     onShare: (pos: { lat: number; lng: number }) => void;
+    onQuickPark: (addressName: string, addressDetails: string | undefined, position: { lat: number; lng: number }) => void;
 }
 
-function LocationMarker({ position, setPosition, onSave, onShare }: LocationMarkerProps) {
+function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }: LocationMarkerProps) {
     const [addressName, setAddressName] = useState('');
     const [addressDetails, setAddressDetails] = useState('');
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
@@ -195,7 +197,20 @@ function LocationMarker({ position, setPosition, onSave, onShare }: LocationMark
                         >
                             <Navigation className="w-4 h-4" />
                         </Button>
-                        {/* Route Here (New) */}
+
+                        {/* Quick Parking Button */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 border-orange-200 hover:bg-orange-50 text-orange-600"
+                            onClick={() => {
+                                const saveName = getDisplayName();
+                                onQuickPark(saveName, addressDetails, position);
+                            }}
+                            title="حفظ موقف سريع"
+                        >
+                            <span className="text-lg">🅿️</span>
+                        </Button>
 
                     </div>
 
@@ -247,6 +262,7 @@ const InteractiveMap = () => {
 
 
     const { toast } = useToast();
+    const { saveParking } = useLocations(); // Added hook usage
 
     // Get user location for sorting
     useEffect(() => {
@@ -651,6 +667,9 @@ const InteractiveMap = () => {
                                         navigator.clipboard.writeText(url);
                                         toast({ title: "تم نسخ الرابط" });
                                     });
+                                }}
+                                onQuickPark={async (name, address, pos) => {
+                                    await saveParking({ lat: pos.lat, lng: pos.lng, address, name });
                                 }}
                             />
 
