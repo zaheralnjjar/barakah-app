@@ -220,12 +220,14 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
         switch (actionId) {
             case 'show_academic_research':
-                if (onNavigateToTab) onNavigateToTab('educational');
+                if (onOpenAcademic) onOpenAcademic();
+                else if (onNavigateToTab) onNavigateToTab('educational');
                 else toast({ title: 'غير متاح', description: 'التنقل غير مفعل' });
                 break;
 
             case 'show_new_muslims':
-                if (onNavigateToTab) onNavigateToTab('daura');
+                if (onOpenNewMuslims) onOpenNewMuslims();
+                else if (onNavigateToTab) onNavigateToTab('daura');
                 else toast({ title: 'غير متاح', description: 'التنقل غير مفعل' });
                 break;
 

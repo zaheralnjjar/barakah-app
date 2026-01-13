@@ -16,6 +16,8 @@ export const DashboardParking: React.FC = () => {
     // Edit Dialog State
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editName, setEditName] = useState('');
+    const [editAddress, setEditAddress] = useState('');
+    const [editNotes, setEditNotes] = useState('');
 
     // Parking Timer Logic
     useEffect(() => {
@@ -65,16 +67,22 @@ export const DashboardParking: React.FC = () => {
 
     const openEditDialog = () => {
         if (latestParking) {
-            setEditName(latestParking.title.split(' 202')[0]); // Remove simple timestamp if present roughly
+            setEditName(latestParking.title.split(' 202')[0]); // Remove simple timestamp if present
+            setEditAddress(latestParking.address || '');
+            setEditNotes(latestParking.notes || '');
             setIsEditDialogOpen(true);
         }
     };
 
     const saveEdit = async () => {
         if (latestParking && editName.trim()) {
-            await updateLocation(latestParking.id, { title: editName });
+            await updateLocation(latestParking.id, {
+                title: editName,
+                address: editAddress,
+                notes: editNotes
+            });
             setIsEditDialogOpen(false);
-            toast({ title: '✅ تم تحديث اسم الموقع' });
+            toast({ title: '✅ تم تحديث بيانات الموقف' });
         }
     };
 
@@ -103,6 +111,9 @@ export const DashboardParking: React.FC = () => {
                         <p className="font-bold text-gray-800 text-sm">{latestParking.title}</p>
                         {latestParking.address && (
                             <p className="text-xs text-gray-500 mt-1">{latestParking.address}</p>
+                        )}
+                        {latestParking.notes && (
+                            <p className="text-xs text-blue-500 mt-1 italic border-r-2 border-blue-200 pr-2 mr-1">{latestParking.notes}</p>
                         )}
                     </div>
                 </div>
@@ -143,6 +154,25 @@ export const DashboardParking: React.FC = () => {
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
                                 placeholder="مثال: السيارة صف ثاني"
+                                className="text-right"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>العنوان (الشارع، الرقم)</Label>
+                            <Input
+                                value={editAddress}
+                                onChange={(e) => setEditAddress(e.target.value)}
+                                placeholder="مثال: شارع الملك فهد، ٤٥"
+                                className="text-right"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>ملاحظات</Label>
+                            <Input
+                                value={editNotes}
+                                onChange={(e) => setEditNotes(e.target.value)}
+                                placeholder="مثال: الطابق الثاني، رقم الموقف B4"
+                                className="text-right"
                             />
                         </div>
                     </div>

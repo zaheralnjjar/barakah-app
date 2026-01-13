@@ -9,6 +9,7 @@ export interface SavedLocation {
     id: string;
     title: string;
     address?: string;
+    notes?: string;
     lat: number;
     lng: number;
     url: string;

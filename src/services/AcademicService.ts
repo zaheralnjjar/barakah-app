@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ResearchProject, ResearchPhase, ResearchChapter, ResearchMaterial, ResearchCircle } from "@/components/AcademicManager";
+import { ResearchProject, ResearchPhase, ResearchChapter, ResearchMaterial, ResearchCircle, ResearchTask, SubTask } from "@/components/AcademicManager";
 
 // Helper to convert DB rows to our Frontend types
 // Note: This relies on strict type alignment, may need mappers if DB columns differ significantly
@@ -200,19 +200,29 @@ export const AcademicService = {
 
         if (error) throw error;
 
-        return (data || []).map(ch => ({
-            id: ch.id,
-            title: ch.title,
-            description: ch.description,
-            content: ch.content,
-            status: ch.status as any,
-            startDate: ch.start_date,
-            endDate: ch.end_date,
-            tasks: [],
-            tags: ch.tags || [],
-            parentId: ch.parent_id,
-            color: ch.color
+        // Load tasks for each chapter
+        const chapters = await Promise.all((data || []).map(async (ch) => {
+            let tasks: ResearchTask[] = [];
+            try {
+                tasks = await AcademicService.getTasks(ch.id);
+            } catch (e) {
+                console.error(`Error fetching tasks for chapter ${ch.id}:`, e);
+            }
+            return {
+                id: ch.id,
+                title: ch.title,
+                description: ch.description,
+                content: ch.content,
+                status: ch.status as any,
+                startDate: ch.start_date,
+                endDate: ch.end_date,
+                tasks,
+                tags: ch.tags || [],
+                parentId: ch.parent_id,
+                color: ch.color
+            };
         }));
+        return chapters;
     },
 
     async createChapter(phaseId: string, title: string, content: string = '', tags: string[] = [], startDate?: string, endDate?: string, parentId?: string): Promise<ResearchChapter> {
@@ -408,6 +418,170 @@ export const AcademicService = {
         if (error) throw error;
     },
 
+    async deleteCircle(id: string): Promise<void> {
+        const { error } = await supabase.from('academic_circles').delete().eq('id', id);
+        if (error) throw error;
+    },
+
+    // --- Tasks ---
+    async getTasks(chapterId: string): Promise<ResearchTask[]> {
+        const { data, error } = await supabase
+            .from('academic_tasks')
+            .select('*')
+            .eq('chapter_id', chapterId)
+            .order('order_index', { ascending: true });
+
+        if (error) throw error;
+
+        const tasks = await Promise.all((data || []).map(async (row) => {
+            const subtasks = await AcademicService.getSubtasks(row.id);
+            return {
+                id: row.id,
+                title: row.title,
+                description: row.description,
+                content: row.content,
+                deadline: row.deadline,
+                status: row.status as any,
+                priority: row.priority as any,
+                subtasks
+            };
+        }));
+        return tasks;
+    },
+
+    async createTask(chapterId: string, task: Partial<ResearchTask>): Promise<ResearchTask> {
+        const { data: existingTasks } = await supabase
+            .from('academic_tasks')
+            .select('order_index')
+            .eq('chapter_id', chapterId)
+            .order('order_index', { ascending: false })
+            .limit(1);
+
+        const nextOrder = (existingTasks?.[0]?.order_index ?? -1) + 1;
+
+        const { data, error } = await supabase
+            .from('academic_tasks')
+            .insert({
+                chapter_id: chapterId,
+                title: task.title,
+                description: task.description,
+                content: task.content || '',
+                deadline: task.deadline,
+                status: task.status || 'pending',
+                priority: task.priority || 'medium',
+                order_index: nextOrder
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return {
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            content: data.content,
+            deadline: data.deadline,
+            status: data.status as any,
+            priority: data.priority as any,
+            subtasks: []
+        };
+    },
+
+    async updateTask(id: string, updates: Partial<ResearchTask>): Promise<void> {
+        const { error } = await supabase
+            .from('academic_tasks')
+            .update({
+                title: updates.title,
+                description: updates.description,
+                content: updates.content,
+                deadline: updates.deadline,
+                status: updates.status,
+                priority: updates.priority
+            })
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async deleteTask(id: string): Promise<void> {
+        const { error } = await supabase.from('academic_tasks').delete().eq('id', id);
+        if (error) throw error;
+    },
+
+    async reorderTasks(updates: { id: string, order_index: number }[]): Promise<void> {
+        for (const u of updates) {
+            await supabase.from('academic_tasks').update({ order_index: u.order_index }).eq('id', u.id);
+        }
+    },
+
+    // --- Subtasks ---
+    async getSubtasks(taskId: string): Promise<SubTask[]> {
+        const { data, error } = await supabase
+            .from('academic_subtasks')
+            .select('*')
+            .eq('task_id', taskId)
+            .order('order_index', { ascending: true });
+
+        if (error) throw error;
+        return (data || []).map(row => ({
+            id: row.id,
+            title: row.title,
+            date: row.date,
+            time: row.time,
+            completed: row.completed
+        }));
+    },
+
+    async createSubtask(taskId: string, subtask: Partial<SubTask>): Promise<SubTask> {
+        const { data: existingSubtasks } = await supabase
+            .from('academic_subtasks')
+            .select('order_index')
+            .eq('task_id', taskId)
+            .order('order_index', { ascending: false })
+            .limit(1);
+
+        const nextOrder = (existingSubtasks?.[0]?.order_index ?? -1) + 1;
+
+        const { data, error } = await supabase
+            .from('academic_subtasks')
+            .insert({
+                task_id: taskId,
+                title: subtask.title,
+                date: subtask.date,
+                time: subtask.time,
+                completed: subtask.completed || false,
+                order_index: nextOrder
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return {
+            id: data.id,
+            title: data.title,
+            date: data.date,
+            time: data.time,
+            completed: data.completed
+        };
+    },
+
+    async updateSubtask(id: string, updates: Partial<SubTask>): Promise<void> {
+        const { error } = await supabase
+            .from('academic_subtasks')
+            .update({
+                title: updates.title,
+                date: updates.date,
+                time: updates.time,
+                completed: updates.completed
+            })
+            .eq('id', id);
+        if (error) throw error;
+    },
+
+    async deleteSubtask(id: string): Promise<void> {
+        const { error } = await supabase.from('academic_subtasks').delete().eq('id', id);
+        if (error) throw error;
+    },
+
     // --- Global Search ---
     async globalSearch(term: string): Promise<any[]> {
         const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -425,6 +599,13 @@ export const AcademicService = {
             .from('academic_materials')
             .select('id, title, author')
             .or(`title.ilike.%${term}%,author.ilike.%${term}%`)
+            .limit(5);
+
+        // Search Tasks
+        const { data: tasks } = await supabase
+            .from('academic_tasks')
+            .select('id, title, description, chapter_id')
+            .or(`title.ilike.%${term}%,description.ilike.%${term}%`)
             .limit(5);
 
         const results = [];
@@ -445,6 +626,16 @@ export const AcademicService = {
                 title: m.title,
                 context: m.author ? `المؤلف: ${m.author}` : 'مرجع',
                 id: m.id
+            })));
+        }
+
+        if (tasks) {
+            results.push(...tasks.map(t => ({
+                type: 'task',
+                title: t.title,
+                context: t.description ? t.description.substring(0, 60) + '...' : 'مهمة بحثية',
+                id: t.id,
+                chapterId: t.chapter_id
             })));
         }
 

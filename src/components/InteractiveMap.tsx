@@ -91,11 +91,13 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
 
     useMapEvents({
         click(e) {
+            console.log('Map Clicked:', e.latlng); // Debug log
             if (!e.latlng) return;
-            setPosition(e.latlng);
-            map.flyTo([e.latlng.lat, e.latlng.lng], map.getZoom(), {
-                duration: 0.5
-            });
+            // Force separate state update to ensure re-render
+            const newPos = L.latLng(e.latlng.lat, e.latlng.lng);
+            setPosition(newPos);
+            // Optionally remove flyTo if it causes jitter, but keep for now
+            // map.flyTo([e.latlng.lat, e.latlng.lng], map.getZoom()); 
         },
     });
 
@@ -198,20 +200,22 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                             <Navigation className="w-4 h-4" />
                         </Button>
 
+
                         {/* Quick Parking Button */}
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 border-orange-200 hover:bg-orange-50 text-orange-600"
+                            className="w-full h-10 mt-2 border-orange-200 hover:bg-orange-50 text-orange-700 flex items-center justify-center gap-2"
                             onClick={() => {
-                                const saveName = getDisplayName();
+                                // Direct save without name if needed, or use default name
+                                const saveName = getDisplayName() || 'موقف';
                                 onQuickPark(saveName, addressDetails, position);
                             }}
                             title="حفظ موقف سريع"
                         >
-                            <span className="text-lg">🅿️</span>
+                            <span className="text-xl">🅿️</span>
+                            <span className="font-bold text-xs">حفظ موقف سريع</span>
                         </Button>
-
                     </div>
 
                 </div>
@@ -449,8 +453,13 @@ const InteractiveMap = () => {
         navigator.geolocation.getCurrentPosition(
             async (pos) => {
                 const { latitude, longitude } = pos.coords;
+                // Fix: Set map center AND current marker position so pin appears
                 setMapCenter([latitude, longitude]);
+                setCurrentMarkerPosition({ lat: latitude, lng: longitude });
+
+                // Also update new item state for saving
                 setNewItem({ name: 'موقعي الحالي', location: `${latitude}, ${longitude}` });
+
                 toast({ title: "تم تحديد موقعك الحالي" });
                 setIsLocating(false);
             },

@@ -1511,17 +1511,17 @@ export default function AcademicManager() {
 
                         {/* Main Editor Area */}
                         <div className="flex-1 flex flex-col overflow-hidden">
-                            {/* Full-Width Toolbar - 2 Rows */}
+                            {/* Full-Width Toolbar - Compact and Responsive */}
                             {!isAndroid && (
-                                <div className="bg-gradient-to-b from-indigo-900 to-slate-800 p-3 shrink-0 border-b border-indigo-700 sticky top-[45px] z-40" dir="rtl">
+                                <div className={`bg-gradient-to-b from-indigo-900 to-slate-800 ${sidebarVisible ? 'p-2' : 'p-3'} shrink-0 border-b border-indigo-700 sticky top-[45px] z-40`} dir="rtl">
                                     {/* Row 1: Undo/Redo, Font, Size, Zoom, Spacing, Format Painter */}
-                                    <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="تراجع" onClick={() => document.execCommand('undo')}><Undo className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إعادة" onClick={() => document.execCommand('redo')}><Redo className="w-4 h-4" /></Button>
-                                        <div className="w-px h-6 bg-white/20" />
-                                        {/* Arabic Fonts */}
+                                    <div className="flex flex-wrap items-center justify-center gap-1 mb-1">
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} title="تراجع" onClick={() => document.execCommand('undo')}><Undo className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} title="إعادة" onClick={() => document.execCommand('redo')}><Redo className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <div className="w-px h-5 bg-white/20" />
+                                        {/* Arabic Fonts - Smaller when sidebar visible */}
                                         <Select defaultValue="Traditional Arabic" onValueChange={(val) => document.execCommand("fontName", false, val)}>
-                                            <SelectTrigger className="w-40 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue placeholder="خط عربي" /></SelectTrigger>
+                                            <SelectTrigger className={`${sidebarVisible ? 'w-28 h-6 text-[10px]' : 'w-40 h-8 text-xs'} bg-white/10 border-white/20 text-white`}><SelectValue placeholder="خط عربي" /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Traditional Arabic">Traditional Arabic (تقليدي)</SelectItem>
                                                 <SelectItem value="Amiri">Amiri (أميري)</SelectItem>
@@ -1545,32 +1545,32 @@ export default function AcademicManager() {
                                         </Select>
                                         {/* Font Size */}
                                         <Select defaultValue="14" onValueChange={(val) => document.execCommand('fontSize', false, val)}>
-                                            <SelectTrigger className="w-14 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue placeholder="14" /></SelectTrigger>
+                                            <SelectTrigger className={`${sidebarVisible ? 'w-12 h-6 text-[10px]' : 'w-14 h-8 text-xs'} bg-white/10 border-white/20 text-white`}><SelectValue placeholder="14" /></SelectTrigger>
                                             <SelectContent>
                                                 {[10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72].map(s => <SelectItem key={s} value={String(s)}>{s}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
-                                        <div className="w-px h-6 bg-white/20" />
+                                        <div className="w-px h-5 bg-white/20" />
                                         {/* Zoom Control */}
-                                        <div className="flex items-center gap-1 bg-white/10 rounded-lg px-2 py-1">
-                                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-white/70" onClick={() => setEditorZoom(Math.max(50, editorZoom - 10))}><Minus className="w-3 h-3" /></Button>
-                                            <span className="text-xs text-white/80 w-10 text-center">{editorZoom}%</span>
-                                            <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-white/70" onClick={() => setEditorZoom(Math.min(200, editorZoom + 10))}><Plus className="w-3 h-3" /></Button>
+                                        <div className={`flex items-center gap-0.5 bg-white/10 rounded-lg ${sidebarVisible ? 'px-1' : 'px-2 py-1'}`}>
+                                            <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-4 w-4' : 'h-5 w-5'} p-0 text-white/70`} onClick={() => setEditorZoom(Math.max(50, editorZoom - 10))}><Minus className={`${sidebarVisible ? 'w-2 h-2' : 'w-3 h-3'}`} /></Button>
+                                            <span className={`${sidebarVisible ? 'text-[9px] w-8' : 'text-xs w-10'} text-white/80 text-center`}>{editorZoom}%</span>
+                                            <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-4 w-4' : 'h-5 w-5'} p-0 text-white/70`} onClick={() => setEditorZoom(Math.min(200, editorZoom + 10))}><Plus className={`${sidebarVisible ? 'w-2 h-2' : 'w-3 h-3'}`} /></Button>
                                         </div>
                                         {/* Page Size Selector */}
                                         <Select value={pageSize} onValueChange={(val: 'A4' | 'A5' | 'Letter') => setPageSize(val)}>
-                                            <SelectTrigger className="w-16 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue /></SelectTrigger>
+                                            <SelectTrigger className={`${sidebarVisible ? 'w-12 h-6 text-[10px]' : 'w-16 h-8 text-xs'} bg-white/10 border-white/20 text-white`}><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="A4">A4</SelectItem>
                                                 <SelectItem value="A5">A5</SelectItem>
                                                 <SelectItem value="Letter">Letter</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {/* Page Counter */}
-                                        <span className="text-xs text-white/60 px-2">صفحة {currentPage}</span>
+                                        {/* Page Counter - hide when sidebar visible */}
+                                        {!sidebarVisible && <span className="text-xs text-white/60 px-2">صفحة {currentPage}</span>}
                                         {/* Line Spacing */}
                                         <Select value={String(lineSpacing)} onValueChange={(val) => setLineSpacing(parseFloat(val))}>
-                                            <SelectTrigger className="w-14 h-8 text-xs bg-white/10 border-white/20 text-white"><SelectValue /></SelectTrigger>
+                                            <SelectTrigger className={`${sidebarVisible ? 'w-11 h-6 text-[10px]' : 'w-14 h-8 text-xs'} bg-white/10 border-white/20 text-white`}><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="1">1.0</SelectItem>
                                                 <SelectItem value="1.5">1.5</SelectItem>
@@ -1578,21 +1578,21 @@ export default function AcademicManager() {
                                                 <SelectItem value="2">2.0</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <div className="w-px h-6 bg-white/20" />
+                                        <div className="w-px h-5 bg-white/20" />
                                         {/* New Page */}
                                         <Button
-                                            variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white"
+                                            variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`}
                                             title="إضافة صفحة جديدة (Ctrl+Enter)"
                                             onClick={addNewPage}
                                         >
-                                            <Plus className="w-4 h-4" />
+                                            <Plus className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} />
                                         </Button>
                                         {/* Insert Table */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إدراج جدول" onClick={() => {
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} title="إدراج جدول" onClick={() => {
                                             const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
                                             document.execCommand('insertHTML', false, table);
                                             toast({ title: "✅ تم إدراج جدول" });
-                                        }}><LayoutGrid className="w-4 h-4" /></Button>
+                                        }}><LayoutGrid className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
                                         {/* Footnote */}
                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة حاشية" onClick={() => {
                                             const content = editorRef.current?.innerHTML || '';
@@ -1671,47 +1671,47 @@ export default function AcademicManager() {
                                         </Button>
                                     </div>
                                     {/* Row 2: Text Formatting */}
-                                    <div className="flex flex-wrap items-center justify-center gap-1">
+                                    <div className="flex flex-wrap items-center justify-center gap-0.5">
                                         {/* Bold, Italic, Underline, Strikethrough */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('bold')} title="غامق"><Bold className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('italic')} title="مائل"><Italic className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('underline')} title="تسطير"><Underline className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('strikeThrough')} title="يتوسطه خط"><Strikethrough className="w-4 h-4" /></Button>
-                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('bold')} title="غامق"><Bold className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('italic')} title="مائل"><Italic className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('underline')} title="تسطير"><Underline className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('strikeThrough')} title="يتوسطه خط"><Strikethrough className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <div className="w-px h-5 bg-white/20 mx-0.5" />
                                         {/* Text Color & Highlight */}
-                                        <div className="flex items-center gap-1 bg-white/10 rounded px-1">
-                                            <Type className="w-3 h-3 text-white/50" />
-                                            <input type="color" className="w-6 h-6 rounded cursor-pointer border-0" onChange={(e) => document.execCommand('foreColor', false, e.target.value)} title="لون النص" />
+                                        <div className="flex items-center gap-0.5 bg-white/10 rounded px-0.5">
+                                            <Type className={`${sidebarVisible ? 'w-2 h-2' : 'w-3 h-3'} text-white/50`} />
+                                            <input type="color" className={`${sidebarVisible ? 'w-5 h-5' : 'w-6 h-6'} rounded cursor-pointer border-0`} onChange={(e) => document.execCommand('foreColor', false, e.target.value)} title="لون النص" />
                                         </div>
-                                        <div className="flex items-center gap-1 bg-white/10 rounded px-1">
-                                            <Palette className="w-3 h-3 text-white/50" />
-                                            <input type="color" className="w-6 h-6 rounded cursor-pointer border-0" defaultValue="#FFFF00" onChange={(e) => document.execCommand('hiliteColor', false, e.target.value)} title="تمييز" />
+                                        <div className="flex items-center gap-0.5 bg-white/10 rounded px-0.5">
+                                            <Palette className={`${sidebarVisible ? 'w-2 h-2' : 'w-3 h-3'} text-white/50`} />
+                                            <input type="color" className={`${sidebarVisible ? 'w-5 h-5' : 'w-6 h-6'} rounded cursor-pointer border-0`} defaultValue="#FFFF00" onChange={(e) => document.execCommand('hiliteColor', false, e.target.value)} title="تمييز" />
                                         </div>
-                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        <div className="w-px h-5 bg-white/20 mx-0.5" />
                                         {/* Text Direction */}
-                                        <Button variant={textDirection === 'rtl' ? 'secondary' : 'ghost'} size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => setTextDirection('rtl')} title="يمين-يسار"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12h-8" /><path d="M21 7h-8" /><path d="M21 17h-8" /><path d="M10 7v10" /><path d="M6 7v10" /></svg></Button>
-                                        <Button variant={textDirection === 'ltr' ? 'secondary' : 'ghost'} size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => setTextDirection('ltr')} title="يسار-يمين"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h8" /><path d="M3 7h8" /><path d="M3 17h8" /><path d="M14 7v10" /><path d="M18 7v10" /></svg></Button>
-                                        <Button variant={textDirection === 'auto' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 p-0 text-white/70 hover:text-white text-xs font-bold" onClick={() => setTextDirection('auto')} title="تلقائي">Auto</Button>
-                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        <Button variant={textDirection === 'rtl' ? 'secondary' : 'ghost'} size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => setTextDirection('rtl')} title="يمين-يسار"><svg xmlns="http://www.w3.org/2000/svg" width={sidebarVisible ? "12" : "16"} height={sidebarVisible ? "12" : "16"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12h-8" /><path d="M21 7h-8" /><path d="M21 17h-8" /><path d="M10 7v10" /><path d="M6 7v10" /></svg></Button>
+                                        <Button variant={textDirection === 'ltr' ? 'secondary' : 'ghost'} size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => setTextDirection('ltr')} title="يسار-يمين"><svg xmlns="http://www.w3.org/2000/svg" width={sidebarVisible ? "12" : "16"} height={sidebarVisible ? "12" : "16"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h8" /><path d="M3 7h8" /><path d="M3 17h8" /><path d="M14 7v10" /><path d="M18 7v10" /></svg></Button>
+                                        {!sidebarVisible && <Button variant={textDirection === 'auto' ? 'secondary' : 'ghost'} size="sm" className="h-8 px-2 p-0 text-white/70 hover:text-white text-xs font-bold" onClick={() => setTextDirection('auto')} title="تلقائي">Auto</Button>}
+                                        <div className="w-px h-5 bg-white/20 mx-0.5" />
                                         {/* Alignment */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyRight')} title="محاذاة يمين"><AlignRight className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyCenter')} title="توسيط"><AlignCenter className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyLeft')} title="محاذاة يسار"><AlignLeft className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => document.execCommand('justifyFull')} title="ضبط"><AlignJustify className="w-4 h-4" /></Button>
-                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('justifyRight')} title="محاذاة يمين"><AlignRight className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('justifyCenter')} title="توسيط"><AlignCenter className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('justifyLeft')} title="محاذاة يسار"><AlignLeft className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => document.execCommand('justifyFull')} title="ضبط"><AlignJustify className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <div className="w-px h-5 bg-white/20 mx-0.5" />
                                         {/* Lists - Fixed RTL */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => {
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => {
                                             document.execCommand('insertHTML', false, '<ul style="list-style-type:disc;padding-right:20px;margin:8px 0;direction:rtl;"><li>عنصر جديد</li></ul>');
-                                        }} title="قائمة نقطية"><LayoutList className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" onClick={() => {
+                                        }} title="قائمة نقطية"><LayoutList className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} onClick={() => {
                                             document.execCommand('insertHTML', false, '<ol style="list-style-type:decimal;padding-right:20px;margin:8px 0;direction:rtl;"><li>عنصر أول</li></ol>');
-                                        }} title="قائمة مرقمة"><LayoutGrid className="w-4 h-4" /></Button>
-                                        <div className="w-px h-6 bg-white/20 mx-1" />
+                                        }} title="قائمة مرقمة"><LayoutGrid className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+                                        <div className="w-px h-5 bg-white/20 mx-0.5" />
 
                                         {/* Table with dropdown for row/column operations */}
                                         <div className="relative group">
-                                            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" title="جدول">
-                                                <LayoutGrid className="w-3 h-3 ml-1" /> جدول ▾
+                                            <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 px-1 text-[10px]' : 'h-8 px-2 text-xs'} text-white/70 hover:text-white hover:bg-white/10`} title="جدول">
+                                                <LayoutGrid className={`${sidebarVisible ? 'w-2 h-2' : 'w-3 h-3'} ml-1`} /> جدول ▾
                                             </Button>
                                             <div className="absolute top-full right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[140px]">
                                                 <button className="w-full text-right px-3 py-2 text-xs text-white/80 hover:bg-white/10" onClick={() => {
@@ -2411,56 +2411,115 @@ mark { background-color: #ffff00; }
 
             {/* Compiled Export Editor Dialog */}
             <Dialog open={isInternalExportOpen} onOpenChange={setIsInternalExportOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-6xl max-h-[95vh] overflow-y-auto flex flex-col p-0 rounded-3xl border-0 shadow-2xl" dir="rtl">
-                    <div className="bg-slate-900 p-4 text-white flex justify-between items-center shrink-0">
-                        <div className="flex items-center gap-3">
-                            <FileUp className="w-5 h-5 text-emerald-400" />
-                            <div>
-                                <h2 className="text-lg font-black leading-none">محرر التجميع والمسودة النهائية</h2>
-                                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest leading-none">تجميع {selectedForExport.size} عناصر</p>
+                <DialogContent className="w-[98vw] sm:max-w-7xl max-h-[98vh] overflow-y-auto flex flex-col p-0 rounded-3xl border-0 shadow-2xl" dir="rtl">
+                    <div className="bg-slate-900 p-3 text-white shrink-0">
+                        {/* Header Row */}
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-3">
+                                <FileUp className="w-5 h-5 text-emerald-400" />
+                                <div>
+                                    <h2 className="text-lg font-black leading-none">محرر التجميع والمسودة النهائية</h2>
+                                    <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-widest leading-none">تجميع {selectedForExport.size} عناصر</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => setIsInternalExportOpen(false)} className="hover:bg-white/10 rounded-full text-white"><X className="w-6 h-6" /></Button>
+                        </div>
+
+                        {/* Full Toolbar - Row 1 */}
+                        <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 rounded-lg p-2 mb-1">
+                            {/* Undo/Redo */}
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('undo')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="تراجع"><Undo className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('redo')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="إعادة"><Redo className="w-3.5 h-3.5" /></Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
+
+                            {/* Font Family */}
+                            <Select onValueChange={(val) => execCmd('fontName', val)}>
+                                <SelectTrigger className="h-7 w-32 bg-transparent border-0 text-white hover:bg-white/20 focus:ring-0 text-xs">
+                                    <SelectValue placeholder="الخط" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Traditional Arabic">Traditional Arabic</SelectItem>
+                                    <SelectItem value="Amiri">Amiri (أميري)</SelectItem>
+                                    <SelectItem value="Cairo">Cairo (القاهرة)</SelectItem>
+                                    <SelectItem value="Tajawal">Tajawal (تجوّل)</SelectItem>
+                                    <SelectItem value="Arial">Arial</SelectItem>
+                                    <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Font Size */}
+                            <Select onValueChange={(val) => execCmd('fontSize', val)}>
+                                <SelectTrigger className="h-7 w-16 bg-transparent border-0 text-white hover:bg-white/20 focus:ring-0 text-xs">
+                                    <SelectValue placeholder="14" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="1">10</SelectItem>
+                                    <SelectItem value="2">12</SelectItem>
+                                    <SelectItem value="3">14</SelectItem>
+                                    <SelectItem value="4">16</SelectItem>
+                                    <SelectItem value="5">18</SelectItem>
+                                    <SelectItem value="6">24</SelectItem>
+                                    <SelectItem value="7">32</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
+
+                            {/* Bold, Italic, Underline, Strikethrough */}
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('bold')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="غامق"><Bold className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('italic')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="مائل"><Italic className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('underline')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="تسطير"><Underline className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('strikeThrough')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="يتوسطه خط"><Strikethrough className="w-3.5 h-3.5" /></Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
+
+                            {/* Text Color & Highlight */}
+                            <div className="flex items-center gap-0.5 bg-white/10 rounded px-1">
+                                <Type className="w-3 h-3 text-white/50" />
+                                <input type="color" className="w-5 h-5 rounded cursor-pointer border-0" onChange={(e) => execCmd('foreColor', e.target.value)} title="لون النص" />
+                            </div>
+                            <div className="flex items-center gap-0.5 bg-white/10 rounded px-1">
+                                <Palette className="w-3 h-3 text-white/50" />
+                                <input type="color" className="w-5 h-5 rounded cursor-pointer border-0" defaultValue="#FFFF00" onChange={(e) => execCmd('hiliteColor', e.target.value)} title="تمييز" />
                             </div>
                         </div>
 
-                        {/* Toolbar */}
-                        <div className="flex bg-white/10 rounded-lg p-1 gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => execCmd('bold')} className="hover:bg-white/20 text-white h-8 w-8 p-0"><Bold className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => execCmd('italic')} className="hover:bg-white/20 text-white h-8 w-8 p-0"><Italic className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => execCmd('underline')} className="hover:bg-white/20 text-white h-8 w-8 p-0"><Underline className="w-4 h-4" /></Button>
-                            <div className="w-px bg-white/20 mx-1"></div>
+                        {/* Full Toolbar - Row 2 */}
+                        <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 rounded-lg p-2">
+                            {/* Text Direction */}
+                            <Button size="sm" variant="ghost" onClick={() => { const area = document.getElementById('export-content-area'); if (area) area.style.direction = 'rtl'; }} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="يمين-يسار">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12h-8" /><path d="M21 7h-8" /><path d="M21 17h-8" /><path d="M10 7v10" /><path d="M6 7v10" /></svg>
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => { const area = document.getElementById('export-content-area'); if (area) area.style.direction = 'ltr'; }} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="يسار-يمين">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h8" /><path d="M3 7h8" /><path d="M3 17h8" /><path d="M14 7v10" /><path d="M18 7v10" /></svg>
+                            </Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
 
-                            <Select onValueChange={(val) => execCmd('foreColor', val)}>
-                                <SelectTrigger className="h-8 w-24 bg-transparent border-0 text-white hover:bg-white/20 focus:ring-0">
-                                    <div className="flex items-center gap-2"><Palette className="w-3 h-3" /> <span className="text-xs">لون</span></div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="#000000">أسود ⚫</SelectItem>
-                                    <SelectItem value="#dc2626">أحمر 🔴</SelectItem>
-                                    <SelectItem value="#16a34a">أخضر 🟢</SelectItem>
-                                    <SelectItem value="#2563eb">أزرق 🔵</SelectItem>
-                                    <SelectItem value="#d97706">برتقالي 🟠</SelectItem>
-                                    <SelectItem value="#7c3aed">بنفسجي 🟣</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {/* Alignment */}
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('justifyRight')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="محاذاة يمين"><AlignRight className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('justifyCenter')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="توسيط"><AlignCenter className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('justifyLeft')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="محاذاة يسار"><AlignLeft className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('justifyFull')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="ضبط"><AlignJustify className="w-3.5 h-3.5" /></Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
 
-                            <Select onValueChange={(val) => execCmd('fontSize', val)}>
-                                <SelectTrigger className="h-8 w-24 bg-transparent border-0 text-white hover:bg-white/20 focus:ring-0">
-                                    <div className="flex items-center gap-2"><Type className="w-3 h-3" /> <span className="text-xs">حجم</span></div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="2">صغير</SelectItem>
-                                    <SelectItem value="3">عادي</SelectItem>
-                                    <SelectItem value="5">كبير</SelectItem>
-                                    <SelectItem value="7">ضخم</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <div className="w-px bg-white/20 mx-1"></div>
-                            <Button size="sm" variant="ghost" onClick={() => insertShape('square')} className="hover:bg-white/20 text-white h-8 w-8 p-0" title="مربع"><Square className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => insertShape('circle')} className="hover:bg-white/20 text-white h-8 w-8 p-0" title="دائرة"><Circle className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => insertShape('rect')} className="hover:bg-white/20 text-white h-8 w-8 p-0" title="مستطيل"><RectangleHorizontal className="w-4 h-4" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => insertShape('line')} className="hover:bg-white/20 text-white h-8 w-8 p-0" title="خط"><Minus className="w-4 h-4" /></Button>
+                            {/* Lists */}
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('insertUnorderedList')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="قائمة نقطية"><LayoutList className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => execCmd('insertOrderedList')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="قائمة مرقمة"><LayoutGrid className="w-3.5 h-3.5" /></Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
+
+                            {/* Shapes */}
+                            <Button size="sm" variant="ghost" onClick={() => insertShape('square')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="مربع"><Square className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => insertShape('circle')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="دائرة"><Circle className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => insertShape('rect')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="مستطيل"><RectangleHorizontal className="w-3.5 h-3.5" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => insertShape('line')} className="hover:bg-white/20 text-white h-7 w-7 p-0" title="خط"><Minus className="w-3.5 h-3.5" /></Button>
+                            <div className="w-px h-5 bg-white/20 mx-1" />
+
+                            {/* Table Insert */}
+                            <Button size="sm" variant="ghost" onClick={() => {
+                                const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                execCmd('insertHTML', table);
+                            }} className="hover:bg-white/20 text-white h-7 px-2 text-xs" title="إدراج جدول">
+                                <LayoutGrid className="w-3 h-3 ml-1" /> جدول
+                            </Button>
                         </div>
-
-                        <Button variant="ghost" size="icon" onClick={() => setIsInternalExportOpen(false)} className="hover:bg-white/10 rounded-full text-white"><X className="w-6 h-6" /></Button>
                     </div>
 
                     <div className="flex-1 bg-gray-50 overflow-auto p-8 flex justify-center">
