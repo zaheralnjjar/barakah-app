@@ -858,7 +858,14 @@ p { margin-bottom: 15px; }
     };
 
     const handleWordExport = async () => {
-        if (!project) return;
+        if (!project) {
+            toast({ title: "❌ لا يوجد مشروع للتصدير", variant: "destructive" });
+            return;
+        }
+
+        // Get content from export preview if available, otherwise use project content
+        const exportPreviewContent = document.getElementById('export-content-area')?.innerHTML;
+        const useExportPreview = exportPreviewContent && exportPreviewContent.trim().length > 0;
 
         const exportAll = selectedForExport.size === 0;
         const children: Paragraph[] = [];
@@ -868,62 +875,159 @@ p { margin-bottom: 15px; }
             text: project.title,
             heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
+            bidirectional: true,
             spacing: { after: 400 }
         }));
 
         // Metadata
         children.push(new Paragraph({
             children: [
-                new TextRun({ text: `المشرف: ${project.supervisor} | المؤسسة: ${project.institution}`, size: 24, color: '666666' })
+                new TextRun({
+                    text: `المشرف: ${project.supervisor} | المؤسسة: ${project.institution}`,
+                    size: 24,
+                    color: '666666',
+                    rightToLeft: true
+                })
             ],
             alignment: AlignmentType.CENTER,
+            bidirectional: true,
             spacing: { after: 600 }
         }));
 
-        // Phases and Chapters
-        project.phases.forEach((phase, pIndex) => {
-            const selectedChapters = (phase.chapters || []).filter(c => exportAll || selectedForExport.has(c.id));
-            if (selectedChapters.length > 0) {
-                children.push(new Paragraph({
-                    text: `المرحلة ${pIndex + 1}: ${phase.title}`,
-                    heading: HeadingLevel.HEADING_1,
-                    spacing: { before: 400, after: 200 }
-                }));
+        // If using export preview, extract text from it
+        if (useExportPreview) {
+            // Convert HTML to paragraphs more intelligently
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = exportPreviewContent || '';
 
-                selectedChapters.forEach((chapter, cIndex) => {
+            // Extract text by processing each element
+            const processElement = (element: HTMLElement) => {
+                const tagName = element.tagName?.toLowerCase();
+                const text = element.textContent?.trim() || '';
+
+                if (!text) return;
+
+                if (tagName === 'h1' || tagName === 'h2') {
                     children.push(new Paragraph({
-                        text: `${cIndex + 1}. ${chapter.title}`,
-                        heading: HeadingLevel.HEADING_2,
+                        text: text,
+                        heading: tagName === 'h1' ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
+                        bidirectional: true,
+                        spacing: { before: 300, after: 150 }
+                    }));
+                } else if (tagName === 'h3') {
+                    children.push(new Paragraph({
+                        text: text,
+                        heading: HeadingLevel.HEADING_3,
+                        bidirectional: true,
                         spacing: { before: 200, after: 100 }
                     }));
-
-                    // Simple HTML to Text conversion (basic) - ideal would be html-to-docx parser if available
-                    // For now, we strip tags or use basic text. 
-                    // To safeguard against "Empty" content if the user has HTML:
-                    const cleanText = (chapter.content || '').replace(/<[^>]*>/g, '');
-
+                } else if (tagName === 'p' || tagName === 'div') {
                     children.push(new Paragraph({
-                        children: [new TextRun({ text: cleanText || '(لا يوجد محتوى نصي)', size: 24 })],
-                        spacing: { after: 300 }
+                        children: [new TextRun({ text: text, size: 24, rightToLeft: true })],
+                        bidirectional: true,
+                        spacing: { after: 200 }
                     }));
-                });
+                }
+            };
+
+            // Process all children
+            Array.from(tempDiv.querySelectorAll('h1, h2, h3, p, div')).forEach(el => {
+                processElement(el as HTMLElement);
+            });
+
+            // If no structured content found, use plain text
+            if (children.length <= 2) {
+                const plainText = tempDiv.textContent?.trim() || '';
+                if (plainText) {
+                    // Split by newlines and create paragraphs
+                    plainText.split(/\n+/).filter(p => p.trim()).forEach(para => {
+                        children.push(new Paragraph({
+                            children: [new TextRun({ text: para.trim(), size: 24, rightToLeft: true })],
+                            bidirectional: true,
+                            spacing: { after: 200 }
+                        }));
+                    });
+                }
             }
-        });
+        } else {
+            // Use project phases and chapters directly
+            project.phases.forEach((phase, pIndex) => {
+                const selectedChapters = (phase.chapters || []).filter(c => exportAll || selectedForExport.has(c.id));
+                if (selectedChapters.length > 0) {
+                    children.push(new Paragraph({
+                        text: `المرحلة ${pIndex + 1}: ${phase.title}`,
+                        heading: HeadingLevel.HEADING_1,
+                        bidirectional: true,
+                        spacing: { before: 400, after: 200 }
+                    }));
+
+                    selectedChapters.forEach((chapter, cIndex) => {
+                        children.push(new Paragraph({
+                            text: `${cIndex + 1}. ${chapter.title}`,
+                            heading: HeadingLevel.HEADING_2,
+                            bidirectional: true,
+                            spacing: { before: 200, after: 100 }
+                        }));
+
+                        // Better HTML to Text conversion
+                        const htmlContent = chapter.content || '';
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = htmlContent;
+
+                        // Extract text preserving some structure
+                        const cleanText = tempDiv.textContent?.trim() || '(لا يوجد محتوى نصي)';
+
+                        // Split into paragraphs
+                        cleanText.split(/\n+/).filter(p => p.trim()).forEach(para => {
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: para.trim(), size: 24, rightToLeft: true })],
+                                bidirectional: true,
+                                spacing: { after: 200 }
+                            }));
+                        });
+                    });
+                }
+            });
+        }
+
+        // Check if we have any content
+        if (children.length <= 2) {
+            toast({ title: "⚠️ لا يوجد محتوى للتصدير", description: "يرجى إضافة محتوى أولاً", variant: "destructive" });
+            return;
+        }
 
         const doc = new Document({
-            sections: [{ properties: {}, children }]
+            sections: [{
+                properties: {
+                    page: {
+                        margin: {
+                            top: 1440, // 1 inch
+                            right: 1440,
+                            bottom: 1440,
+                            left: 1440,
+                        },
+                    },
+                },
+                children
+            }]
         });
 
         try {
             const blob = await Packer.toBlob(doc);
-            const fileName = exportFilename.endsWith('.docx') ? exportFilename : `${exportFilename}.docx`;
+            // Generate proper filename with fallback
+            const baseFilename = (exportFilename?.trim() || project.title || 'بحث_أكاديمي')
+                .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+                .trim();
+            const fileName = baseFilename.endsWith('.docx') ? baseFilename : `${baseFilename}.docx`;
+
             saveAs(blob, fileName);
-            toast({ title: "✅ تم تحميل ملف Word" });
+            toast({ title: "✅ تم تحميل ملف Word", description: fileName });
         } catch (err) {
-            console.error(err);
-            toast({ title: "❌ فشل التصدير", variant: "destructive" });
+            console.error('Word export error:', err);
+            toast({ title: "❌ فشل التصدير", description: "تحقق من المحتوى وحاول مجدداً", variant: "destructive" });
         }
     };
+
 
     const insertShape = (shape: 'square' | 'circle' | 'rect' | 'line') => {
         const shapeHtml: Record<string, string> = {
@@ -1223,8 +1327,11 @@ p { margin-bottom: 15px; }
                                                     </CardHeader>
                                                     <CardContent>
                                                         <p className={`text-xs leading-relaxed text-gray-600 line-clamp-3 min-h-[4rem] whitespace-pre-wrap ${!chapter.content ? 'text-gray-300 italic' : ''}`}>
-                                                            {chapter.content || 'انقر للكتابة...'}
+                                                            {chapter.content
+                                                                ? chapter.content.replace(/<[^>]*>/g, '').substring(0, 200) + (chapter.content.length > 200 ? '...' : '')
+                                                                : 'انقر للكتابة...'}
                                                         </p>
+
                                                     </CardContent>
                                                     <div className="px-4 py-2 bg-gray-100/50 flex justify-between items-center text-[10px] text-gray-400">
                                                         <span>{chapter.content?.length || 0} حرف</span>
@@ -1586,9 +1693,9 @@ p { margin-bottom: 15px; }
 
                         {/* Main Editor Area */}
                         <div className="flex-1 flex flex-col overflow-hidden">
-                            {/* Full-Width Toolbar - Compact and Responsive */}
+                            {/* Full-Width Toolbar - Always fills available width */}
                             {!isAndroid && (
-                                <div className={`bg-gradient-to-b from-indigo-900 to-slate-800 ${sidebarVisible ? 'p-2' : 'p-3'} shrink-0 border-b border-indigo-700 sticky top-[45px] z-40`} dir="rtl">
+                                <div className="w-full bg-gradient-to-b from-indigo-900 to-slate-800 p-2 shrink-0 border-b border-indigo-700 sticky top-[45px] z-40" dir="rtl">
                                     {/* Row 1: Undo/Redo, Font, Size, Zoom, Spacing, Format Painter */}
                                     <div className="flex flex-wrap items-center justify-center gap-1 mb-1">
                                         <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} title="تراجع" onClick={() => document.execCommand('undo')}><Undo className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
@@ -1912,9 +2019,19 @@ p { margin-bottom: 15px; }
                                                         contentEditable={!isAndroid}
                                                         suppressContentEditableWarning={true}
                                                         dangerouslySetInnerHTML={{ __html: pageContent }}
-                                                        className="outline-none text-justify h-full focus:outline-none overflow-hidden flex flex-col"
-                                                        dir={textDirection}
+                                                        className="outline-none h-full focus:outline-none overflow-hidden flex flex-col"
+                                                        dir="rtl"
+                                                        style={{
+                                                            direction: 'rtl',
+                                                            textAlign: 'right',
+                                                            unicodeBidi: 'embed',
+                                                            writingMode: 'horizontal-tb',
+                                                            caretColor: '#d97706',
+                                                            lineHeight: lineSpacing,
+                                                            fontFamily: "'Tajawal', 'Amiri', 'Traditional Arabic', sans-serif",
+                                                        }}
                                                         onFocus={() => setActivePageIndex(pageIndex)}
+
                                                         onInput={(e) => {
                                                             handlePageInput(pageIndex, e.currentTarget.innerHTML);
                                                         }}
