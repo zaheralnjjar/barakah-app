@@ -186,6 +186,111 @@
     text-align: right;
     direction: rtl;
   }
+
+  /* ===== إصلاحات RTL الشاملة ===== */
+  
+  /* جميع النوافذ المنبثقة */
+  [role="dialog"],
+  [role="alertdialog"],
+  [data-radix-dialog-content],
+  [data-radix-alert-dialog-content] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* القوائم المنسدلة */
+  [role="listbox"],
+  [role="menu"],
+  [role="combobox"],
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content],
+  [data-radix-popover-content] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* الأزرار مع أيقونات - عكس الترتيب */
+  button:has(svg):not(.ltr-button) {
+    flex-direction: row-reverse;
+  }
+
+  /* إصلاح flexbox للعربية */
+  .flex-row-reverse-rtl {
+    flex-direction: row-reverse;
+  }
+
+  /* إصلاح justify-end للعربية */
+  .justify-start-rtl {
+    justify-content: flex-start;
+  }
+
+  /* إصلاح margins و paddings للعربية */
+  .ms-2 { margin-inline-start: 0.5rem; }
+  .me-2 { margin-inline-end: 0.5rem; }
+  .ps-2 { padding-inline-start: 0.5rem; }
+  .pe-2 { padding-inline-end: 0.5rem; }
+
+  .ms-3 { margin-inline-start: 0.75rem; }
+  .me-3 { margin-inline-end: 0.75rem; }
+  .ps-3 { padding-inline-start: 0.75rem; }
+  .pe-3 { padding-inline-end: 0.75rem; }
+
+  .ms-4 { margin-inline-start: 1rem; }
+  .me-4 { margin-inline-end: 1rem; }
+  .ps-4 { padding-inline-start: 1rem; }
+  .pe-4 { padding-inline-end: 1rem; }
+
+  /* إصلاح gap للأزرار */
+  .gap-rtl-2 {
+    gap: 0.5rem;
+  }
+
+  /* تحسين عرض النوافذ */
+  [data-radix-dialog-content] button,
+  [data-radix-alert-dialog-content] button {
+    flex-direction: row-reverse;
+  }
+
+  /* إصلاح موضع زر الإغلاق */
+  [data-radix-dialog-content] > button:last-of-type,
+  [data-radix-alert-dialog-content] > button:last-of-type {
+    left: 0.75rem;
+    right: auto;
+  }
+
+  /* تحسين التوافق مع Radix UI */
+  [data-radix-scroll-area-viewport] {
+    direction: rtl;
+  }
+
+  /* إصلاح Tooltip */
+  [role="tooltip"] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* إصلاح Tabs */
+  [role="tablist"] {
+    direction: rtl;
+  }
+
+  /* إصلاح Cards */
+  .card, [data-card] {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* إصلاح Forms */
+  form, .form {
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* إصلاح Labels */
+  label {
+    text-align: right;
+    display: block;
+  }
 }
 
 @layer components {
