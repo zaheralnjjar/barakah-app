@@ -39,6 +39,7 @@ import DashboardStats from './dashboard/DashboardStats';
 import QuickActionsGrid from './dashboard/QuickActionsGrid';
 import DailyReportCard from './dashboard/DailyReportCard';
 import DashboardCalendar from './dashboard/DashboardCalendar';
+import { AddMaterialDialog } from './academic/AddMaterialDialog';
 import { CollapsibleSection } from './dashboard/CollapsibleSection';
 
 // Refactored Widgets

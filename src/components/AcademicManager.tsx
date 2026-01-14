@@ -40,76 +40,16 @@ import { Loader2, RefreshCw, BarChart2 } from 'lucide-react';
 import { GlobalSearch } from './academic/GlobalSearch';
 import { StatsDashboard } from './academic/StatsDashboard';
 import { Capacitor } from '@capacitor/core';
-
-// --- Types ---
-export interface SubTask {
-    id: string;
-    title: string;
-    date?: string;
-    time?: string;
-    completed: boolean;
-}
-
-export interface ResearchTask {
-    id: string;
-    title: string;
-    description?: string;
-    content?: string; // For drafting (Keep style)
-    deadline?: string;
-    status: 'pending' | 'in_progress' | 'completed';
-    priority: 'high' | 'medium' | 'low';
-    subtasks: SubTask[];
-}
-
-export interface ResearchChapter {
-    id: string;
-    title: string;
-    description?: string;
-    content?: string; // For drafting (Keep style)
-    status: 'pending' | 'in_progress' | 'completed';
-    tasks: ResearchTask[];
-    tags?: string[];
-    startDate?: string;
-    endDate?: string;
-    parentId?: string;
-    color?: string;
-}
-
-export interface ResearchPhase {
-    id: string;
-    title: string;
-    startDate?: string;
-    endDate?: string;
-    status: 'pending' | 'in_progress' | 'completed';
-    chapters: ResearchChapter[];
-    tasks: ResearchTask[];
-    tags?: string[];
-    color?: string;
-    order?: number;
-}
-
-export interface ResearchCircle {
-    id: string;
-    title: string;
-    date: string;
-    location?: string;
-    notes?: string;
-    completed: boolean;
-}
-
-export interface ResearchMaterial {
-    id: string;
-    title: string;
-    type: 'book' | 'paper' | 'link' | 'other';
-    url?: string;
-    status: 'to_read' | 'reading' | 'read';
-    author?: string;
-    publisher?: string;
-    year?: string;
-    deathDate?: string;
-    tags?: string[];
-}
-
+import {
+    ResearchProject,
+    ResearchPhase,
+    ResearchChapter,
+    ResearchTask,
+    SubTask,
+    ResearchCircle,
+    ResearchMaterial
+} from '@/types/academic';
+import { AddMaterialDialog } from './academic/AddMaterialDialog';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import {
     DndContext,
@@ -129,19 +69,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-export interface ResearchProject {
-    id: string;
-    title: string;
-    description: string;
-    supervisor: string;
-    institution: string;
-    startDate?: string;
-    deadline?: string;
-    phases: ResearchPhase[];
-    researchCircles: ResearchCircle[];
-    materials: ResearchMaterial[];
-    references: any[]; // Placeholder for now
-}
+
 
 function SortablePhaseItem({ id, children }: { id: string; children: React.ReactNode }) {
     const {
@@ -180,7 +108,7 @@ const STORAGE_KEYS = {
     PROJECT: 'my_research_project_v2',
 };
 
-export default function AcademicManager() {
+export default function AcademicManager({ onClose }: { onClose?: () => void }) {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const isAndroid = Capacitor.getPlatform() === 'android';
@@ -235,6 +163,8 @@ export default function AcademicManager() {
     const [selectedTemplate, setSelectedTemplate] = useState<string>('');
     const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
     const [isQuickNotesOpen, setIsQuickNotesOpen] = useState(false);
+    const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
+    const [exportFilename, setExportFilename] = useState('');
 
     // Editor state
     const [editorZoom, setEditorZoom] = useState(100);
@@ -306,37 +236,15 @@ export default function AcademicManager() {
         pagesRef.current = pages;
     }, [pages]);
 
-    // Function to check if content overflows and auto-create new page
-    const handlePageInput = (index: number, content: string) => {
-        const newPages = [...pagesRef.current];
-        newPages[index] = content;
-
-        // Optimistically update state
-        setPages(newPages);
-
-        // Also update draftContent with all pages combined
-        const allContent = newPages.join('<div style="page-break-after:always;"></div>');
-        setDraftContent(allContent);
-
-        // Debounce pagination to avoid heavy calc on every keystroke
-        if (pagintationTimeoutRef.current) clearTimeout(pagintationTimeoutRef.current);
-        pagintationTimeoutRef.current = setTimeout(() => {
-            checkOverflowAndPaginate(index, newPages);
-        }, 500);
-    };
-
     const pagintationTimeoutRef = useRef<NodeJS.Timeout>();
 
-    // Auto-distribute content across pages when overflow detected
+    // --- Pagination Logic ---
     const checkOverflowAndPaginate = (startPageIndex: number, currentPages: string[]) => {
         const maxHeight = pageSizes[pageSize].pxHeight - 80; // Subtract padding
         let updatedPages = [...currentPages];
         let hasChanges = false;
 
-        // Limit iterations to prevent freezing
         const maxPagesToCheck = 50;
-
-        // Create temporary div to measure content height
         const measureDiv = document.createElement('div');
         measureDiv.style.cssText = `
             position: absolute;
@@ -355,34 +263,21 @@ export default function AcademicManager() {
             for (let i = startPageIndex; i < updatedPages.length && i < startPageIndex + maxPagesToCheck; i++) {
                 const content = updatedPages[i];
                 measureDiv.innerHTML = content;
-
                 if (measureDiv.scrollHeight > maxHeight) {
-                    // Overflow detected
                     hasChanges = true;
-
-                    // Split content
-                    // Use a range-based approach or word-by-word backward check for better precision?
-                    // Current Paragraph split is coarse but safer.
-
                     const elements = content.split(/(<\/p>|<\/div>|<br\s*\/?>)/gi);
                     let fitContent = '';
                     let moveContent = '';
                     let overflowDetected = false;
-
                     measureDiv.innerHTML = '';
-
                     for (const el of elements) {
                         if (!el) continue;
-
                         if (!overflowDetected) {
                             const prevHtml = measureDiv.innerHTML;
                             measureDiv.innerHTML += el;
-
                             if (measureDiv.scrollHeight > maxHeight) {
                                 overflowDetected = true;
-                                // Revert last addition
                                 measureDiv.innerHTML = prevHtml;
-                                // Using prevHtml is safer for 'fitContent'
                                 fitContent = prevHtml;
                                 moveContent = el;
                             }
@@ -390,7 +285,6 @@ export default function AcademicManager() {
                             moveContent += el;
                         }
                     }
-
                     if (overflowDetected && moveContent) {
                         updatedPages[i] = fitContent;
                         if (i === updatedPages.length - 1) {
@@ -398,12 +292,6 @@ export default function AcademicManager() {
                         } else {
                             updatedPages[i + 1] = moveContent + (updatedPages[i + 1] || '');
                         }
-
-                        // Continue loop to check next page
-                    } else {
-                        // Could not split? (Single giant element?)
-                        // If we can't split, we might be stuck. 
-                        // For now, leave it overflowing to avoid infinite loop of empty moves.
                     }
                 }
             }
@@ -417,6 +305,117 @@ export default function AcademicManager() {
             setDraftContent(allContent);
         }
     };
+
+    // --- Smart Footnote System (Per-Page Numbering) ---
+    const reorderFootnotes = useCallback(() => {
+        // Iterate through all pages and reorder footnotes for each page independently
+        pageRefs.current.forEach((editor, pageIdx) => {
+            if (!editor) return;
+
+            // 1. Find all markers in this specific page
+            const markers = Array.from(editor.querySelectorAll('.footnote-marker'));
+            const footnotesSection = editor.querySelector('.footnotes-section');
+
+            if (markers.length === 0) {
+                if (footnotesSection) footnotesSection.remove();
+                return;
+            }
+
+            // 2. Ensure footnotes section exists for this page
+            let section = footnotesSection as HTMLElement;
+            if (!section) {
+                section = document.createElement('div');
+                section.className = 'footnotes-section';
+                section.style.cssText = 'margin-top:auto;padding-top:12px;border-top:1px solid #444;direction:rtl;margin-top:25px;';
+                section.innerHTML = '<p style="font-weight:bold;color:#1a237e;font-size:11px;margin-bottom:5px;border-bottom:1px solid #eee;padding-bottom:2px;opacity:0.6;">الحواشي</p>';
+                editor.appendChild(section);
+            }
+
+            // Save contents to prevent data loss
+            const noteContents: { [key: string]: string } = {};
+            section.querySelectorAll('.footnote-item').forEach(item => {
+                const id = item.getAttribute('data-note-id');
+                const span = item.querySelector('.note-text');
+                if (id && span) noteContents[id] = span.innerHTML;
+            });
+
+            // Clear items but keep header
+            section.innerHTML = '<p style="font-weight:bold;color:#1a237e;font-size:11px;margin-bottom:5px;border-bottom:1px solid #eee;padding-bottom:2px;opacity:0.6;">الحواشي</p>';
+
+            // 3. Re-number and link per page (always start from 1)
+            markers.forEach((marker, idx) => {
+                const num = idx + 1;
+                const noteId = marker.getAttribute('data-note-id') || `note-${pageIdx}-${num}-${Math.random().toString(36).substr(2, 4)}`;
+
+                // Update marker
+                marker.setAttribute('data-note-id', noteId);
+                marker.setAttribute('id', `ref-${noteId}`);
+                marker.innerHTML = `[${num}]`;
+                (marker as HTMLElement).style.cssText = 'color:#d97706;cursor:pointer;font-weight:bold;font-size:0.8em;vertical-align:super;margin:0 1px;';
+
+                // Direct jump to bottom note
+                (marker as HTMLElement).onclick = (e) => {
+                    e.preventDefault();
+                    document.getElementById(`bottom-${noteId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+
+                // Add to section
+                const item = document.createElement('div');
+                item.className = 'footnote-item';
+                item.id = `bottom-${noteId}`;
+                item.setAttribute('data-note-id', noteId);
+                item.style.cssText = 'font-size:11px;color:#333;margin-bottom:2px;display:flex;gap:5px;line-height:1.4;';
+
+                const numBtn = document.createElement('span');
+                numBtn.innerHTML = `[${num}]`;
+                numBtn.style.cssText = 'font-weight:bold;color:#d97706;cursor:pointer;min-width:18px;';
+                numBtn.onclick = () => {
+                    document.getElementById(`ref-${noteId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                };
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'note-text';
+                textSpan.contentEditable = 'true';
+                textSpan.style.cssText = 'flex:1;outline:none;border-bottom:1px hidden #eee;';
+                textSpan.innerHTML = noteContents[noteId] || 'نص الحاشية...';
+
+                item.appendChild(numBtn);
+                item.appendChild(textSpan);
+                section.appendChild(item);
+            });
+        });
+    }, []);
+
+    // --- Core Sync and Pagination ---
+    const handlePageInput = useCallback((index: number, content: string) => {
+        const newPages = [...pagesRef.current];
+        newPages[index] = content;
+
+        // Update pages state
+        setPages(newPages);
+
+        // Sync with comprehensive draft content (combined pages)
+        const allContent = newPages.join('<div style="page-break-after:always;"></div>');
+        setDraftContent(allContent);
+
+        // Debounce heavy operations (Pagination & Footnote Reordering)
+        if (pagintationTimeoutRef.current) clearTimeout(pagintationTimeoutRef.current);
+        pagintationTimeoutRef.current = setTimeout(() => {
+            checkOverflowAndPaginate(index, newPages);
+            reorderFootnotes();
+        }, 500);
+    }, [reorderFootnotes]);
+
+
+    const insertFootnote = () => {
+        const uniqueId = `note-${activePageIndex}-${Date.now()}`;
+        const marker = `<sup class="footnote-marker" data-note-id="${uniqueId}">[?]</sup>`;
+        document.execCommand('insertHTML', false, marker);
+        // Small delay to ensure marker is in DOM
+        setTimeout(reorderFootnotes, 10);
+        toast({ title: "✅ تمت إضافة حاشية جديدة" });
+    };
+
 
     // Toggle folder open/close
     const toggleFolder = (phaseId: string) => {
@@ -689,23 +688,61 @@ export default function AcademicManager() {
     };
 
     const handlePdfExport = async () => {
-        const element = document.getElementById('export-content-area');
-        if (!element) return;
-
-        try {
-            const canvas = await html2canvas(element);
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`Research_Project_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-            toast({ title: "✅ تم تحميل ملف PDF" });
-        } catch (err) {
-            console.error(err);
-            toast({ title: "❌ فشل التصدير لـ PDF", variant: "destructive" });
+        // Use print-based export for better quality, margins, and footnotes
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast({ title: "⚠️ تم حظر النافذة المنبثقة", description: "اسمح بالنوافذ المنبثقة للتصدير", variant: "destructive" });
+            return;
         }
+        const title = exportFilename || project?.title || 'Research Project';
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>
+@page { size: A4; margin: 2.5cm; }
+body { 
+    font-family: 'Traditional Arabic', 'Arial', serif; 
+    font-size: 14pt; 
+    line-height: 1.8; 
+    direction: rtl; 
+    text-align: justify;
+    margin: 0;
+    padding: 20px;
+    color: #000;
+}
+h1 { font-size: 24pt; text-align: center; margin-bottom: 40px; }
+h2 { font-size: 18pt; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; }
+h3 { font-size: 16pt; margin-top: 20px; color: #333; }
+p { margin-bottom: 15px; }
+.footnotes-section { 
+    margin-top: 50px; 
+    padding-top: 20px; 
+    border-top: 1px solid #000; 
+    font-size: 10pt;
+}
+@media print {
+    body { padding: 0; }
+    button { display: none; }
+}
+</style>
+</head>
+<body>
+    ${exportContent}
+    <script>
+        window.onload = function() { 
+            setTimeout(function() { 
+                window.print(); 
+                // Optional: window.close(); 
+            }, 800); 
+        };
+    </script>
+</body>
+</html>`);
+        printWindow.document.close();
+        toast({ title: "✅ تم تجهيز ملف PDF", description: "سيظهر مربع حوار الطباعة..." });
     };
 
     // Auto-save draft content with debounce (handled by Effect + Mutation if we wanted auto-save, 
@@ -785,8 +822,12 @@ export default function AcademicManager() {
         }
     };
 
+
     const handleOpenExportEditor = () => {
         if (!project) return;
+
+        // Default to ALL chapters if none selected
+        const exportAll = selectedForExport.size === 0;
 
         // Generate Hierarchical HTML for the editor
         let html = `<div style="font-family: 'Tajawal', sans-serif; direction: rtl; text-align: right; padding: 40px; color: #1f2937;">`;
@@ -795,7 +836,7 @@ export default function AcademicManager() {
         html += `<hr style="border: 0; border-top: 2px solid #e5e7eb; margin: 30px 0;" />`;
 
         project.phases.forEach((phase, index) => {
-            const selectedChapters = (phase.chapters || []).filter(c => selectedForExport.has(c.id));
+            const selectedChapters = (phase.chapters || []).filter(c => exportAll || selectedForExport.has(c.id));
 
             if (selectedChapters.length > 0) {
                 html += `<div style="margin-bottom: 40px;">`;
@@ -812,12 +853,14 @@ export default function AcademicManager() {
         html += `</div>`;
 
         setExportContent(html);
+        setExportFilename(project.title || 'Research_Project');
         setIsInternalExportOpen(true);
     };
 
     const handleWordExport = async () => {
         if (!project) return;
 
+        const exportAll = selectedForExport.size === 0;
         const children: Paragraph[] = [];
 
         // Title
@@ -839,7 +882,7 @@ export default function AcademicManager() {
 
         // Phases and Chapters
         project.phases.forEach((phase, pIndex) => {
-            const selectedChapters = (phase.chapters || []).filter(c => selectedForExport.has(c.id));
+            const selectedChapters = (phase.chapters || []).filter(c => exportAll || selectedForExport.has(c.id));
             if (selectedChapters.length > 0) {
                 children.push(new Paragraph({
                     text: `المرحلة ${pIndex + 1}: ${phase.title}`,
@@ -853,8 +896,14 @@ export default function AcademicManager() {
                         heading: HeadingLevel.HEADING_2,
                         spacing: { before: 200, after: 100 }
                     }));
+
+                    // Simple HTML to Text conversion (basic) - ideal would be html-to-docx parser if available
+                    // For now, we strip tags or use basic text. 
+                    // To safeguard against "Empty" content if the user has HTML:
+                    const cleanText = (chapter.content || '').replace(/<[^>]*>/g, '');
+
                     children.push(new Paragraph({
-                        children: [new TextRun({ text: chapter.content || '(لا يوجد محتوى)', size: 24 })],
+                        children: [new TextRun({ text: cleanText || '(لا يوجد محتوى نصي)', size: 24 })],
                         spacing: { after: 300 }
                     }));
                 });
@@ -867,7 +916,8 @@ export default function AcademicManager() {
 
         try {
             const blob = await Packer.toBlob(doc);
-            saveAs(blob, `Research_${format(new Date(), 'yyyy-MM-dd')}.docx`);
+            const fileName = exportFilename.endsWith('.docx') ? exportFilename : `${exportFilename}.docx`;
+            saveAs(blob, fileName);
             toast({ title: "✅ تم تحميل ملف Word" });
         } catch (err) {
             console.error(err);
@@ -953,10 +1003,24 @@ export default function AcademicManager() {
     }
 
     return (
-        <div className="space-y-4 bg-gray-50/30 p-2 sm:p-4" dir="rtl">
+        <div className="space-y-4 bg-gray-50/30 p-2 sm:p-4 pb-32" dir="rtl">
             {/* Header section (Mobile Optimized) */}
             {project && (
                 <div className="bg-gradient-to-r from-purple-800 via-indigo-900 to-slate-900 rounded-xl p-3 sm:p-4 text-white shadow-lg relative overflow-hidden">
+                    {/* Header Controls */}
+                    <div className="absolute top-2 left-2 z-20 flex gap-2">
+                        {onClose && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/10 rounded-full"
+                            >
+                                <X className="w-5 h-5" />
+                            </Button>
+                        )}
+                    </div>
+
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                     <div className="flex flex-col gap-3 relative z-10">
                         <div>
@@ -988,7 +1052,7 @@ export default function AcademicManager() {
             )}
 
             {/* Navigation Tabs (Mobile Optimized) */}
-            <Tabs defaultValue="drafts" onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="bg-white/80 backdrop-blur border border-gray-100 p-1.5 rounded-xl shadow-sm mb-4 sticky top-0 z-30">
                     <div className="overflow-x-auto scrollbar-thin">
                         <TabsList className="bg-gray-100/50 p-0.5 rounded-lg h-auto flex flex-nowrap justify-start min-w-max gap-0.5">
@@ -1292,113 +1356,65 @@ export default function AcademicManager() {
                 </TabsContent>
 
                 {/* --- Materials Tab --- */}
-                <TabsContent value="materials" className="focus-visible:outline-none">
-                    <Card className="border-0 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-bold">مكتبة المصادر والمراجع</CardTitle>
-                            <CardDescription>نظم الكتب والأبحاث التي تعتمد عليها في دراستك</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Add Material Form */}
-                            <div className="bg-gray-50 p-4 rounded-2xl space-y-4">
-                                <h4 className="font-bold text-sm text-gray-700">إضافة مرجع جديد</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <Input placeholder="عنوان الكتاب / المرجع" id="mat-title" className="h-10 text-sm" />
-                                    <Input placeholder="اسم المؤلف" id="mat-author" className="h-10 text-sm" />
-                                    <Input placeholder="الدار الناشرة" id="mat-publisher" className="h-10 text-sm" />
-                                    <Input placeholder="سنة الطبع" id="mat-year" className="h-10 text-sm" />
-                                    <Input placeholder="تاريخ وفاة المؤلف (هـ)" id="mat-death" className="h-10 text-sm" />
-                                    <Input placeholder="الوسوم (مثلاً: فقه, تاريخ)" id="mat-tags" className="h-10 text-sm" />
-                                    <Select defaultValue="book">
-                                        <SelectTrigger className="h-10" id="mat-type">
-                                            <SelectValue placeholder="نوع المرجع" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="book">كتاب</SelectItem>
-                                            <SelectItem value="paper">بحث/ورقة</SelectItem>
-                                            <SelectItem value="link">رابط</SelectItem>
-                                            <SelectItem value="other">أخرى</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                {/* --- Library Tab --- */}
+                <TabsContent value="materials" className="focus-visible:outline-none pb-24">
+                    <Card className="border-0 shadow-sm ring-1 ring-black/5 min-h-[60vh] bg-gray-50/50">
+                        <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-gray-50/95 backdrop-blur z-10 border-b px-4 py-3">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><Library className="w-5 h-5" /></div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 leading-none">المكتبة والمراجع</h3>
+                                    <p className="text-[10px] text-gray-500 mt-1">إدارة المصادر والمراجع العلمية ({project?.materials.length || 0})</p>
                                 </div>
-                                <Button onClick={() => {
-                                    const titleEl = document.getElementById('mat-title') as HTMLInputElement;
-                                    const authorEl = document.getElementById('mat-author') as HTMLInputElement;
-                                    const publisherEl = document.getElementById('mat-publisher') as HTMLInputElement;
-                                    const yearEl = document.getElementById('mat-year') as HTMLInputElement;
-                                    const deathEl = document.getElementById('mat-death') as HTMLInputElement;
-                                    const tagsEl = document.getElementById('mat-tags') as HTMLInputElement;
-
-                                    if (titleEl.value && project) {
-                                        const newMat: Omit<ResearchMaterial, 'id'> = {
-                                            title: titleEl.value,
-                                            author: authorEl.value || undefined,
-                                            publisher: publisherEl.value || undefined,
-                                            year: yearEl.value || undefined,
-                                            deathDate: deathEl.value || undefined,
-                                            tags: tagsEl.value ? tagsEl.value.split(',').map(t => t.trim()) : [],
-                                            type: 'book',
-                                            status: 'to_read'
-                                        };
-                                        addMaterialMutation.mutate(newMat);
-                                        titleEl.value = '';
-                                        authorEl.value = '';
-                                        publisherEl.value = '';
-                                        yearEl.value = '';
-                                        deathEl.value = '';
-                                    }
-                                }} className="bg-purple-600 hover:bg-purple-700 h-10 w-full md:w-auto">
-                                    <Plus className="w-4 h-4 ml-1" /> إضافة مرجع
-                                </Button>
                             </div>
+                            <Button onClick={() => setIsAddMaterialOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 h-9 px-4 rounded-xl shadow-lg shadow-indigo-200/50">
+                                <Plus className="w-4 h-4 ml-2" /> إضافة مرجع
+                            </Button>
+                        </CardHeader>
 
-                            {/* Materials List */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {(project?.materials || []).map(mat => (
-                                    <Card key={mat.id} className="border border-gray-100 hover:border-purple-200 transition-colors">
-                                        <CardContent className="p-4">
-                                            <div className="flex items-start justify-between mb-2">
+                        <CardContent className="p-4">
+                            {(project?.materials || []).length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {(project?.materials || []).map((mat) => (
+                                        <div key={mat.id} className="group bg-white rounded-xl border border-gray-100 hover:border-indigo-300 shadow-sm hover:shadow-md transition-all p-4 flex flex-col relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-2 h-full bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                                            <div className="flex justify-between items-start mb-2 pl-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-lg">
-                                                        {mat.type === 'book' ? '📕' : mat.type === 'paper' ? '📄' : '🔗'}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-sm text-gray-800">{mat.title}</h4>
-                                                        {mat.author && <p className="text-xs text-gray-500">{mat.author} {mat.deathDate ? `(ت: ${mat.deathDate})` : ''}</p>}
-                                                    </div>
+                                                    <span className="text-2xl">{mat.type === 'book' ? '📕' : mat.type === 'paper' ? '📄' : '🔗'}</span>
+                                                    <Badge variant="outline" className="text-[10px] bg-gray-50">{mat.type === 'book' ? 'كتاب' : mat.type === 'paper' ? 'ورقة' : 'موقع'}</Badge>
                                                 </div>
-                                                <Badge variant="outline" className={`text-[10px] ${mat.status === 'read' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                                    {mat.status === 'read' ? '✅ قرأت' : '⏳ قيد الانتظار'}
+                                                <Button size="icon" variant="ghost" className="h-6 w-6 -mt-1 -ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => {
+                                                    if (confirm('حذف المرجع؟')) deleteMaterialMutation.mutate(mat.id);
+                                                }}>
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+
+                                            <h4 className="font-bold text-gray-800 leading-snug mb-1 line-clamp-2" title={mat.title}>{mat.title}</h4>
+                                            <p className="text-xs text-gray-500 mb-3 line-clamp-1">{mat.author} {mat.year && `(${mat.year})`}</p>
+
+                                            <div className="flex flex-wrap gap-1 mt-auto">
+                                                {mat.publisher && <span className="text-[10px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded border border-slate-100">{mat.publisher}</span>}
+                                                <Badge variant={mat.status === 'read' ? 'default' : 'secondary'} className={`text-[9px] h-5 cursor-pointer ${mat.status === 'read' ? 'bg-emerald-500 hover:bg-emerald-600' : 'hover:bg-gray-200'}`} onClick={() => {
+                                                    updateMaterialMutation.mutate({ id: mat.id, updates: { status: mat.status === 'read' ? 'to_read' : 'read' } });
+                                                }}>
+                                                    {mat.status === 'read' ? 'تمت القراءة' : 'قيد الانتظار'}
                                                 </Badge>
                                             </div>
-                                            <div className="flex flex-wrap gap-2 text-[10px] text-gray-400">
-                                                {mat.publisher && <span className="bg-gray-100 px-2 py-1 rounded">🏛️ {mat.publisher}</span>}
-                                                {mat.year && <span className="bg-gray-100 px-2 py-1 rounded">📅 {mat.year}</span>}
-                                            </div>
-                                            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-                                                <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => {
-                                                    const newStatus = mat.status === 'read' ? 'to_read' : 'read';
-                                                    updateMaterialMutation.mutate({ id: mat.id, updates: { status: newStatus } });
-                                                }}>
-                                                    {mat.status === 'read' ? 'إعادة للانتظار' : 'تم القراءة'}
-                                                </Button>
-                                                <Button size="sm" variant="ghost" className="h-7 text-xs text-rose-500 hover:bg-rose-50" onClick={() => {
-                                                    if (confirm("هل أنت متأكد من حذف المرجع؟")) {
-                                                        deleteMaterialMutation.mutate(mat.id);
-                                                    }
-                                                }}>
-                                                    <Trash className="w-3 h-3" />
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-
-                            {(project?.materials || []).length === 0 && (
-                                <div className="text-center py-12 text-gray-400">
-                                    <Library className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                    <p>لا توجد مراجع مسجلة بعد</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center min-h-[300px] text-center p-8 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                                    <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300">
+                                        <Library className="w-10 h-10 text-indigo-300" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-gray-800 mb-2">مكتبة البحث فارغة</h3>
+                                    <p className="text-gray-400 max-w-sm mx-auto mb-6 leading-relaxed">قم بإضافة المراجع والكتب والأوراق البحثية لتنظيم مصادرك والاقتباس منها بسهولة أثناء الكتابة.</p>
+                                    <Button onClick={() => setIsAddMaterialOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 px-8 rounded-full shadow-lg shadow-indigo-100">
+                                        <Plus className="w-4 h-4 ml-2" /> إضافة أول مرجع
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>
@@ -1439,11 +1455,70 @@ export default function AcademicManager() {
                 <TabsContent value="stats" className="focus-visible:outline-none">
                     <StatsDashboard project={project} />
                 </TabsContent>
+
+                {/* Bottom Navigation Bar - Inside Tabs to ensure sync */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2 z-[100] flex justify-around items-center shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-safe-area">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setActiveTab('drafts')}
+                        className={`flex flex-col items-center gap-0.5 h-12 px-3 rounded-xl transition-all ${activeTab === 'drafts' ? 'text-indigo-600 bg-indigo-50 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <StickyNote className={`w-5 h-5 ${activeTab === 'drafts' ? 'fill-current' : ''}`} />
+                        <span className="text-[10px] font-black">النصوص</span>
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        onClick={() => setActiveTab('plan')}
+                        className={`flex flex-col items-center gap-0.5 h-12 px-3 rounded-xl transition-all ${activeTab === 'plan' ? 'text-indigo-600 bg-indigo-50 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <LayoutList className={`w-5 h-5 ${activeTab === 'plan' ? 'fill-current' : ''}`} />
+                        <span className="text-[10px] font-black">الهيكل</span>
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        onClick={() => setActiveTab('materials')}
+                        className={`flex flex-col items-center gap-0.5 h-12 px-3 rounded-xl transition-all ${activeTab === 'materials' ? 'text-indigo-600 bg-indigo-50 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <Library className={`w-5 h-5 ${activeTab === 'materials' ? 'fill-current' : ''}`} />
+                        <span className="text-[10px] font-black">المكتبة</span>
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        onClick={() => setActiveTab('timeline')}
+                        className={`flex flex-col items-center gap-0.5 h-12 px-3 rounded-xl transition-all ${activeTab === 'timeline' ? 'text-indigo-600 bg-indigo-50 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <History className={`w-5 h-5 ${activeTab === 'timeline' ? 'fill-current' : ''}`} />
+                        <span className="text-[10px] font-black">الجدول</span>
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        onClick={() => setActiveTab('stats')}
+                        className={`flex flex-col items-center gap-0.5 h-12 px-3 rounded-xl transition-all ${activeTab === 'stats' ? 'text-amber-600 bg-amber-50 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                        <BarChart2 className={`w-5 h-5 ${activeTab === 'stats' ? 'fill-current' : ''}`} />
+                        <span className="text-[10px] font-black">الإحصائيات</span>
+                    </Button>
+                </div>
             </Tabs >
+
+
+
 
             {/* --- Dialogs --- */}
 
             {/* Editor Dialog - Full Screen Professional Layout */}
+            {/* Other Dialogs */}
+            <AddMaterialDialog
+                isOpen={isAddMaterialOpen}
+                onClose={() => setIsAddMaterialOpen(false)}
+                onAdd={(material) => {
+                    addMaterialMutation.mutate(material);
+                }}
+            />
             <GlobalSearch />
             {editingNode && (
                 isAndroid ? (
@@ -1594,31 +1669,9 @@ export default function AcademicManager() {
                                             toast({ title: "✅ تم إدراج جدول" });
                                         }}><LayoutGrid className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
                                         {/* Footnote */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة حاشية" onClick={() => {
-                                            const content = editorRef.current?.innerHTML || '';
-                                            const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
-                                            document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
-                                            const activePageRef = pageRefs.current[activePageIndex];
-                                            if (activePageRef) {
-                                                let section = activePageRef.querySelector('.footnotes-section');
-                                                if (!section) {
-                                                    const footnotesSection = document.createElement('div');
-                                                    footnotesSection.className = 'footnotes-section';
-                                                    footnotesSection.style.cssText = 'margin-top:40px;padding-top:15px;border-top:2px dashed #d97706;';
-                                                    footnotesSection.innerHTML = '<p style="font-weight:bold;color:#d97706;font-size:16px;margin-bottom:10px;">📝 الحواشي</p>';
-                                                    activePageRef.appendChild(footnotesSection);
-                                                    section = footnotesSection;
-                                                }
-                                                if (section) {
-                                                    const newFootnote = document.createElement('p');
-                                                    newFootnote.className = 'footnote-item';
-                                                    newFootnote.style.cssText = 'font-size:14px;color:#666;';
-                                                    newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
-                                                    section.appendChild(newFootnote);
-                                                }
-                                            }
-                                            toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
-                                        }}><Footprints className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة حاشية" onClick={insertFootnote}>
+                                            <Footprints className="w-4 h-4" />
+                                        </Button>
                                         {/* Comment */}
                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة تعليق" onClick={() => {
                                             const selection = window.getSelection();
@@ -1785,30 +1838,9 @@ export default function AcademicManager() {
                                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-rose-400 hover:bg-rose-500/20" onClick={() => pdfInputRef.current?.click()} title="إدراج PDF"><FileUp className="w-3 h-3 ml-1" /> PDF</Button>
 
                                         {/* Footnote - Enhanced with bottom section */}
-                                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
-                                            const content = editorRef.current?.innerHTML || '';
-                                            const footnoteCount = (content.match(/class="footnote-marker"/g) || []).length + 1;
-                                            // Add marker in text
-                                            document.execCommand('insertHTML', false, `<sup class="footnote-marker" style="color:#d97706;cursor:pointer;font-weight:bold;">[${footnoteCount}]</sup>`);
-                                            // Check if footnotes section exists, if not create it
-                                            if (editorRef.current && !editorRef.current.querySelector('.footnotes-section')) {
-                                                const footnotesSection = document.createElement('div');
-                                                footnotesSection.className = 'footnotes-section';
-                                                footnotesSection.style.cssText = 'margin-top:40px;padding-top:20px;border-top:2px dashed #ccc;';
-                                                footnotesSection.innerHTML = `<p style="font-weight:bold;color:#6366f1;margin-bottom:10px;">── الحواشي ──</p><p class="footnote-item" style="font-size:14px;color:#666;">[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span></p>`;
-                                                editorRef.current.appendChild(footnotesSection);
-                                            } else if (editorRef.current) {
-                                                const section = editorRef.current.querySelector('.footnotes-section');
-                                                if (section) {
-                                                    const newFootnote = document.createElement('p');
-                                                    newFootnote.className = 'footnote-item';
-                                                    newFootnote.style.cssText = 'font-size:14px;color:#666;';
-                                                    newFootnote.innerHTML = `[${footnoteCount}] <span contenteditable="true" style="color:#333;">أدخل نص الحاشية هنا</span>`;
-                                                    section.appendChild(newFootnote);
-                                                }
-                                            }
-                                            toast({ title: `✅ تم إضافة حاشية [${footnoteCount}]` });
-                                        }} title="حاشية"><Footprints className="w-3 h-3 ml-1" /> حاشية</Button>
+                                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={insertFootnote} title="حاشية">
+                                            <Footprints className="w-3 h-3 ml-1" /> حاشية
+                                        </Button>
 
                                         {/* Page Break - Creates independent pages */}
                                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
@@ -1880,13 +1912,11 @@ export default function AcademicManager() {
                                                         contentEditable={!isAndroid}
                                                         suppressContentEditableWarning={true}
                                                         dangerouslySetInnerHTML={{ __html: pageContent }}
-                                                        className="outline-none text-justify h-full focus:outline-none overflow-hidden"
+                                                        className="outline-none text-justify h-full focus:outline-none overflow-hidden flex flex-col"
                                                         dir={textDirection}
                                                         onFocus={() => setActivePageIndex(pageIndex)}
                                                         onInput={(e) => {
                                                             handlePageInput(pageIndex, e.currentTarget.innerHTML);
-                                                            // Check for overflow
-                                                            setTimeout(() => checkOverflowAndPaginate(pageIndex), 100);
                                                         }}
                                                         onKeyDown={(e) => {
                                                             if (e.ctrlKey || e.metaKey) {
@@ -1978,7 +2008,9 @@ export default function AcademicManager() {
                                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
                                             const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
                                             // Collect content from all pages for multi-page export
-                                            const content = pages.join('<div style="page-break-after:always;margin:40px 0;"></div>') || draftContent;
+                                            const content = Array.isArray(pages) && pages.length > 0 ? pages.join('<div style="page-break-after:always;margin-top:40px;"></div>') : draftContent;
+
+                                            // Open a new window for printing
                                             const printWindow = window.open('', '_blank');
                                             if (printWindow) {
                                                 printWindow.document.write(`<!DOCTYPE html>
@@ -1987,7 +2019,7 @@ export default function AcademicManager() {
 <meta charset="UTF-8">
 <title>${title}</title>
 <style>
-@page { size: ${pageSize}; margin: 20mm; }
+@page { size: ${pageSize}; margin: 2.5cm; }
 * { box-sizing: border-box; }
 body { 
     font-family: 'Traditional Arabic', 'Arial', serif; 
@@ -1997,29 +2029,39 @@ body {
     text-align: justify;
     margin: 0;
     padding: 20px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 h1, h2, h3 { text-align: center; margin: 20px 0; }
-table { border-collapse: collapse; width: 100%; margin: 15px 0; }
-td, th { border: 1px solid #333; padding: 10px; text-align: right; }
-th { background: #f5f5f5; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; border: 1px solid #000; }
+td, th { border: 1px solid #000; padding: 10px; text-align: right; }
+th { background: #f0f0f0 !important; font-weight: bold; }
+a { text-decoration: none; color: black; }
 .footnotes-section { 
     margin-top: 40px; 
     padding-top: 15px; 
-    border-top: 2px dashed #666; 
-    font-size: 12pt;
+    border-top: 1px solid #000; 
+    font-size: 10pt;
 }
-.footnote-marker { color: #d97706; font-weight: bold; }
-mark { background-color: #fef3c7; padding: 2px 4px; }
+.footnote-marker { font-size: 0.8em; vertical-align: super; font-weight: bold; }
 ul, ol { padding-right: 25px; margin: 10px 0; }
 @media print {
-    body { padding: 0; }
+    body { padding: 0; margin: 0; }
+    .no-print { display: none; }
 }
 </style>
 </head>
-<body>${content}</body>
+<body>
+    <h1 style="text-align:center; margin-bottom: 40px;">${title}</h1>
+    ${content}
+    <script>
+        window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };
+    </script>
+</body>
 </html>`);
                                                 printWindow.document.close();
-                                                setTimeout(() => { printWindow.print(); }, 500);
+                                            } else {
+                                                toast({ title: "⚠️ تم حظر النافذة المنبثقة", description: "اسمح بالنوافذ المنبثقة للطباعة" });
                                             }
                                         }} title="تصدير PDF">
                                             <FileText className="w-4 h-4 ml-1" />
@@ -2028,12 +2070,13 @@ ul, ol { padding-right: 25px; margin: 10px 0; }
                                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
                                             const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
                                             // Collect content from all pages for Word export
-                                            const content = pages.join('<br style="page-break-after:always;">') || draftContent;
-                                            const docContent = `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+                                            const content = Array.isArray(pages) && pages.length > 0 ? pages.join('<br clear="all" style="page-break-before:always" />') : draftContent;
+
+                                            // Prepare HTML for Word with specific namespaces and XML data for view settings
+                                            const docContent = `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
 <title>${title}</title>
 <!--[if gte mso 9]>
 <xml>
@@ -2045,33 +2088,66 @@ ul, ol { padding-right: 25px; margin: 10px 0; }
 </xml>
 <![endif]-->
 <style>
-@page { size: ${pageSize}; margin: 2.5cm; }
-body { 
-    font-family: 'Traditional Arabic', 'Arial', serif; 
-    font-size: 14pt; 
-    line-height: 1.8; 
-    direction: rtl; 
-    text-align: justify;
-    mso-bidi-font-family: 'Traditional Arabic';
+@page {
+    size: ${pageSize};
+    margin: 2.54cm 2.54cm 2.54cm 2.54cm;
+    mso-page-orientation: portrait;
 }
-table { border-collapse: collapse; width: 100%; }
-td, th { border: 1px solid #000; padding: 8px; }
-.footnotes-section { margin-top: 30pt; padding-top: 10pt; border-top: 1px solid #ccc; }
-mark { background-color: #ffff00; }
+body {
+    font-family: 'Traditional Arabic', Arial, sans-serif;
+    font-size: 14pt;
+    tab-interval: 36.0pt;
+    text-align: justify;
+    direction: rtl;
+}
+p {
+    margin: 0in 0in 10.0pt 0in;
+    line-height: ${lineSpacing * 115}%;
+    mso-pagination: widow-orphan;
+    font-size: 14.0pt;
+    font-family: "Traditional Arabic", "Arial", sans-serif;
+    mso-ascii-font-family: "Arial";
+    mso-hansi-font-family: "Arial";
+    mso-bidi-font-family: "Traditional Arabic";
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    mso-yfti-tbllook: 1184;
+    mso-padding-alt: 0cm 5.4pt 0cm 5.4pt;
+}
+td {
+    border: solid windowtext 1.0pt;
+    padding: 0cm 5.4pt 0cm 5.4pt;
+}
+.footnotes-section {
+    mso-element: footnote-list;
+}
+/* Ensure proper RTL support */
+body, table, p, div, span {
+    mso-bidi-language: AR-SA;
+    mso-ascii-font-family: Arial;
+    mso-hansi-font-family: Arial;
+    mso-bidi-font-family: "Traditional Arabic";
+}
 </style>
 </head>
-<body>${content}</body>
+<body lang=AR-SA style='tab-interval:36.0pt'>
+<div class=WordSection1 dir=RTL>
+    <p style='text-align:center;font-size:18pt;font-weight:bold'>${title}</p>
+    ${content}
+</div>
+</body>
 </html>`;
-                                            const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8' });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = `${title}.doc`;
-                                            document.body.appendChild(a);
-                                            a.click();
-                                            document.body.removeChild(a);
-                                            URL.revokeObjectURL(url);
-                                            toast({ title: "✅ تم تصدير Word", description: "افتح الملف في Microsoft Word" });
+
+                                            // Create Blob with UTF-8 BOM
+                                            const blob = new Blob(['\ufeff', docContent], {
+                                                type: 'application/msword;charset=utf-8'
+                                            });
+
+                                            // Trigger download
+                                            saveAs(blob, `${title}.doc`);
+                                            toast({ title: "✅ جارٍ التنزيل", description: "تم إنشاء ملف Word بنجاح" });
                                         }} title="تصدير Word">
                                             <FileUp className="w-4 h-4 ml-1" />
                                             <span className="hidden sm:inline">Word</span>
@@ -2150,6 +2226,29 @@ mark { background-color: #ffff00; }
                                     <span className="font-bold text-sm">الهيكل البحثي</span>
                                 </div>
                                 <div className="flex items-center gap-1">
+                                    {/* Expand/Collapse Actions */}
+                                    <div className="flex bg-indigo-900/50 rounded-lg p-0.5 mr-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 text-white/40 hover:text-white"
+                                            onClick={() => setOpenFolders(new Set(project?.phases.map(p => p.id) || []))}
+                                            title="توسيع الكل"
+                                        >
+                                            <ChevronDown className="w-3 h-3" />
+                                        </Button>
+                                        <div className="w-px bg-white/10 my-1"></div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 text-white/40 hover:text-white"
+                                            onClick={() => setOpenFolders(new Set())}
+                                            title="طي الكل"
+                                        >
+                                            <ChevronUp className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -2166,7 +2265,7 @@ mark { background-color: #ffff00; }
                             </div>
 
                             {/* Document Structure */}
-                            <ScrollArea className="flex-1" dir="rtl">
+                            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-600 scrollbar-track-transparent custom-scrollbar" dir="rtl">
                                 <div className="p-2 space-y-1">
                                     {project?.phases.map((phase) => (
                                         <div key={phase.id} className="space-y-0.5">
@@ -2202,7 +2301,7 @@ mark { background-color: #ffff00; }
                                             </div>
 
                                             {/* Chapters - Collapsible Content */}
-                                            {openFolders[phase.id] && phase.chapters?.map((chapter) => (
+                                            {openFolders.has(phase.id) && phase.chapters?.map((chapter) => (
                                                 <div
                                                     key={chapter.id}
                                                     className={`group flex items-center justify-between p-2 mr-4 rounded text-[10px] cursor-pointer transition ${editingNode?.chapterId === chapter.id ? 'bg-amber-500 text-black font-bold' : 'hover:bg-indigo-800'}`}
@@ -2245,7 +2344,7 @@ mark { background-color: #ffff00; }
                                         </div>
                                     ))}
                                 </div>
-                            </ScrollArea>
+                            </div>
 
                             {/* Sidebar Footer - Simplified */}
                             <div className="p-3 border-t border-indigo-800 text-center">
@@ -2533,22 +2632,28 @@ mark { background-color: #ffff00; }
                         />
                     </div>
 
-                    <div className="p-4 bg-white border-t flex justify-between items-center gap-3">
-                        <div className="text-xs text-gray-400 font-bold px-4">
-                            * التعديلات هنا لا تؤثر على النصوص الأصلية
+                    <div className="p-4 bg-white border-t flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex-1 w-full sm:w-auto">
+                            <Label className="text-[10px] text-gray-400 mb-1 block">اسم الملف عند الحفظ:</Label>
+                            <Input
+                                value={exportFilename}
+                                onChange={(e) => setExportFilename(e.target.value)}
+                                className="h-9 text-xs border-indigo-100 focus:ring-indigo-500 rounded-lg text-right"
+                                placeholder="مثال: بحث التخرج النهائي"
+                            />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0">
                             <Button variant="outline" onClick={() => {
                                 navigator.clipboard.writeText(document.getElementById('export-content-area')?.innerText || '');
                                 toast({ title: "✅ تم النسخ" });
                             }} className="h-10 px-4 rounded-xl font-bold border-gray-200">
-                                <Copy className="w-4 h-4 ml-2" /> نسخ نص
+                                <Copy className="w-4 h-4 ml-2" /> نص
                             </Button>
                             <Button variant="outline" onClick={handleWordExport} className="h-10 px-4 rounded-xl font-bold border-indigo-100 text-indigo-700 hover:bg-indigo-50">
                                 <Download className="w-4 h-4 ml-2" /> Word
                             </Button>
                             <Button onClick={handlePdfExport} className="h-10 px-6 rounded-xl font-black bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-100/50">
-                                <Printer className="w-4 h-4 ml-2" /> تصدير PDF
+                                <Printer className="w-4 h-4 ml-2" /> PDF
                             </Button>
                         </div>
                     </div>
