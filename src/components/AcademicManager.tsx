@@ -2031,21 +2031,17 @@ p { margin-bottom: 15px; }
                                                         contentEditable={!isAndroid}
                                                         suppressContentEditableWarning={true}
                                                         dangerouslySetInnerHTML={{ __html: pageContent }}
-                                                        className="outline-none h-full focus:outline-none overflow-hidden flex flex-col arabic-editor"
+                                                        className="outline-none h-full focus:outline-none overflow-hidden flex flex-col"
                                                         dir="rtl"
                                                         style={{
                                                             direction: 'rtl',
                                                             textAlign: 'right',
-                                                            unicodeBidi: 'isolate-override',
+                                                            unicodeBidi: 'bidi-override',
                                                             writingMode: 'horizontal-tb',
                                                             caretColor: '#d97706',
                                                             lineHeight: lineSpacing,
                                                             fontFamily: "'Amiri', 'Traditional Arabic', 'Tajawal', 'Arial', serif",
                                                             fontSize: '18px',
-                                                            letterSpacing: '0',
-                                                            wordSpacing: '0.1em',
-                                                            textRendering: 'optimizeLegibility',
-                                                            WebkitFontSmoothing: 'antialiased',
                                                         }}
 
                                                         onFocus={() => setActivePageIndex(pageIndex)}
