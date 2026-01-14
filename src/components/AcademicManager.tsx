@@ -179,7 +179,7 @@ export default function AcademicManager({ onClose }: { onClose?: () => void }) {
     const [pageSize, setPageSize] = useState<'A4' | 'A5' | 'Letter'>('A4');
     const [pages, setPages] = useState<string[]>(['']); // Array of page contents
     const [activePageIndex, setActivePageIndex] = useState(0);
-    const [textDirection, setTextDirection] = useState<'rtl' | 'ltr' | 'auto'>('auto');
+    const [textDirection, setTextDirection] = useState<'rtl' | 'ltr' | 'auto'>('rtl'); // تعيين RTL كافتراضي للعربية
 
     // Page dimensions in mm (converted to pixels at 96 DPI)
     const pageSizes = {
@@ -237,31 +237,70 @@ export default function AcademicManager({ onClose }: { onClose?: () => void }) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            const result = await mammoth.convertToHtml({ arrayBuffer });
-
-            if (result.value) {
-                const importedContent = result.value;
-                // Add as a new chapter in the first phase
-                if (project && project.phases.length > 0) {
-                    const phaseId = project.phases[0].id;
-                    const chapterTitle = file.name.replace('.docx', '').replace('.doc', '') || 'ملف مستورد';
-
-                    // Call the addChapter logic (assuming addChapterMutation is used inside addChapter wrapper or direct mutation)
-                    // Since addChapter is a function wrapper in this file:
-                    addChapter(phaseId, chapterTitle, importedContent); // Assuming addChapter accepts content
-                    toast({ title: "✅ تم استيراد ملف Word بنجاح" });
-                } else {
-                    toast({ title: "⚠️ لا توجد مراحل لإضافة الملف إليها" });
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            toast({ title: "❌ فشل استيراد ملف Word", variant: "destructive" });
+        // التحقق من نوع الملف
+        if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
+            toast({
+                title: "❌ نوع ملف غير مدعوم",
+                description: "يرجى اختيار ملف Word (.doc أو .docx)",
+                variant: "destructive"
+            });
+            e.target.value = '';
+            return;
         }
 
-        // Reset input
+        toast({ title: "⏳ جاري استيراد الملف..." });
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.convertToHtml({
+                arrayBuffer,
+                styleMap: [
+                    "p[style-name='Arabic'] => p.arabic:fresh",
+                    "p[style-name='Heading 1'] => h1:fresh",
+                    "p[style-name='Heading 2'] => h2:fresh"
+                ]
+            });
+
+            if (result.value) {
+                // إضافة تنسيق RTL للمحتوى المستورد
+                let importedContent = result.value;
+                importedContent = `<div dir="rtl" style="text-align: right; font-family: 'Traditional Arabic', serif;">${importedContent}</div>`;
+
+                if (project && project.phases.length > 0) {
+                    const phaseId = project.phases[0].id;
+                    const chapterTitle = file.name
+                        .replace('.docx', '')
+                        .replace('.doc', '') || 'ملف مستورد';
+
+                    await addChapter(phaseId, chapterTitle, importedContent);
+                    toast({
+                        title: "✅ تم استيراد ملف Word بنجاح",
+                        description: `تم إضافة "${chapterTitle}" إلى المرحلة الأولى`
+                    });
+                } else {
+                    toast({
+                        title: "⚠️ لا توجد مراحل",
+                        description: "أضف مرحلة أولاً من تبويب 'الهيكل'",
+                        variant: "destructive"
+                    });
+                }
+            } else {
+                toast({
+                    title: "⚠️ الملف فارغ",
+                    description: "لم يتم العثور على محتوى في الملف",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            console.error("Word import error:", error);
+            toast({
+                title: "❌ فشل استيراد ملف Word",
+                description: "تأكد من أن الملف غير تالف وحاول مرة أخرى",
+                variant: "destructive"
+            });
+        }
+
+        // إعادة تعيين input
         e.target.value = '';
     };
 
@@ -1242,6 +1281,13 @@ p { margin-bottom: 15px; }
                                 >
                                     <Plus className="w-4 h-4" /> صندوق نص جديد
                                 </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={() => document.getElementById('word-import-input')?.click()}
+                                    className="bg-blue-600 hover:bg-blue-700 gap-2 h-10 px-4 rounded-xl shadow-lg shadow-blue-200/50"
+                                >
+                                    <FileUp className="w-4 h-4" /> استيراد Word
+                                </Button>
                                 <Button size="sm" onClick={handleOpenExportEditor} className="bg-emerald-600 hover:bg-emerald-700 gap-2 h-10 px-4 rounded-xl shadow-lg shadow-emerald-200/50" disabled={selectedForExport.size === 0}>
                                     <PenTool className="w-4 h-4" /> تجميع وتحرير ({selectedForExport.size})
                                 </Button>
@@ -1765,7 +1811,6 @@ p { margin-bottom: 15px; }
                                                 }}
                                                 onClick={() => setActivePageIndex(pageIndex)}
                                             >
-                                                {/* Editable Content */}
                                                 <div
                                                     ref={el => pageRefs.current[pageIndex] = el}
                                                     id={`editor-page-${pageIndex}`}
@@ -1774,19 +1819,7 @@ p { margin-bottom: 15px; }
                                                     dangerouslySetInnerHTML={{ __html: pageContent }}
                                                     className="outline-none h-full focus:outline-none overflow-hidden flex flex-col"
                                                     dir="rtl"
-                                                    style={{
-                                                        direction: 'rtl',
-                                                        textAlign: 'right',
-                                                        writingMode: 'horizontal-tb',
-                                                        caretColor: '#d97706',
-                                                        lineHeight: lineSpacing,
-                                                        fontFamily: "'Amiri', 'Traditional Arabic', 'Tajawal', 'Arial', serif",
-                                                        fontSize: '18px',
-                                                    }}
-
-
                                                     onFocus={() => setActivePageIndex(pageIndex)}
-
                                                     onInput={(e) => {
                                                         handlePageInput(pageIndex, e.currentTarget.innerHTML);
                                                     }}
@@ -1828,10 +1861,10 @@ p { margin-bottom: 15px; }
                                                         }
                                                     }}
                                                     style={{
-                                                        fontFamily: 'Arial, "Traditional Arabic", "Tajawal", sans-serif',
+                                                        fontFamily: "'Traditional Arabic', 'Amiri', 'Tajawal', 'Arial', serif",
                                                         fontSize: '18px',
-                                                        lineHeight: '1.8',
-                                                        textAlign: textDirection === 'rtl' ? 'justify' : 'left',
+                                                        lineHeight: lineSpacing,
+                                                        textAlign: textDirection === 'rtl' ? 'right' : textDirection === 'ltr' ? 'left' : 'justify',
                                                         direction: textDirection,
                                                         unicodeBidi: 'embed',
                                                         caretColor: '#d97706',
@@ -2571,6 +2604,16 @@ body, table, p, div, span, h1, h2, h3, h4, h5, h6, li {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Hidden File Input for Word Import */}
+            <input
+                id="word-import-input"
+                ref={wordInputRef}
+                type="file"
+                accept=".doc,.docx"
+                onChange={handleWordImport}
+                style={{ display: 'none' }}
+            />
         </div>
     );
 };
