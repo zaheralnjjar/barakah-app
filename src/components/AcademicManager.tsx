@@ -1771,10 +1771,22 @@ p { margin-bottom: 15px; }
                                         </Button>
                                         {/* Insert Table */}
                                         <Button variant="ghost" size="sm" className={`${sidebarVisible ? 'h-6 w-6' : 'h-8 w-8'} p-0 text-white/70 hover:text-white`} title="إدراج جدول" onClick={() => {
-                                            const table = `<table style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;"><tr><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;background:#f8fafc;">&nbsp;</td></tr><tr><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td><td style="border:1px solid #6366f1;padding:12px;">&nbsp;</td></tr></table>`;
+                                            const table = `<table contenteditable="false" style="width:100%;border-collapse:collapse;margin:16px 0;direction:rtl;table-layout:fixed;">
+                                                <tr>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;background:#f8fafc;min-height:40px;text-align:right;direction:rtl;">اكتب هنا</td>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;background:#f8fafc;min-height:40px;text-align:right;direction:rtl;">اكتب هنا</td>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;background:#f8fafc;min-height:40px;text-align:right;direction:rtl;">اكتب هنا</td>
+                                                </tr>
+                                                <tr>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;min-height:40px;text-align:right;direction:rtl;"></td>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;min-height:40px;text-align:right;direction:rtl;"></td>
+                                                    <td contenteditable="true" style="border:2px solid #6366f1;padding:12px;min-height:40px;text-align:right;direction:rtl;"></td>
+                                                </tr>
+                                            </table><p><br></p>`;
                                             document.execCommand('insertHTML', false, table);
-                                            toast({ title: "✅ تم إدراج جدول" });
+                                            toast({ title: "✅ تم إدراج جدول - انقر داخل الخلية للكتابة" });
                                         }}><LayoutGrid className={`${sidebarVisible ? 'w-3 h-3' : 'w-4 h-4'}`} /></Button>
+
                                         {/* Footnote */}
                                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-white/70 hover:text-white" title="إضافة حاشية" onClick={insertFootnote}>
                                             <Footprints className="w-4 h-4" />
@@ -2019,17 +2031,23 @@ p { margin-bottom: 15px; }
                                                         contentEditable={!isAndroid}
                                                         suppressContentEditableWarning={true}
                                                         dangerouslySetInnerHTML={{ __html: pageContent }}
-                                                        className="outline-none h-full focus:outline-none overflow-hidden flex flex-col"
+                                                        className="outline-none h-full focus:outline-none overflow-hidden flex flex-col arabic-editor"
                                                         dir="rtl"
                                                         style={{
                                                             direction: 'rtl',
                                                             textAlign: 'right',
-                                                            unicodeBidi: 'embed',
+                                                            unicodeBidi: 'isolate-override',
                                                             writingMode: 'horizontal-tb',
                                                             caretColor: '#d97706',
                                                             lineHeight: lineSpacing,
-                                                            fontFamily: "'Tajawal', 'Amiri', 'Traditional Arabic', sans-serif",
+                                                            fontFamily: "'Amiri', 'Traditional Arabic', 'Tajawal', 'Arial', serif",
+                                                            fontSize: '18px',
+                                                            letterSpacing: '0',
+                                                            wordSpacing: '0.1em',
+                                                            textRendering: 'optimizeLegibility',
+                                                            WebkitFontSmoothing: 'antialiased',
                                                         }}
+
                                                         onFocus={() => setActivePageIndex(pageIndex)}
 
                                                         onInput={(e) => {
@@ -2102,35 +2120,25 @@ p { margin-bottom: 15px; }
                                 </div>
 
                                 {/* Footer Bar - Unified with all actions */}
-                                <div className="p-2 bg-slate-800 border-t border-slate-600 flex justify-between items-center shrink-0" dir="rtl">
-                                    {/* Right side - Action icons */}
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={async () => {
-                                            const textContent = draftContent.replace(/<[^>]*>/g, '');
-                                            if (navigator.share) {
-                                                try {
-                                                    await navigator.share({
-                                                        title: getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة',
-                                                        text: textContent.substring(0, 500),
-                                                    });
-                                                } catch { /* cancelled */ }
-                                            } else {
-                                                navigator.clipboard.writeText(textContent);
-                                                toast({ title: "✅ تم النسخ للمشاركة" });
-                                            }
-                                        }} title="مشاركة">
-                                            <Share2 className="w-4 h-4 ml-1" />
-                                            <span className="hidden sm:inline">مشاركة</span>
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
-                                            const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
-                                            // Collect content from all pages for multi-page export
-                                            const content = Array.isArray(pages) && pages.length > 0 ? pages.join('<div style="page-break-after:always;margin-top:40px;"></div>') : draftContent;
+                                <div className="p-3 bg-gradient-to-r from-slate-900 to-slate-800 border-t border-slate-600 flex justify-between items-center shrink-0" dir="rtl">
+                                    {/* Right side - Export buttons with clear colors */}
+                                    <div className="flex items-center gap-2">
+                                        {/* PDF Button - Red */}
+                                        <Button
+                                            size="sm"
+                                            className="h-9 px-4 text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg"
+                                            onClick={() => {
+                                                // Get title from chapter, task, or project
+                                                const chapterTitle = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title;
+                                                const title = chapterTitle || project?.title || 'بحث_أكاديمي';
+                                                // Collect content from all pages for multi-page export
+                                                const content = Array.isArray(pages) && pages.length > 0 ? pages.join('<div style="page-break-after:always;margin-top:40px;"></div>') : draftContent;
 
-                                            // Open a new window for printing
-                                            const printWindow = window.open('', '_blank');
-                                            if (printWindow) {
-                                                printWindow.document.write(`<!DOCTYPE html>
+
+                                                // Open a new window for printing
+                                                const printWindow = window.open('', '_blank');
+                                                if (printWindow) {
+                                                    printWindow.document.write(`<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8">
@@ -2176,18 +2184,25 @@ ul, ol { padding-right: 25px; margin: 10px 0; }
     </script>
 </body>
 </html>`);
-                                                printWindow.document.close();
-                                            } else {
-                                                toast({ title: "⚠️ تم حظر النافذة المنبثقة", description: "اسمح بالنوافذ المنبثقة للطباعة" });
-                                            }
-                                        }} title="تصدير PDF">
+                                                    printWindow.document.close();
+                                                } else {
+                                                    toast({ title: "⚠️ تم حظر النافذة المنبثقة", description: "اسمح بالنوافذ المنبثقة للطباعة" });
+                                                }
+                                            }} title="تصدير PDF">
                                             <FileText className="w-4 h-4 ml-1" />
-                                            <span className="hidden sm:inline">PDF</span>
+                                            PDF
                                         </Button>
-                                        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
-                                            const title = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title || 'مسودة';
+
+                                        {/* Word Button - Blue */}
+                                        <Button size="sm" className="h-9 px-4 text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg" onClick={() => {
+                                            // Get title from chapter, task, or project
+                                            const chapterTitle = getChapterOrTaskById(editingNode?.phaseId || '', editingNode?.chapterId, editingNode?.taskId)?.title;
+                                            const title = chapterTitle || project?.title || 'بحث_أكاديمي';
+                                            // Clean filename - remove special characters
+                                            const cleanTitle = title.replace(/[<>:"/\\|?*]/g, '').trim() || 'بحث_أكاديمي';
                                             // Collect content from all pages for Word export
                                             const content = Array.isArray(pages) && pages.length > 0 ? pages.join('<br clear="all" style="page-break-before:always" />') : draftContent;
+
 
                                             // Prepare HTML for Word with specific namespaces and XML data for view settings
                                             const docContent = `
@@ -2262,13 +2277,15 @@ body, table, p, div, span {
                                                 type: 'application/msword;charset=utf-8'
                                             });
 
-                                            // Trigger download
-                                            saveAs(blob, `${title}.doc`);
-                                            toast({ title: "✅ جارٍ التنزيل", description: "تم إنشاء ملف Word بنجاح" });
-                                        }} title="تصدير Word">
+                                            // Trigger download with clean filename
+                                            saveAs(blob, `${cleanTitle}.doc`);
+                                            toast({ title: "✅ جارٍ التنزيل", description: `تم حفظ الملف: ${cleanTitle}.doc` });
+
+                                        }}>
                                             <FileUp className="w-4 h-4 ml-1" />
-                                            <span className="hidden sm:inline">Word</span>
+                                            Word
                                         </Button>
+
                                         <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-white/70 hover:text-white hover:bg-white/10" onClick={() => {
                                             const textContent = draftContent.replace(/<[^>]*>/g, '');
                                             navigator.clipboard.writeText(textContent);
