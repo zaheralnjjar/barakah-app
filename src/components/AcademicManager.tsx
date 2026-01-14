@@ -2222,7 +2222,7 @@ ul, ol { padding-right: 25px; margin: 10px 0; }
     mso-page-orientation: portrait;
 }
 body {
-    font-family: 'Traditional Arabic', Arial, sans-serif;
+    font-family: 'Traditional Arabic', 'Amiri', Arial, sans-serif;
     font-size: 14pt;
     tab-interval: 36.0pt;
     text-align: justify;
@@ -2233,32 +2233,91 @@ p {
     line-height: ${lineSpacing * 115}%;
     mso-pagination: widow-orphan;
     font-size: 14.0pt;
-    font-family: "Traditional Arabic", "Arial", sans-serif;
+    font-family: "Traditional Arabic", "Amiri", "Arial", sans-serif;
     mso-ascii-font-family: "Arial";
     mso-hansi-font-family: "Arial";
     mso-bidi-font-family: "Traditional Arabic";
 }
+/* Preserve text colors */
+span[style*="color"] {
+    mso-style-textfill-type: solid;
+}
+/* Preserve background colors */
+span[style*="background"] {
+    mso-highlight: yellow;
+}
+/* Bold text */
+b, strong {
+    font-weight: bold;
+    mso-bidi-font-weight: bold;
+}
+/* Italic text */
+i, em {
+    font-style: italic;
+    mso-bidi-font-style: italic;
+}
+/* Underline */
+u {
+    text-decoration: underline;
+    mso-text-underline: single;
+}
+/* Tables */
 table {
     border-collapse: collapse;
     width: 100%;
     mso-yfti-tbllook: 1184;
     mso-padding-alt: 0cm 5.4pt 0cm 5.4pt;
+    direction: rtl;
 }
-td {
+td, th {
     border: solid windowtext 1.0pt;
     padding: 0cm 5.4pt 0cm 5.4pt;
+    mso-border-alt: solid windowtext .5pt;
+    text-align: right;
+    direction: rtl;
 }
+th {
+    background: #f0f0f0;
+    font-weight: bold;
+}
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: bold;
+    text-align: center;
+    direction: rtl;
+}
+h1 { font-size: 24pt; margin: 12pt 0; }
+h2 { font-size: 18pt; margin: 10pt 0; }
+h3 { font-size: 16pt; margin: 8pt 0; }
+/* Lists */
+ul, ol {
+    margin-right: 36pt;
+    direction: rtl;
+}
+/* Footnotes */
 .footnotes-section {
     mso-element: footnote-list;
+    border-top: 1pt solid black;
+    margin-top: 20pt;
+    padding-top: 10pt;
+}
+.footnote-marker {
+    vertical-align: super;
+    font-size: 0.8em;
 }
 /* Ensure proper RTL support */
-body, table, p, div, span {
+body, table, p, div, span, h1, h2, h3, h4, h5, h6, li {
     mso-bidi-language: AR-SA;
     mso-ascii-font-family: Arial;
     mso-hansi-font-family: Arial;
     mso-bidi-font-family: "Traditional Arabic";
 }
+/* Preserve inline styles */
+*[style] {
+    mso-style-priority: 99;
+}
 </style>
+
 </head>
 <body lang=AR-SA style='tab-interval:36.0pt'>
 <div class=WordSection1 dir=RTL>
