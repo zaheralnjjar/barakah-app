@@ -2036,13 +2036,13 @@ p { margin-bottom: 15px; }
                                                         style={{
                                                             direction: 'rtl',
                                                             textAlign: 'right',
-                                                            unicodeBidi: 'bidi-override',
                                                             writingMode: 'horizontal-tb',
                                                             caretColor: '#d97706',
                                                             lineHeight: lineSpacing,
                                                             fontFamily: "'Amiri', 'Traditional Arabic', 'Tajawal', 'Arial', serif",
                                                             fontSize: '18px',
                                                         }}
+
 
                                                         onFocus={() => setActivePageIndex(pageIndex)}
 
