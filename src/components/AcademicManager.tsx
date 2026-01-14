@@ -1255,7 +1255,7 @@ p { margin-bottom: 15px; }
                                 <Button size="sm" onClick={() => setIsPhaseOpen(true)} className="bg-purple-600 hover:bg-purple-700 h-10 px-4 rounded-xl shadow-lg shadow-purple-200/50">
                                     <Plus className="w-4 h-4 ml-1" /> إضافة مرحلة
                                 </Button>
-                                <Button size="sm" onClick={() => wordInputRef.current?.click()} className="bg-emerald-600 hover:bg-emerald-700 h-10 px-4 rounded-xl shadow-lg shadow-emerald-200/50 mr-2">
+                                <Button size="sm" onClick={() => document.getElementById('word-import-input')?.click()} className="bg-emerald-600 hover:bg-emerald-700 h-10 px-4 rounded-xl shadow-lg shadow-emerald-200/50 mr-2">
                                     <FileUp className="w-4 h-4 ml-1" /> استيراد Word
                                 </Button>
                             </>
@@ -1691,9 +1691,13 @@ p { margin-bottom: 15px; }
                     {/* Word Input - Moved to top for reliability */}
                     <input
                         type="file"
+                        id="word-import-input"
                         ref={wordInputRef}
-                        onChange={handleWordImport}
-                        className="hidden"
+                        onChange={(e) => {
+                            console.log("Word file selected", e.target.files);
+                            handleWordImport(e);
+                        }}
+                        className="fixed top-0 left-0 w-1 h-1 opacity-0 -z-50 pointer-events-none"
                         accept=".docx"
                     />
 
@@ -1827,8 +1831,8 @@ p { margin-bottom: 15px; }
                                                         fontFamily: 'Arial, "Traditional Arabic", "Tajawal", sans-serif',
                                                         fontSize: '18px',
                                                         lineHeight: '1.8',
-                                                        textAlign: 'justify',
-                                                        direction: 'rtl',
+                                                        textAlign: textDirection === 'rtl' ? 'justify' : 'left',
+                                                        direction: textDirection,
                                                         unicodeBidi: 'embed',
                                                         caretColor: '#d97706',
                                                         minHeight: `calc(${pageSizes[pageSize].height}mm - 40mm)`,
@@ -2280,7 +2284,7 @@ body, table, p, div, span, h1, h2, h3, h4, h5, h6, li {
                                 variant="ghost"
                                 size="sm"
                                 className="text-[11px] text-indigo-300 hover:text-indigo-200 hover:bg-indigo-900/50 w-full justify-start h-7"
-                                onClick={() => wordInputRef.current?.click()}
+                                onClick={() => document.getElementById('word-import-input')?.click()}
                             >
                                 <FileUp className="w-3 h-3 ml-2" /> استيراد ملف Word
                             </Button>

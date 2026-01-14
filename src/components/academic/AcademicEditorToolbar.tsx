@@ -83,6 +83,9 @@ export const AcademicEditorToolbar: React.FC<AcademicEditorToolbarProps> = ({
                         <SelectItem value="Noto Naskh Arabic">Noto Naskh Arabic</SelectItem>
                         <SelectItem value="Scheherazade New">Scheherazade New</SelectItem>
                         <SelectItem value="Arial">Arial</SelectItem>
+                        <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                        <SelectItem value="Calibri">Calibri</SelectItem>
+                        <SelectItem value="Roboto">Roboto</SelectItem>
                     </SelectContent>
                 </Select>
 
@@ -185,6 +188,23 @@ export const AcademicEditorToolbar: React.FC<AcademicEditorToolbarProps> = ({
                     title="ناسخ التنسيق"
                 >
                     <Pencil className="w-3 h-3 ml-1" />
+                </Button>
+
+                {/* Auto Format Arabic */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`${btnSize} p-0 text-emerald-400 hover:text-emerald-300 font-serif font-bold`}
+                    title="تنسيق خطة عربي"
+                    onClick={() => {
+                        document.execCommand('fontName', false, 'Traditional Arabic');
+                        document.execCommand('fontSize', false, '5');
+                        setTextDirection('rtl');
+                        document.execCommand('justifyFull');
+                        toast({ title: "✅ تم تطبيق تنسيق الخطة العربية" });
+                    }}
+                >
+                    ض
                 </Button>
             </div>
 
