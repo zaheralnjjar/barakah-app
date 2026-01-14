@@ -159,6 +159,33 @@
   .gold-accent {
     background: var(--gradient-gold);
   }
+
+  /* Arabic RTL Support for All Input Fields */
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  [contenteditable="true"] {
+    direction: rtl;
+    text-align: right;
+    font-family: 'Amiri', 'Traditional Arabic', 'Tajawal', 'Arial', serif;
+  }
+
+  /* Ensure proper RTL for shadcn/ui Input components */
+  input.text-right,
+  textarea.text-right {
+    direction: rtl !important;
+    text-align: right !important;
+  }
+
+  /* Placeholder text alignment */
+  input::placeholder,
+  textarea::placeholder {
+    text-align: right;
+    direction: rtl;
+  }
 }
 
 @layer components {
