@@ -122,7 +122,7 @@ const defaultPomodoroStats: PomodoroStats = {
 };
 
 const defaultDashboardOrder = ['stats', 'appointments', 'shopping', 'map'];
-const defaultSectionOrder = ['newmuslims', 'academic'];
+const defaultSectionOrder = ['newmuslims'];
 
 // Create the store
 export const useLocalStore = create<LocalStoreState>()(

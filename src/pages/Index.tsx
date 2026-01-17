@@ -4,10 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Bot, Users, ChevronDown, ChevronUp, GraduationCap, GripVertical } from 'lucide-react';
+import { Loader2, Bot, Users, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
-import AcademicManager from '@/components/AcademicManager';
 
 // Components
 import FinancialController from '@/components/agents/FinancialController';
@@ -35,7 +34,7 @@ import { useQuickNotes } from '@/hooks/useQuickNotes';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
 // Section types for reordering
-type SectionId = 'newmuslims' | 'academic';
+type SectionId = 'newmuslims';
 interface SectionConfig {
   id: SectionId;
   title: string;
@@ -59,15 +58,14 @@ const Index = () => {
   // Collapsible states
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
     newmuslims: false,
-    academic: false,
   });
 
   // Reorderable sections order
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(() => {
     try {
       const saved = localStorage.getItem('baraka_section_order');
-      return saved ? JSON.parse(saved) : ['newmuslims', 'academic'];
-    } catch { return ['newmuslims', 'academic']; }
+      return saved ? JSON.parse(saved) : ['newmuslims'];
+    } catch { return ['newmuslims']; }
   });
 
   // Drag state

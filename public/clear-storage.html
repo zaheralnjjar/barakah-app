@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>مسح بيانات التخزين</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { color: #e11d48; }
+        button { background: #10b981; color: white; border: none; padding: 15px 40px; font-size: 18px; border-radius: 10px; cursor: pointer; margin: 10px; }
+        button:hover { background: #059669; }
+        .danger { background: #e11d48; }
+        .danger:hover { background: #be123c; }
+        #status { margin-top: 20px; padding: 20px; background: #f0fdf4; border-radius: 10px; }
+        .size { font-size: 24px; font-weight: bold; color: #e11d48; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ مسح بيانات التخزين المحلي</h1>
+        <p>localStorage ممتلئ ويسبب أخطاء في التطبيق</p>
+        
+        <div id="size-info">
+            <p>الحجم الحالي: <span id="current-size" class="size">جاري الحساب...</span></p>
+        </div>
+        
+        <button class="danger" onclick="clearAll()">🗑️ مسح جميع البيانات</button>
+        <button onclick="clearOld()">🧹 مسح البيانات القديمة فقط</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function getStorageSize() {
+            let total = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    total += localStorage[key].length + key.length;
+                }
+            }
+            return (total / 1024 / 1024).toFixed(2);
+        }
+
+        function updateSize() {
+            document.getElementById('current-size').textContent = getStorageSize() + ' MB';
+        }
+
+        function clearAll() {
+            if (confirm('هل أنت متأكد؟ سيتم مسح جميع البيانات المحفوظة!')) {
+                localStorage.clear();
+                document.getElementById('status').innerHTML = '<p style="color: green;">✅ تم مسح جميع البيانات بنجاح!</p><p>أعد تحميل التطبيق الآن: <a href="http://localhost:5173">http://localhost:5173</a></p>';
+                updateSize();
+            }
+        }
+
+        function clearOld() {
+            const keysToRemove = [
+                'my_research_project_v2',
+                'my_research_project',
+                'pomodoro_presets',
+                'baraka_custom_shortcuts',
+                'keyboard-shortcuts-hint-seen',
+                'CapacitorStorage.widget_prayers'
+            ];
+            
+            let removed = 0;
+            keysToRemove.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    removed++;
+                }
+            });
+            
+            document.getElementById('status').innerHTML = `<p style="color: green;">✅ تم مسح ${removed} عناصر قديمة!</p><p>أعد تحميل التطبيق الآن: <a href="http://localhost:5173">http://localhost:5173</a></p>`;
+            updateSize();
+        }
+
+        updateSize();
+    </script>
+</body>
+</html>

@@ -14,6 +14,7 @@ import {
     Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings,
     GraduationCap, Users, Search
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickActionsGridProps {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal') => void;
@@ -23,18 +24,18 @@ interface QuickActionsGridProps {
     latestParking?: any;
     onNavigateToTab?: (tabId: string) => void;
     onOpenSearch?: () => void;
-    onOpenAcademic?: () => void;
     onOpenNewMuslims?: () => void;
     onActivateWidgets?: (widgets: string[]) => void;
     activeWidgets?: string[];
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenAcademic, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
     const { tasks } = useTasks();
     const { appointments } = useAppointments();
+    const navigate = useNavigate();
 
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
@@ -115,7 +116,6 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
     // Available Actions (25+ options)
     const AVAILABLE_ACTIONS = [
-        { id: 'show_academic_research', name: 'البحث العلمي', icon: GraduationCap, category: 'info', description: 'الانتقال إلى قسم البحث العلمي' },
         { id: 'show_new_muslims', name: 'هداية', icon: Users, category: 'info', description: 'الانتقال إلى قسم هداية' },
 
         // Information Display
@@ -219,12 +219,6 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         if (!action) return;
 
         switch (actionId) {
-            case 'show_academic_research':
-                if (onOpenAcademic) onOpenAcademic();
-                else if (onNavigateToTab) onNavigateToTab('educational');
-                else toast({ title: 'غير متاح', description: 'التنقل غير مفعل' });
-                break;
-
             case 'show_new_muslims':
                 if (onOpenNewMuslims) onOpenNewMuslims();
                 else if (onNavigateToTab) onNavigateToTab('daura');
@@ -573,8 +567,8 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenVoiceRecorder ? onOpenVoiceRecorder() : onOpenAddDialog('note') },
                     { icon: Search, label: 'بحث', color: 'bg-indigo-100 text-indigo-600', action: () => onOpenSearch?.() },
                     { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
-                    { icon: GraduationCap, label: 'أكاديمي', color: 'bg-violet-100 text-violet-600', action: () => onOpenAcademic?.() },
                     { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-600', action: () => onOpenNewMuslims?.() },
+                    { icon: GraduationCap, label: 'أكاديميا', color: 'bg-violet-100 text-violet-600', action: () => navigate('/thesis') },
                 ].map((item, idx) => (
                     <button
                         key={idx}

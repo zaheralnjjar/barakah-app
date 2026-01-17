@@ -18,7 +18,6 @@ const InitializationWizard = ({ onComplete }) => {
     prayerTimesFile: null,
     balanceARS: '',
     balanceUSD: '',
-    academicMilestone: '',
     exchangeRate: '1200' // Default ARS to USD rate
   });
 
@@ -54,21 +53,6 @@ const InitializationWizard = ({ onComplete }) => {
         })
         .eq('user_id', user.id);
 
-      // Initialize Academic Data
-      await supabase
-        .from('academic_data_2025_12_18_18_42')
-        .update({
-          milestones: [
-            {
-              id: 1,
-              title: formData.academicMilestone,
-              status: 'active',
-              created_at: new Date().toISOString()
-            }
-          ],
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
 
       // Initialize Spiritual Data (Prayer Times)
       if (formData.prayerTimesFile) {
@@ -96,8 +80,7 @@ const InitializationWizard = ({ onComplete }) => {
             system_version: '1.0.0',
             initialization_data: {
               prayer_times_uploaded: !!formData.prayerTimesFile,
-              initial_balance_set: !!(formData.balanceARS || formData.balanceUSD),
-              academic_milestone_set: !!formData.academicMilestone
+              initial_balance_set: !!(formData.balanceARS || formData.balanceUSD)
             }
           },
           system_logs: [
@@ -131,7 +114,7 @@ const InitializationWizard = ({ onComplete }) => {
   };
 
   const nextStep = () => {
-    if (step < 4) {
+    if (step < 3) {
       setStep(step + 1);
     } else {
       initializeSystem();
@@ -158,7 +141,7 @@ const InitializationWizard = ({ onComplete }) => {
                 يرجى رفع ملف أوقات الصلاة لمدينة بوينس آيرس (JSON أو PDF)
               </p>
             </div>
-            
+
             <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 text-center">
               <input
                 type="file"
@@ -167,7 +150,7 @@ const InitializationWizard = ({ onComplete }) => {
                 className="hidden"
                 id="prayer-times-upload"
               />
-              <label 
+              <label
                 htmlFor="prayer-times-upload"
                 className="cursor-pointer block"
               >
@@ -179,7 +162,7 @@ const InitializationWizard = ({ onComplete }) => {
                   JSON, PDF (حتى 10MB)
                 </p>
               </label>
-              
+
               {formData.prayerTimesFile && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
                   <CheckCircle className="w-5 h-5 text-green-600 inline ml-2" />
@@ -216,7 +199,7 @@ const InitializationWizard = ({ onComplete }) => {
                   className="text-left"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label className="arabic-body">الرصيد بالدولار الأمريكي (USD)</Label>
                 <Input
@@ -246,40 +229,6 @@ const InitializationWizard = ({ onComplete }) => {
         );
 
       case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <BookOpen className="w-16 h-16 text-primary mx-auto mb-4" />
-              <h3 className="text-xl arabic-title text-primary mb-2">
-                المعلم الأكاديمي الأول
-              </h3>
-              <p className="arabic-body text-muted-foreground">
-                أدخل أول معلم أكاديمي لرسالة الماجستير في الشريعة الإسلامية
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="arabic-body">عنوان المعلم الأكاديمي</Label>
-                <Textarea
-                  placeholder="مثال: مراجعة الأدبيات حول وضع الأقليات المسلمة في أمريكا اللاتينية"
-                  value={formData.academicMilestone}
-                  onChange={(e) => handleInputChange('academicMilestone', e.target.value)}
-                  className="min-h-[100px]"
-                />
-              </div>
-              
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="arabic-title text-primary mb-2">موضوع الرسالة:</h4>
-                <p className="arabic-body text-sm text-muted-foreground">
-                  "الشريعة الإسلامية ووضع الأقليات المسلمة في أمريكا اللاتينية"
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 4:
         return (
           <div className="space-y-6">
             <div className="text-center">
@@ -320,20 +269,10 @@ const InitializationWizard = ({ onComplete }) => {
                   </p>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="arabic-title text-sm">المعلم الأكاديمي</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="arabic-body text-sm">
-                    {formData.academicMilestone || 'لم يتم تحديد معلم'}
-                  </p>
-                </CardContent>
-              </Card>
             </div>
           </div>
         );
+
 
       default:
         return null;
@@ -348,14 +287,14 @@ const InitializationWizard = ({ onComplete }) => {
             تهيئة نظام بركة
           </CardTitle>
           <CardDescription className="arabic-body text-lg">
-            الخطوة {step} من 4 - إعداد النظام للاستخدام
+            الخطوة {step} من 3 - إعداد النظام للاستخدام
           </CardDescription>
-          
+
           {/* Progress Bar */}
           <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-            <div 
+            <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(step / 4) * 100}%` }}
+              style={{ width: `${(step / 3) * 100}%` }}
             ></div>
           </div>
         </CardHeader>
@@ -364,16 +303,16 @@ const InitializationWizard = ({ onComplete }) => {
           {renderStep()}
 
           <div className="flex justify-between pt-6">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={prevStep}
               disabled={step === 1}
               className="arabic-body"
             >
               السابق
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={nextStep}
               disabled={loading}
               className="btn-islamic arabic-body"
@@ -383,7 +322,7 @@ const InitializationWizard = ({ onComplete }) => {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white ml-2"></div>
                   جاري التهيئة...
                 </>
-              ) : step === 4 ? (
+              ) : step === 3 ? (
                 'تهيئة النظام'
               ) : (
                 'التالي'

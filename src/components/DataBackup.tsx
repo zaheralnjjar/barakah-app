@@ -327,6 +327,13 @@ const DataBackup: React.FC = () => {
                         <Share2 className="w-4 h-4 mr-2" />
                         مشاركة
                     </Button>
+                    <Button onClick={async () => {
+                        const { BackupService } = await import('@/services/BackupService');
+                        await BackupService.restoreFullBackup();
+                    }} variant="outline" className="bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700">
+                        <Upload className="w-4 h-4 mr-2" />
+                        استعادة مشروع (ZIP)
+                    </Button>
                 </div>
 
                 <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileSelect} className="hidden" />

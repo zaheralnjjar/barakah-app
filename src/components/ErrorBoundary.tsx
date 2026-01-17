@@ -1,116 +1,71 @@
-import React, { Component, ReactNode, ErrorInfo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { logger } from '@/services/thesis/LoggerService';
+import { AlertTriangle, RefreshCcw, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
     children: ReactNode;
-    fallback?: ReactNode;
 }
 
 interface State {
     hasError: boolean;
     error: Error | null;
-    errorInfo: ErrorInfo | null;
 }
 
 class ErrorBoundary extends Component<Props, State> {
-    constructor(props: Props) {
-        super(props);
-        this.state = {
-            hasError: false,
-            error: null,
-            errorInfo: null,
-        };
-    }
-
-    static getDerivedStateFromError(error: Error): State {
-        return {
-            hasError: true,
-            error,
-            errorInfo: null,
-        };
-    }
-
-    componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('Error caught by ErrorBoundary:', error, errorInfo);
-
-        this.setState({
-            error,
-            errorInfo,
-        });
-    }
-
-    handleReset = () => {
-        this.setState({
-            hasError: false,
-            error: null,
-            errorInfo: null,
-        });
+    public state: State = {
+        hasError: false,
+        error: null
     };
 
-    handleGoHome = () => {
-        window.location.href = '/';
+    public static getDerivedStateFromError(error: Error): State {
+        return { hasError: true, error };
+    }
+
+    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+        logger.error('Uncaught error in component tree', { error: error.message, stack: errorInfo.componentStack });
+    }
+
+    public handleReload = () => {
+        window.location.reload();
     };
 
-    render() {
+    public handleCopyError = () => {
+        if (this.state.error) {
+            navigator.clipboard.writeText(this.state.error.toString());
+            toast.success("تم نسخ تفاصيل الخطأ");
+        }
+    };
+
+    public render() {
         if (this.state.hasError) {
-            if (this.props.fallback) {
-                return this.props.fallback;
-            }
-
             return (
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                    <Card className="max-w-2xl w-full">
-                        <CardHeader className="text-center">
-                            <div className="flex justify-center mb-4">
-                                <AlertTriangle className="w-16 h-16 text-red-500" />
-                            </div>
-                            <CardTitle className="text-2xl text-red-600">
-                                حدث خطأ غير متوقع
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <p className="text-sm font-mono text-red-800 dir-ltr">
-                                    {this.state.error?.message || 'خطأ غير معروف'}
-                                </p>
-                            </div>
+                <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center space-y-4" dir="rtl">
+                    <div className="p-4 bg-red-50 rounded-full">
+                        <AlertTriangle className="w-12 h-12 text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-800">عذراً، حدث خطأ غير متوقع</h2>
+                    <p className="text-gray-600 max-w-md">
+                        واجه التطبيق مشكلة في عرض هذه الصفحة. تم تسجيل الخطأ للتحليل.
+                    </p>
 
-                            {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                                <details className="bg-gray-100 border rounded-lg p-4">
-                                    <summary className="cursor-pointer font-semibold text-sm mb-2">
-                                        تفاصيل تقنية (للمطورين)
-                                    </summary>
-                                    <pre className="text-xs overflow-auto dir-ltr">
-                                        {this.state.errorInfo.componentStack}
-                                    </pre>
-                                </details>
-                            )}
+                    {this.state.error && (
+                        <div className="w-full max-w-lg p-4 mt-4 bg-gray-100 rounded text-left overflow-auto text-xs font-mono border border-gray-200">
+                            {this.state.error.toString()}
+                        </div>
+                    )}
 
-                            <div className="flex gap-3 justify-center pt-4">
-                                <Button
-                                    onClick={this.handleReset}
-                                    variant="outline"
-                                    className="gap-2"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                    إعادة المحاولة
-                                </Button>
-                                <Button
-                                    onClick={this.handleGoHome}
-                                    className="gap-2"
-                                >
-                                    <Home className="w-4 h-4" />
-                                    العودة للرئيسية
-                                </Button>
-                            </div>
-
-                            <p className="text-center text-sm text-gray-500 pt-4">
-                                إذا استمرت المشكلة، يرجى تحديث الصفحة أو مسح بيانات المتصفح
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="flex gap-4 pt-4">
+                        <Button onClick={this.handleReload} className="gap-2">
+                            <RefreshCcw className="w-4 h-4" />
+                            إعادة تحميل الصفحة
+                        </Button>
+                        <Button variant="outline" onClick={this.handleCopyError} className="gap-2">
+                            <Copy className="w-4 h-4" />
+                            نسخ الخطأ
+                        </Button>
+                    </div>
                 </div>
             );
         }

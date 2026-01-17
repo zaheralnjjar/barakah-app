@@ -1,0 +1,84 @@
+{
+    "thesis": {
+        "name": "رسالة ماجستير/دكتوراه",
+        "description": "الهيكل التقليدي للرسائل العلمية (مقدمة، فصول، خاتمة)",
+        "structure": [
+            {
+                "type": "chapter",
+                "title": "المقدمة"
+            },
+            {
+                "type": "chapter",
+                "title": "الفصل التمهيدي"
+            },
+            {
+                "type": "chapter",
+                "title": "الفصل الأول: [العنوان]"
+            },
+            {
+                "type": "chapter",
+                "title": "الفصل الثاني: [العنوان]"
+            },
+            {
+                "type": "chapter",
+                "title": "الفصل الثالث: [العنوان]"
+            },
+            {
+                "type": "chapter",
+                "title": "الخاتمة"
+            },
+            {
+                "type": "chapter",
+                "title": "المصادر والمراجع"
+            }
+        ]
+    },
+    "research": {
+        "name": "بحث علمي محكم",
+        "description": "هيكل مناسب للأبحاث المعدة للنشر في المجلات",
+        "structure": [
+            {
+                "type": "section",
+                "title": "ملخص البحث"
+            },
+            {
+                "type": "section",
+                "title": "المقدمة"
+            },
+            {
+                "type": "section",
+                "title": "المنهجية"
+            },
+            {
+                "type": "section",
+                "title": "النتائج والمناقشة"
+            },
+            {
+                "type": "section",
+                "title": "الخاتمة"
+            },
+            {
+                "type": "section",
+                "title": "المراجع"
+            }
+        ]
+    },
+    "paper": {
+        "name": "ورقة بحثية قصيرة",
+        "description": "هيكل مبسط للأوراق البحثية القصيرة والمقالات",
+        "structure": [
+            {
+                "type": "section",
+                "title": "المقدمة"
+            },
+            {
+                "type": "section",
+                "title": "العرض"
+            },
+            {
+                "type": "section",
+                "title": "الخاتمة"
+            }
+        ]
+    }
+}

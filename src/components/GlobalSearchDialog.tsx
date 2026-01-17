@@ -1,316 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Search, CheckSquare, StickyNote, Users, Calculator, GraduationCap, Settings, Link as LinkIcon } from 'lucide-react';
-import { useTasks } from '@/hooks/useTasks';
-import { useQuickNotes } from '@/hooks/useQuickNotes';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { AcademicService } from '@/services/AcademicService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search, FileText, CheckSquare, StickyNote, ArrowRight, Loader2 } from 'lucide-react';
+import { ThesisService } from '@/services/thesis/ThesisService';
+import { debounce } from 'lodash'; // You might need to install lodash or write a simple debounce
+
+// Simple debounce implementation if lodash is not available or desired to keep minimal
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+    useEffect(() => {
+        const handler = setTimeout(() => setDebouncedValue(value), delay);
+        return () => clearTimeout(handler);
+    }, [value, delay]);
+    return debouncedValue;
+}
 
 interface SearchResult {
     id: string;
-    type: 'task' | 'note' | 'student' | 'finance' | 'academic' | 'setting';
+    type: 'node' | 'task' | 'note' | 'reference';
     title: string;
-    subtitle: string;
-    date?: string;
-    icon?: React.ReactNode;
-    onClick: () => void;
+    subtitle?: string; // Parent title or context
+    match_context?: string; // Snippet of text where match occurred
+    icon: React.ElementType;
+    link: string;
 }
 
-interface GlobalSearchDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onNavigateToTab?: (tab: string) => void;
-    onOpenNewMuslims?: () => void;
-    onOpenAcademic?: () => void;
-}
-
-const FINANCE_TABLE = 'finance_data_2025_12_18_18_42';
-
-export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({ isOpen, onClose, onNavigateToTab, onOpenNewMuslims, onOpenAcademic }) => {
+export function GlobalSearchDialog() {
+    const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const debouncedQuery = useDebounce(query, 300);
     const [results, setResults] = useState<SearchResult[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
-
-    // Hooks
-    const { tasks } = useTasks();
-    const { notesHistory } = useQuickNotes();
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Data fetching (From LocalStorage for mobile performance)
-    const [students, setStudents] = useState<any[]>([]);
-    const [muslimAppointments, setMuslimAppointments] = useState<any[]>([]);
-    const [generalAppointments, setGeneralAppointments] = useState<any[]>([]);
-
+    // Toggle with Cmd+K or Ctrl+K
     useEffect(() => {
-        if (!isOpen) return;
-        try {
-            const storedStudents = localStorage.getItem('newmuslims_students');
-            if (storedStudents) setStudents(JSON.parse(storedStudents));
-
-            const storedApts = localStorage.getItem('newmuslims_appointments');
-            if (storedApts) setMuslimAppointments(JSON.parse(storedApts));
-
-            const storedGeneralApts = localStorage.getItem('baraka_appointments');
-            if (storedGeneralApts) setGeneralAppointments(JSON.parse(storedGeneralApts));
-        } catch (e) { console.error(e); }
-    }, [isOpen]);
-
-    useEffect(() => {
-        if (!query.trim()) {
-            setResults([]);
-            return;
-        }
-
-        const debounceSearch = setTimeout(async () => {
-            setIsSearching(true);
-            const lowerQuery = query.toLowerCase().trim();
-            const newResults: SearchResult[] = [];
-
-            // 1. Local Data Search (Sync)
-
-            // Tasks
-            tasks.forEach(task => {
-                if (task.title.toLowerCase().includes(lowerQuery) || task.description?.toLowerCase().includes(lowerQuery)) {
-                    newResults.push({
-                        id: task.id,
-                        type: 'task',
-                        title: task.title,
-                        subtitle: task.description || 'مهمة',
-                        date: task.deadline,
-                        icon: <CheckSquare className="w-4 h-4" />,
-                        onClick: () => {
-                            if (onNavigateToTab) onNavigateToTab('dashboard');
-                            onClose();
-                        }
-                    });
-                }
-            });
-
-            // Appointments
-            const allApts = [...muslimAppointments, ...generalAppointments];
-            allApts.forEach(apt => {
-                if (apt.title?.toLowerCase().includes(lowerQuery) || apt.notes?.toLowerCase().includes(lowerQuery)) {
-                    newResults.push({
-                        id: apt.id,
-                        type: 'task', // Use task/calendar icon
-                        title: `📅 ${apt.title}`,
-                        subtitle: apt.notes || 'موعد',
-                        date: apt.date,
-                        icon: <CheckSquare className="w-4 h-4" />,
-                        onClick: () => {
-                            onClose();
-                            const isMuslimApt = muslimAppointments.some(ma => ma.id === apt.id);
-                            if (isMuslimApt && onOpenNewMuslims) onOpenNewMuslims();
-                            else if (onNavigateToTab) onNavigateToTab('dashboard'); // Or calendar if specific logic added
-                        }
-                    });
-                }
-            });
-
-            // Notes
-            notesHistory.forEach((note, idx) => {
-                if (note.content.toLowerCase().includes(lowerQuery)) {
-                    newResults.push({
-                        id: `note-${idx}`,
-                        type: 'note',
-                        title: note.content.split('\n')[0].substring(0, 30),
-                        subtitle: note.content.substring(0, 50).replace(/\n/g, ' '),
-                        date: note.createdAt,
-                        icon: <StickyNote className="w-4 h-4" />,
-                        onClick: () => {
-                            if (onNavigateToTab) onNavigateToTab('dashboard'); // Or productivity if notes moved there
-                            onClose();
-                        }
-                    });
-                }
-            });
-
-            // Students (New Muslims)
-            students.forEach(student => {
-                const matchesName = student.fullName?.toLowerCase().includes(lowerQuery) ||
-                    student.arabicName?.toLowerCase().includes(lowerQuery) ||
-                    student.name?.toLowerCase().includes(lowerQuery);
-                const matchesNotes = student.notes?.toLowerCase().includes(lowerQuery);
-                const matchesPhone = student.phone?.includes(query);
-
-                if (matchesName || matchesNotes || matchesPhone) {
-                    newResults.push({
-                        id: student.id,
-                        type: 'student',
-                        title: student.fullName || student.arabicName || student.name || 'مجهول',
-                        subtitle: student.phone || 'طالب جديد',
-                        date: student.date,
-                        icon: <Users className="w-4 h-4" />,
-                        onClick: () => {
-                            onClose();
-                            if (onOpenNewMuslims) onOpenNewMuslims();
-                        }
-                    });
-                }
-            });
-
-            // Settings/Pages (Static)
-            const staticPages = [
-                { id: 'settings', title: 'الإعدادات', tab: 'settings', keywords: ['settings', 'config', 'اعدادات', 'ضبط'] },
-                { id: 'finance', title: 'المالية والمصاريف', tab: 'finance', keywords: ['money', 'expense', 'malia', 'مالية', 'فلوس'] },
-                { id: 'academic', title: 'القسم الأكاديمي', action: 'academic', keywords: ['academic', 'research', 'bahth', 'بحث', 'اكاديمي'] },
-                { id: 'newmuslims', title: 'هداية', action: 'newmuslims', keywords: ['new', 'muslims', 'student', 'students', 'طلاب', 'مهتدين'] },
-            ];
-
-            staticPages.forEach(page => {
-                if (page.title.includes(query) || page.keywords.some(k => k.includes(lowerQuery))) {
-                    newResults.push({
-                        id: page.id,
-                        type: 'setting',
-                        title: page.title,
-                        subtitle: 'قسم / إعدادات',
-                        icon: page.id === 'settings' ? <Settings className="w-4 h-4" /> : <LinkIcon className="w-4 h-4" />,
-                        onClick: () => {
-                            onClose();
-                            if (page.tab && onNavigateToTab) onNavigateToTab(page.tab);
-                            if (page.action === 'academic' && onOpenAcademic) onOpenAcademic();
-                            if (page.action === 'newmuslims' && onOpenNewMuslims) onOpenNewMuslims();
-                        }
-                    });
-                }
-            });
-
-
-            // 2. Async Data Search (Supabase)
-            try {
-                // Finance Search
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    // We need to fetch the JSON column 'pending_expenses' from the finance table
-                    // Since it's JSON array, we can't easily search inside it with simple SQL 'like' on the column
-                    // efficiently without exact structure. However, user usually has one row per user.
-                    // We fetch the row and filter client side for the 'transactions'.
-
-                    const { data: financeRow } = await supabase
-                        .from(FINANCE_TABLE)
-                        .select('pending_expenses')
-                        .eq('user_id', user.id)
-                        .single();
-
-                    if (financeRow && financeRow.pending_expenses && Array.isArray(financeRow.pending_expenses)) {
-                        financeRow.pending_expenses.forEach((tx: any) => {
-                            if (tx.description?.toLowerCase().includes(lowerQuery) || tx.category?.toLowerCase().includes(lowerQuery)) {
-                                newResults.push({
-                                    id: `tx-${tx.id}`,
-                                    type: 'finance',
-                                    title: `${tx.type === 'expense' ? '💸' : '💰'} ${tx.description}`,
-                                    subtitle: `${tx.amount} ${tx.currency} - ${tx.category}`,
-                                    date: tx.timestamp,
-                                    icon: <Calculator className="w-4 h-4" />,
-                                    onClick: () => {
-                                        if (onNavigateToTab) onNavigateToTab('finance');
-                                        onClose();
-                                    }
-                                });
-                            }
-                        });
-                    }
-                }
-
-                // Academic Search
-                const academicResults = await AcademicService.globalSearch(lowerQuery);
-                academicResults.forEach(res => {
-                    newResults.push({
-                        id: `academic-${res.id}`,
-                        type: 'academic',
-                        title: res.title,
-                        subtitle: res.context,
-                        icon: <GraduationCap className="w-4 h-4" />,
-                        onClick: () => {
-                            if (onOpenAcademic) onOpenAcademic();
-                            // Logic to open specific chapter could be added here if AcademicManager supports it via props/context
-                            onClose();
-                        }
-                    });
-                });
-
-            } catch (err) {
-                console.error("Async search error", err);
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setOpen((open) => !open);
             }
+        };
+        document.addEventListener('keydown', down);
+        return () => document.removeEventListener('keydown', down);
+    }, []);
 
-            setResults(newResults);
-            setIsSearching(false);
-        }, 500); // 500ms debounce
+    useEffect(() => {
+        if (debouncedQuery.trim().length > 1) {
+            performSearch(debouncedQuery);
+        } else {
+            setResults([]);
+        }
+    }, [debouncedQuery]);
 
-        return () => clearTimeout(debounceSearch);
-    }, [query, tasks, notesHistory, students, muslimAppointments]);
+    const performSearch = async (searchTerm: string) => {
+        setLoading(true);
+        try {
+            // Needed: A unified search API or multiple parallel queries
+            // Since we don't have a backend "search" endpoint yet, we'll fetch and filter
+            // Ideally, this should be an RPC call to Supabase
+
+            // Temporary Strategy: Fetch current project structure and tasks (if project context exists)
+            // Or fetch ALL projects? Let's assume global context for now or limit to active?
+            // "Global Search" implies everything.
+
+            const results: SearchResult[] = [];
+            const termLower = searchTerm.toLowerCase();
+
+            // 1. Search Projects
+            const projects = await ThesisService.getProjects();
+            projects.forEach(p => {
+                if (p.name.toLowerCase().includes(termLower)) {
+                    results.push({
+                        id: p.id,
+                        type: 'node', // Using node icon for project for now
+                        title: p.name,
+                        subtitle: 'مشروع',
+                        icon: FileText,
+                        link: `/thesis/structure?project=${p.id}`
+                    });
+                }
+            });
+
+            // If we are inside a project (can we know?), search its content.
+            // For now, let's just search the projects list as a start + maybe RPC later.
+            // But User wants "Global Search". 
+            // We need an RPC function in Supabase for efficient full-text search.
+
+            setResults(results);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSelect = (result: SearchResult) => {
+        setOpen(false);
+        navigate(result.link);
+    };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[500px] p-0 gap-0 overflow-hidden bg-white">
-                <div className="p-4 border-b flex items-center gap-3 bg-gray-50/80 backdrop-blur">
-                    <Search className="w-5 h-5 text-gray-400" />
-                    <Input
-                        placeholder="ابحث في المهام، الملاحظات، المالية، الأكاديمية..."
-                        className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-lg placeholder:text-gray-400"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        autoFocus
-                    />
-                    {isSearching && <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>}
-                </div>
-
-                <div className="max-h-[60vh] overflow-y-auto p-2">
-                    {results.length === 0 && !query.trim() && (
-                        <div className="text-center py-12 text-gray-500 space-y-4">
-                            <div className="flex justify-center gap-4 opacity-50 mb-4">
-                                <CheckSquare className="w-8 h-8 text-blue-400" />
-                                <Calculator className="w-8 h-8 text-emerald-400" />
-                                <GraduationCap className="w-8 h-8 text-purple-400" />
-                            </div>
-                            <p className="font-bold text-lg text-gray-700">البحث الشامل الذكي 🚀</p>
-                            <p className="text-sm text-gray-400 max-w-[80%] mx-auto leading-relaxed">
-                                ابحث في كل مكان: المعاملات المالية، المحتوى الأكاديمي، المهام، الملاحظات، والطلاب.
-                            </p>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="p-0 sm:max-w-[550px] gap-0 overflow-hidden">
+                <DialogHeader className="px-4 py-3 border-b">
+                    <div className="flex items-center gap-2">
+                        <Search className="w-5 h-5 text-gray-500" />
+                        <Input
+                            className="border-0 focus-visible:ring-0 px-0 h-auto text-lg"
+                            placeholder="ابحث في المشاريع، الفصول، المهام..."
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                        />
+                    </div>
+                </DialogHeader>
+                <ScrollArea className="h-[300px] p-2">
+                    {loading && (
+                        <div className="flex items-center justify-center h-20 text-gray-500">
+                            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                            جاري البحث...
                         </div>
                     )}
 
-                    {results.length === 0 && query.trim() && !isSearching && (
-                        <div className="text-center py-8 text-gray-400 flex flex-col items-center gap-2">
-                            <Search className="w-8 h-8 opacity-20" />
-                            <p>لا توجد نتائج مطابقة</p>
+                    {!loading && results.length === 0 && query.length > 1 && (
+                        <div className="text-center py-10 text-gray-500">
+                            لا توجد نتائج لـ "{query}"
                         </div>
                     )}
 
-                    {results.length > 0 && (
+                    {!loading && results.length > 0 && (
                         <div className="space-y-1">
                             {results.map((result) => (
                                 <div
                                     key={`${result.type}-${result.id}`}
-                                    onClick={result.onClick}
-                                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 cursor-pointer transition-all duration-200 group"
+                                    onClick={() => handleSelect(result)}
+                                    className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 cursor-pointer group"
                                 >
-                                    <div className={`p-2.5 rounded-full transition-colors ${result.type === 'task' ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-100' :
-                                            result.type === 'note' ? 'bg-amber-50 text-amber-600 group-hover:bg-amber-100' :
-                                                result.type === 'student' ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' :
-                                                    result.type === 'finance' ? 'bg-red-50 text-red-600 group-hover:bg-red-100' :
-                                                        result.type === 'academic' ? 'bg-purple-50 text-purple-600 group-hover:bg-purple-100' :
-                                                            'bg-gray-100 text-gray-600'
-                                        }`}>
-                                        {result.icon}
+                                    <div className="p-2 rounded-full bg-gray-200 group-hover:bg-white text-gray-600">
+                                        <result.icon className="w-4 h-4" />
                                     </div>
-                                    <div className="flex-1 min-w-0 text-right">
-                                        <h4 className="font-bold text-sm text-gray-900 truncate group-hover:text-primary transition-colors">{result.title}</h4>
-                                        <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-sm text-gray-900">{result.title}</h4>
+                                        {result.subtitle && (
+                                            <p className="text-xs text-gray-500">{result.subtitle}</p>
+                                        )}
                                     </div>
-                                    {result.date && (
-                                        <div className="text-[10px] text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-md">
-                                            {new Date(result.date).toLocaleDateString('ar-EG')}
-                                        </div>
-                                    )}
+                                    <ArrowRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             ))}
                         </div>
                     )}
-                </div>
+
+                    {!loading && query.length === 0 && (
+                        <div className="p-4">
+                            <h3 className="text-xs font-semibold text-gray-500 mb-2">اختصارات</h3>
+                            <div className="text-sm text-gray-400">
+                                <span className="kbd bg-gray-100 px-1 rounded border">Cmd</span> + <span className="kbd bg-gray-100 px-1 rounded border">K</span> للفتح
+                            </div>
+                        </div>
+                    )}
+                </ScrollArea>
             </DialogContent>
         </Dialog>
     );
-};
+}

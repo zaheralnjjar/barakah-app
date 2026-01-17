@@ -8,6 +8,19 @@ import { useEffect } from "react";
 import Index from "./pages/Index";
 import WidgetPage from "./pages/WidgetPage";
 import NotFound from "./pages/NotFound";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import ThesisNavigator from "./pages/thesis/ThesisNavigator";
+import ThesisDashboard from "./pages/thesis/ThesisDashboard";
+import ThesisTasks from "./pages/thesis/ThesisTasks";
+import ThesisStructure from "./pages/thesis/ThesisStructure";
+import ThesisCalendar from "./pages/thesis/ThesisCalendar";
+import ThesisIndexes from "./pages/thesis/ThesisIndexes";
+import ThesisSettings from "./pages/thesis/ThesisSettings";
+import ThesisReferences from "./pages/thesis/ThesisReferences";
+import ThesisTrash from "./pages/thesis/ThesisTrash";
+import ThesisLinks from "./pages/thesis/ThesisLinks";
+import ThesisMindMap from "./pages/thesis/ThesisMindMap";
+import ThesisTimeline from "./pages/thesis/ThesisTimeline";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
@@ -71,6 +84,8 @@ const PermissionRequester = () => {
   return null;
 };
 
+import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
+
 const App = () => {
   // Watch sync removed - watch app deleted
   // Initialize keyboard shortcuts
@@ -82,14 +97,30 @@ const App = () => {
         <PermissionRequester />
         <Toaster />
         <Sonner />
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/widget" element={<WidgetPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </HashRouter>
+        <ErrorBoundary>
+          <HashRouter>
+            <GlobalSearchDialog />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/widget" element={<WidgetPage />} />
+              {/* Thesis Manager Routes */}
+              <Route path="/thesis" element={<ThesisNavigator />} />
+              <Route path="/thesis/dashboard" element={<ThesisDashboard />} />
+              <Route path="/thesis/tasks" element={<ThesisTasks />} />
+              <Route path="/thesis/structure" element={<ThesisStructure />} />
+              <Route path="/thesis/calendar" element={<ThesisCalendar />} />
+              <Route path="/thesis/indexes" element={<ThesisIndexes />} />
+              <Route path="/thesis/settings" element={<ThesisSettings />} />
+              <Route path="/thesis/references" element={<ThesisReferences />} />
+              <Route path="/thesis/trash" element={<ThesisTrash />} />
+              <Route path="/thesis/links" element={<ThesisLinks />} />
+              <Route path="/thesis/mindmap" element={<ThesisMindMap />} />
+              <Route path="/thesis/timeline" element={<ThesisTimeline />} />
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </HashRouter>
+        </ErrorBoundary>
       </TooltipProvider>
 
     </QueryClientProvider>

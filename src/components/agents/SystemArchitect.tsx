@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Settings, 
-  Database, 
+import {
+  Settings,
+  Database,
   Shield,
   CheckCircle,
   AlertTriangle,
@@ -65,7 +65,7 @@ const SystemArchitect = () => {
         backup: Math.random() > 0.2 ? 'current' : 'outdated',
         performance: Math.random() > 0.15 ? 'optimal' : 'slow'
       };
-      
+
       setSystemStatus(healthCheck);
     } catch (error) {
       console.error('Error checking system health:', error);
@@ -146,7 +146,7 @@ const SystemArchitect = () => {
         slow: 'بطيء'
       }
     };
-    
+
     return statusTexts[component]?.[status] || status;
   };
 
@@ -200,8 +200,8 @@ const SystemArchitect = () => {
               <Shield className="w-5 h-5 ml-2" />
               حالة النظام العامة
             </span>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={checkSystemHealth}
               className="arabic-body"
@@ -275,8 +275,8 @@ const SystemArchitect = () => {
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <h4 className="arabic-body font-semibold mb-2">معلومات التهيئة</h4>
                   <p className="text-sm text-muted-foreground">
-                    تاريخ التهيئة: {systemData.master_context_file.initialized_at ? 
-                      new Date(systemData.master_context_file.initialized_at).toLocaleDateString('ar') : 
+                    تاريخ التهيئة: {systemData.master_context_file.initialized_at ?
+                      new Date(systemData.master_context_file.initialized_at).toLocaleDateString('ar') :
                       'غير محدد'
                     }
                   </p>
@@ -293,25 +293,18 @@ const SystemArchitect = () => {
                   {systemData.master_context_file.initialization_data && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        {systemData.master_context_file.initialization_data.prayer_times_uploaded ? 
-                          <CheckCircle className="w-4 h-4 text-green-600" /> : 
+                        {systemData.master_context_file.initialization_data.prayer_times_uploaded ?
+                          <CheckCircle className="w-4 h-4 text-green-600" /> :
                           <AlertTriangle className="w-4 h-4 text-yellow-600" />
                         }
                         <span className="text-sm arabic-body">أوقات الصلاة</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {systemData.master_context_file.initialization_data.initial_balance_set ? 
-                          <CheckCircle className="w-4 h-4 text-green-600" /> : 
+                        {systemData.master_context_file.initialization_data.initial_balance_set ?
+                          <CheckCircle className="w-4 h-4 text-green-600" /> :
                           <AlertTriangle className="w-4 h-4 text-yellow-600" />
                         }
                         <span className="text-sm arabic-body">الرصيد الابتدائي</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {systemData.master_context_file.initialization_data.academic_milestone_set ? 
-                          <CheckCircle className="w-4 h-4 text-green-600" /> : 
-                          <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                        }
-                        <span className="text-sm arabic-body">المعلم الأكاديمي</span>
                       </div>
                     </div>
                   )}
@@ -337,14 +330,14 @@ const SystemArchitect = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button 
+            <Button
               onClick={runSystemMaintenance}
               className="btn-islamic arabic-body"
             >
               تشغيل الصيانة الدورية
             </Button>
-            
-            <Button 
+
+            <Button
               variant="outline"
               onClick={loadSystemData}
               className="arabic-body"
@@ -386,8 +379,8 @@ const SystemArchitect = () => {
                   <div className="flex items-center justify-between mb-1">
                     <span className="arabic-body font-semibold text-sm">
                       {log.event === 'system_initialization' ? 'تهيئة النظام' :
-                       log.event === 'system_maintenance' ? 'صيانة النظام' :
-                       log.event}
+                        log.event === 'system_maintenance' ? 'صيانة النظام' :
+                          log.event}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(log.timestamp).toLocaleString('ar')}

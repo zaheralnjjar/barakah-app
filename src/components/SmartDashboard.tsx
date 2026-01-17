@@ -20,13 +20,12 @@ import { searchLocation } from '@/services/GeocodingService';
 // Icons
 import {
     CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, MapPin,
-    GraduationCap, Users, LayoutGrid, Calendar as CalendarIcon
+    Users, LayoutGrid, Calendar as CalendarIcon
 } from 'lucide-react';
 
 
 
 import NewMuslimsManager from './NewMuslims/NewMuslimsManager';
-import AcademicManager from './AcademicManager';
 
 // Components
 import InteractiveMap from '@/components/InteractiveMap';
@@ -39,7 +38,6 @@ import DashboardStats from './dashboard/DashboardStats';
 import QuickActionsGrid from './dashboard/QuickActionsGrid';
 import DailyReportCard from './dashboard/DailyReportCard';
 import DashboardCalendar from './dashboard/DashboardCalendar';
-import { AddMaterialDialog } from './academic/AddMaterialDialog';
 import { CollapsibleSection } from './dashboard/CollapsibleSection';
 
 // Refactored Widgets
@@ -85,7 +83,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [showAddDialog, setShowAddDialog] = useState<'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | null>(null);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isParkingSectionOpen, setIsParkingSectionOpen] = useState(false);
-    const [showAcademicDialog, setShowAcademicDialog] = useState(false);
     const [showNewMuslimsDialog, setShowNewMuslimsDialog] = useState(false);
     const [showPomodoroTimer, setShowPomodoroTimer] = useState(false);
     const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
@@ -210,7 +207,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             onNavigateToTab={onNavigateToTab}
                             onOpenSearch={() => setIsSearchOpen(true)}
                             onQuickParking={handleQuickParking}
-                            onOpenAcademic={() => setShowAcademicDialog(true)}
                             onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                             onActivateWidgets={(widgets: string[]) => setActiveWidgets(widgets)}
                             activeWidgets={activeWidgets}
@@ -295,7 +291,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 onClose={() => setIsSearchOpen(false)}
                 onNavigateToTab={onNavigateToTab}
                 onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
-                onOpenAcademic={() => setShowAcademicDialog(true)}
             />
 
             <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
@@ -568,15 +563,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     {showAddDialog === 'goal' && <div className="text-center p-4">إضافة هدف جديد (قريباً).</div>}
                 </DialogContent>
             </Dialog>
-
-            {/* Academic Full Screen Overlay */}
-            {
-                showAcademicDialog && (
-                    <div className="fixed inset-0 z-[100] bg-white animate-in fade-in slide-in-from-bottom-5 overflow-hidden flex flex-col">
-                        <AcademicManager onClose={() => setShowAcademicDialog(false)} />
-                    </div>
-                )
-            }
 
             {/* New Muslims Full Screen Overlay */}
             {

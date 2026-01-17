@@ -43,72 +43,6 @@ const CalendarSection: React.FC = () => {
     const { medications } = useMedications();
     const { prayerTimes = [], nextPrayer, timeUntilNext } = useDashboardData();
     const { toast } = useToast();
-    const [academicSubtasks, setAcademicSubtasks] = useState<any[]>([]);
-
-    // Load academic tasks subtasks
-    useEffect(() => {
-        const loadAcademicTasks = () => {
-            try {
-                const stored = localStorage.getItem('my_research_project_v2');
-                if (stored) {
-                    const project = JSON.parse(stored);
-                    const allItems: any[] = [];
-
-                    if (project.phases) {
-                        const processTask = (task: any) => {
-                            // Add main task if it has a deadline
-                            if (task.deadline) {
-                                allItems.push({
-                                    id: task.id,
-                                    title: `🎓 ${task.title}`,
-                                    date: task.deadline,
-                                    type: 'academic-task',
-                                    priority: task.priority,
-                                    completed: task.status === 'completed'
-                                });
-                            }
-
-                            // Add subtasks if they have dates
-                            if (task.subtasks) {
-                                task.subtasks.forEach((sub: any) => {
-                                    if (sub.date) {
-                                        allItems.push({
-                                            ...sub,
-                                            parentId: task.id,
-                                            parentTitle: task.title,
-                                            type: 'academic-subtask'
-                                        });
-                                    }
-                                });
-                            }
-                        };
-
-                        project.phases.forEach((phase: any) => {
-                            // Direct Tasks
-                            if (phase.tasks) {
-                                phase.tasks.forEach((task: any) => processTask(task));
-                            }
-                            // Chapter Tasks
-                            if (phase.chapters) {
-                                phase.chapters.forEach((chapter: any) => {
-                                    if (chapter.tasks) {
-                                        chapter.tasks.forEach((task: any) => processTask(task));
-                                    }
-                                });
-                            }
-                        });
-                    }
-                    setAcademicSubtasks(allItems);
-                }
-            } catch (e) {
-                console.error("Failed to load academic tasks", e);
-            }
-        };
-
-        loadAcademicTasks();
-        window.addEventListener('storage', loadAcademicTasks);
-        return () => window.removeEventListener('storage', loadAcademicTasks);
-    }, []);
 
     // Prayer icon helper
     const getPrayerIcon = (name: string) => {
@@ -127,23 +61,7 @@ const CalendarSection: React.FC = () => {
         const dateTasks = tasks.filter(t => t.deadline === dateStr);
         const dateAppointments = appointments.filter(a => a.date === dateStr);
 
-        // Filter academic items for this date
-        const dateAcademicItems = academicSubtasks.filter(s => s.date === dateStr).map(s => ({
-            id: s.id,
-            title: s.type === 'academic-subtask' ? `🔹 ${s.parentTitle}: ${s.title}` : s.title,
-            description: s.time ? `الساعة: ${s.time}` : 'بحث علمي',
-            deadline: s.date,
-            time: s.time,
-            status: s.completed ? 'completed' : 'pending',
-            progress: s.completed ? 100 : 0,
-            subtasks: [],
-            priority: s.priority || 'medium',
-            type: 'academic'
-        }));
-
-        return { tasks: [...dateTasks, ...dateAcademicItems], appointments: dateAppointments };
-
-
+        return { tasks: dateTasks, appointments: dateAppointments };
     };
 
     // Generate calendar days

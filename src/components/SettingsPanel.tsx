@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Share } from '@capacitor/share';
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
-import AcademicManager from '@/components/AcademicManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,7 +31,6 @@ import {
     Share2, // Added icon
     Smartphone, // Added icon
     Users, // Added icon
-    GraduationCap, // Academic icon
     ChevronUp,
     ChevronDown,
     LayoutDashboard,
@@ -328,7 +326,7 @@ const SettingsPanel = () => {
     // --- Layout Customization State ---
     const DEFAULT_SECTIONS_ORDER = [
         'notifications', 'new_muslims', 'sync', 'finance',
-        'storage', 'security', 'routines', 'academic', 'about'
+        'storage', 'security', 'routines', 'about'
     ];
 
     const [sectionsOrder, setSectionsOrder] = useState<string[]>(() => {
@@ -494,15 +492,6 @@ const SettingsPanel = () => {
             bg: 'bg-purple-50',
             borderColor: 'border-purple-100',
             description: 'قوالب روتينية قابلة للتكرار'
-        },
-        {
-            id: 'academic',
-            title: 'البحث الأكاديمي',
-            icon: GraduationCap,
-            color: 'text-violet-600',
-            bg: 'bg-violet-50',
-            borderColor: 'border-violet-100',
-            description: 'إدارة خطة رسالة الماجستير/الدكتوراه'
         },
         {
             id: 'about',
@@ -1519,32 +1508,6 @@ const SettingsPanel = () => {
                     </DialogHeader>
                     <div className="p-2 sm:p-4">
                         <NewMuslimsManager />
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Academic Research Dialog */}
-            <Dialog open={activeSection === 'academic'} onOpenChange={(open) => !open && setActiveSection(null)}>
-                <DialogContent
-                    className="w-[95vw] max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0"
-                    onInteractOutside={(e) => e.preventDefault()}
-                >
-                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
-                        <DialogTitle className="flex items-center gap-2 text-purple-700">
-                            <GraduationCap className="w-5 h-5" />
-                            القسم الأكاديمي
-                        </DialogTitle>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setActiveSection(null)}
-                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
-                        >
-                            <X className="w-5 h-5" />
-                        </Button>
-                    </DialogHeader>
-                    <div className="p-2 sm:p-4 overflow-x-hidden">
-                        <AcademicManager />
                     </div>
                 </DialogContent>
             </Dialog>
