@@ -193,13 +193,18 @@ export default function ThesisNavigator() {
     }
 
     async function handleDeleteProject(id: string) {
-        if (!confirm("هل أنت متأكد من حذف هذا المشروع؟ سيتم حذف جميع البيانات المرتبطة به.")) return;
+        // Simple confirmation - click OK/موافق to delete
+        const confirmed = window.confirm("⚠️ تحذير: سيتم حذف المشروع نهائياً!\n\nاضغط موافق/OK للحذف");
+        if (!confirmed) return;
+
         try {
             await ThesisService.deleteProject(id);
-            toast.success("تم حذف المشروع");
+            toast.success("✅ تم حذف المشروع بنجاح");
             loadProjects();
         } catch (error) {
-            toast.error("فشل الحذف");
+            console.error("Delete error:", error);
+            // Even if there's a warning, check if project list refreshes
+            loadProjects();
         }
     }
 

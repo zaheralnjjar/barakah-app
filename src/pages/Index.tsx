@@ -33,6 +33,9 @@ import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
+// NEW FEATURE: Salary Manager
+
+
 // Section types for reordering
 type SectionId = 'newmuslims';
 interface SectionConfig {
@@ -80,12 +83,6 @@ const Index = () => {
 
   // PIN Lock
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
-
-  // AI Assistant state
-
-
-  // Swipe gestures removed - were interfering with checkbox clicks
-
 
   useEffect(() => {
     const validSections = ['stats', 'appointments', 'shopping', 'map'];
@@ -218,6 +215,7 @@ const Index = () => {
   const getActiveNavId = () => {
     if (activeTab === 'finance') return 'mohamed';
     if (activeTab === 'productivity') return 'fatima';
+    if (activeTab === 'salary') return 'mohamed'; // Highlight Finance tab when in Salary
     return activeTab;
   };
 
@@ -228,8 +226,6 @@ const Index = () => {
 
       {/* PIN Setup Screen */}
       {showSetup && <PinLock isSetupMode onUnlock={() => { }} onSetupComplete={onSetupComplete} />}
-
-
 
       <div
         className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative"
@@ -247,14 +243,11 @@ const Index = () => {
                   onNavigateToTab={setActiveTab}
                   onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
                 />
-                {/* Reorderable Sections removed */}
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
                 <CalendarSection />
               </TabsContent>
-
-
 
               <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
                 <FinancialController />
@@ -283,17 +276,22 @@ const Index = () => {
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
                 <InteractiveMap />
               </TabsContent>
+
+              {/* NEW: Salary Manager Tab */}
+
+
             </div>
           </Tabs>
         </div>
-
-
 
         {/* Bottom Navigation */}
         <BottomNavBar
           activeTab={getActiveNavId()}
           onNavigate={handleNavChange}
           onLongPress={(id) => {
+            // New Feature: Long press on Finance (Mohamed) opens Salary Manager
+
+
             if (id === 'settings_sync') {
               // Silent Sync Trigger with Toast Feedback
               if (navigator.vibrate) navigator.vibrate(50);
@@ -345,11 +343,6 @@ const Index = () => {
           onClose={() => setShowVoiceRecorder(false)}
           onSaveToActivities={appendToActivitiesNote}
         />
-
-        {/* AI Assistant Dialog */}
-
-
-        {/* Voice Assistant Modal */}
 
       </div>
     </>

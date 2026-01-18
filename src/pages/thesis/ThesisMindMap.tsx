@@ -80,7 +80,7 @@ export default function ThesisMindMap() {
                 const y = 60 + level * 100;
                 nodes.push({
                     id: node.id,
-                    title: node.title.substring(0, 30) + (node.title.length > 30 ? '...' : ''),
+                    title: cleanNodeTitle(node.title).substring(0, 30) + (cleanNodeTitle(node.title).length > 30 ? '...' : ''),
                     fullTitle: cleanNodeTitle(node.title),
                     type: node.type,
                     x, y, parentId
@@ -129,7 +129,7 @@ export default function ThesisMindMap() {
 
                 nodes.push({
                     id: item.node.id,
-                    title: item.node.title.substring(0, 15) + (item.node.title.length > 15 ? '...' : ''),
+                    title: cleanNodeTitle(item.node.title).substring(0, 15) + (cleanNodeTitle(item.node.title).length > 15 ? '...' : ''),
                     fullTitle: cleanNodeTitle(item.node.title),
                     type: item.node.type,
                     x, y, parentId: item.parentId
@@ -148,7 +148,7 @@ export default function ThesisMindMap() {
 
                 nodes.push({
                     id: node.id,
-                    title: node.title.substring(0, 15) + (node.title.length > 15 ? '...' : ''),
+                    title: cleanNodeTitle(node.title).substring(0, 15) + (cleanNodeTitle(node.title).length > 15 ? '...' : ''),
                     fullTitle: cleanNodeTitle(node.title),
                     type: node.type,
                     x, y, parentId

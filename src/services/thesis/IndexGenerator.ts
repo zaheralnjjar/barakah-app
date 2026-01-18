@@ -20,19 +20,23 @@ export class IndexGenerator {
 
     /**
      * استخراج الآيات القرآنية من النص
-     * Patterns: {آية} | ﴿آية﴾ | قال تعالى: "آية"
+     * Patterns: ﴿آية﴾ | {آية} | قال تعالى: "آية" | يقول الله تعالى ...
      */
     static extractVerses(content: string, location: string): IndexEntry[] {
         const verses: Map<string, IndexEntry> = new Map();
 
-        // Pattern 1: ﴿...﴾
+        // Pattern 1: ﴿...﴾ (Quranic brackets)
         const pattern1 = /﴿([^﴾]+)﴾/g;
-        // Pattern 2: {﴿...﴾}
+        // Pattern 2: {...} (curly braces)
         const pattern2 = /\{([^}]+)\}/g;
-        // Pattern 3: قال تعالى: "..."
+        // Pattern 3: قال تعالى: "..." or قال الله تعالى: "..."
         const pattern3 = /قال\s+(?:الله\s+)?تعالى\s*[:\s]*[""«]([^""»]+)[""»]/g;
+        // Pattern 4: يقول الله تعالى ... (without quotes - capture until end of sentence)
+        const pattern4 = /(?:يقول|قال)\s+(?:الله\s+)?تعالى\s*[:\s]*([^.،\n]+)/g;
+        // Pattern 5: Common Quran phrases without explicit markers
+        const pattern5 = /(?:وقوله\s+تعالى|لقوله\s+تعالى)\s*[:\s]*([^.،\n]+)/g;
 
-        const patterns = [pattern1, pattern2, pattern3];
+        const patterns = [pattern1, pattern2, pattern3, pattern4, pattern5];
 
         for (const pattern of patterns) {
             let match;
@@ -68,14 +72,18 @@ export class IndexGenerator {
     static extractHadiths(content: string, location: string): IndexEntry[] {
         const hadiths: Map<string, IndexEntry> = new Map();
 
-        // Pattern 1: قال رسول الله ﷺ: "..."
+        // Pattern 1: قال رسول الله ﷺ: "..." (with quotes)
         const pattern1 = /قال\s+(?:رسول\s+الله|النبي)\s*[ﷺ﷽]*\s*[:\s]*[""«]([^""»]+)[""»]/g;
-        // Pattern 2: عن ... قال: "..."
-        const pattern2 = /عن\s+[^،]+\s+قال\s*[:\s]*[""«]([^""»]+)[""»]/g;
-        // Pattern 3: روى ... أن النبي قال
-        const pattern3 = /روى\s+[^:]+[:\s]+([^.]+\.)/g;
+        // Pattern 2: قال رسول الله ﷺ ... (without quotes - until period)
+        const pattern2 = /قال\s+(?:رسول\s+الله|النبي)\s*[ﷺ﷽]*\s*[:\s]*([^.،\n]+)/g;
+        // Pattern 3: عن ... قال: "..."
+        const pattern3 = /عن\s+[^،]+\s+قال\s*[:\s]*[""«]([^""»]+)[""»]/g;
+        // Pattern 4: روى ... أن النبي قال
+        const pattern4 = /روى\s+[^:]+[:\s]+([^.]+\.)/g;
+        // Pattern 5: Flexible "رسول الله" without قال
+        const pattern5 = /(?:رسول\s+الله|النبي)\s*[ﷺ﷽]*\s*[:\s]+([^.،\n]+)/g;
 
-        const patterns = [pattern1, pattern2, pattern3];
+        const patterns = [pattern1, pattern2, pattern3, pattern4, pattern5];
 
         for (const pattern of patterns) {
             let match;

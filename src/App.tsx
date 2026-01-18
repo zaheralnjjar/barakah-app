@@ -24,6 +24,11 @@ import ThesisTimeline from "./pages/thesis/ThesisTimeline";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
+// Untracked/New Component
+import ThesisLayout from "./pages/thesis/ThesisLayout";
+
+import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
+
 const queryClient = new QueryClient();
 
 // Request all permissions on app start
@@ -84,7 +89,6 @@ const PermissionRequester = () => {
   return null;
 };
 
-import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 
 const App = () => {
   // Watch sync removed - watch app deleted
@@ -103,19 +107,20 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/widget" element={<WidgetPage />} />
-              {/* Thesis Manager Routes */}
-              <Route path="/thesis" element={<ThesisNavigator />} />
-              <Route path="/thesis/dashboard" element={<ThesisDashboard />} />
-              <Route path="/thesis/tasks" element={<ThesisTasks />} />
-              <Route path="/thesis/structure" element={<ThesisStructure />} />
-              <Route path="/thesis/calendar" element={<ThesisCalendar />} />
-              <Route path="/thesis/indexes" element={<ThesisIndexes />} />
-              <Route path="/thesis/settings" element={<ThesisSettings />} />
-              <Route path="/thesis/references" element={<ThesisReferences />} />
-              <Route path="/thesis/trash" element={<ThesisTrash />} />
-              <Route path="/thesis/links" element={<ThesisLinks />} />
-              <Route path="/thesis/mindmap" element={<ThesisMindMap />} />
-              <Route path="/thesis/timeline" element={<ThesisTimeline />} />
+
+              {/* Thesis Manager Routes - Wrapped with Layout for BottomNavBar */}
+              <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />
+              <Route path="/thesis/dashboard" element={<ThesisLayout><ThesisDashboard /></ThesisLayout>} />
+              <Route path="/thesis/tasks" element={<ThesisLayout><ThesisTasks /></ThesisLayout>} />
+              <Route path="/thesis/structure" element={<ThesisLayout><ThesisStructure /></ThesisLayout>} />
+              <Route path="/thesis/calendar" element={<ThesisLayout><ThesisCalendar /></ThesisLayout>} />
+              <Route path="/thesis/indexes" element={<ThesisLayout><ThesisIndexes /></ThesisLayout>} />
+              <Route path="/thesis/settings" element={<ThesisLayout><ThesisSettings /></ThesisLayout>} />
+              <Route path="/thesis/references" element={<ThesisLayout><ThesisReferences /></ThesisLayout>} />
+              <Route path="/thesis/trash" element={<ThesisLayout><ThesisTrash /></ThesisLayout>} />
+              <Route path="/thesis/links" element={<ThesisLayout><ThesisLinks /></ThesisLayout>} />
+              <Route path="/thesis/mindmap" element={<ThesisLayout><ThesisMindMap /></ThesisLayout>} />
+              <Route path="/thesis/timeline" element={<ThesisLayout><ThesisTimeline /></ThesisLayout>} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
