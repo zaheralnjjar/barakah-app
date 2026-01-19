@@ -236,8 +236,8 @@ export default function ThesisNavigator() {
                                     <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-3">
                                         <span className="text-3xl">🎓</span>
                                     </div>
-                                    <DialogTitle className="text-xl">إعداد الخطة البحثية</DialogTitle>
-                                    <p className="text-sm text-muted-foreground">سوف نساعدك في تنظيم وإدارة رسالتك العلمية بكفاءة عالية</p>
+                                    <DialogTitle className="text-base md:text-lg">إعداد الخطة البحثية</DialogTitle>
+                                    <p className="text-xs md:text-sm text-muted-foreground">سوف نساعدك في تنظيم وإدارة رسالتك العلمية بكفاءة عالية</p>
                                 </DialogHeader>
                                 <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
                                     {/* عنوان الرسالة */}
@@ -401,7 +401,7 @@ export default function ThesisNavigator() {
                             <Search className="text-muted-foreground w-5 h-5" />
                             <Input
                                 placeholder="بحث في المشاريع..."
-                                className="border-0 bg-transparent focus-visible:ring-0 px-0 text-lg"
+                                className="border-0 bg-transparent focus-visible:ring-0 px-0 text-sm md:text-base"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -436,7 +436,7 @@ export default function ThesisNavigator() {
                                     </Button>
                                 </CardHeader>
                                 <CardContent>
-                                    <CardTitle className="mb-2 line-clamp-1 text-xl">{project.name}</CardTitle>
+                                    <CardTitle className="mb-2 line-clamp-1 text-base md:text-lg">{project.name}</CardTitle>
                                     <CardDescription className="flex items-center gap-4 text-sm">
                                         <span className="flex items-center gap-1">
                                             <Calendar className="w-3 h-3" />
@@ -469,8 +469,8 @@ export default function ThesisNavigator() {
                         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                             <Plus className="w-8 h-8 text-muted-foreground" />
                         </div>
-                        <h3 className="text-xl font-medium mb-2">لا توجد مشاريع</h3>
-                        <p className="text-muted-foreground mb-6">ابدأ بإنشاء مشروعك العلمي الأول</p>
+                        <h3 className="text-base md:text-lg font-medium mb-2">لا توجد مشاريع</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground mb-6">ابدأ بإنشاء مشروعك العلمي الأول</p>
                         <Button onClick={() => setShowNewProjectDialog(true)}>إنشاء مشروع جديد</Button>
                     </div>
                 )}

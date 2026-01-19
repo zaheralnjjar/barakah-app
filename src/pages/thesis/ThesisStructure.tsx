@@ -18,8 +18,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { DocxGenerator } from '@/services/thesis/DocxGenerator';
 import { FileSystemService } from '@/services/thesis/FileSystemService';
 import { FolderManagerDialog } from './FolderManagerDialog';
+import { isAcademicReadOnly } from '@/utils/platformDetection';
 
 export default function ThesisStructure() {
+    const isReadOnly = isAcademicReadOnly(); // Read-only on Android
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get('project');
     const navigate = useNavigate();
@@ -999,18 +1001,22 @@ export default function ThesisStructure() {
                                 )}
                             </>
                         )}
-                        <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                            <FileText className="w-4 h-4 ml-2" />
-                            استيراد خطة
-                        </Button>
                         <Button variant="outline" onClick={generateMasterDoc}>
                             <BookOpen className="w-4 h-4 ml-2" />
                             الملف الرئيسي
                         </Button>
-                        <Button onClick={() => handleAdd(null)} className="bg-primary text-primary-foreground">
-                            <Plus className="w-4 h-4 ml-2" />
-                            إضافة فصل
-                        </Button>
+                        {!isReadOnly && (
+                            <>
+                                <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                                    <FileText className="w-4 h-4 ml-2" />
+                                    استيراد خطة
+                                </Button>
+                                <Button onClick={() => handleAdd(null)} className="bg-primary text-primary-foreground">
+                                    <Plus className="w-4 h-4 ml-2" />
+                                    إضافة فصل
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -1068,8 +1074,14 @@ export default function ThesisStructure() {
                         <div className="text-center py-20 border-2 border-dashed rounded-xl bg-gray-50">
                             <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                             <h3 className="text-xl font-medium text-gray-900">الهيكل فارغ</h3>
-                            <p className="text-gray-500 mb-6">ابدأ بإنشاء الهيكل التنظيمي لرسالتك</p>
-                            <Button onClick={() => handleAdd(null)}>إضافة الفصل الأول</Button>
+                            {isReadOnly ? (
+                                <p className="text-gray-500 mt-2">وضع العرض فقط</p>
+                            ) : (
+                                <>
+                                    <p className="text-gray-500 mb-6">ابدأ بإنشاء الهيكل التنظيمي لرسالتك</p>
+                                    <Button onClick={() => handleAdd(null)}>إضافة الفصل الأول</Button>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

@@ -24,14 +24,10 @@ import {
 } from 'lucide-react';
 
 
-
 import NewMuslimsManager from './NewMuslims/NewMuslimsManager';
-
-// Components
 import InteractiveMap from '@/components/InteractiveMap';
 import AppointmentManager from '@/components/AppointmentManager';
 import PomodoroTimer from '@/components/PomodoroTimer';
-import { RoutineModesWidget } from './dashboard/RoutineModesWidget';
 import DashboardHeader from './dashboard/DashboardHeader';
 import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import DashboardStats from './dashboard/DashboardStats';
@@ -168,21 +164,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         return () => window.removeEventListener('storage', loadNewMuslimsCount);
     }, []);
 
-    // Sync to Widget
-    useEffect(() => {
-        const syncToWidget = async () => {
-            try {
-                // Dynamic import to avoid SSR/Build issues if any
-                const { syncWidgetData } = await import('@/utils/widgetSync');
-                await syncWidgetData({
-                    tasks, appointments, habits, medications, prayers: prayerTimes,
-                    finance: { balance: financeData?.current_balance_ars?.toString() || '0', debt: financeData?.total_debt?.toString() || '0' },
-                    shopping: shoppingItems
-                });
-            } catch (e) { console.error("Widget sync error", e); }
-        };
-        if (!dataLoading) syncToWidget();
-    }, [tasks, appointments, habits, medications, prayerTimes, financeData, shoppingItems, dataLoading]);
 
 
     return (
@@ -247,8 +228,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             </CollapsibleSection>
                         )}
 
-                        {/* 9. Routine Modes - Collapsible */}
-                        <RoutineModesWidget />
+
 
                         {/* Pomodoro Timer (Hidden Trigger) */}
                         <PomodoroTimer hideTrigger={true} />

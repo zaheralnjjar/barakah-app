@@ -416,6 +416,40 @@ END:VCALENDAR`;
         });
     };
 
+    // Calculate days remaining until appointment
+    const getDaysRemaining = (date: string): string => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const aptDate = new Date(date);
+        aptDate.setHours(0, 0, 0, 0);
+
+        const diffTime = aptDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return 'فات الموعد';
+        if (diffDays === 0) return 'اليوم';
+        if (diffDays === 1) return 'غداً';
+        if (diffDays === 2) return 'بعد غد';
+        return `بعد ${diffDays} يوم`;
+    };
+
+    // Get countdown badge color
+    const getCountdownColor = (date: string): string => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const aptDate = new Date(date);
+        aptDate.setHours(0, 0, 0, 0);
+
+        const diffTime = aptDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return 'bg-red-100 text-red-600';
+        if (diffDays === 0) return 'bg-orange-100 text-orange-600';
+        if (diffDays === 1) return 'bg-yellow-100 text-yellow-600';
+        if (diffDays <= 3) return 'bg-blue-100 text-blue-600';
+        return 'bg-gray-100 text-gray-600';
+    };
+
     return (
         <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
             <Card>
@@ -502,7 +536,12 @@ END:VCALENDAR`;
                                         <Check className="w-5 h-5" />
                                     </button>
                                     <div className="flex-1 min-w-0">
-                                        <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
+                                            <Badge className={`text-[10px] font-bold ${getCountdownColor(apt.date)}`}>
+                                                ⏱️ {getDaysRemaining(apt.date)}
+                                            </Badge>
+                                        </div>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <span>{formatDate(apt.date)}</span>
                                             <span>{apt.time}</span>

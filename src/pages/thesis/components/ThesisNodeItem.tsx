@@ -7,6 +7,7 @@ import {
     ChevronDown, ChevronRight, CheckCircle2, MoreVertical,
     Plus, Edit, Calendar, Merge, Scissors, Trash2
 } from 'lucide-react';
+import { isAcademicReadOnly } from '@/utils/platformDetection';
 
 interface ThesisNodeItemProps {
     node: ThesisNode;
@@ -41,6 +42,7 @@ const ThesisNodeItem = memo(({
     onDelete,
     onOpenFolder
 }: ThesisNodeItemProps) => {
+    const isReadOnly = isAcademicReadOnly(); // Read-only on Android
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = !!expandedIds[node.id];
     const hasFile = !!fileStatusMap[node.id];
@@ -148,57 +150,59 @@ const ThesisNodeItem = memo(({
                         <span className="text-white">فتح</span>
                     </Button>
 
-                    {/* Toolbar Actions - Icons Only */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreVertical className="w-4 h-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            {/* Add Child */}
-                            {level < 4 && (
-                                <DropdownMenuItem onClick={() => onAdd(node)} className="gap-2 text-green-600 focus:text-green-700 focus:bg-green-50">
-                                    <Plus className="w-4 h-4" />
-                                    <span>إضافة فرعي</span>
+                    {/* Toolbar Actions - Icons Only - Hidden in Read-Only mode */}
+                    {!isReadOnly && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="w-4 h-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                {/* Add Child */}
+                                {level < 4 && (
+                                    <DropdownMenuItem onClick={() => onAdd(node)} className="gap-2 text-green-600 focus:text-green-700 focus:bg-green-50">
+                                        <Plus className="w-4 h-4" />
+                                        <span>إضافة فرعي</span>
+                                    </DropdownMenuItem>
+                                )}
+
+                                {/* Edit */}
+                                <DropdownMenuItem onClick={() => onEdit(node)} className="gap-2 text-amber-600 focus:text-amber-700 focus:bg-amber-50">
+                                    <Edit className="w-4 h-4" />
+                                    <span>تعديل الاسم</span>
                                 </DropdownMenuItem>
-                            )}
 
-                            {/* Edit */}
-                            <DropdownMenuItem onClick={() => onEdit(node)} className="gap-2 text-amber-600 focus:text-amber-700 focus:bg-amber-50">
-                                <Edit className="w-4 h-4" />
-                                <span>تعديل الاسم</span>
-                            </DropdownMenuItem>
-
-                            {/* Appointment - New Feature */}
-                            <DropdownMenuItem onClick={() => onAppointment(node)} className="gap-2 text-blue-600 focus:text-blue-700 focus:bg-blue-50">
-                                <Calendar className="w-4 h-4" />
-                                <span>تعيين موعد/مجازة</span>
-                            </DropdownMenuItem>
-
-                            {/* Merge */}
-                            <DropdownMenuItem onClick={() => onMerge(node.id)} className="gap-2 text-purple-600 focus:text-purple-700 focus:bg-purple-50">
-                                <Merge className="w-4 h-4" />
-                                <span>دمج مع التالي</span>
-                            </DropdownMenuItem>
-
-                            {/* Split */}
-                            {node.children && node.children.length >= 2 && (
-                                <DropdownMenuItem onClick={() => onSplit(node.id)} className="gap-2 text-teal-600 focus:text-teal-700 focus:bg-teal-50">
-                                    <Scissors className="w-4 h-4" />
-                                    <span>تقسيم</span>
+                                {/* Appointment - New Feature */}
+                                <DropdownMenuItem onClick={() => onAppointment(node)} className="gap-2 text-blue-600 focus:text-blue-700 focus:bg-blue-50">
+                                    <Calendar className="w-4 h-4" />
+                                    <span>تعيين موعد/مجازة</span>
                                 </DropdownMenuItem>
-                            )}
 
-                            <DropdownMenuSeparator />
+                                {/* Merge */}
+                                <DropdownMenuItem onClick={() => onMerge(node.id)} className="gap-2 text-purple-600 focus:text-purple-700 focus:bg-purple-50">
+                                    <Merge className="w-4 h-4" />
+                                    <span>دمج مع التالي</span>
+                                </DropdownMenuItem>
 
-                            {/* Delete */}
-                            <DropdownMenuItem onClick={() => onDelete(node.id)} className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
-                                <Trash2 className="w-4 h-4" />
-                                <span>حذف</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                {/* Split */}
+                                {node.children && node.children.length >= 2 && (
+                                    <DropdownMenuItem onClick={() => onSplit(node.id)} className="gap-2 text-teal-600 focus:text-teal-700 focus:bg-teal-50">
+                                        <Scissors className="w-4 h-4" />
+                                        <span>تقسيم</span>
+                                    </DropdownMenuItem>
+                                )}
+
+                                <DropdownMenuSeparator />
+
+                                {/* Delete */}
+                                <DropdownMenuItem onClick={() => onDelete(node.id)} className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>حذف</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </div>
 

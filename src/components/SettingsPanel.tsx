@@ -458,6 +458,15 @@ const SettingsPanel = () => {
             description: 'النسخ السحابي وجداول البيانات'
         },
         {
+            id: 'whatsapp',
+            title: 'اختصارات واتساب',
+            icon: Smartphone,
+            color: 'text-green-600',
+            bg: 'bg-green-50',
+            borderColor: 'border-green-100',
+            description: 'إعدادات الإرسال السريع'
+        },
+        {
             id: 'finance',
             title: 'الإعدادات المالية',
             icon: DollarSign,
@@ -1304,6 +1313,102 @@ const SettingsPanel = () => {
                                 </div>
                             </>
                         )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* WhatsApp Shortcuts Dialog */}
+            <Dialog open={activeSection === 'whatsapp'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Smartphone className="w-5 h-5 text-green-600" />
+                            اختصارات واتساب
+                        </DialogTitle>
+                        <DialogDescription>
+                            إعداد رقم الواتساب وتخصيص الاختصارات
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {/* WhatsApp Number */}
+                        <div className="space-y-2">
+                            <Label htmlFor="whatsapp_number">رقم الواتساب (مع رمز الدولة)</Label>
+                            <Input
+                                id="whatsapp_number"
+                                type="tel"
+                                placeholder="مثال: 5491123456789"
+                                defaultValue={localStorage.getItem('baraka_whatsapp_number') || ''}
+                                onChange={(e) => localStorage.setItem('baraka_whatsapp_number', e.target.value)}
+                                className="text-left"
+                                dir="ltr"
+                            />
+                            <p className="text-xs text-gray-500">أدخل الرقم بدون + أو مسافات</p>
+                        </div>
+
+                        {/* Built-in Shortcuts */}
+                        <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                            <h4 className="font-semibold text-green-700 mb-2">الاختصارات المدمجة:</h4>
+                            <ul className="text-sm text-green-600 space-y-1">
+                                <li>📍 حفظ الموقع - يرسل موقعك مع رابط الخريطة</li>
+                                <li>💵 سعر الدولار - البيسو الأرجنتيني (رسمي + بلو)</li>
+                                <li>🕌 مواقيت الصلاة - الصلوات الخمس</li>
+                            </ul>
+                        </div>
+
+                        {/* Quick Send Buttons */}
+                        <div className="space-y-2">
+                            <h4 className="font-semibold text-gray-700">إرسال سريع:</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const number = localStorage.getItem('baraka_whatsapp_number');
+                                        if (!number) { toast({ title: 'أدخل رقم WhatsApp أولاً', variant: 'destructive' }); return; }
+                                        window.open(`https://wa.me/${number}?text=${encodeURIComponent('🏠 أنا في البيت')}`, '_blank');
+                                    }}
+                                >
+                                    🏠 أنا في البيت
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const number = localStorage.getItem('baraka_whatsapp_number');
+                                        if (!number) { toast({ title: 'أدخل رقم WhatsApp أولاً', variant: 'destructive' }); return; }
+                                        window.open(`https://wa.me/${number}?text=${encodeURIComponent('🚗 أنا في الطريق')}`, '_blank');
+                                    }}
+                                >
+                                    🚗 في الطريق
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const number = localStorage.getItem('baraka_whatsapp_number');
+                                        if (!number) { toast({ title: 'أدخل رقم WhatsApp أولاً', variant: 'destructive' }); return; }
+                                        window.open(`https://wa.me/${number}?text=${encodeURIComponent('✅ وصلت بسلام')}`, '_blank');
+                                    }}
+                                >
+                                    ✅ وصلت
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        const number = localStorage.getItem('baraka_whatsapp_number');
+                                        if (!number) { toast({ title: 'أدخل رقم WhatsApp أولاً', variant: 'destructive' }); return; }
+                                        window.open(`https://wa.me/${number}?text=${encodeURIComponent('📞 اتصل بي')}`, '_blank');
+                                    }}
+                                >
+                                    📞 اتصل بي
+                                </Button>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-400 text-center">
+                            اضغط مطولاً على أيقونة التطبيق في الشاشة الرئيسية للوصول السريع
+                        </p>
                     </div>
                 </DialogContent>
             </Dialog>

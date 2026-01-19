@@ -21,12 +21,17 @@ import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 import CalendarSection from '@/components/CalendarSection';
 
+import SmartBottomBar from '@/components/SmartBottomBar';
 import BottomNavBar from '@/components/BottomNavBar';
+import { isAndroid } from '@/utils/platformDetection';
+import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { getDaysUntil } from '@/utils/dateUtils';
+import { useSwipeBack } from '@/hooks/useSwipeBack';
 import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
 import { NotificationBell } from '@/components/NotificationBell';
 import NavSummaryDialogs from '@/components/NavSummaryDialogs';
-import { useWidgetSync } from '@/hooks/useWidgetSync';
+
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
@@ -78,11 +83,49 @@ const Index = () => {
 
   // Sync Hooks
   const { syncNow, isSyncing, lastSync, isOnline, pendingActions, failedActions } = useCloudSync();
-  useWidgetSync(); // Keep for background sync if needed
+
   useLocalNotifications();
 
   // PIN Lock
   const { isLocked, pinEnabled, showSetup, unlock, onSetupComplete, setShowSetup } = usePinLock();
+
+  // Prayer times for SmartBottomBar
+  const { nextPrayer, timeUntilNext } = usePrayerTimes();
+
+  // Appointments state
+  const [appointments, setAppointments] = useState<any[]>([]);
+
+  // Tasks state for SmartBottomBar
+  const [tasksCount, setTasksCount] = useState({ remaining: 0, completed: 0 });
+
+  // Swipe back gesture for Android
+  useSwipeBack({ enabled: true });
+
+  // Listen for SmartBottomBar long-press events
+  useEffect(() => {
+    const handleQuickActions = () => {
+      // Scroll to quick actions or trigger some action
+      const element = document.querySelector('.quick-actions-grid');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    const handleCloudSync = () => {
+      if (syncNow) {
+        syncNow();
+        toast({ title: '☁️ جاري المزامنة...', description: 'تزامن البيانات مع السحابة' });
+      }
+    };
+
+    window.addEventListener('open-quick-actions', handleQuickActions);
+    window.addEventListener('trigger-cloud-sync', handleCloudSync);
+
+    return () => {
+      window.removeEventListener('open-quick-actions', handleQuickActions);
+      window.removeEventListener('trigger-cloud-sync', handleCloudSync);
+    };
+  }, [syncNow]);
 
   useEffect(() => {
     const validSections = ['stats', 'appointments', 'shopping', 'map'];
@@ -120,6 +163,43 @@ const Index = () => {
     );
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Load appointments and tasks for SmartBottomBar
+  useEffect(() => {
+    const loadAppointmentsAndTasks = () => {
+      try {
+        // Load appointments
+        const savedAppointments = localStorage.getItem('baraka_appointments');
+        if (savedAppointments) {
+          const parsed = JSON.parse(savedAppointments);
+          setAppointments(parsed.slice(0, 5));
+        }
+
+        // Load tasks
+        const savedTasks = localStorage.getItem('baraka_tasks');
+        if (savedTasks) {
+          const parsed = JSON.parse(savedTasks);
+          const today = new Date().toISOString().split('T')[0];
+          const todayTasks = parsed.filter((t: any) => t.date === today);
+          const remaining = todayTasks.filter((t: any) => !t.completed).length;
+          const completed = todayTasks.filter((t: any) => t.completed).length;
+          setTasksCount({ remaining, completed });
+        }
+      } catch (error) {
+        console.error('Error loading appointments/tasks:', error);
+      }
+    };
+
+    loadAppointmentsAndTasks();
+
+    window.addEventListener('appointments-updated', loadAppointmentsAndTasks);
+    window.addEventListener('tasks-updated', loadAppointmentsAndTasks);
+
+    return () => {
+      window.removeEventListener('appointments-updated', loadAppointmentsAndTasks);
+      window.removeEventListener('tasks-updated', loadAppointmentsAndTasks);
+    };
   }, []);
 
   useEffect(() => {
@@ -198,24 +278,31 @@ const Index = () => {
   }
 
   // Map BottomNavBar IDs to Tab Values
-  // 'mohamed' -> finance
-  // 'fatima' -> productivity
+  // 'financial' -> finance
+  // 'productivity' -> productivity
+  // 'prayer' -> prayer
+  // 'appointments' -> appointments
   // 'dashboard' -> dashboard
   // 'settings' -> settings
   const handleNavChange = (id: string) => {
-    // console.log("Navigating to:", id);
-    if (id === 'mohamed') {
+    // Map SmartBottomBar IDs to actual tab IDs
+    if (id === 'financial') {
       setActiveTab('finance');
+    } else if (id === 'productivity') {
+      setActiveTab('productivity');
+    } else if (id === 'prayer') {
+      setActiveTab('prayer');
+    } else if (id === 'appointments') {
+      setActiveTab('appointments');
+    } else {
+      setActiveTab(id);
     }
-    else if (id === 'fatima') setActiveTab('productivity');
-    else setActiveTab(id);
   };
 
-  // Reverse mapping for BottomNavBar active state
+  // Reverse mapping for SmartBottomBar active state
   const getActiveNavId = () => {
-    if (activeTab === 'finance') return 'mohamed';
-    if (activeTab === 'productivity') return 'fatima';
-    if (activeTab === 'salary') return 'mohamed'; // Highlight Finance tab when in Salary
+    if (activeTab === 'finance') return 'financial';
+    if (activeTab === 'salary') return 'financial';
     return activeTab;
   };
 
@@ -284,53 +371,19 @@ const Index = () => {
           </Tabs>
         </div>
 
-        {/* Bottom Navigation */}
-        <BottomNavBar
-          activeTab={getActiveNavId()}
-          onNavigate={handleNavChange}
-          onLongPress={(id) => {
-            // New Feature: Long press on Finance (Mohamed) opens Salary Manager
-
-
-            if (id === 'settings_sync') {
-              // Silent Sync Trigger with Toast Feedback
-              if (navigator.vibrate) navigator.vibrate(50);
-
-              toast({
-                title: "جاري المزامنة",
-                description: "يتم تحديث البيانات والإعدادات مع السحابة...",
-                duration: 2000,
-              });
-
-              // Construct proper async handling
-              const performSync = async () => {
-                try {
-                  await syncNow();
-                  toast({
-                    title: "تمت المزامنة",
-                    description: "تم تحديث البيانات والإعدادات بنجاح",
-                    className: "bg-green-50 border-green-200",
-                    duration: 3000
-                  });
-                } catch (error) {
-                  console.error("Sync failed:", error);
-                  toast({
-                    title: "فشل المزامنة",
-                    description: "يرجى التحقق من الاتصال",
-                    variant: "destructive"
-                  });
-                }
-              };
-
-              performSync();
-            } else {
-              // Ignore 'settings' to prevent opening empty dialog (handled by sync above)
-              if (id !== 'settings') {
-                setActiveSummary(id);
-              }
-            }
-          }}
-        />
+        {/* Smart Bottom Navigation - SmartBottomBar on Android, BottomNavBar on Web */}
+        {isAndroid() ? (
+          <SmartBottomBar
+            activeTab={getActiveNavId()}
+            onNavigate={handleNavChange}
+          />
+        ) : (
+          <BottomNavBar
+            activeTab={getActiveNavId()}
+            onNavigate={handleNavChange}
+            onLongPress={() => { }}
+          />
+        )}
 
         <NavSummaryDialogs
           type={activeSummary}

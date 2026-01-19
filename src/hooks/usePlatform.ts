@@ -1,34 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 
 /**
- * Hook to detect the current platform
- * @returns Platform information
+ * Platform detection utilities
  */
-export const usePlatform = () => {
-    const isNative = Capacitor.isNativePlatform();
-    const platform = Capacitor.getPlatform(); // 'web', 'android', 'ios'
-
-    return {
-        isWeb: platform === 'web',
-        isAndroid: platform === 'android',
-        isIOS: platform === 'ios',
-        isNative,
-        platform
-    };
-};
-
-/**
- * Check if running on Android
- */
-export const isAndroid = (): boolean => {
-    return Capacitor.getPlatform() === 'android';
-};
-
-/**
- * Check if running on Web
- */
-export const isWeb = (): boolean => {
-    return Capacitor.getPlatform() === 'web';
-};
-
-export default usePlatform;
+export const isAndroid = () => Capacitor.getPlatform() === 'android';
+export const isIOS = () => Capacitor.getPlatform() === 'ios';
+export const isWeb = () => Capacitor.getPlatform() === 'web';
+export const isMobile = () => isAndroid() || isIOS();
+export const isNative = () => Capacitor.isNativePlatform();

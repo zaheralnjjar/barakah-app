@@ -6,7 +6,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 
 import Index from "./pages/Index";
-import WidgetPage from "./pages/WidgetPage";
+
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ThesisNavigator from "./pages/thesis/ThesisNavigator";
@@ -23,6 +23,8 @@ import ThesisMindMap from "./pages/thesis/ThesisMindMap";
 import ThesisTimeline from "./pages/thesis/ThesisTimeline";
 import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { handleShortcut, parseDeepLink } from '@/services/ShortcutHandler';
+import { App as CapApp } from '@capacitor/app';
 
 // Untracked/New Component
 import ThesisLayout from "./pages/thesis/ThesisLayout";
@@ -30,6 +32,43 @@ import ThesisLayout from "./pages/thesis/ThesisLayout";
 import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 
 const queryClient = new QueryClient();
+
+// Deep Link Handler Component
+const DeepLinkHandler = () => {
+  useEffect(() => {
+    // Handle app URL open (from shortcuts)
+    const handleAppUrlOpen = async () => {
+      try {
+        const { url } = await CapApp.getLaunchUrl() || {};
+        if (url) {
+          const shortcutType = parseDeepLink(url);
+          if (shortcutType) {
+            // Small delay to let app fully load
+            setTimeout(() => handleShortcut(shortcutType), 500);
+          }
+        }
+      } catch (e) {
+        console.error('Error handling launch URL:', e);
+      }
+    };
+
+    handleAppUrlOpen();
+
+    // Listen for app URL open events
+    const listener = CapApp.addListener('appUrlOpen', async (event) => {
+      const shortcutType = parseDeepLink(event.url);
+      if (shortcutType) {
+        await handleShortcut(shortcutType);
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, []);
+
+  return null;
+};
 
 // Request all permissions on app start
 const PermissionRequester = () => {
@@ -99,6 +138,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <PermissionRequester />
+        <DeepLinkHandler />
         <Toaster />
         <Sonner />
         <ErrorBoundary>
@@ -106,7 +146,7 @@ const App = () => {
             <GlobalSearchDialog />
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/widget" element={<WidgetPage />} />
+
 
               {/* Thesis Manager Routes - Wrapped with Layout for BottomNavBar */}
               <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />
