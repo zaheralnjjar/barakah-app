@@ -23,6 +23,10 @@ export default function ThesisReferences() {
     const [showBibDialog, setShowBibDialog] = useState(false);
     const [bibText, setBibText] = useState("");
 
+    // Feature: Add New Reference Dialog
+    const [showAddDialog, setShowAddDialog] = useState(false);
+    const [newRef, setNewRef] = useState({ title: '', author: '', year: '', publisher: '', type: 'book' });
+
     const handleScanFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length || !projectId) return;
         setScanning(true);
@@ -168,6 +172,21 @@ export default function ThesisReferences() {
         }
     };
 
+    const handleAddReference = async () => {
+        if (!newRef.title.trim() || !projectId) {
+            toast.error("يرجى إدخال عنوان المرجع على الأقل");
+            return;
+        }
+        try {
+            await ThesisService.addReference({ ...newRef, project_id: projectId });
+            toast.success("تمت إضافة المرجع بنجاح");
+            setShowAddDialog(false);
+            setNewRef({ title: '', author: '', year: '', publisher: '', type: 'book' });
+        } catch (e) {
+            toast.error("فشل في إضافة المرجع");
+        }
+    };
+
     if (!projectId) return <div className="p-8 text-center">يرجى اختيار مشروع</div>;
 
     return (
@@ -201,7 +220,7 @@ export default function ThesisReferences() {
                             <Download className="w-4 h-4 ml-2" />
                             تصدير BibTeX
                         </Button>
-                        <Button>
+                        <Button onClick={() => setShowAddDialog(true)}>
                             <Plus className="w-4 h-4 ml-2" />
                             مرجع جديد
                         </Button>
@@ -255,6 +274,53 @@ export default function ThesisReferences() {
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={() => setShowBibDialog(false)}>إلغاء</Button>
                             <Button onClick={handleBibImport}>استيراد</Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Add Reference Dialog */}
+                <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 ${showAddDialog ? '' : 'hidden'}`}>
+                    <div className="bg-background p-6 rounded-lg max-w-lg w-full m-4">
+                        <h3 className="text-lg font-bold mb-4">إضافة مرجع جديد</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <Label>العنوان *</Label>
+                                <Input
+                                    placeholder="عنوان الكتاب أو المقالة"
+                                    value={newRef.title}
+                                    onChange={e => setNewRef({ ...newRef, title: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <Label>المؤلف</Label>
+                                <Input
+                                    placeholder="اسم المؤلف"
+                                    value={newRef.author}
+                                    onChange={e => setNewRef({ ...newRef, author: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>السنة</Label>
+                                    <Input
+                                        placeholder="2024"
+                                        value={newRef.year}
+                                        onChange={e => setNewRef({ ...newRef, year: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <Label>الناشر</Label>
+                                    <Input
+                                        placeholder="دار النشر"
+                                        value={newRef.publisher}
+                                        onChange={e => setNewRef({ ...newRef, publisher: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-6">
+                            <Button variant="outline" onClick={() => setShowAddDialog(false)}>إلغاء</Button>
+                            <Button onClick={handleAddReference}>حفظ المرجع</Button>
                         </div>
                     </div>
                 </div>

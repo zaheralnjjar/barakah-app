@@ -82,11 +82,20 @@ const ThesisNodeItem = memo(({
                     ) : <div className="w-4 h-4" />}
                 </Button>
 
-                <div className={`p-2 rounded-full bg-slate-100 ${color}`}>
+                <div
+                    className={`p-2 rounded-full bg-slate-100 ${color} cursor-pointer hover:opacity-80 transition-opacity`}
+                    onClick={() => onOpenFolder(node)}
+                    title={hasFile ? "فتح المجلد" : "إدارة المجلد"}
+                >
                     <Icon className="w-5 h-5" />
+                    {hasFile && <CheckCircle2 className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-emerald-500" />}
                 </div>
 
-                <div className="flex-1">
+                <div
+                    className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => onOpenFolder(node)}
+                    title={hasFile ? "فتح المجلد" : "إدارة المجلد"}
+                >
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-bold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded`}>{label}</span>
                         <span className="font-semibold text-lg">{node.title}</span>
@@ -131,107 +140,92 @@ const ThesisNodeItem = memo(({
                                 {node.file_path}
                             </span>
                         )}
+
+                        {hasFile && (
+                            <span className="w-4 h-4 text-emerald-500" title="يوجد ملف">✓</span>
+                        )}
                     </div>
                 </div>
 
-                {/* Action Menu */}
-                <div className="flex items-center gap-1">
-                    {/* Open Folder Manager - Prominent Button */}
-                    <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => onOpenFolder(node)}
-                        title={hasFile ? "فتح المجلد" : "إدارة المجلد"}
-                        className={`${hasFile
-                            ? "bg-emerald-600 hover:bg-emerald-700"
-                            : "bg-[#D97706] hover:bg-[#B45309]"} !text-white px-3 h-7 rounded text-xs gap-1.5 ml-1 shadow-sm transition-all`}
-                    >
-                        {hasFile ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : <Folder className="w-3.5 h-3.5 text-white" />}
-                        <span className="text-white">فتح</span>
-                    </Button>
-
-                    {/* Toolbar Actions - Icons Only - Hidden in Read-Only mode */}
-                    {!isReadOnly && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreVertical className="w-4 h-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                {/* Add Child */}
-                                {level < 4 && (
-                                    <DropdownMenuItem onClick={() => onAdd(node)} className="gap-2 text-green-600 focus:text-green-700 focus:bg-green-50">
-                                        <Plus className="w-4 h-4" />
-                                        <span>إضافة فرعي</span>
-                                    </DropdownMenuItem>
-                                )}
-
-                                {/* Edit */}
-                                <DropdownMenuItem onClick={() => onEdit(node)} className="gap-2 text-amber-600 focus:text-amber-700 focus:bg-amber-50">
-                                    <Edit className="w-4 h-4" />
-                                    <span>تعديل الاسم</span>
+                {/* Toolbar Actions - Icons Only - Hidden in Read-Only mode */}
+                {!isReadOnly && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreVertical className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                            {/* Add Child */}
+                            {level < 4 && (
+                                <DropdownMenuItem onClick={() => onAdd(node)} className="gap-2 text-green-600 focus:text-green-700 focus:bg-green-50">
+                                    <Plus className="w-4 h-4" />
+                                    <span>إضافة فرعي</span>
                                 </DropdownMenuItem>
+                            )}
 
-                                {/* Appointment - New Feature */}
-                                <DropdownMenuItem onClick={() => onAppointment(node)} className="gap-2 text-blue-600 focus:text-blue-700 focus:bg-blue-50">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>تعيين موعد/مجازة</span>
+                            {/* Edit */}
+                            <DropdownMenuItem onClick={() => onEdit(node)} className="gap-2 text-amber-600 focus:text-amber-700 focus:bg-amber-50">
+                                <Edit className="w-4 h-4" />
+                                <span>تعديل الاسم</span>
+                            </DropdownMenuItem>
+
+                            {/* Appointment - New Feature */}
+                            <DropdownMenuItem onClick={() => onAppointment(node)} className="gap-2 text-blue-600 focus:text-blue-700 focus:bg-blue-50">
+                                <Calendar className="w-4 h-4" />
+                                <span>تعيين موعد/مجازة</span>
+                            </DropdownMenuItem>
+
+                            {/* Merge */}
+                            <DropdownMenuItem onClick={() => onMerge(node.id)} className="gap-2 text-purple-600 focus:text-purple-700 focus:bg-purple-50">
+                                <Merge className="w-4 h-4" />
+                                <span>دمج مع التالي</span>
+                            </DropdownMenuItem>
+
+                            {/* Split */}
+                            {node.children && node.children.length >= 2 && (
+                                <DropdownMenuItem onClick={() => onSplit(node.id)} className="gap-2 text-teal-600 focus:text-teal-700 focus:bg-teal-50">
+                                    <Scissors className="w-4 h-4" />
+                                    <span>تقسيم</span>
                                 </DropdownMenuItem>
+                            )}
 
-                                {/* Merge */}
-                                <DropdownMenuItem onClick={() => onMerge(node.id)} className="gap-2 text-purple-600 focus:text-purple-700 focus:bg-purple-50">
-                                    <Merge className="w-4 h-4" />
-                                    <span>دمج مع التالي</span>
-                                </DropdownMenuItem>
+                            <DropdownMenuSeparator />
 
-                                {/* Split */}
-                                {node.children && node.children.length >= 2 && (
-                                    <DropdownMenuItem onClick={() => onSplit(node.id)} className="gap-2 text-teal-600 focus:text-teal-700 focus:bg-teal-50">
-                                        <Scissors className="w-4 h-4" />
-                                        <span>تقسيم</span>
-                                    </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuSeparator />
-
-                                {/* Delete */}
-                                <DropdownMenuItem onClick={() => onDelete(node.id)} className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
-                                    <Trash2 className="w-4 h-4" />
-                                    <span>حذف</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                </div>
+                            {/* Delete */}
+                            <DropdownMenuItem onClick={() => onDelete(node.id)} className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
+                                <Trash2 className="w-4 h-4" />
+                                <span>حذف</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
             </div>
 
-            {
-                isExpanded && node.children && (
-                    <div className="mt-2 animate-in slide-in-from-top-2">
-                        {node.children.map(child => (
-                            <ThesisNodeItem
-                                key={child.id}
-                                node={child}
-                                level={level + 1}
-                                expandedIds={expandedIds}
-                                fileStatusMap={fileStatusMap}
-                                folderPath={folderPath}
-                                onToggleExpand={onToggleExpand}
-                                onStatusChange={onStatusChange}
-                                onAdd={onAdd}
-                                onEdit={onEdit}
-                                onAppointment={onAppointment}
-                                onMerge={onMerge}
-                                onSplit={onSplit}
-                                onDelete={onDelete}
-                                onOpenFolder={onOpenFolder}
-                            />
-                        ))}
-                    </div>
-                )
-            }
-        </div >
+            {isExpanded && node.children && (
+                <div className="mt-2 animate-in slide-in-from-top-2">
+                    {node.children.map(child => (
+                        <ThesisNodeItem
+                            key={child.id}
+                            node={child}
+                            level={level + 1}
+                            expandedIds={expandedIds}
+                            fileStatusMap={fileStatusMap}
+                            folderPath={folderPath}
+                            onToggleExpand={onToggleExpand}
+                            onStatusChange={onStatusChange}
+                            onAdd={onAdd}
+                            onEdit={onEdit}
+                            onAppointment={onAppointment}
+                            onMerge={onMerge}
+                            onSplit={onSplit}
+                            onDelete={onDelete}
+                            onOpenFolder={onOpenFolder}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
     );
 });
 

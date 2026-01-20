@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,18 +8,25 @@ import { Loader2, Bot, Users, ChevronDown, ChevronUp, GripVertical } from 'lucid
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
 
-// Components
-import FinancialController from '@/components/agents/FinancialController';
-import LogisticsManager from '@/components/agents/LogisticsManager';
+// Error Boundary and Loading
+import ErrorBoundary from '@/components/ErrorBoundary';
+import PageLoading from '@/components/PageLoading';
+
+// Lazy loaded heavy components (Code Splitting)
+const FinancialController = lazy(() => import('@/components/agents/FinancialController'));
+const LogisticsManager = lazy(() => import('@/components/agents/LogisticsManager'));
+const CalendarSection = lazy(() => import('@/components/CalendarSection'));
+const InteractiveMap = lazy(() => import('@/components/InteractiveMap'));
+const SettingsPanel = lazy(() => import('@/components/SettingsPanel'));
+const PrayerManager = lazy(() => import('@/components/PrayerManager'));
+
+// Regular imports for critical path components
 import InitializationWizard from '@/components/InitializationWizard';
 import SmartDashboard from '@/components/SmartDashboard';
-import SettingsPanel from '@/components/SettingsPanel';
 import AuthForm from '@/components/AuthForm';
 import AppointmentManager from '@/components/AppointmentManager';
-import PrayerManager from '@/components/PrayerManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
-import CalendarSection from '@/components/CalendarSection';
 
 import SmartBottomBar from '@/components/SmartBottomBar';
 import BottomNavBar from '@/components/BottomNavBar';
@@ -27,7 +34,6 @@ import { isAndroid } from '@/utils/platformDetection';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { getDaysUntil } from '@/utils/dateUtils';
 import { useSwipeBack } from '@/hooks/useSwipeBack';
-import InteractiveMap from '@/components/InteractiveMap';
 import PinLock, { usePinLock } from '@/components/PinLock';
 import { NotificationBell } from '@/components/NotificationBell';
 import NavSummaryDialogs from '@/components/NavSummaryDialogs';
@@ -38,7 +44,9 @@ import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
+
 // NEW FEATURE: Salary Manager
+
 
 
 // Section types for reordering
@@ -333,23 +341,43 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
-                <CalendarSection />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل التقويم..." />}>
+                    <CalendarSection />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="finance" className="animate-fade-in data-[state=active]:block">
-                <FinancialController />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل الإدارة المالية..." />}>
+                    <FinancialController />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="prayer" className="animate-fade-in data-[state=active]:block">
-                <PrayerManager />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل أوقات الصلاة..." />}>
+                    <PrayerManager />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="productivity" className="animate-fade-in data-[state=active]:block">
-                <LogisticsManager />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل الإنتاجية..." />}>
+                    <LogisticsManager />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="settings" className="animate-fade-in data-[state=active]:block">
-                <SettingsPanel />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل الإعدادات..." />}>
+                    <SettingsPanel />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="appointments" className="animate-fade-in data-[state=active]:block">
@@ -361,7 +389,11 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
-                <InteractiveMap />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل الخريطة..." />}>
+                    <InteractiveMap />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               {/* NEW: Salary Manager Tab */}
