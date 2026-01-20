@@ -10,8 +10,8 @@ interface BottomNavBarProps {
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLongPress }) => {
     // 7 icons: 3 left, home center, 3 right
     const navItems = [
-        { id: 'mohamed', label: 'المالية', icon: Calculator },
-        { id: 'fatima', label: 'الإنتاجية', icon: Briefcase },
+        { id: 'finance', label: 'المالية', icon: Calculator },
+        { id: 'productivity', label: 'الإنتاجية', icon: Briefcase },
         { id: 'calendar', label: 'التقويم', icon: Calendar },
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
         { id: 'prayer', label: 'الصلاة', icon: Moon },

@@ -196,7 +196,18 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         {/* 4. Parking Widget - Dynamic */}
                         <DashboardParking />
 
-                        {/* 5. Quick Notes - Collapsible */}
+                        {/* 5. Financial Summary - Collapsible */}
+                        <CollapsibleSection title="الملخص المالي" icon={DollarSign} defaultOpen={false}>
+                            <DashboardStats
+                                onNavigateToFinance={() => onNavigateToTab('finance')}
+                                financeData={financeData}
+                                todayExpense={todayExpense}
+                                dailyLimitARS={dailyLimitARS}
+                                newMuslimsCount={newMuslimsCount}
+                            />
+                        </CollapsibleSection>
+
+                        {/* 6. Quick Notes - Collapsible */}
                         {isSectionVisible('notes') && (
                             <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
                                 <QuickNotes />
