@@ -75,18 +75,25 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
         setShowEditDialog(true);
     };
 
+    // Reset dialog state when opening
+    const openCreateDialog = () => {
+        setNewFolderName('');
+        setSelectedColor(FOLDER_COLORS[0].value);
+        setShowCreateDialog(true);
+    };
+
     return (
-        <div className="p-6">
+        <div className="p-4">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">📂 المجلدات</h2>
-                <Button
-                    onClick={() => setShowCreateDialog(true)}
-                    className="gap-2"
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800">📂 المجلدات</h2>
+                <button
+                    onClick={openCreateDialog}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm font-medium hover:from-green-600 hover:to-green-700 transition-all shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
-                    مجلد جديد
-                </Button>
+                    جديد
+                </button>
             </div>
 
             {/* Folder Grid */}
@@ -119,23 +126,29 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
-                                    className="absolute top-2 left-2 p-1.5 rounded-lg bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                                    className="absolute top-2 left-2 p-1.5 rounded-lg bg-white/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white shadow-sm"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <MoreVertical className="w-4 h-4 text-gray-600" />
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
+                            <DropdownMenuContent align="start" className="z-[9999]">
                                 <DropdownMenuItem
-                                    onClick={() => openEditDialog(folder)}
-                                    className="gap-2"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditDialog(folder);
+                                    }}
+                                    className="gap-2 cursor-pointer"
                                 >
                                     <Edit2 className="w-4 h-4" />
                                     تعديل
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    onClick={() => onDeleteFolder(folder.id)}
-                                    className="gap-2 text-red-600"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteFolder(folder.id);
+                                    }}
+                                    className="gap-2 text-red-600 cursor-pointer focus:text-red-600"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     حذف
@@ -147,10 +160,12 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
 
                 {/* Add New Folder Card */}
                 <button
-                    onClick={() => setShowCreateDialog(true)}
-                    className="w-full aspect-square rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-3 transition-all duration-200 hover:border-primary hover:bg-primary/5 active:scale-95"
+                    onClick={openCreateDialog}
+                    className="w-full aspect-square rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 transition-all duration-200 hover:border-green-500 hover:bg-green-50 active:scale-95"
                 >
-                    <Plus className="w-12 h-12 text-gray-400" />
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <Plus className="w-6 h-6 text-green-600" />
+                    </div>
                     <span className="text-sm text-gray-500">مجلد جديد</span>
                 </button>
             </div>
@@ -179,8 +194,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                         key={color.value}
                                         onClick={() => setSelectedColor(color.value)}
                                         className={`h-12 rounded-lg transition-all ${selectedColor === color.value
-                                                ? 'ring-2 ring-offset-2 ring-primary scale-110'
-                                                : 'hover:scale-105'
+                                            ? 'ring-2 ring-offset-2 ring-primary scale-110'
+                                            : 'hover:scale-105'
                                             }`}
                                         style={{ backgroundColor: color.value }}
                                         title={color.name}
@@ -223,8 +238,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                         key={color.value}
                                         onClick={() => setSelectedColor(color.value)}
                                         className={`h-12 rounded-lg transition-all ${selectedColor === color.value
-                                                ? 'ring-2 ring-offset-2 ring-primary scale-110'
-                                                : 'hover:scale-105'
+                                            ? 'ring-2 ring-offset-2 ring-primary scale-110'
+                                            : 'hover:scale-105'
                                             }`}
                                         style={{ backgroundColor: color.value }}
                                         title={color.name}

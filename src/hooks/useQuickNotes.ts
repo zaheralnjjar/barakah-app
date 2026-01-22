@@ -132,7 +132,7 @@ export const useQuickNotes = () => {
     }, [fetchNotes, fetchFolders]);
 
     // Add new note
-    const addNote = async (content: string, type: NoteType = 'quick', title?: string, isSecure = false) => {
+    const addNote = async (content: string, type: NoteType = 'quick', title?: string, isSecure = false, folderId?: string) => {
         if (!content.trim() && !title?.trim()) return;
 
         const newNote: NoteData = {
@@ -142,6 +142,7 @@ export const useQuickNotes = () => {
             type,
             isSecure,
             isPinned: false,
+            folderId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
@@ -158,7 +159,8 @@ export const useQuickNotes = () => {
                     title: newNote.title || 'ملاحظة',
                     content: newNote.content,
                     is_pinned: false,
-                    color: '#ffffff',
+                    folder_id: newNote.folderId || null,
+                    tags: newNote.tags || [],
                 });
             }
             toast({ title: 'تم حفظ الملاحظة ✅' });

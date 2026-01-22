@@ -29,7 +29,7 @@ export const useNoteFolders = () => {
 
             const { data, error } = await supabase
                 .from('note_folders')
-                .select('*, quick_notes(count)')
+                .select('*')
                 .order('order_index', { ascending: true });
 
             if (error) throw error;
@@ -41,7 +41,7 @@ export const useNoteFolders = () => {
                     color: f.color,
                     icon: f.icon,
                     orderIndex: f.order_index,
-                    notesCount: f.quick_notes?.[0]?.count || 0,
+                    notesCount: 0, // Will be calculated separately if needed
                     createdAt: f.created_at,
                     updatedAt: f.updated_at,
                 }));

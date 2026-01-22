@@ -85,8 +85,8 @@ export const NotesManager: React.FC = () => {
                 'تم التحديث'
             );
         } else {
-            // Create new note
-            await addNote(content, 'quick', title, false);
+            // Create new note with folderId
+            await addNote(content, 'quick', title, false, selectedFolderId || undefined);
         }
         setViewMode('notes');
         setSelectedNoteId(null);

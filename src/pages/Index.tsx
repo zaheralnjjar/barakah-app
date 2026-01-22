@@ -43,6 +43,7 @@ import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
+import { NotesManager } from '@/components/notes/NotesManager';
 
 
 // NEW FEATURE: Salary Manager
@@ -70,6 +71,7 @@ const Index = () => {
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showReportGenerator, setShowReportGenerator] = useState(false);
+  const [showNotesManager, setShowNotesManager] = useState(false);
   const { toast } = useToast();
 
   // Collapsible states
@@ -332,6 +334,7 @@ const Index = () => {
           toast({ title: '🔄 جاري المزامنة...', description: 'يتم تحديث البيانات' });
         }}
         onOpenReports={() => setShowReportGenerator(true)}
+        onOpenNotes={() => setShowNotesManager(true)}
         onLongPress={(id) => {
           if (id === 'settings_sync') {
             syncNow();
@@ -443,9 +446,24 @@ const Index = () => {
           onClose={() => setShowReportGenerator(false)}
         />
 
+        {/* Notes Manager */}
+        {showNotesManager && (
+          <div className="fixed inset-0 z-[10000] bg-white">
+            <NotesManager />
+            <button
+              onClick={() => setShowNotesManager(false)}
+              className="fixed top-4 left-4 z-[10001] px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full shadow-lg hover:from-red-600 hover:to-red-700 transition-all flex items-center gap-2 font-medium"
+            >
+              <span className="text-lg">✕</span>
+              إغلاق
+            </button>
+          </div>
+        )}
+
       </div>
     </>
   );
 };
+
 
 export default Index;

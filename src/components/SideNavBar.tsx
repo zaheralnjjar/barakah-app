@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, FileText } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SideNavBarProps {
@@ -8,9 +8,10 @@ interface SideNavBarProps {
     onLongPress?: (tab: string) => void;
     onSync?: () => void;
     onOpenReports?: () => void;
+    onOpenNotes?: () => void;
 }
 
-const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPress, onSync, onOpenReports }) => {
+const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPress, onSync, onOpenReports, onOpenNotes }) => {
     const navItems = [
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
         { id: 'finance', label: 'المالية', icon: Calculator },
@@ -107,6 +108,21 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
                         );
                     })}
                 </div>
+
+                {/* Notes Button */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={onOpenNotes}
+                            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 text-purple-500 hover:bg-purple-50 active:scale-95 mb-2"
+                        >
+                            <FileText className="w-6 h-6" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-lg">
+                        الملاحظات
+                    </TooltipContent>
+                </Tooltip>
 
                 {/* Send Report Button - Bottom */}
                 <Tooltip>
