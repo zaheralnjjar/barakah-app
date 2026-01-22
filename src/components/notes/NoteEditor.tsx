@@ -1,17 +1,11 @@
 import React, { useState, useRef } from 'react';
 import {
     List, ListOrdered, Clock, Save, X,
-    ChevronDown, Type, Palette, Plus, Minus
+    Plus, Minus, Minus as Line
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface NoteEditorProps {
     initialTitle?: string;
@@ -21,16 +15,6 @@ interface NoteEditorProps {
     onSave: (title: string, content: string, tags: string[]) => void;
     onCancel: () => void;
 }
-
-// Arabic fonts
-const ARABIC_FONTS = [
-    { name: 'الافتراضي', value: 'inherit' },
-    { name: 'تالومة', value: "'Tajawal', sans-serif" },
-    { name: 'أميري', value: "'Amiri', serif" },
-    { name: 'القاهرة', value: "'Cairo', sans-serif" },
-    { name: 'نوتو نسخ', value: "'Noto Naskh Arabic', serif" },
-    { name: 'الكوفي', value: "'Reem Kufi', sans-serif" },
-];
 
 // Font sizes - numeric 10 to 24
 const FONT_SIZES = [
@@ -42,16 +26,6 @@ const FONT_SIZES = [
     { name: '20', value: '20px' },
     { name: '22', value: '22px' },
     { name: '24', value: '24px' },
-];
-
-// Text colors
-const TEXT_COLORS = [
-    { name: 'أسود', value: '#1f2937', emoji: '⚫' },
-    { name: 'أحمر', value: '#dc2626', emoji: '🔴' },
-    { name: 'أخضر', value: '#16a34a', emoji: '🟢' },
-    { name: 'أزرق', value: '#2563eb', emoji: '🔵' },
-    { name: 'برتقالي', value: '#ea580c', emoji: '🟠' },
-    { name: 'بنفسجي', value: '#9333ea', emoji: '🟣' },
 ];
 
 // Rotating colors for edit entries
@@ -74,9 +48,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     const [content, setContent] = useState(initialContent);
     const [tags, setTags] = useState<string[]>(initialTags);
     const [newTag, setNewTag] = useState('');
-    const [selectedFont, setSelectedFont] = useState(ARABIC_FONTS[0]);
-    const [selectedSize, setSelectedSize] = useState(FONT_SIZES[1]);
-    const [selectedColor, setSelectedColor] = useState(TEXT_COLORS[0]);
+    const [selectedSize, setSelectedSize] = useState(FONT_SIZES[3]); // Default 16px
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const handleSave = () => {
@@ -135,6 +107,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         insertAtCursor(separator);
     };
 
+    // Add simple line separator (without timestamp)
+    const addLineSeparator = () => {
+        insertAtCursor('\n\n────────────────────\n\n');
+    };
+
     return (
         <div className="flex flex-col h-full bg-white">
             {/* Header - Compact */}
@@ -144,7 +121,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="عنوان الملاحظة..."
                     className="text-lg font-semibold border-none bg-transparent focus-visible:ring-0 px-0 h-8 flex-1"
-                    style={{ fontFamily: selectedFont.value }}
                 />
                 <div className="flex items-center gap-1 mr-2">
                     <Button variant="ghost" size="sm" onClick={onCancel} className="h-8 px-2 text-gray-600">
@@ -159,26 +135,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
             {/* Compact Toolbar */}
             <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-white flex-wrap">
-                {/* Font Family */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 border">
-                        <Type className="w-3 h-3" />
-                        <span className="max-w-16 truncate">{selectedFont.name}</span>
-                        <ChevronDown className="w-3 h-3" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {ARABIC_FONTS.map((font) => (
-                            <DropdownMenuItem
-                                key={font.value}
-                                onClick={() => setSelectedFont(font)}
-                                style={{ fontFamily: font.value }}
-                            >
-                                {font.name}
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Font Size */}
                 <div className="flex items-center border rounded">
                     <button
@@ -191,7 +147,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     >
                         <Minus className="w-3 h-3" />
                     </button>
-                    <span className="px-1 text-xs min-w-10 text-center">{selectedSize.name}</span>
+                    <span className="px-2 text-xs min-w-10 text-center">{selectedSize.name}</span>
                     <button
                         onClick={() => {
                             const idx = FONT_SIZES.findIndex(s => s.value === selectedSize.value);
@@ -203,27 +159,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                         <Plus className="w-3 h-3" />
                     </button>
                 </div>
-
-                {/* Text Color */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-gray-100 border">
-                        <Palette className="w-3 h-3" style={{ color: selectedColor.value }} />
-                        <span>{selectedColor.emoji}</span>
-                        <ChevronDown className="w-3 h-3" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        {TEXT_COLORS.map((color) => (
-                            <DropdownMenuItem
-                                key={color.value}
-                                onClick={() => setSelectedColor(color)}
-                                className="gap-2"
-                            >
-                                <span>{color.emoji}</span>
-                                <span style={{ color: color.value }}>{color.name}</span>
-                            </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
 
                 <div className="w-px h-5 bg-gray-300 mx-1" />
 
@@ -247,6 +182,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
                 <div className="w-px h-5 bg-gray-300 mx-1" />
 
+                {/* Simple Line Separator */}
+                <button
+                    onClick={addLineSeparator}
+                    className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100"
+                    title="خط فاصل"
+                >
+                    <Minus className="w-4 h-4" />
+                </button>
+
                 {/* Timestamp Separator */}
                 <button
                     onClick={addEditSeparator}
@@ -257,7 +201,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 </button>
             </div>
 
-            {/* Content Editor */}
+            {/* Content Editor - Native keyboard shortcuts work automatically */}
             <div className="flex-1 overflow-y-auto">
                 <Textarea
                     ref={textareaRef}
@@ -267,9 +211,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     className="min-h-full h-full w-full border-none focus-visible:ring-0 resize-none p-4"
                     style={{
                         whiteSpace: 'pre-wrap',
-                        fontFamily: selectedFont.value,
                         fontSize: selectedSize.value,
-                        color: selectedColor.value,
                     }}
                 />
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowLeft, Download, Lock, Unlock } from 'lucide-react';
+import { Search, ArrowLeft, Download, Lock, Unlock, X } from 'lucide-react';
 import { useNoteFolders } from '@/hooks/useNoteFolders';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
 import { useNoteRevisions } from '@/hooks/useNoteRevisions';
@@ -14,7 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 
 type ViewMode = 'folders' | 'notes' | 'editor' | 'revisions';
 
-export const NotesManager: React.FC = () => {
+interface NotesManagerProps {
+    onClose?: () => void;
+}
+
+export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
     const { toast } = useToast();
     const [viewMode, setViewMode] = useState<ViewMode>('folders');
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -94,7 +98,12 @@ export const NotesManager: React.FC = () => {
 
     const handleSearch = (query: string) => {
         setSearchQuery(query);
-        searchNotes(query);
+        // Smart search: only search after 3 characters
+        if (query.length >= 3) {
+            searchNotes(query);
+        } else if (query.length === 0) {
+            searchNotes(''); // Clear search
+        }
     };
 
     const handleBack = () => {
@@ -115,8 +124,9 @@ export const NotesManager: React.FC = () => {
             <div className="bg-white border-b p-4">
                 <div className="flex items-center gap-4">
                     {viewMode !== 'folders' && (
-                        <Button variant="ghost" size="sm" onClick={handleBack}>
-                            <ArrowLeft className="w-4 h-4" />
+                        <Button variant="outline" size="sm" onClick={handleBack}>
+                            <ArrowLeft className="w-4 h-4 ml-1" />
+                            رجوع
                         </Button>
                     )}
                     <h1 className="text-2xl font-bold flex-1">
@@ -125,8 +135,34 @@ export const NotesManager: React.FC = () => {
                         {viewMode === 'editor' && (selectedNote?.title || 'ملاحظة جديدة')}
                         {viewMode === 'revisions' && 'سجل التعديلات'}
                     </h1>
+                    {/* Search and Close - shown in folders view */}
+                    {viewMode === 'folders' && (
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                    value={searchQuery}
+                                    onChange={(e) => handleSearch(e.target.value)}
+                                    placeholder="بحث في الملاحظات..."
+                                    className="pr-10 w-64"
+                                />
+                            </div>
+                            {onClose && (
+                                <Button onClick={onClose} className="bg-red-500 hover:bg-red-600 text-white">
+                                    <X className="w-4 h-4 ml-1" />
+                                    إغلاق
+                                </Button>
+                            )}
+                        </div>
+                    )}
                     {viewMode === 'notes' && (
                         <div className="flex items-center gap-2">
+                            {onClose && (
+                                <Button onClick={onClose} className="bg-red-500 hover:bg-red-600 text-white">
+                                    <X className="w-4 h-4 ml-1" />
+                                    إغلاق
+                                </Button>
+                            )}
                             <div className="relative">
                                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <Input

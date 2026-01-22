@@ -26,13 +26,15 @@ interface FolderGridProps {
 }
 
 const FOLDER_COLORS = [
-    { name: 'أخضر', value: '#4ade80' },
+    { name: 'أخضر', value: '#22c55e' },
     { name: 'أزرق', value: '#3b82f6' },
-    { name: 'أصفر', value: '#eab308' },
-    { name: 'برتقالي', value: '#f97316' },
     { name: 'أحمر', value: '#ef4444' },
+    { name: 'برتقالي', value: '#f97316' },
+    { name: 'أصفر', value: '#eab308' },
     { name: 'بنفسجي', value: '#8b5cf6' },
     { name: 'وردي', value: '#ec4899' },
+    { name: 'سماوي', value: '#06b6d4' },
+    { name: 'بني', value: '#a16207' },
     { name: 'رمادي', value: '#6b7280' },
 ];
 
@@ -172,43 +174,57 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
 
             {/* Create Folder Dialog */}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogContent>
+                <DialogContent className="z-[10002] max-w-sm">
                     <DialogHeader>
                         <DialogTitle>إنشاء مجلد جديد</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-3 py-2">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">اسم المجلد</label>
+                            <label className="text-sm font-medium mb-1 block">اسم المجلد</label>
                             <Input
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
-                                placeholder="مثال: العمل، الدراسة، شخصي..."
+                                placeholder="مثال: العمل، الدراسة..."
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                             />
                         </div>
                         <div>
-                            <label className="text-sm font-medium mb-2 block">اللون</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {FOLDER_COLORS.map((color) => (
-                                    <button
-                                        key={color.value}
-                                        onClick={() => setSelectedColor(color.value)}
-                                        className={`h-12 rounded-lg transition-all ${selectedColor === color.value
-                                            ? 'ring-2 ring-offset-2 ring-primary scale-110'
-                                            : 'hover:scale-105'
-                                            }`}
-                                        style={{ backgroundColor: color.value }}
-                                        title={color.name}
-                                    />
-                                ))}
-                            </div>
+                            <label className="text-sm font-medium mb-1 block">اللون</label>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="w-full flex items-center gap-2 px-3 py-2 border rounded-md hover:bg-gray-50">
+                                        <div
+                                            className="w-5 h-5 rounded-full"
+                                            style={{ backgroundColor: selectedColor }}
+                                        />
+                                        <span className="flex-1 text-right text-sm">
+                                            {FOLDER_COLORS.find(c => c.value === selectedColor)?.name || 'اختر لون'}
+                                        </span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-48">
+                                    {FOLDER_COLORS.map((color) => (
+                                        <DropdownMenuItem
+                                            key={color.value}
+                                            onClick={() => setSelectedColor(color.value)}
+                                            className="gap-2 cursor-pointer"
+                                        >
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{ backgroundColor: color.value }}
+                                            />
+                                            {color.name}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowCreateDialog(false)}>
                             إلغاء
                         </Button>
-                        <Button onClick={handleCreateFolder}>
+                        <Button size="sm" onClick={handleCreateFolder}>
                             إنشاء
                         </Button>
                     </DialogFooter>
@@ -217,13 +233,13 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
 
             {/* Edit Folder Dialog */}
             <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-                <DialogContent>
+                <DialogContent className="z-[10002] max-w-sm">
                     <DialogHeader>
                         <DialogTitle>تعديل المجلد</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-3 py-2">
                         <div>
-                            <label className="text-sm font-medium mb-2 block">اسم المجلد</label>
+                            <label className="text-sm font-medium mb-1 block">اسم المجلد</label>
                             <Input
                                 value={newFolderName}
                                 onChange={(e) => setNewFolderName(e.target.value)}
@@ -231,28 +247,42 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                             />
                         </div>
                         <div>
-                            <label className="text-sm font-medium mb-2 block">اللون</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {FOLDER_COLORS.map((color) => (
-                                    <button
-                                        key={color.value}
-                                        onClick={() => setSelectedColor(color.value)}
-                                        className={`h-12 rounded-lg transition-all ${selectedColor === color.value
-                                            ? 'ring-2 ring-offset-2 ring-primary scale-110'
-                                            : 'hover:scale-105'
-                                            }`}
-                                        style={{ backgroundColor: color.value }}
-                                        title={color.name}
-                                    />
-                                ))}
-                            </div>
+                            <label className="text-sm font-medium mb-1 block">اللون</label>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="w-full flex items-center gap-2 px-3 py-2 border rounded-md hover:bg-gray-50">
+                                        <div
+                                            className="w-5 h-5 rounded-full"
+                                            style={{ backgroundColor: selectedColor }}
+                                        />
+                                        <span className="flex-1 text-right text-sm">
+                                            {FOLDER_COLORS.find(c => c.value === selectedColor)?.name || 'اختر لون'}
+                                        </span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-48">
+                                    {FOLDER_COLORS.map((color) => (
+                                        <DropdownMenuItem
+                                            key={color.value}
+                                            onClick={() => setSelectedColor(color.value)}
+                                            className="gap-2 cursor-pointer"
+                                        >
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{ backgroundColor: color.value }}
+                                            />
+                                            {color.name}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowEditDialog(false)}>
                             إلغاء
                         </Button>
-                        <Button onClick={handleEditFolder}>
+                        <Button size="sm" onClick={handleEditFolder}>
                             حفظ
                         </Button>
                     </DialogFooter>
