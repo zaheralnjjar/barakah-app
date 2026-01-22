@@ -28,8 +28,8 @@ import AppointmentManager from '@/components/AppointmentManager';
 import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 
-import SmartBottomBar from '@/components/SmartBottomBar';
-import BottomNavBar from '@/components/BottomNavBar';
+import SideNavBar from '@/components/SideNavBar';
+import ReportGenerator from '@/components/ReportGenerator';
 import { isAndroid } from '@/utils/platformDetection';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { getDaysUntil } from '@/utils/dateUtils';
@@ -69,6 +69,7 @@ const Index = () => {
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showReportGenerator, setShowReportGenerator] = useState(false);
   const { toast } = useToast();
 
   // Collapsible states
@@ -322,9 +323,28 @@ const Index = () => {
       {/* PIN Setup Screen */}
       {showSetup && <PinLock isSetupMode onUnlock={() => { }} onSetupComplete={onSetupComplete} />}
 
+      {/* Sidebar Navigation - Fixed on Right */}
+      <SideNavBar
+        activeTab={getActiveNavId()}
+        onNavigate={handleNavChange}
+        onSync={() => {
+          syncNow();
+          toast({ title: '🔄 جاري المزامنة...', description: 'يتم تحديث البيانات' });
+        }}
+        onOpenReports={() => setShowReportGenerator(true)}
+        onLongPress={(id) => {
+          if (id === 'settings_sync') {
+            syncNow();
+            toast({ title: 'جاري المزامنة...' });
+          } else {
+            setActiveSummary(id);
+          }
+        }}
+      />
+
       <div
-        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-24 relative"
-      >        {/* Content Area - No Padding Container for full width */}
+        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pr-16 relative"
+      >        {/* Content Area - Padding right for sidebar */}
         <div className="w-full">
 
           {/* Main Tabs */}
@@ -403,19 +423,7 @@ const Index = () => {
           </Tabs>
         </div>
 
-        {/* Smart Bottom Navigation - SmartBottomBar on Android, BottomNavBar on Web */}
-        {isAndroid() ? (
-          <SmartBottomBar
-            activeTab={getActiveNavId()}
-            onNavigate={handleNavChange}
-          />
-        ) : (
-          <BottomNavBar
-            activeTab={getActiveNavId()}
-            onNavigate={handleNavChange}
-            onLongPress={() => { }}
-          />
-        )}
+        {/* Bottom Navigation removed - Using SideNavBar instead */}
 
         <NavSummaryDialogs
           type={activeSummary}
@@ -427,6 +435,12 @@ const Index = () => {
           isOpen={showVoiceRecorder}
           onClose={() => setShowVoiceRecorder(false)}
           onSaveToActivities={appendToActivitiesNote}
+        />
+
+        {/* Report Generator */}
+        <ReportGenerator
+          isOpen={showReportGenerator}
+          onClose={() => setShowReportGenerator(false)}
         />
 
       </div>

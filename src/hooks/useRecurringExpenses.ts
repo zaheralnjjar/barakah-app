@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export interface RecurringExpense {
@@ -9,11 +10,13 @@ export interface RecurringExpense {
     currency: 'ARS' | 'USD';
     category: string;
     cycle: 'monthly' | 'yearly';
-    dayOfMonth: number;  // 1-31
-    monthOfYear?: number; // 1-12 (for yearly)
+    dayOfMonth: number;
+    monthOfYear?: number;
     isActive: boolean;
-    lastProcessed?: string; // ISO date string
-    reminderDays: number; // Days before to remind
+    lastProcessed?: string;
+    nextDue?: string;
+    reminderDays: number;
+    notes?: string;
     createdAt: string;
 }
 
@@ -21,55 +24,193 @@ const STORAGE_KEY = 'baraka_recurring_expenses';
 const PROCESSED_KEY = 'baraka_recurring_processed';
 
 export const useRecurringExpenses = () => {
-    const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : [];
-        } catch {
-            return [];
-        }
-    });
+    const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+    const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    // Save to localStorage
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(recurringExpenses));
-    }, [recurringExpenses]);
+    // Fetch from Supabase
+    const fetchExpenses = useCallback(async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                // Fallback to localStorage
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) setRecurringExpenses(JSON.parse(saved));
+                setLoading(false);
+                return;
+            }
 
-    const addRecurringExpense = (data: Omit<RecurringExpense, 'id' | 'createdAt' | 'isActive'>) => {
+            const { data, error } = await supabase
+                .from('recurring_expenses')
+                .select('*')
+                .order('next_due', { ascending: true });
+
+            if (error) throw error;
+
+            if (data) {
+                const mapped: RecurringExpense[] = data.map((e: any) => ({
+                    id: e.id,
+                    name: e.name,
+                    amount: parseFloat(e.amount) || 0,
+                    currency: e.currency as 'ARS' | 'USD',
+                    category: e.category || 'عام',
+                    cycle: e.frequency === 'yearly' ? 'yearly' : 'monthly',
+                    dayOfMonth: e.due_day || 1,
+                    monthOfYear: e.due_day, // Simplified
+                    isActive: e.is_active,
+                    lastProcessed: e.last_processed,
+                    nextDue: e.next_due,
+                    reminderDays: 3,
+                    notes: e.notes,
+                    createdAt: e.created_at,
+                }));
+                setRecurringExpenses(mapped);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped));
+            }
+        } catch (error) {
+            console.error('Error fetching recurring expenses:', error);
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) setRecurringExpenses(JSON.parse(saved));
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchExpenses();
+
+        // Realtime subscription
+        const channel = supabase
+            .channel('recurring_expenses_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_expenses' }, () => {
+                fetchExpenses();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchExpenses]);
+
+    // Calculate next due date
+    const calculateNextDue = (expense: Omit<RecurringExpense, 'id' | 'createdAt' | 'isActive'>): string => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+
+        if (expense.cycle === 'monthly') {
+            let nextDate = new Date(year, month, expense.dayOfMonth);
+            if (nextDate <= today) {
+                nextDate = new Date(year, month + 1, expense.dayOfMonth);
+            }
+            return nextDate.toISOString().split('T')[0];
+        } else {
+            let nextDate = new Date(year, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
+            if (nextDate <= today) {
+                nextDate = new Date(year + 1, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
+            }
+            return nextDate.toISOString().split('T')[0];
+        }
+    };
+
+    const addRecurringExpense = async (data: Omit<RecurringExpense, 'id' | 'createdAt' | 'isActive'>) => {
+        const id = crypto.randomUUID();
+        const nextDue = calculateNextDue(data);
+
         const newExpense: RecurringExpense = {
             ...data,
-            id: `recurring-${Date.now()}`,
+            id,
             isActive: true,
+            nextDue,
             createdAt: new Date().toISOString(),
         };
+
+        // Optimistic update
         setRecurringExpenses(prev => [...prev, newExpense]);
-        toast({ title: 'تم الإضافة', description: `تم إضافة "${data.name}" كمصروف متكرر` });
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('recurring_expenses').insert({
+                    id,
+                    user_id: user.id,
+                    name: data.name,
+                    amount: data.amount,
+                    currency: data.currency,
+                    category: data.category,
+                    frequency: data.cycle,
+                    due_day: data.dayOfMonth,
+                    is_active: true,
+                    next_due: nextDue,
+                    notes: data.notes,
+                });
+            }
+            toast({ title: 'تم الإضافة', description: `تم إضافة "${data.name}" كمصروف متكرر` });
+        } catch (error) {
+            console.error('Error adding recurring expense:', error);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...recurringExpenses, newExpense]));
+        }
+
         return newExpense;
     };
 
-    const updateRecurringExpense = (id: string, updates: Partial<RecurringExpense>) => {
-        setRecurringExpenses(prev => prev.map(e =>
-            e.id === id ? { ...e, ...updates } : e
-        ));
-        toast({ title: 'تم التحديث' });
+    const updateRecurringExpense = async (id: string, updates: Partial<RecurringExpense>) => {
+        setRecurringExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('recurring_expenses').update({
+                    name: updates.name,
+                    amount: updates.amount,
+                    currency: updates.currency,
+                    category: updates.category,
+                    frequency: updates.cycle,
+                    due_day: updates.dayOfMonth,
+                    is_active: updates.isActive,
+                    notes: updates.notes,
+                }).eq('id', id);
+            }
+            toast({ title: 'تم التحديث' });
+        } catch (error) {
+            console.error('Error updating recurring expense:', error);
+        }
     };
 
-    const deleteRecurringExpense = (id: string) => {
+    const deleteRecurringExpense = async (id: string) => {
         setRecurringExpenses(prev => prev.filter(e => e.id !== id));
-        toast({ title: 'تم الحذف' });
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('recurring_expenses').delete().eq('id', id);
+            }
+            toast({ title: 'تم الحذف' });
+        } catch (error) {
+            console.error('Error deleting recurring expense:', error);
+        }
     };
 
-    const toggleActive = (id: string) => {
-        setRecurringExpenses(prev => prev.map(e =>
-            e.id === id ? { ...e, isActive: !e.isActive } : e
-        ));
+    const toggleActive = async (id: string) => {
+        const expense = recurringExpenses.find(e => e.id === id);
+        if (!expense) return;
+
+        const newActiveState = !expense.isActive;
+        setRecurringExpenses(prev => prev.map(e => e.id === id ? { ...e, isActive: newActiveState } : e));
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('recurring_expenses').update({ is_active: newActiveState }).eq('id', id);
+            }
+        } catch (error) {
+            console.error('Error toggling active:', error);
+        }
     };
 
-    // Check if an expense is due today
+    // Check if due today
     const isDueToday = (expense: RecurringExpense): boolean => {
         if (!expense.isActive) return false;
-
         const today = new Date();
         const todayDay = today.getDate();
         const todayMonth = today.getMonth() + 1;
@@ -77,12 +218,10 @@ export const useRecurringExpenses = () => {
         if (expense.cycle === 'monthly') {
             return todayDay === expense.dayOfMonth;
         } else {
-            // Yearly
             return todayDay === expense.dayOfMonth && todayMonth === expense.monthOfYear;
         }
     };
 
-    // Check if expense was already processed today
     const wasProcessedToday = (expenseId: string): boolean => {
         try {
             const processed = JSON.parse(localStorage.getItem(PROCESSED_KEY) || '{}');
@@ -93,30 +232,50 @@ export const useRecurringExpenses = () => {
         }
     };
 
-    // Mark expense as processed
-    const markAsProcessed = (expenseId: string) => {
+    const markAsProcessed = async (expenseId: string) => {
         try {
-            const processed = JSON.parse(localStorage.getItem(PROCESSED_KEY) || '{}');
             const today = new Date().toISOString().split('T')[0];
+            const processed = JSON.parse(localStorage.getItem(PROCESSED_KEY) || '{}');
             processed[expenseId] = today;
             localStorage.setItem(PROCESSED_KEY, JSON.stringify(processed));
 
             setRecurringExpenses(prev => prev.map(e =>
                 e.id === expenseId ? { ...e, lastProcessed: today } : e
             ));
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('recurring_expenses').update({ last_processed: today }).eq('id', expenseId);
+            }
         } catch (e) {
             console.error('Error marking as processed:', e);
         }
     };
 
-    // Get expenses due today that haven't been processed
     const getDueExpenses = (): RecurringExpense[] => {
-        return recurringExpenses.filter(e =>
-            isDueToday(e) && !wasProcessedToday(e.id)
-        );
+        return recurringExpenses.filter(e => isDueToday(e) && !wasProcessedToday(e.id));
     };
 
-    // Get upcoming reminders (expenses due within reminderDays)
+    const getNextDueDate = (expense: RecurringExpense): Date => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+
+        if (expense.cycle === 'monthly') {
+            let nextDate = new Date(year, month, expense.dayOfMonth);
+            if (nextDate <= today) {
+                nextDate = new Date(year, month + 1, expense.dayOfMonth);
+            }
+            return nextDate;
+        } else {
+            let nextDate = new Date(year, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
+            if (nextDate <= today) {
+                nextDate = new Date(year + 1, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
+            }
+            return nextDate;
+        }
+    };
+
     const getUpcomingReminders = (): Array<RecurringExpense & { dueDate: Date; daysUntil: number }> => {
         const today = new Date();
         const reminders: Array<RecurringExpense & { dueDate: Date; daysUntil: number }> = [];
@@ -133,29 +292,6 @@ export const useRecurringExpenses = () => {
         return reminders.sort((a, b) => a.daysUntil - b.daysUntil);
     };
 
-    // Get next due date for an expense
-    const getNextDueDate = (expense: RecurringExpense): Date => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-
-        if (expense.cycle === 'monthly') {
-            let nextDate = new Date(year, month, expense.dayOfMonth);
-            if (nextDate <= today) {
-                nextDate = new Date(year, month + 1, expense.dayOfMonth);
-            }
-            return nextDate;
-        } else {
-            // Yearly
-            let nextDate = new Date(year, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
-            if (nextDate <= today) {
-                nextDate = new Date(year + 1, (expense.monthOfYear || 1) - 1, expense.dayOfMonth);
-            }
-            return nextDate;
-        }
-    };
-
-    // Schedule reminder notifications
     const scheduleReminders = async () => {
         try {
             const reminders = getUpcomingReminders();
@@ -168,7 +304,7 @@ export const useRecurringExpenses = () => {
                         id: notifId,
                         title: '💰 تذكير بدفعة قادمة',
                         body: `${reminder.name}: ${reminder.amount} ${reminder.currency} - بعد ${reminder.daysUntil} ${reminder.daysUntil === 1 ? 'يوم' : 'أيام'}`,
-                        schedule: { at: new Date(Date.now() + 1000) }, // Now for testing
+                        schedule: { at: new Date(Date.now() + 1000) },
                         sound: 'default',
                     }]
                 });
@@ -178,7 +314,6 @@ export const useRecurringExpenses = () => {
         }
     };
 
-    // Calculate total monthly recurring expenses
     const getMonthlyTotal = (): { ars: number; usd: number } => {
         return recurringExpenses
             .filter(e => e.isActive && e.cycle === 'monthly')
@@ -192,7 +327,6 @@ export const useRecurringExpenses = () => {
             }, { ars: 0, usd: 0 });
     };
 
-    // Calculate total yearly recurring expenses
     const getYearlyTotal = (): { ars: number; usd: number } => {
         return recurringExpenses
             .filter(e => e.isActive && e.cycle === 'yearly')
@@ -208,6 +342,7 @@ export const useRecurringExpenses = () => {
 
     return {
         recurringExpenses,
+        loading,
         addRecurringExpense,
         updateRecurringExpense,
         deleteRecurringExpense,
@@ -219,5 +354,6 @@ export const useRecurringExpenses = () => {
         scheduleReminders,
         getMonthlyTotal,
         getYearlyTotal,
+        refresh: fetchExpenses,
     };
 };

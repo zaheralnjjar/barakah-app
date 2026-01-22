@@ -141,17 +141,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 {/* Normal Header */}
                 <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-3 shadow-sm border border-emerald-100 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                        {/* Notification Bell and Sync Status - Right Side (First in RTL) */}
+                        {/* Notification Bell - Right Side (First in RTL) */}
                         <div className="flex items-center gap-1">
-                            <SyncStatusIndicator
-                                isOnline={isOnline}
-                                isSyncing={isSyncing}
-                                lastSync={lastSync}
-                                pendingActions={pendingActions}
-                                failedActions={failedActions}
-                                onSyncClick={() => syncNow()}
-                                compact
-                            />
                             <NotificationBell />
                         </div>
 
