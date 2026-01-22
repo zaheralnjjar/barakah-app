@@ -121,64 +121,56 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
     return (
         <div className="h-screen flex flex-col bg-gray-50">
             {/* Header */}
-            <div className="bg-white border-b p-4">
-                <div className="flex items-center gap-4">
+            <div className="bg-white border-b px-4 py-3">
+                <div className="flex items-center gap-3">
                     {viewMode !== 'folders' && (
-                        <Button variant="outline" size="sm" onClick={handleBack}>
-                            <ArrowLeft className="w-4 h-4 ml-1" />
+                        <button
+                            onClick={handleBack}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
                             رجوع
-                        </Button>
+                            <ArrowLeft className="w-4 h-4" />
+                        </button>
                     )}
-                    <h1 className="text-2xl font-bold flex-1">
+                    <h1 className="text-xl font-bold text-gray-800 flex-1">
                         {viewMode === 'folders' && '📝 الملاحظات'}
                         {viewMode === 'notes' && `📂 ${currentFolder?.name || 'الملاحظات'}`}
                         {viewMode === 'editor' && (selectedNote?.title || 'ملاحظة جديدة')}
                         {viewMode === 'revisions' && 'سجل التعديلات'}
                     </h1>
-                    {/* Search and Close - shown in folders view */}
-                    {viewMode === 'folders' && (
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <Input
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    placeholder="بحث في الملاحظات..."
-                                    className="pr-10 w-64"
-                                />
-                            </div>
-                            {onClose && (
-                                <Button onClick={onClose} className="bg-red-500 hover:bg-red-600 text-white">
-                                    <X className="w-4 h-4 ml-1" />
-                                    إغلاق
-                                </Button>
-                            )}
+                    {/* Search - shown in folders and notes view */}
+                    {(viewMode === 'folders' || viewMode === 'notes') && (
+                        <div className="relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input
+                                value={searchQuery}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                placeholder="بحث..."
+                                className="pr-10 w-48 h-9 text-sm"
+                            />
                         </div>
                     )}
+                    {/* New Note button - shown in notes view */}
                     {viewMode === 'notes' && (
-                        <div className="flex items-center gap-2">
-                            {onClose && (
-                                <Button onClick={onClose} className="bg-red-500 hover:bg-red-600 text-white">
-                                    <X className="w-4 h-4 ml-1" />
-                                    إغلاق
-                                </Button>
-                            )}
-                            <div className="relative">
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <Input
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    placeholder="بحث..."
-                                    className="pr-10 w-64"
-                                />
-                            </div>
-                            <Button onClick={() => {
+                        <button
+                            onClick={() => {
                                 setSelectedNoteId(null);
                                 setViewMode('editor');
-                            }}>
-                                ملاحظة جديدة
-                            </Button>
-                        </div>
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg shadow-sm transition-all"
+                        >
+                            ملاحظة جديدة
+                        </button>
+                    )}
+                    {/* Close button */}
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg shadow-sm transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                            إغلاق
+                        </button>
                     )}
                     {viewMode === 'editor' && selectedNoteId && (
                         <div className="flex items-center gap-2">
