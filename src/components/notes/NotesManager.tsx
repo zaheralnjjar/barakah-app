@@ -11,6 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type ViewMode = 'folders' | 'notes' | 'editor' | 'revisions';
 
@@ -27,6 +37,10 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
     const [showLockDialog, setShowLockDialog] = useState(false);
     const [lockPin, setLockPin] = useState('');
 
+    // Safety
+    const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+    const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+
     const { folders, createFolder, updateFolder, deleteFolder } = useNoteFolders();
     const {
         notesHistory,
@@ -39,7 +53,9 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
         removeTag,
         exportNoteToTXT,
         exportNoteToPDF,
+        deleteNoteById,
     } = useQuickNotes();
+
     const { revisions, createRevision, restoreRevision } = useNoteRevisions(selectedNoteId || undefined);
 
     const currentFolder = folders.find(f => f.id === selectedFolderId);
@@ -108,14 +124,40 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
 
     const handleMoveNote = async (noteId: string, targetFolderId: string) => {
         if (targetFolderId === 'general') {
-            // If moved to General, remove folder association (make it general only)
-            // Or just do nothing as it is already visible in General. 
-            // Let's remove specific folder ID to make it 'General' only.
-            await updateNoteById(noteId, { folderId: undefined });
+            await updateNoteById(noteId, { folderId: undefined }); // Passing undefined might fail if API expects null, checking useQuickNotes it seems OK.
+            // Actually useQuickNotes expects 'folderId' field name but DB expects 'folder_id'. 
+            // The hook converts it. If undefined, it sends null. Correct.
             toast({ title: 'تم نقل الملاحظة إلى العام ✅' });
         } else {
             await updateNoteById(noteId, { folderId: targetFolderId });
             toast({ title: 'تم نقل الملاحظة ✅' });
+        }
+    };
+
+    const handleDeleteRequest = (noteId: string) => {
+        setNoteToDelete(noteId);
+        setShowDeleteAlert(true);
+    };
+
+    const confirmDeleteNote = async () => {
+        if (noteToDelete) {
+            await deleteNoteById(noteToDelete);
+            setNoteToDelete(null);
+            setShowDeleteAlert(false);
+            toast({ title: 'تم حذف الملاحظة 🗑️' });
+        }
+    };
+
+    const handleShareNote = (note: any) => {
+        const text = `${note.title || 'ملاحظة'}\n\n${note.content.replace(/<[^>]*>?/gm, '')}`; // Strip HTML
+        if (navigator.share) {
+            navigator.share({
+                title: note.title || 'Barakah Note',
+                text: text,
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(text);
+            toast({ title: 'تم نسخ النص للمشاركة 📋' });
         }
     };
 
@@ -229,6 +271,8 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
                         onCreateFolder={createFolder}
                         onUpdateFolder={updateFolder}
                         onDeleteFolder={deleteFolder}
+                        onDeleteNote={handleDeleteRequest}
+                        onShareNote={handleShareNote}
                     />
                 )}
 
@@ -300,7 +344,7 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
                                     setSelectedNoteId(null);
                                 }}
                             >
-                                إلغاء
+                                إغلاق
                             </Button>
                             <Button className="flex-1" onClick={handleUnlock}>
                                 <Unlock className="w-4 h-4 ml-1" />
@@ -310,6 +354,24 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation Alert */}
+            <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-right">حذف الملاحظة</AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                            هل أنت متأكد من رغبتك في حذف هذه الملاحظة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="sm:justify-start gap-2">
+                        <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteNote}>
+                            حذف نهائي
+                        </AlertDialogAction>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

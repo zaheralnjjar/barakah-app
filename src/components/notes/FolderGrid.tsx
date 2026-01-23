@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, Plus, Edit2, Trash2, FileText, Search, X } from 'lucide-react';
+import { Folder, Plus, Edit2, Trash2, FileText, Search, X, Share2, MoreVertical } from 'lucide-react';
 import { NoteFolder } from '@/hooks/useNoteFolders';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,8 @@ interface FolderGridProps {
     onCreateFolder: (name: string, color: string, icon: string) => void;
     onUpdateFolder: (id: string, updates: Partial<NoteFolder>) => void;
     onDeleteFolder: (id: string) => void;
+    onDeleteNote?: (id: string) => void;
+    onShareNote?: (note: any) => void;
     searchQuery?: string;
     onSearch?: (query: string) => void;
 }
@@ -47,6 +49,8 @@ interface FolderColumnProps {
     onFolderClick: (folderId: string) => void;
     onNoteClick: (noteId: string) => void;
     onMoveNote?: (noteId: string, targetFolderId: string) => void;
+    onDeleteNote?: (id: string) => void;
+    onShareNote?: (note: any) => void;
     openEditDialog: (folder: NoteFolder) => void;
     openDeleteConfirm: (folder: NoteFolder) => void;
 }
@@ -61,6 +65,8 @@ const FolderColumn = ({
     onFolderClick,
     onNoteClick,
     onMoveNote,
+    onDeleteNote,
+    onShareNote,
     openEditDialog,
     openDeleteConfirm
 }: FolderColumnProps) => {
@@ -192,22 +198,45 @@ const FolderColumn = ({
                                 onClick={() => onNoteClick(note.id)}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, note.id)}
-                                className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group active:cursor-grabbing cursor-grab"
+                                className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group active:cursor-grabbing cursor-grab relative"
                             >
                                 <div className="flex justify-between items-start mb-1 gap-2">
-                                    <h4 className="font-medium text-gray-800 text-sm line-clamp-2 group-hover:text-blue-600 flex-1 ml-1">
-                                        {note.title || 'بدون عنوان'}
-                                    </h4>
+                                    <h4 className="font-medium text-gray-800 text-sm line-clamp-2 group-hover:text-blue-600 flex-1 ml-1"
+                                        dangerouslySetInnerHTML={{
+                                            // Strip HTML for preview title if it contains tags
+                                            __html: (note.title || 'بدون عنوان').replace(/<[^>]*>?/gm, '')
+                                        }}
+                                    />
                                     {sourceFolder && (
                                         <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-500 whitespace-nowrap shrink-0 max-w-[80px] truncate">
                                             {sourceFolder}
                                         </span>
                                     )}
                                 </div>
-                                <div className="flex items-center justify-between text-[10px] text-gray-400">
-                                    <div className="flex items-center gap-1">
-                                        <FileText className="w-3 h-3" />
-                                        <span>نص</span>
+                                <div className="flex items-center justify-between text-[10px] text-gray-400 mt-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <FileText className="w-3 h-3" />
+                                            <span>نص</span>
+                                        </div>
+                                        {/* Actions */}
+                                        <div className="flex bg-gray-100 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onShareNote?.(note); }}
+                                                className="p-1 hover:bg-blue-100 hover:text-blue-500 rounded-r-md transition-colors"
+                                                title="مشاركة"
+                                            >
+                                                <Share2 className="w-3 h-3" />
+                                            </button>
+                                            <div className="w-px bg-gray-200" />
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onDeleteNote?.(note.id); }}
+                                                className="p-1 hover:bg-red-100 hover:text-red-500 rounded-l-md transition-colors"
+                                                title="حذف"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
                                     </div>
                                     <span>
                                         {dateDisplay}
@@ -247,6 +276,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
     onCreateFolder,
     onUpdateFolder,
     onDeleteFolder,
+    onDeleteNote,
+    onShareNote,
     searchQuery = '',
     onSearch,
 }) => {
@@ -274,7 +305,6 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
 
     const handleCreateFolder = () => {
         if (!newFolderName.trim()) return;
-        console.log("Creating folder:", newFolderName, selectedColor);
         onCreateFolder(newFolderName, selectedColor, 'folder');
         setNewFolderName('');
         setSelectedColor(FOLDER_COLORS[0].value);
@@ -332,6 +362,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                     onFolderClick={onFolderClick}
                     onNoteClick={onNoteClick}
                     onMoveNote={onMoveNote}
+                    onDeleteNote={onDeleteNote}
+                    onShareNote={onShareNote}
                     openEditDialog={openEditDialog}
                     openDeleteConfirm={openDeleteConfirm}
                 />
@@ -362,6 +394,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                 onFolderClick={onFolderClick}
                                 onNoteClick={onNoteClick}
                                 onMoveNote={onMoveNote}
+                                onDeleteNote={onDeleteNote}
+                                onShareNote={onShareNote}
                                 openEditDialog={openEditDialog}
                                 openDeleteConfirm={openDeleteConfirm}
                             />
@@ -381,6 +415,8 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                 onFolderClick={onFolderClick}
                                 onNoteClick={onNoteClick}
                                 onMoveNote={onMoveNote}
+                                onDeleteNote={onDeleteNote}
+                                onShareNote={onShareNote}
                                 openEditDialog={openEditDialog}
                                 openDeleteConfirm={openDeleteConfirm}
                             />
