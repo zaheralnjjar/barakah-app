@@ -106,6 +106,19 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
         }
     };
 
+    const handleMoveNote = async (noteId: string, targetFolderId: string) => {
+        if (targetFolderId === 'general') {
+            // If moved to General, remove folder association (make it general only)
+            // Or just do nothing as it is already visible in General. 
+            // Let's remove specific folder ID to make it 'General' only.
+            await updateNoteById(noteId, { folderId: undefined });
+            toast({ title: 'تم نقل الملاحظة إلى العام ✅' });
+        } else {
+            await updateNoteById(noteId, { folderId: targetFolderId });
+            toast({ title: 'تم نقل الملاحظة ✅' });
+        }
+    };
+
     const handleBack = () => {
         if (viewMode === 'revisions') {
             setViewMode('editor');
@@ -207,7 +220,12 @@ export const NotesManager: React.FC<NotesManagerProps> = ({ onClose }) => {
                 {viewMode === 'folders' && (
                     <FolderGrid
                         folders={folders}
+                        notes={notesHistory}
+                        searchQuery={searchQuery}
+                        onSearch={handleSearch}
                         onFolderClick={handleFolderClick}
+                        onNoteClick={handleNoteClick}
+                        onMoveNote={handleMoveNote}
                         onCreateFolder={createFolder}
                         onUpdateFolder={updateFolder}
                         onDeleteFolder={deleteFolder}

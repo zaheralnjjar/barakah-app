@@ -16,7 +16,7 @@ import { useQuickNotes } from '@/hooks/useQuickNotes';
 import {
     FileText, Calendar, CheckSquare, Pill, Moon, MapPin, ShoppingCart,
     StickyNote, Users, User, Send, Copy, Clock, Sun, Sunset, CalendarDays,
-    PartyPopper, X, Plus, Trash2, Phone, MessageCircle, ChevronLeft, Check
+    PartyPopper, X, Plus, Trash2, Phone, MessageCircle, ChevronLeft, Check, Search
 } from 'lucide-react';
 
 interface ReportGeneratorProps {
@@ -65,6 +65,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const [showContactPicker, setShowContactPicker] = useState(false);
     const [showMuslimPicker, setShowMuslimPicker] = useState(false);
     const [selectedMuslims, setSelectedMuslims] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const [favoriteContacts, setFavoriteContacts] = useState<FavoriteContact[]>([]);
     const [newMuslims, setNewMuslims] = useState<NewMuslim[]>([]);
     const [showAddContact, setShowAddContact] = useState(false);
@@ -759,6 +760,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         setShowContactPicker(false);
         setShowMuslimPicker(false);
         setSelectedMuslims([]);
+        setSearchQuery('');
     };
 
     const emojiOptions = ['👤', '👩', '👨', '👴', '👵', '👨‍💼', '👩‍💼', '🏠', '💼', '❤️', '⭐', '📱'];
@@ -781,6 +783,17 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                                 <ChevronLeft className="w-4 h-4 ml-1" /> رجوع
                             </Button>
                             <span className="text-sm text-gray-500">اختر مسلماً أو أكثر ({newMuslims.length})</span>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input
+                                placeholder="بحث بالاسم أو الدولة..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pr-10 bg-white"
+                            />
                         </div>
 
                         {/* Select All / Deselect All Buttons */}
@@ -808,29 +821,41 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                         )}
 
                         <div className="flex-1 overflow-y-auto max-h-[45vh] space-y-1">
-                            {newMuslims.length === 0 ? (
-                                <p className="text-center text-gray-500 py-8">لا يوجد مسلمون مسجلون</p>
+                            {newMuslims.filter(m =>
+                                m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                m.stage?.toLowerCase().includes(searchQuery.toLowerCase())
+                            ).length === 0 ? (
+                                <p className="text-center text-gray-500 py-8">
+                                    {searchQuery ? 'لا توجد نتائج مطابقة' : 'لا يوجد مسلمون مسجلون'}
+                                </p>
                             ) : (
-                                newMuslims.map(muslim => (
-                                    <button
-                                        key={muslim.id}
-                                        onClick={() => toggleMuslimSelection(muslim.id)}
-                                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-right ${selectedMuslims.includes(muslim.id) ? 'bg-primary/10 border border-primary' : 'hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selectedMuslims.includes(muslim.id) ? 'bg-primary border-primary' : 'border-gray-300'
-                                            }`}>
-                                            {selectedMuslims.includes(muslim.id) && <Check className="w-4 h-4 text-white" />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{muslim.name}</p>
-                                            <div className="flex gap-2 text-xs text-gray-500">
-                                                {muslim.country && <span>🌍 {muslim.country}</span>}
-                                                {muslim.stage && <span>📊 {muslim.stage}</span>}
+                                newMuslims
+                                    .filter(m =>
+                                        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        m.stage?.toLowerCase().includes(searchQuery.toLowerCase())
+                                    )
+                                    .map(muslim => (
+                                        <button
+                                            key={muslim.id}
+                                            onClick={() => toggleMuslimSelection(muslim.id)}
+                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-right ${selectedMuslims.includes(muslim.id) ? 'bg-primary/10 border border-primary' : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selectedMuslims.includes(muslim.id) ? 'bg-primary border-primary' : 'border-gray-300'
+                                                }`}>
+                                                {selectedMuslims.includes(muslim.id) && <Check className="w-4 h-4 text-white" />}
                                             </div>
-                                        </div>
-                                    </button>
-                                ))
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium truncate">{muslim.name}</p>
+                                                <div className="flex gap-2 text-xs text-gray-500">
+                                                    {muslim.country && <span>🌍 {muslim.country}</span>}
+                                                    {muslim.stage && <span>📊 {muslim.stage}</span>}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))
                             )}
                         </div>
 

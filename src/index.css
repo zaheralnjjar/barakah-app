@@ -583,3 +583,26 @@ html {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+
+.scrollbar-thumb-gray-200::-webkit-scrollbar-thumb {
+  background-color: #e2e8f0;
+}
+
+.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
