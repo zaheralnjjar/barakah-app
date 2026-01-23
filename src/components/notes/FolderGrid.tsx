@@ -41,6 +41,7 @@ interface FolderColumnProps {
     folder: NoteFolder;
     isFullHeight?: boolean;
     notes: any[];
+    folders: NoteFolder[];
     searchQuery?: string;
     onSearch?: (query: string) => void;
     onFolderClick: (folderId: string) => void;
@@ -54,6 +55,7 @@ const FolderColumn = ({
     folder,
     isFullHeight = false,
     notes,
+    folders,
     searchQuery,
     onSearch,
     onFolderClick,
@@ -117,7 +119,7 @@ const FolderColumn = ({
                         <div className="relative flex-1">
                             <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <Input
-                                value={searchQuery}
+                                value={searchQuery || ''}
                                 onChange={(e) => onSearch?.(e.target.value)}
                                 placeholder="بحث عام..."
                                 className="pr-8 h-9 text-right bg-white/80 border-gray-200 focus:border-blue-500 rounded-lg text-sm w-full"
@@ -169,28 +171,51 @@ const FolderColumn = ({
             {/* Notes List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-200">
                 {folderNotes.length > 0 ? (
-                    folderNotes.map(note => (
-                        <div
-                            key={note.id}
-                            onClick={() => onNoteClick(note.id)}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, note.id)}
-                            className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group active:cursor-grabbing cursor-grab"
-                        >
-                            <h4 className="font-medium text-gray-800 text-sm mb-1 line-clamp-2 group-hover:text-blue-600">
-                                {note.title || 'بدون عنوان'}
-                            </h4>
-                            <div className="flex items-center justify-between text-[10px] text-gray-400">
-                                <div className="flex items-center gap-1">
-                                    <FileText className="w-3 h-3" />
-                                    <span>نص</span>
+                    folderNotes.map(note => {
+                        const dateStr = note.updated_at || note.createdAt || note.created_at;
+                        let dateDisplay = '';
+                        try {
+                            if (dateStr) {
+                                dateDisplay = new Date(dateStr).toLocaleDateString('ar-SA');
+                            }
+                        } catch (e) {
+                            dateDisplay = '';
+                        }
+
+                        const sourceFolder = isGeneral && note.folderId
+                            ? folders.find(f => f.id === note.folderId)?.name
+                            : null;
+
+                        return (
+                            <div
+                                key={note.id}
+                                onClick={() => onNoteClick(note.id)}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, note.id)}
+                                className="bg-white p-3 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group active:cursor-grabbing cursor-grab"
+                            >
+                                <div className="flex justify-between items-start mb-1 gap-2">
+                                    <h4 className="font-medium text-gray-800 text-sm line-clamp-2 group-hover:text-blue-600 flex-1 ml-1">
+                                        {note.title || 'بدون عنوان'}
+                                    </h4>
+                                    {sourceFolder && (
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-500 whitespace-nowrap shrink-0 max-w-[80px] truncate">
+                                            {sourceFolder}
+                                        </span>
+                                    )}
                                 </div>
-                                <span>
-                                    {new Date(note.updated_at).toLocaleDateString('ar-SA')}
-                                </span>
+                                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                                    <div className="flex items-center gap-1">
+                                        <FileText className="w-3 h-3" />
+                                        <span>نص</span>
+                                    </div>
+                                    <span>
+                                        {dateDisplay}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 ) : (
                     <div className="h-full flex flex-col items-center justify-center text-gray-400 gap-2 opacity-60">
                         <FileText className="w-8 h-8" />
@@ -249,6 +274,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
 
     const handleCreateFolder = () => {
         if (!newFolderName.trim()) return;
+        console.log("Creating folder:", newFolderName, selectedColor);
         onCreateFolder(newFolderName, selectedColor, 'folder');
         setNewFolderName('');
         setSelectedColor(FOLDER_COLORS[0].value);
@@ -300,6 +326,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                     folder={generalFolder}
                     isFullHeight={true}
                     notes={notes}
+                    folders={folders}
                     searchQuery={searchQuery}
                     onSearch={onSearch}
                     onFolderClick={onFolderClick}
@@ -331,6 +358,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                 key={folder.id}
                                 folder={folder}
                                 notes={notes}
+                                folders={folders}
                                 onFolderClick={onFolderClick}
                                 onNoteClick={onNoteClick}
                                 onMoveNote={onMoveNote}
@@ -349,6 +377,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                 key={folder.id}
                                 folder={folder}
                                 notes={notes}
+                                folders={folders}
                                 onFolderClick={onFolderClick}
                                 onNoteClick={onNoteClick}
                                 onMoveNote={onMoveNote}
