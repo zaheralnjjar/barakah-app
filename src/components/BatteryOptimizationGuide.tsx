@@ -24,7 +24,7 @@ export function BatteryOptimizationGuide() {
                     </div>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto" dir="rtl">
+            <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto" dir="rtl" aria-describedby={undefined}>
                 <DialogHeader className="text-right">
                     <DialogTitle className="flex items-center gap-2 text-xl">
                         <Battery className="h-6 w-6 text-orange-500" />

@@ -7,6 +7,16 @@ import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff, Sea
 import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface NoteItem {
     id: number;
@@ -87,6 +97,10 @@ export const QuickNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note:
     const [searchQuery, setSearchQuery] = useState('');
     const noteEditorRef = useRef<HTMLDivElement>(null);
 
+    // Delete Safety
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [noteToDeleteId, setNoteToDeleteId] = useState<number | null>(null);
+
     // Convert NoteData objects to NoteItem format
     const notes: NoteItem[] = notesHistory.map((note, idx) => {
         const lines = note.content.split('\n');
@@ -133,10 +147,19 @@ export const QuickNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note:
         }
     };
 
-    const handleDelete = (idx: number) => {
-        deleteHistoryItem(idx);
-        setSelectedNote(null);
-        toast({ title: 'تم الحذف' });
+    const handleDeleteRequest = (idx: number) => {
+        setNoteToDeleteId(idx);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        if (noteToDeleteId !== null) {
+            deleteHistoryItem(noteToDeleteId);
+            setSelectedNote(null);
+            setNoteToDeleteId(null);
+            setShowDeleteConfirm(false);
+            toast({ title: 'تم الحذف 🗑️' });
+        }
     };
 
     const handleShareAll = async () => {
@@ -286,7 +309,7 @@ export const QuickNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note:
                                 <Button
                                     variant="outline"
                                     className="flex-1 gap-1 text-red-500 hover:text-red-600"
-                                    onClick={() => selectedNote && handleDelete(selectedNote.id)}
+                                    onClick={() => selectedNote && handleDeleteRequest(selectedNote.id)}
                                 >
                                     <Trash2 className="w-4 h-4" /> حذف
                                 </Button>
@@ -369,6 +392,24 @@ export const QuickNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note:
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                {/* Delete Confirmation Alert */}
+                <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-right">حذف الملاحظة</AlertDialogTitle>
+                            <AlertDialogDescription className="text-right">
+                                هل أنت متأكد من رغبتك في حذف هذه الملاحظة نهائياً؟ لا يمكن التراجع عن هذا الإجراء.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="sm:justify-start gap-2">
+                            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
+                                حذف نهائي
+                            </AlertDialogAction>
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </CardContent>
         </Card>
     );

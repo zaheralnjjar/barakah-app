@@ -16,6 +16,9 @@ const getT = (lang: Language) => (key: string) => translations[lang]?.[key] || k
 // Helper function to reshape Arabic text for correct PDF rendering
 // Note: We only reshape Arabic characters for ligatures, no reversal needed
 // jsPDF with Amiri font handles RTL direction correctly
+// Helper function to reshape Arabic text for correct PDF rendering
+// Note: We only reshape Arabic characters for ligatures, no reversal needed
+// jsPDF with Amiri font handles RTL direction correctly
 const reshapeArabic = (text: string): string => {
     if (!text) return text;
     try {
@@ -26,6 +29,91 @@ const reshapeArabic = (text: string): string => {
         console.warn('Arabic reshaping failed:', e);
         return text;
     }
+};
+
+export type ReportSection =
+    | { type: 'text', content: string; align?: 'left' | 'center' | 'right' }
+    | { type: 'table', title?: string, headers: string[], rows: string[][] };
+
+export type ReportData = {
+    title: string;
+    sections: ReportSection[];
+};
+
+export const generateGenericPDF = (data: ReportData, filename: string) => {
+    const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true
+    });
+
+    // Add Arabic Font
+    doc.addFileToVFS("Amiri-Regular.ttf", AmiriFontBase64);
+    doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
+    doc.setFont("Amiri"); // Set as default
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(41, 128, 185); // Blue
+    doc.text(reshapeArabic(data.title), 105, 20, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`${reshapeArabic('تاريخ التقرير')}: ${new Date().toLocaleDateString('ar-SA')}`, 105, 30, { align: 'center' });
+
+    let yPos = 40;
+
+    data.sections.forEach(section => {
+        if (section.type === 'text') {
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+
+            // Split text into lines for wrapping
+            const textLines = doc.splitTextToSize(reshapeArabic(section.content), 180);
+            const align = section.align || 'right';
+            const xPos = align === 'right' ? 190 : (align === 'center' ? 105 : 20);
+
+            doc.text(textLines, xPos, yPos, { align: align });
+            yPos += (textLines.length * 6) + 5;
+        } else if (section.type === 'table') {
+            if (section.title) {
+                doc.setFontSize(14);
+                doc.setTextColor(41, 128, 185);
+                doc.text(reshapeArabic(section.title), 190, yPos, { align: 'right' });
+                yPos += 6;
+            }
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [section.headers.map(h => reshapeArabic(h))],
+                body: section.rows.map(row => row.map(cell => reshapeArabic(cell))),
+                theme: 'striped',
+                headStyles: { fillColor: [41, 128, 185], font: 'Amiri', halign: 'right' },
+                styles: { halign: 'right', font: 'Amiri' },
+                margin: { top: 10 }
+            });
+
+            yPos = (doc as any).lastAutoTable.finalY + 15;
+        }
+
+        // Page break check (rough)
+        if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+        }
+    });
+
+    // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`${reshapeArabic('صفحة')} ${i} ${reshapeArabic('من')} ${pageCount}`, 105, 290, { align: 'center' });
+    }
+
+    saveAndSharePDF(doc, filename);
 };
 
 

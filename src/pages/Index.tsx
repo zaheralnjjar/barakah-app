@@ -360,6 +360,7 @@ const Index = () => {
                 <SmartDashboard
                   onNavigateToTab={setActiveTab}
                   onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
+                  onOpenNotes={() => setShowNotesManager(true)}
                 />
               </TabsContent>
 
@@ -394,6 +395,7 @@ const Index = () => {
                   </Suspense>
                 </ErrorBoundary>
               </TabsContent>
+
 
               <TabsContent value="settings" className="animate-fade-in data-[state=active]:block">
                 <ErrorBoundary>

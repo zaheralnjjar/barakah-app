@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Share } from '@capacitor/share';
 import { supabase } from '@/integrations/supabase/client';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useFinance } from '@/hooks/useFinance';
@@ -13,10 +12,10 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { useMedications } from '@/hooks/useMedications';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useQuickNotes } from '@/hooks/useQuickNotes';
+import { generateGenericPDF, ReportData } from '@/utils/pdfGenerator';
 import {
     FileText, Calendar, CheckSquare, Pill, Moon, MapPin, ShoppingCart,
-    StickyNote, Users, User, Send, Copy, Clock, Sun, Sunset, CalendarDays,
-    PartyPopper, X, Plus, Trash2, Phone, MessageCircle, ChevronLeft, Check, Search
+    StickyNote, Users, User, Share2, Download, Search, ChevronLeft, Check, Plus, Trash2, MessageCircle, Sun
 } from 'lucide-react';
 
 interface ReportGeneratorProps {
@@ -59,12 +58,15 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const { items: shoppingItems } = useShoppingList();
     const { notesHistory } = useQuickNotes();
 
-    const [selectedReport, setSelectedReport] = useState<string | null>(null);
-    const [generatedReport, setGeneratedReport] = useState<string>('');
-    const [editableReport, setEditableReport] = useState<string>('');
+    const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+    const [reportData, setReportData] = useState<ReportData | null>(null);
+
+    // Pickers State
     const [showContactPicker, setShowContactPicker] = useState(false);
     const [showMuslimPicker, setShowMuslimPicker] = useState(false);
     const [selectedMuslims, setSelectedMuslims] = useState<string[]>([]);
+    const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
+    const [showNotePicker, setShowNotePicker] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [favoriteContacts, setFavoriteContacts] = useState<FavoriteContact[]>([]);
     const [newMuslims, setNewMuslims] = useState<NewMuslim[]>([]);
@@ -77,35 +79,24 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const todayStr = today.toISOString().split('T')[0];
     const hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic', { dateStyle: 'full' });
 
-    // Fetch favorite contacts from Supabase
+    // --- Data Fetching ---
     const fetchContacts = useCallback(async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-                // Fallback to localStorage
                 const saved = localStorage.getItem('baraka_favorite_contacts');
                 if (saved) setFavoriteContacts(JSON.parse(saved));
                 return;
             }
-
-            const { data, error } = await supabase
-                .from('favorite_contacts')
-                .select('*')
-                .order('order_index', { ascending: true });
-
+            const { data, error } = await supabase.from('favorite_contacts').select('*').order('order_index', { ascending: true });
             if (error) throw error;
-
             if (data && data.length > 0) {
                 const mapped: FavoriteContact[] = data.map((c: any) => ({
-                    id: c.id,
-                    name: c.name,
-                    phone: c.phone,
-                    emoji: c.emoji || '👤',
+                    id: c.id, name: c.name, phone: c.phone, emoji: c.emoji || '👤',
                 }));
                 setFavoriteContacts(mapped);
                 localStorage.setItem('baraka_favorite_contacts', JSON.stringify(mapped));
             } else {
-                // Fallback to localStorage
                 const saved = localStorage.getItem('baraka_favorite_contacts');
                 if (saved) setFavoriteContacts(JSON.parse(saved));
             }
@@ -116,7 +107,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         }
     }, []);
 
-    // Fetch new Muslims from Supabase
     const fetchNewMuslims = useCallback(async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -125,14 +115,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                 if (saved) setNewMuslims(JSON.parse(saved));
                 return;
             }
-
-            const { data, error } = await supabase
-                .from('new_muslims')
-                .select('*')
-                .order('created_at', { ascending: false });
-
+            const { data, error } = await supabase.from('new_muslims').select('*').order('created_at', { ascending: false });
             if (error) throw error;
-
             if (data && data.length > 0) {
                 const mapped: NewMuslim[] = data.map((m: any) => ({
                     id: m.id.toString(),
@@ -170,24 +154,18 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         }
     }, [isOpen, fetchContacts, fetchNewMuslims]);
 
-    // Save contacts to Supabase
     const saveContact = async (contact: FavoriteContact) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 await supabase.from('favorite_contacts').insert({
-                    id: contact.id,
-                    user_id: user.id,
-                    name: contact.name,
-                    phone: contact.phone,
-                    emoji: contact.emoji,
-                    order_index: favoriteContacts.length,
+                    id: contact.id, user_id: user.id, name: contact.name, phone: contact.phone, emoji: contact.emoji, order_index: favoriteContacts.length,
                 });
             }
             setFavoriteContacts(prev => [...prev, contact]);
             localStorage.setItem('baraka_favorite_contacts', JSON.stringify([...favoriteContacts, contact]));
         } catch (error) {
-            console.error('Error saving contact:', error);
+            console.error(error);
             setFavoriteContacts(prev => [...prev, contact]);
             localStorage.setItem('baraka_favorite_contacts', JSON.stringify([...favoriteContacts, contact]));
         }
@@ -199,16 +177,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
             return;
         }
         const newContact: FavoriteContact = {
-            id: crypto.randomUUID(),
-            name: newContactName,
-            phone: newContactPhone.replace(/\s/g, ''),
-            emoji: newContactEmoji
+            id: crypto.randomUUID(), name: newContactName, phone: newContactPhone.replace(/\s/g, ''), emoji: newContactEmoji
         };
         await saveContact(newContact);
-        setNewContactName('');
-        setNewContactPhone('');
-        setNewContactEmoji('👤');
-        setShowAddContact(false);
+        setNewContactName(''); setNewContactPhone(''); setNewContactEmoji('👤'); setShowAddContact(false);
         toast({ title: 'تم إضافة جهة الاتصال ✅' });
     };
 
@@ -216,478 +188,291 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         setFavoriteContacts(prev => prev.filter(c => c.id !== id));
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await supabase.from('favorite_contacts').delete().eq('id', id);
-            }
-        } catch (error) {
-            console.error('Error deleting contact:', error);
-        }
+            if (user) await supabase.from('favorite_contacts').delete().eq('id', id);
+        } catch (error) { console.error(error); }
         localStorage.setItem('baraka_favorite_contacts', JSON.stringify(favoriteContacts.filter(c => c.id !== id)));
     };
 
-    const getReportHeader = (title: string) => {
-        return `📊 *${title}*\n${'━'.repeat(25)}\n📅 ${today.toLocaleDateString('ar-SA')} | ${hijriDate.split('،')[0]}\n${'━'.repeat(25)}\n\n`;
-    };
+    // --- Report Generators (Returning ReportData) ---
 
-    const getReportFooter = () => {
-        return `\n${'━'.repeat(25)}\n✨ تقرير من تطبيق البركة`;
-    };
-
-    // Report Generators
-    const generateDailySummary = () => {
+    const generateDailySummary = (): ReportData => {
         const todayTasks = tasks.filter(t => t.deadline === todayStr);
         const completedTasks = todayTasks.filter(t => t.progress >= 100);
         const todayExpenses = financeData?.pending_expenses?.filter(e => e.timestamp?.startsWith(todayStr)) || [];
         const totalExpenses = todayExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-        let report = getReportHeader('ملخص اليوم');
-
-        report += `💰 *المالية:*\n`;
-        report += `   الرصيد: ${financeData?.current_balance_ars?.toLocaleString() || 0} ARS\n`;
-        report += `   مصاريف اليوم: ${totalExpenses.toLocaleString()} ARS\n`;
-        report += `   الحد المتبقي: ${dailyLimit?.toLocaleString() || 0} ARS\n\n`;
-
-        report += `✅ *المهام:*\n`;
-        report += `   المكتملة: ${completedTasks.length}/${todayTasks.length}\n`;
-        if (todayTasks.length > 0) {
-            todayTasks.slice(0, 5).forEach(t => {
-                report += `   ${t.progress >= 100 ? '✓' : '○'} ${t.title}\n`;
-            });
-        }
-        report += '\n';
-
-        report += `🕌 *الصلاة القادمة:*\n`;
-        report += `   ${nextPrayer?.nameAr || 'غير متاح'} - ${nextPrayer?.time || '--:--'}\n`;
-        report += `   المتبقي: ${timeUntilNext || '--:--'}\n`;
-
-        report += getReportFooter();
-        return report;
+        return {
+            title: 'ملخص اليوم',
+            sections: [
+                { type: 'text', content: `التاريخ: ${today.toLocaleDateString('ar-SA')} | ${hijriDate.split('،')[0]}`, align: 'center' },
+                {
+                    type: 'table',
+                    title: '💰 المالية',
+                    headers: ['البند', 'القيمة'],
+                    rows: [
+                        ['الرصيد', `${financeData?.current_balance_ars?.toLocaleString() || 0}`],
+                        ['المصروف', `${totalExpenses.toLocaleString()}`],
+                        ['المتبقي', `${dailyLimit?.toLocaleString() || 0}`]
+                    ]
+                },
+                {
+                    type: 'table',
+                    title: '✅ المهام',
+                    headers: ['م', 'المهمة', 'الحالة'],
+                    rows: todayTasks.slice(0, 10).map((t, idx) => [
+                        (idx + 1).toString(),
+                        t.title,
+                        t.progress >= 100 ? 'مكتملة' : 'قيد التنفيذ'
+                    ])
+                },
+                {
+                    type: 'text',
+                    content: `اكتمل: ${completedTasks.length} من ${todayTasks.length}`,
+                    align: 'right'
+                },
+                {
+                    type: 'text',
+                    content: `🕌 الصلاة القادمة: ${nextPrayer?.nameAr || 'غير متاح'} (${nextPrayer?.time || '--:--'}) - المتبقي: ${timeUntilNext || '--:--'}`,
+                    align: 'center'
+                }
+            ]
+        };
     };
 
-    const generateWeeklySummary = () => {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-
-        const weekTasks = tasks.filter(t => {
-            const taskDate = new Date(t.deadline);
-            return taskDate >= weekAgo && taskDate <= today;
-        });
-        const completedWeekTasks = weekTasks.filter(t => t.progress >= 100);
-
-        let report = getReportHeader('ملخص الأسبوع');
-
-        report += `📊 *الإحصائيات:*\n`;
-        report += `   إجمالي المهام: ${weekTasks.length}\n`;
-        report += `   المكتملة: ${completedWeekTasks.length}\n`;
-        report += `   نسبة الإنجاز: ${weekTasks.length > 0 ? Math.round((completedWeekTasks.length / weekTasks.length) * 100) : 0}%\n\n`;
-
-        report += `📅 *المواعيد المنجزة:*\n`;
-        const weekAppointments = appointments.filter(a => {
-            const apptDate = new Date(a.date);
-            return apptDate >= weekAgo && apptDate <= today;
-        });
-        report += `   ${weekAppointments.length} موعد\n`;
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateMorningReport = () => {
-        const todayTasks = tasks.filter(t => t.deadline === todayStr && t.progress < 100);
-        const todayAppointments = appointments.filter(a => a.date === todayStr);
-        const activeMeds = medications.filter(m => m.isPermanent || (m.startDate <= todayStr && (!m.endDate || m.endDate >= todayStr)));
-
-        let report = getReportHeader('تقرير صباحي 🌅');
-
-        report += `📋 *مهام اليوم (${todayTasks.length}):*\n`;
-        todayTasks.forEach(t => {
-            report += `   ○ ${t.title}\n`;
-        });
-        if (todayTasks.length === 0) report += `   لا توجد مهام لليوم\n`;
-        report += '\n';
-
-        report += `📅 *مواعيد اليوم (${todayAppointments.length}):*\n`;
-        todayAppointments.forEach(a => {
-            report += `   🕐 ${a.time || '--:--'} - ${a.title}\n`;
-        });
-        if (todayAppointments.length === 0) report += `   لا توجد مواعيد\n`;
-        report += '\n';
-
-        report += `💊 *الأدوية:*\n`;
-        activeMeds.forEach(m => {
-            report += `   ${m.name} - ${m.frequency || 'حسب الحاجة'}\n`;
-        });
-        if (activeMeds.length === 0) report += `   لا توجد أدوية\n`;
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateEveningReport = () => {
+    const generateTodayTasks = (): ReportData => {
         const todayTasks = tasks.filter(t => t.deadline === todayStr);
-        const completedTasks = todayTasks.filter(t => t.progress >= 100);
-
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const tomorrowTasks = tasks.filter(t => t.deadline === tomorrowStr);
-
-        let report = getReportHeader('تقرير مسائي 🌙');
-
-        report += `✅ *إنجازات اليوم:*\n`;
-        report += `   المهام: ${completedTasks.length}/${todayTasks.length} مكتملة\n`;
-        completedTasks.forEach(t => {
-            report += `   ✓ ${t.title}\n`;
-        });
-        report += '\n';
-
-        report += `📋 *خطة الغد (${tomorrowTasks.length} مهمة):*\n`;
-        tomorrowTasks.forEach(t => {
-            report += `   ○ ${t.title}\n`;
-        });
-        if (tomorrowTasks.length === 0) report += `   لا توجد مهام مجدولة\n`;
-
-        report += getReportFooter();
-        return report;
+        return {
+            title: 'مهام اليوم',
+            sections: [
+                {
+                    type: 'table',
+                    headers: ['الحالة', 'المهمة', 'الأهمية'],
+                    rows: todayTasks.length > 0 ? todayTasks.map(t => [
+                        t.progress >= 100 ? '✓' : '○',
+                        t.title,
+                        t.priority === 'high' ? 'عالي' : 'عادي'
+                    ]) : [['-', 'لا توجد مهام', '-']]
+                }
+            ]
+        };
     };
 
-    const generateTodayTasks = () => {
-        const todayTasks = tasks.filter(t => t.deadline === todayStr);
-
-        let report = getReportHeader('مهام اليوم ✅');
-
-        if (todayTasks.length === 0) {
-            report += `لا توجد مهام لليوم 🎉\n`;
-        } else {
-            todayTasks.forEach(t => {
-                const status = t.progress >= 100 ? '✓' : '○';
-                report += `${status} ${t.title}\n`;
-                if (t.description) report += `   ${t.description}\n`;
-            });
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateWeekTasks = () => {
+    const generateWeekTasks = (): ReportData => {
         const weekEnd = new Date(today);
         weekEnd.setDate(weekEnd.getDate() + 7);
-
         const weekTasks = tasks.filter(t => {
             const taskDate = new Date(t.deadline);
             return taskDate >= today && taskDate <= weekEnd;
         });
 
-        let report = getReportHeader('مهام الأسبوع 📋');
-
-        if (weekTasks.length === 0) {
-            report += `لا توجد مهام للأسبوع القادم\n`;
-        } else {
-            weekTasks.forEach(t => {
-                const status = t.progress >= 100 ? '✓' : '○';
-                const date = new Date(t.deadline).toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric' });
-                report += `${status} ${t.title} (${date})\n`;
-            });
-        }
-
-        report += getReportFooter();
-        return report;
+        return {
+            title: 'مهام الأسبوع',
+            sections: [
+                {
+                    type: 'table',
+                    headers: ['اليوم', 'المهمة', 'الحالة'],
+                    rows: weekTasks.length > 0 ? weekTasks.map(t => [
+                        new Date(t.deadline).toLocaleDateString('ar-SA', { weekday: 'short' }),
+                        t.title,
+                        t.progress >= 100 ? '✓' : '○'
+                    ]) : [['-', 'لا توجد مهام قادمة', '-']]
+                }
+            ]
+        };
     };
 
-    const generateAppointments = () => {
-        const upcomingAppts = appointments
-            .filter(a => new Date(a.date) >= today)
-            .slice(0, 10);
-
-        let report = getReportHeader('المواعيد القادمة 📅');
-
-        if (upcomingAppts.length === 0) {
-            report += `لا توجد مواعيد قادمة\n`;
-        } else {
-            upcomingAppts.forEach(a => {
-                const date = new Date(a.date).toLocaleDateString('ar-SA', { weekday: 'short', month: 'short', day: 'numeric' });
-                report += `📌 ${a.title}\n`;
-                report += `   📅 ${date} ${a.time ? `- 🕐 ${a.time}` : ''}\n`;
-                if (a.location) report += `   📍 ${a.location}\n`;
-                report += '\n';
-            });
-        }
-
-        report += getReportFooter();
-        return report;
+    const generateAppointments = (): ReportData => {
+        const upcomingAppts = appointments.filter(a => new Date(a.date) >= today).slice(0, 10);
+        return {
+            title: 'المواعيد القادمة',
+            sections: [
+                {
+                    type: 'table',
+                    headers: ['التاريخ', 'الوقت', 'الموعد'],
+                    rows: upcomingAppts.length > 0 ? upcomingAppts.map(a => [
+                        new Date(a.date).toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric' }),
+                        a.time || '-',
+                        a.title
+                    ]) : [['-', '-', 'لا توجد مواعيد']]
+                }
+            ]
+        };
     };
 
-    const generateMedications = () => {
+    const generateMedications = (): ReportData => {
         const activeMeds = medications.filter(m => m.isPermanent || (m.startDate <= todayStr && (!m.endDate || m.endDate >= todayStr)));
+        const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+        const headers = ['الدواء', ...days.map(d => d.substring(0, 1))];
 
-        let report = getReportHeader('تقرير الأدوية 💊');
-
-        if (activeMeds.length === 0) {
-            report += `لا توجد أدوية مسجلة\n`;
-        } else {
-            activeMeds.forEach(m => {
-                report += `💊 *${m.name}*\n`;
-                report += `   الوقت: ${m.time || 'غير محدد'}\n`;
-                report += `   التكرار: ${m.frequency || 'يومي'}\n`;
-                report += '\n';
+        const rows = activeMeds.map(m => {
+            const schedule = days.map(day => {
+                if (m.frequency === 'daily') return '✓';
+                if (m.frequency === 'specific_days' && m.customDays?.includes(day)) return '✓';
+                if (m.frequency === 'weekly' && m.customDays?.includes(day)) return '✓';
+                return '.';
             });
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateTodayPrayer = () => {
-        let report = getReportHeader('أوقات الصلاة - اليوم 🕌');
-
-        if (prayerTimes && prayerTimes.length > 0) {
-            const fajr = prayerTimes.find(p => p.name === 'fajr');
-            const sunrise = prayerTimes.find(p => p.name === 'sunrise');
-            const dhuhr = prayerTimes.find(p => p.name === 'dhuhr');
-            const asr = prayerTimes.find(p => p.name === 'asr');
-            const maghrib = prayerTimes.find(p => p.name === 'maghrib');
-            const isha = prayerTimes.find(p => p.name === 'isha');
-
-            report += `🌅 الفجر: ${fajr?.time || '--:--'}\n`;
-            report += `☀️ الشروق: ${sunrise?.time || '--:--'}\n`;
-            report += `🌞 الظهر: ${dhuhr?.time || '--:--'}\n`;
-            report += `🌤️ العصر: ${asr?.time || '--:--'}\n`;
-            report += `🌅 المغرب: ${maghrib?.time || '--:--'}\n`;
-            report += `🌙 العشاء: ${isha?.time || '--:--'}\n`;
-        } else {
-            report += `لم يتم تحميل أوقات الصلاة\n`;
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateWeekPrayer = () => {
-        let report = getReportHeader('أوقات الصلاة - الأسبوع 🕌');
-        report += `⚠️ هذه الميزة تتطلب API خارجي\n`;
-        report += `يرجى استخدام تقرير اليوم حالياً\n`;
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateMonthPrayer = () => {
-        let report = getReportHeader('أوقات الصلاة - الشهر 🕌');
-        report += `⚠️ هذه الميزة تتطلب API خارجي\n`;
-        report += `يرجى استخدام تقرير اليوم حالياً\n`;
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateHolidays = () => {
-        const holidays = [
-            { name: 'عيد الفطر', hijriMonth: 10, hijriDay: 1 },
-            { name: 'عيد الأضحى', hijriMonth: 12, hijriDay: 10 },
-            { name: 'رأس السنة الهجرية', hijriMonth: 1, hijriDay: 1 },
-            { name: 'المولد النبوي', hijriMonth: 3, hijriDay: 12 },
-            { name: 'ليلة الإسراء والمعراج', hijriMonth: 7, hijriDay: 27 },
-            { name: 'ليلة النصف من شعبان', hijriMonth: 8, hijriDay: 15 },
-        ];
-
-        let report = getReportHeader('المناسبات والأعياد الإسلامية 🎉');
-
-        holidays.forEach(h => {
-            report += `🌙 ${h.name}\n`;
+            return [m.name, ...schedule];
         });
 
-        report += `\n📅 التاريخ الهجري اليوم:\n${hijriDate}\n`;
-
-        report += getReportFooter();
-        return report;
+        return {
+            title: 'جدول الأدوية الأسبوعي',
+            sections: [
+                {
+                    type: 'table',
+                    headers: headers,
+                    rows: rows.length > 0 ? rows : [['-', ...Array(7).fill('.')]]
+                },
+                {
+                    type: 'text',
+                    content: 'تفاصيل الجرعات:',
+                    align: 'right'
+                },
+                {
+                    type: 'table',
+                    headers: ['الدواء', 'الوقت', 'ملاحظات'],
+                    rows: activeMeds.map(m => [m.name, m.time || '-', m.notes || '-'])
+                }
+            ]
+        };
     };
 
-    const generateLocations = () => {
-        let report = getReportHeader('المواقع المحفوظة 📍');
+    const generateTodayPrayer = (): ReportData => {
+        // Horizontal Table
+        return {
+            title: 'أوقات الصلاة - اليوم',
+            sections: [
+                {
+                    type: 'table',
+                    headers: prayerTimes.map(p => p.nameAr),
+                    rows: [prayerTimes.map(p => p.time)]
+                }
+            ]
+        };
+    };
 
+    const generateLocations = (): ReportData => {
+        let allLocations: any[] = [];
         try {
             const savedLocations = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
             const customLocations = JSON.parse(localStorage.getItem('baraka_custom_locations') || '[]');
-            const allLocations = [...savedLocations, ...customLocations];
+            allLocations = [...savedLocations, ...customLocations];
+        } catch { }
 
-            if (allLocations.length === 0) {
-                report += `لا توجد مواقع محفوظة\n`;
-            } else {
-                allLocations.forEach((loc: any) => {
-                    report += `📍 ${loc.title || loc.name}\n`;
-                    if (loc.url) report += `   🔗 ${loc.url}\n`;
-                    report += '\n';
-                });
-            }
-        } catch {
-            report += `خطأ في تحميل المواقع\n`;
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateShopping = () => {
-        let report = getReportHeader('قائمة المشتريات 🛒');
-
-        if (shoppingItems.length === 0) {
-            report += `القائمة فارغة ✨\n`;
-        } else {
-            const pending = shoppingItems.filter(i => !i.completed);
-            const completed = shoppingItems.filter(i => i.completed);
-
-            if (pending.length > 0) {
-                report += `*المطلوب شراؤها:*\n`;
-                pending.forEach(i => {
-                    report += `○ ${i.text}\n`;
-                });
-                report += '\n';
-            }
-
-            if (completed.length > 0) {
-                report += `*تم شراؤها:*\n`;
-                completed.forEach(i => {
-                    report += `✓ ${i.text}\n`;
-                });
-            }
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    const generateNotes = () => {
-        let report = getReportHeader('الملاحظات 📝');
-
-        if (notesHistory.length === 0) {
-            report += `لا توجد ملاحظات\n`;
-        } else {
-            notesHistory.slice(0, 10).forEach((note, idx) => {
-                report += `${idx + 1}. ${note.title || 'ملاحظة'}\n`;
-                if (note.content) {
-                    const preview = note.content.substring(0, 100);
-                    report += `   ${preview}${note.content.length > 100 ? '...' : ''}\n`;
+        return {
+            title: 'المواقع المحفوظة',
+            sections: [
+                {
+                    type: 'table',
+                    headers: ['الاسم', 'الرابط'],
+                    rows: allLocations.length > 0 ? allLocations.map(l => [l.title || l.name, l.url || '-']) : [['-', 'لا توجد مواقع']]
                 }
-                report += '\n';
-            });
-        }
-
-        report += getReportFooter();
-        return report;
+            ]
+        };
     };
 
-    // Generate report for selected Muslims (single or multiple)
-    const generateSelectedMuslimsReport = (muslimIds: string[]) => {
+    const generateShopping = (): ReportData => {
+        const pending = shoppingItems.filter(i => !i.completed);
+        return {
+            title: 'قائمة المشتريات',
+            sections: [
+                {
+                    type: 'table',
+                    headers: ['المادة', 'الكمية'],
+                    rows: pending.length > 0 ? pending.map(i => [
+                        i.text,
+                        `${i.quantity || ''} ${i.unit === 'unit' ? '' : i.unit || ''}`.trim() || '-'
+                    ]) : [['-', 'تم شراء كل العناصر']]
+                }
+            ]
+        };
+    };
+
+    const generateSelectedMuslimsReport = (muslimIds: string[]): ReportData => {
         const selected = newMuslims.filter(m => muslimIds.includes(m.id));
+        const sections: any[] = [];
 
-        let report = getReportHeader(selected.length === 1 ? `تقرير المسلم الجديد 👤` : `تقرير المسلمين الجدد (${selected.length}) 👥`);
-
-        if (selected.length === 0) {
-            report += `لم يتم اختيار أي مسلم\n`;
-        } else {
-            selected.forEach((m, idx) => {
-                if (selected.length > 1) {
-                    report += `\n${'━'.repeat(20)}\n`;
-                    report += `📌 *${idx + 1}. ${m.name}*\n`;
-                    report += `${'━'.repeat(20)}\n`;
-                } else {
-                    report += `👤 *${m.name}*\n\n`;
-                }
-
-                // Basic Info
-                if (m.gender) report += `⚧ الجنس: ${m.gender === 'male' ? 'ذكر' : m.gender === 'female' ? 'أنثى' : m.gender}\n`;
-                if (m.country) report += `🌍 البلد: ${m.country}\n`;
-                if (m.address) report += `📍 العنوان: ${m.address}\n`;
-
-                // Contact Info
-                if (m.phone) report += `📱 الهاتف: ${m.phone}\n`;
-                if (m.email) report += `📧 البريد: ${m.email}\n`;
-
-                // Islam Journey
-                if (m.conversionDate) report += `📅 تاريخ الإسلام: ${m.conversionDate}\n`;
-                if (m.witnessSheikh) report += `👨‍🏫 الشيخ الشاهد: ${m.witnessSheikh}\n`;
-                if (m.stage) report += `📊 المرحلة: ${m.stage}\n`;
-
-                // Personal Info
-                if (m.birthDate) report += `🎂 تاريخ الميلاد: ${m.birthDate}\n`;
-                if (m.occupation) report += `💼 المهنة: ${m.occupation}\n`;
-                if (m.education) report += `🎓 التعليم: ${m.education}\n`;
-
-                // Availability
-                if (m.availableDays && m.availableDays.length > 0) {
-                    report += `📆 الأيام المتاحة: ${m.availableDays.join('، ')}\n`;
-                }
-
-                // Notes
-                if (m.notes) report += `📝 ملاحظات: ${m.notes}\n`;
-
-                report += '\n';
+        selected.forEach(m => {
+            sections.push({
+                type: 'text',
+                content: `بيانات: ${m.name}`,
+                align: 'right'
             });
-        }
-
-        report += getReportFooter();
-        return report;
-    };
-
-    // Select All / Deselect All
-    const selectAllMuslims = () => {
-        setSelectedMuslims(newMuslims.map(m => m.id));
-    };
-
-    const deselectAllMuslims = () => {
-        setSelectedMuslims([]);
-    };
-
-    const generateAllMuslims = () => {
-        let report = getReportHeader('قائمة المسلمين الجدد 👥');
-
-        if (newMuslims.length === 0) {
-            report += `لا يوجد مسلمون جدد مسجلون\n`;
-        } else {
-            report += `العدد الإجمالي: ${newMuslims.length}\n\n`;
-            newMuslims.forEach((m, idx) => {
-                report += `${idx + 1}. ${m.name}`;
-                if (m.country) report += ` (${m.country})`;
-                report += '\n';
+            sections.push({
+                type: 'table',
+                headers: ['البيان', 'التفاصيل'],
+                rows: [
+                    ['الجنس', m.gender === 'male' ? 'ذكر' : 'أنثى'],
+                    ['البلد', m.country || '-'],
+                    ['الهاتف', m.phone || '-'],
+                    ['تاريخ الإسلام', m.conversionDate || '-'],
+                    ['المرحلة', m.stage || '-'],
+                    ['العنوان', m.address || '-']
+                ]
             });
-        }
+            if (m.notes) {
+                sections.push({ type: 'text', content: `ملاحظات: ${m.notes}`, align: 'right' });
+            }
+            sections.push({ type: 'text', content: ' ', align: 'center' }); // Spacer
+        });
 
-        report += getReportFooter();
-        return report;
+        return {
+            title: 'تقرير المسلمين الجدد',
+            sections: sections
+        };
     };
+
+    const generateSelectedNotesReport = (noteIds: string[]): ReportData => {
+        const selected = notesHistory.filter(n => noteIds.includes(n.id));
+        const sections: any[] = [];
+
+        selected.forEach((note, idx) => {
+            sections.push({
+                type: 'text',
+                content: `${idx + 1}. ${note.title || 'بدون عنوان'}`,
+                align: 'right'
+            });
+            sections.push({
+                type: 'text',
+                content: note.content || '',
+                align: 'right'
+            });
+            sections.push({ type: 'text', content: '-------------------', align: 'center' });
+        });
+
+        return {
+            title: 'تقرير الملاحظات',
+            sections: sections
+        };
+    };
+
+    // --- State Handlers ---
+
+    const selectAllMuslims = () => setSelectedMuslims(newMuslims.map(m => m.id));
+    const deselectAllMuslims = () => setSelectedMuslims([]);
 
     const reportTypes = [
         { id: 'daily', name: 'ملخص اليوم', icon: Sun, generator: generateDailySummary },
-        { id: 'weekly', name: 'ملخص الأسبوع', icon: CalendarDays, generator: generateWeeklySummary },
-        { id: 'morning', name: 'تقرير صباحي', icon: Sun, generator: generateMorningReport },
-        { id: 'evening', name: 'تقرير مسائي', icon: Sunset, generator: generateEveningReport },
         { id: 'todayTasks', name: 'مهام اليوم', icon: CheckSquare, generator: generateTodayTasks },
         { id: 'weekTasks', name: 'مهام الأسبوع', icon: CheckSquare, generator: generateWeekTasks },
         { id: 'appointments', name: 'المواعيد القادمة', icon: Calendar, generator: generateAppointments },
         { id: 'medications', name: 'تقرير الأدوية', icon: Pill, generator: generateMedications },
         { id: 'prayerToday', name: 'أوقات الصلاة - اليوم', icon: Moon, generator: generateTodayPrayer },
-        { id: 'prayerWeek', name: 'أوقات الصلاة - الأسبوع', icon: Moon, generator: generateWeekPrayer },
-        { id: 'prayerMonth', name: 'أوقات الصلاة - الشهر', icon: Moon, generator: generateMonthPrayer },
-        { id: 'holidays', name: 'المناسبات والأعياد', icon: PartyPopper, generator: generateHolidays },
         { id: 'locations', name: 'المواقع المحفوظة', icon: MapPin, generator: generateLocations },
         { id: 'shopping', name: 'قائمة المشتريات', icon: ShoppingCart, generator: generateShopping },
-        { id: 'notes', name: 'الملاحظات', icon: StickyNote, generator: generateNotes },
-        { id: 'newMuslim', name: 'تقرير مسلم جديد', icon: User, generator: () => '', needsSelection: true },
-        { id: 'allMuslims', name: 'قائمة المسلمين الجدد', icon: Users, generator: generateAllMuslims },
+        { id: 'notes', name: 'الملاحظات', icon: StickyNote, generator: () => null, needsSelection: true },
+        { id: 'newMuslim', name: 'تقرير مسلم جديد', icon: User, generator: () => null, needsSelection: true },
     ];
 
     const handleSelectReport = (reportId: string) => {
         const report = reportTypes.find(r => r.id === reportId);
         if (report) {
             if (report.id === 'newMuslim') {
-                // Show Muslim picker
-                setSelectedMuslims([]);
-                setShowMuslimPicker(true);
-                setSelectedReport(reportId);
+                setSelectedMuslims([]); setShowMuslimPicker(true); setSelectedReportId(reportId);
+            } else if (report.id === 'notes') {
+                setSelectedNotes([]); setShowNotePicker(true); setSelectedReportId(reportId);
             } else {
-                const generated = report.generator();
-                setGeneratedReport(generated);
-                setEditableReport(generated);
-                setSelectedReport(reportId);
+                setReportData(report.generator());
+                setSelectedReportId(reportId);
             }
         }
     };
@@ -697,69 +482,41 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
             toast({ title: 'اختر مسلماً واحداً على الأقل', variant: 'destructive' });
             return;
         }
-        const generated = generateSelectedMuslimsReport(selectedMuslims);
-        setGeneratedReport(generated);
-        setEditableReport(generated);
+        setReportData(generateSelectedMuslimsReport(selectedMuslims));
         setShowMuslimPicker(false);
     };
 
-    const toggleMuslimSelection = (id: string) => {
-        setSelectedMuslims(prev =>
-            prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
-        );
-    };
-
-    const handleSendToContact = async (contact: FavoriteContact) => {
-        const text = encodeURIComponent(editableReport);
-        const phone = contact.phone.replace(/\D/g, '');
-        const url = `https://wa.me/${phone}?text=${text}`;
-        window.open(url, '_blank');
-        setShowContactPicker(false);
-        toast({ title: `تم فتح محادثة ${contact.name} ✅` });
-    };
-
-    const handleShare = async () => {
-        if (!editableReport) return;
-        setShowContactPicker(true);
-    };
-
-    const handleShareGeneric = async () => {
-        try {
-            await Share.share({
-                text: editableReport,
-                title: 'تقرير البركة',
-            });
-            toast({ title: 'تم إرسال التقرير ✅' });
-            setShowContactPicker(false);
-        } catch (error) {
-            // Fallback to clipboard
-            try {
-                await navigator.clipboard.writeText(editableReport);
-                toast({ title: 'تم نسخ التقرير 📋', description: 'يمكنك لصقه في أي تطبيق' });
-            } catch {
-                toast({ title: 'خطأ', description: 'فشل في المشاركة', variant: 'destructive' });
-            }
+    const handleNoteSelection = () => {
+        if (selectedNotes.length === 0) {
+            toast({ title: 'اختر ملاحظة واحدة على الأقل', variant: 'destructive' });
+            return;
         }
+        setReportData(generateSelectedNotesReport(selectedNotes));
+        setShowNotePicker(false);
     };
 
-    const handleCopy = async () => {
-        if (!editableReport) return;
-
+    const handleSharePDF = async () => {
+        if (!reportData) return;
         try {
-            await navigator.clipboard.writeText(editableReport);
-            toast({ title: 'تم النسخ ✅' });
-        } catch {
-            toast({ title: 'خطأ في النسخ', variant: 'destructive' });
+            await generateGenericPDF(reportData, `Barakah-Report-${Date.now()}.pdf`);
+            if (window.Capacitor) {
+                // generateGenericPDF handles sharing on mobile
+            } else {
+                toast({ title: 'تم تحميل ملف PDF ✅' });
+            }
+        } catch (e) {
+            toast({ title: 'خطأ في إنشاء ملف PDF', variant: 'destructive' });
         }
     };
 
     const resetState = () => {
-        setSelectedReport(null);
-        setGeneratedReport('');
-        setEditableReport('');
+        setSelectedReportId(null);
+        setReportData(null);
         setShowContactPicker(false);
         setShowMuslimPicker(false);
         setSelectedMuslims([]);
+        setShowNotePicker(false);
+        setSelectedNotes([]);
         setSearchQuery('');
     };
 
@@ -771,11 +528,11 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-right">
                         <FileText className="w-5 h-5 text-primary" />
-                        إرسال تقرير
+                        إرسال تقرير (PDF)
                     </DialogTitle>
                 </DialogHeader>
 
-                {/* Muslim Picker Dialog */}
+                {/* Muslim Picker */}
                 {showMuslimPicker && (
                     <div className="flex-1 flex flex-col gap-3">
                         <div className="flex items-center justify-between">
@@ -784,180 +541,123 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                             </Button>
                             <span className="text-sm text-gray-500">اختر مسلماً أو أكثر ({newMuslims.length})</span>
                         </div>
-
-                        {/* Search Input */}
                         <div className="relative">
                             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
-                                placeholder="بحث بالاسم أو الدولة..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pr-10 bg-white"
-                            />
+                            <Input placeholder="بحث..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10" />
                         </div>
-
-                        {/* Select All / Deselect All Buttons */}
-                        {newMuslims.length > 0 && (
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={selectAllMuslims}
-                                    className="flex-1 text-xs"
-                                    disabled={selectedMuslims.length === newMuslims.length}
-                                >
-                                    ✅ اختيار الكل
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={deselectAllMuslims}
-                                    className="flex-1 text-xs"
-                                    disabled={selectedMuslims.length === 0}
-                                >
-                                    ❌ إلغاء الكل
-                                </Button>
-                            </div>
-                        )}
-
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={selectAllMuslims} className="flex-1 text-xs">✅ اختيار الكل</Button>
+                            <Button variant="outline" size="sm" onClick={deselectAllMuslims} className="flex-1 text-xs">❌ إلغاء الكل</Button>
+                        </div>
                         <div className="flex-1 overflow-y-auto max-h-[45vh] space-y-1">
-                            {newMuslims.filter(m =>
-                                m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                m.stage?.toLowerCase().includes(searchQuery.toLowerCase())
-                            ).length === 0 ? (
-                                <p className="text-center text-gray-500 py-8">
-                                    {searchQuery ? 'لا توجد نتائج مطابقة' : 'لا يوجد مسلمون مسجلون'}
-                                </p>
-                            ) : (
-                                newMuslims
-                                    .filter(m =>
-                                        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        m.country?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        m.stage?.toLowerCase().includes(searchQuery.toLowerCase())
-                                    )
-                                    .map(muslim => (
-                                        <button
-                                            key={muslim.id}
-                                            onClick={() => toggleMuslimSelection(muslim.id)}
-                                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-right ${selectedMuslims.includes(muslim.id) ? 'bg-primary/10 border border-primary' : 'hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selectedMuslims.includes(muslim.id) ? 'bg-primary border-primary' : 'border-gray-300'
-                                                }`}>
-                                                {selectedMuslims.includes(muslim.id) && <Check className="w-4 h-4 text-white" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium truncate">{muslim.name}</p>
-                                                <div className="flex gap-2 text-xs text-gray-500">
-                                                    {muslim.country && <span>🌍 {muslim.country}</span>}
-                                                    {muslim.stage && <span>📊 {muslim.stage}</span>}
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))
-                            )}
+                            {newMuslims.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase())).map(muslim => (
+                                <button key={muslim.id} onClick={() => setSelectedMuslims(prev => prev.includes(muslim.id) ? prev.filter(i => i !== muslim.id) : [...prev, muslim.id])}
+                                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-right ${selectedMuslims.includes(muslim.id) ? 'bg-primary/10 border border-primary' : 'hover:bg-gray-50'}`}>
+                                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selectedMuslims.includes(muslim.id) ? 'bg-primary border-primary' : 'border-gray-300'}`}>
+                                        {selectedMuslims.includes(muslim.id) && <Check className="w-4 h-4 text-white" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium truncate">{muslim.name}</p>
+                                        <p className="text-xs text-gray-500">{muslim.country}</p>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
-
-                        <Button onClick={handleMuslimSelection} disabled={selectedMuslims.length === 0} className="w-full">
-                            إنشاء التقرير ({selectedMuslims.length} مختار)
-                        </Button>
+                        <Button onClick={handleMuslimSelection} disabled={selectedMuslims.length === 0} className="w-full">إنشاء التقرير</Button>
                     </div>
                 )}
 
-                {/* Contact Picker Dialog */}
-                {showContactPicker && !showMuslimPicker && (
+                {/* Note Picker */}
+                {showNotePicker && (
                     <div className="flex-1 flex flex-col gap-3">
                         <div className="flex items-center justify-between">
-                            <Button variant="ghost" size="sm" onClick={() => setShowContactPicker(false)}>
+                            <Button variant="ghost" size="sm" onClick={() => setShowNotePicker(false)}>
                                 <ChevronLeft className="w-4 h-4 ml-1" /> رجوع
                             </Button>
-                            <span className="text-sm text-gray-500">إرسال إلى</span>
+                            <span className="text-sm text-gray-500">اختر ملاحظة ({notesHistory.length})</span>
                         </div>
-
-                        {/* Add Contact Form */}
-                        {showAddContact ? (
-                            <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                                <div className="flex gap-2">
-                                    <select
-                                        value={newContactEmoji}
-                                        onChange={e => setNewContactEmoji(e.target.value)}
-                                        className="w-16 text-xl bg-white rounded-lg border p-2"
-                                    >
-                                        {emojiOptions.map(e => <option key={e} value={e}>{e}</option>)}
-                                    </select>
-                                    <Input
-                                        placeholder="الاسم"
-                                        value={newContactName}
-                                        onChange={e => setNewContactName(e.target.value)}
-                                    />
-                                </div>
-                                <Input
-                                    placeholder="رقم الهاتف مع رمز الدولة"
-                                    value={newContactPhone}
-                                    onChange={e => setNewContactPhone(e.target.value)}
-                                    dir="ltr"
-                                />
-                                <div className="flex gap-2">
-                                    <Button onClick={addContact} size="sm" className="flex-1">
-                                        <Plus className="w-4 h-4 ml-1" /> إضافة
-                                    </Button>
-                                    <Button variant="outline" size="sm" onClick={() => setShowAddContact(false)}>
-                                        إلغاء
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <Button variant="outline" onClick={() => setShowAddContact(true)} className="w-full">
-                                <Plus className="w-4 h-4 ml-2" /> إضافة جهة اتصال جديدة
-                            </Button>
-                        )}
-
-                        {/* Contact List */}
-                        <div className="flex-1 overflow-y-auto max-h-[40vh] space-y-1">
-                            {/* Generic Share */}
-                            <button
-                                onClick={handleShareGeneric}
-                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
-                            >
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                    <Send className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <span className="flex-1 font-medium text-right">مشاركة عامة...</span>
-                            </button>
-
-                            {/* Favorite Contacts */}
-                            {favoriteContacts.map(contact => (
-                                <div key={contact.id} className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handleSendToContact(contact)}
-                                        className="flex-1 flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 transition-colors"
-                                    >
-                                        <div className="p-2 bg-green-100 rounded-lg text-xl">
-                                            {contact.emoji}
-                                        </div>
-                                        <div className="flex-1 text-right">
-                                            <p className="font-medium">{contact.name}</p>
-                                            <p className="text-xs text-gray-500" dir="ltr">{contact.phone}</p>
-                                        </div>
-                                        <MessageCircle className="w-5 h-5 text-green-600" />
-                                    </button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => deleteContact(contact.id)}
-                                        className="text-red-500 hover:bg-red-50"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                        <div className="relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input placeholder="بحث..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10" />
+                        </div>
+                        <div className="flex-1 overflow-y-auto border rounded-xl p-2 space-y-1 bg-gray-50 max-h-[50vh]">
+                            {notesHistory.filter(n => (n.title || '').includes(searchQuery)).map((note) => (
+                                <div key={note.id} onClick={() => setSelectedNotes(prev => prev.includes(note.id) ? prev.filter(i => i !== note.id) : [...prev, note.id])}
+                                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border ${selectedNotes.includes(note.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'}`}>
+                                    <Checkbox checked={selectedNotes.includes(note.id)} onCheckedChange={() => { }} />
+                                    <div className="flex-1 text-right">
+                                        <p className="font-medium text-sm">{note.title || 'بدون عنوان'}</p>
+                                        <p className="text-xs text-gray-400 line-clamp-1">{note.content}</p>
+                                    </div>
                                 </div>
                             ))}
+                        </div>
+                        <Button className="flex-1" onClick={handleNoteSelection}>متابعة ({selectedNotes.length})</Button>
+                    </div>
+                )}
+
+                {/* Report Generation Preview */}
+                {selectedReportId && reportData && !showMuslimPicker && !showNotePicker && (
+                    <div className="flex-1 flex flex-col gap-3 h-full overflow-hidden">
+                        <Button variant="ghost" size="sm" onClick={resetState} className="self-start">
+                            <ChevronLeft className="w-4 h-4 ml-1" /> رجوع للقائمة
+                        </Button>
+
+                        {/* Reports Preview - HTML Representation of the PDF */}
+                        <div className="flex-1 overflow-y-auto bg-gray-50 border rounded-xl p-4 text-right" dir="rtl">
+                            <h2 className="text-xl font-bold text-center text-primary mb-4">{reportData.title}</h2>
+                            <div className="space-y-4">
+                                {reportData.sections.map((section, idx) => {
+                                    if (section.type === 'text') {
+                                        return (
+                                            <p key={idx} className={`text-sm text-gray-700 whitespace-pre-wrap ${section.align === 'center' ? 'text-center' : (section.align === 'left' ? 'text-left' : 'text-right')
+                                                }`}>
+                                                {section.content}
+                                            </p>
+                                        );
+                                    } else if (section.type === 'table') {
+                                        return (
+                                            <div key={idx} className="mt-2">
+                                                {section.title && <h3 className="font-bold text-sm mb-1 text-primary">{section.title}</h3>}
+                                                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                                    <table className="w-full text-xs">
+                                                        <thead className="bg-primary/10">
+                                                            <tr>
+                                                                {section.headers.map((h, i) => (
+                                                                    <th key={i} className="p-2 border-l last:border-l-0 border-gray-200 font-bold text-primary">{h}</th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {section.rows.map((row, rIdx) => (
+                                                                <tr key={rIdx} className="border-t border-gray-200 even:bg-gray-50">
+                                                                    {row.map((cell, cIdx) => (
+                                                                        <td key={cIdx} className="p-2 border-l last:border-l-0 border-gray-200">{cell}</td>
+                                                                    ))}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Button onClick={handleSharePDF} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                                <Share2 className="w-4 h-4 ml-2" />
+                                مشاركة / تحميل PDF
+                            </Button>
                         </div>
                     </div>
                 )}
 
                 {/* Report List */}
-                {!selectedReport && !showMuslimPicker && !showContactPicker && (
+                {!selectedReportId && !showMuslimPicker && !showNotePicker && (
                     <div className="flex-1 overflow-y-auto space-y-1">
                         {reportTypes.map(report => {
                             const Icon = report.icon;
@@ -971,44 +671,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                                         <Icon className="w-5 h-5 text-primary" />
                                     </div>
                                     <span className="flex-1 font-medium text-gray-700">{report.name}</span>
-                                    <Send className="w-4 h-4 text-gray-400" />
                                 </button>
                             );
                         })}
-                    </div>
-                )}
-
-                {/* Generated Report Preview & Edit */}
-                {selectedReport && !showMuslimPicker && !showContactPicker && (
-                    <div className="flex-1 flex flex-col gap-3">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={resetState}
-                            className="self-start"
-                        >
-                            <ChevronLeft className="w-4 h-4 ml-1" /> رجوع للقائمة
-                        </Button>
-
-                        {/* Editable Report */}
-                        <textarea
-                            value={editableReport}
-                            onChange={e => setEditableReport(e.target.value)}
-                            className="flex-1 bg-gray-50 rounded-xl p-4 text-sm text-gray-700 font-sans text-right resize-none min-h-[200px] max-h-[40vh] border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                            dir="rtl"
-                            placeholder="التقرير فارغ..."
-                        />
-
-                        <div className="flex gap-2">
-                            <Button onClick={handleShare} className="flex-1 bg-green-600 hover:bg-green-700">
-                                <MessageCircle className="w-4 h-4 ml-2" />
-                                إرسال
-                            </Button>
-                            <Button onClick={handleCopy} variant="outline" className="flex-1">
-                                <Copy className="w-4 h-4 ml-2" />
-                                نسخ
-                            </Button>
-                        </div>
                     </div>
                 )}
             </DialogContent>

@@ -27,9 +27,10 @@ interface QuickActionsGridProps {
     onOpenNewMuslims?: () => void;
     onActivateWidgets?: (widgets: string[]) => void;
     activeWidgets?: string[];
+    onOpenNotes?: () => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets, onOpenNotes }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -564,7 +565,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
                     { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
                     { icon: ShoppingCart, label: 'تسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
-                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenVoiceRecorder ? onOpenVoiceRecorder() : onOpenAddDialog('note') },
+                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
                     { icon: Calendar, label: 'تقويم', color: 'bg-indigo-100 text-indigo-600', action: () => onNavigateToTab?.('calendar') },
                     { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
                     { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-600', action: () => onOpenNewMuslims?.() },

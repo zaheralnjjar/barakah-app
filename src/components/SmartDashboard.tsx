@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useLocationReminders } from '@/hooks/useLocationReminders';
+import { useQuickNotes } from '@/hooks/useQuickNotes';
 import { searchLocation } from '@/services/GeocodingService';
 
 // Icons
@@ -37,17 +38,18 @@ import DashboardCalendar from './dashboard/DashboardCalendar';
 import { CollapsibleSection } from './dashboard/CollapsibleSection';
 
 // Refactored Widgets
-import { QuickNotes } from '@/components/logistics/QuickNotes';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
+import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
     onOpenVoiceRecorder: () => void;
+    onOpenNotes: () => void;
 }
 
-const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpenVoiceRecorder }) => {
+const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpenVoiceRecorder, onOpenNotes }) => {
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -70,6 +72,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { medications } = useMedications();
     const { tasks, refreshTasks, addTask } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
+    const { addNote } = useQuickNotes();
 
 
     // State
@@ -191,6 +194,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                             onActivateWidgets={(widgets: string[]) => setActiveWidgets(widgets)}
                             activeWidgets={activeWidgets}
+                            onOpenNotes={onOpenNotes}
                         />
 
                         {/* 4. Parking Widget - Dynamic */}
@@ -207,12 +211,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             />
                         </CollapsibleSection>
 
-                        {/* 6. Quick Notes - Collapsible */}
-                        {isSectionVisible('notes') && (
-                            <CollapsibleSection title="الملاحظات السريعة" icon={FileText} defaultOpen={false}>
-                                <QuickNotes />
-                            </CollapsibleSection>
-                        )}
 
                         {/* Shopping List - Collapsible */}
                         {isSectionVisible('shopping') && (
@@ -277,6 +275,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             {/* === DIALOGS === */}
 
+            import {QuickNoteDialog} from '@/components/notes-v2/QuickNoteDialog';
+
+            // ... existing code ...
+
             <GlobalSearchDialog
                 isOpen={isSearchOpen}
                 onClose={() => setIsSearchOpen(false)}
@@ -284,7 +286,15 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
             />
 
-            <Dialog open={showAddDialog !== null} onOpenChange={(open) => {
+            {/* Quick Note Dialog V2 (Separate) */}
+            <QuickNoteDialog
+                isOpen={showAddDialog === 'note'}
+                onClose={() => setShowAddDialog(null)}
+            />
+
+
+
+            <Dialog open={showAddDialog !== null && showAddDialog !== 'note'} onOpenChange={(open) => {
                 if (!open) {
                     if (showAddDialog === 'appointment') refreshAppointments();
                     if (showAddDialog === 'task') refreshTasks();
@@ -298,13 +308,14 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             {showAddDialog === 'task' && <><CheckSquare className="w-5 h-5 text-blue-500" /> إضافة مهمة</>}
                             {showAddDialog === 'location' && <><MapPin className="w-5 h-5 text-green-500" /> حفظ موقع</>}
                             {showAddDialog === 'shopping' && <><ShoppingCart className="w-5 h-5 text-pink-500" /> إضافة للتسوق</>}
-                            {showAddDialog === 'note' && <><FileText className="w-5 h-5 text-yellow-500" /> ملاحظة سريعة</>}
+                            {/* Note title handled by separate dialog */}
                             {showAddDialog === 'expense' && <><DollarSign className="w-5 h-5 text-red-500" /> إضافة مصروف</>}
                             {showAddDialog === 'goal' && <><Target className="w-5 h-5 text-purple-500" /> إضافة هدف</>}
                         </DialogTitle>
                     </DialogHeader>
 
                     {showAddDialog === 'appointment' && <div className="mt-2"><AppointmentManager /></div>}
+
 
                     {showAddDialog === 'task' && (
                         <div className="space-y-4 mt-2 p-1">
@@ -493,21 +504,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         </div>
                     )}
 
-                    {showAddDialog === 'note' && (
-                        <div className="space-y-4 mt-2">
-                            <Input id="note-title" placeholder="عنوان الملاحظة" className="text-right" />
-                            <div className="min-h-[100px] p-2 border rounded-md" contentEditable id="note-content"></div>
-                            <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black" onClick={() => {
-                                const content = document.getElementById('note-content')?.innerText;
-                                if (content) {
-                                    // Normally we would use useQuickNotes hook addNote here, 
-                                    // but hook logic might be simpler. For now just toast.
-                                    toast({ title: '⚠️ يرجى استخدام قسم الملاحظات للإضافة' });
-                                }
-                                setShowAddDialog(null);
-                            }}>حفظ الملاحظة</Button>
-                        </div>
-                    )}
+
 
                     {showAddDialog === 'shopping' && (
                         <div className="space-y-4 py-2">

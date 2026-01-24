@@ -1,42 +1,63 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>نظام بركة - Barakah Life Management System</title>
-    <meta name="description" content="نظام إدارة الحياة المتكامل للمسلمين في أمريكا اللاتينية - فريق افتراضي من 8 خبراء متخصصين" />
-    <meta name="author" content="Barakah System" />
-    
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#16a34a" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="بركة" />
-    <link rel="manifest" href="./manifest.json" />
-    <link rel="apple-touch-icon" href="./icon-192.png" />
 
-    <meta property="og:title" content="نظام بركة - Barakah Life Management System" />
-    <meta property="og:description" content="نظام إدارة الحياة المتكامل للمسلمين في أمريكا اللاتينية - فريق افتراضي من 8 خبراء متخصصين" />
-    <meta property="og:type" content="website" />
-    
-    <!-- Arabic Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;700&family=Reem+Kufi:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>نظام بركة - Barakah Life Management System</title>
+  <meta name="description"
+    content="نظام إدارة الحياة المتكامل للمسلمين في أمريكا اللاتينية - فريق افتراضي من 8 خبراء متخصصين" />
+  <meta name="author" content="Barakah System" />
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Register Service Worker only for HTTP/HTTPS (not file://)
-      if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#16a34a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="بركة" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+
+  <meta property="og:title" content="نظام بركة - Barakah Life Management System" />
+  <meta property="og:description"
+    content="نظام إدارة الحياة المتكامل للمسلمين في أمريكا اللاتينية - فريق افتراضي من 8 خبراء متخصصين" />
+  <meta property="og:type" content="website" />
+
+  <!-- Arabic Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;700&family=Reem+Kufi:wght@400;700&family=Tajawal:wght@400;500;700&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+  <script>
+    // Register Service Worker only for HTTP/HTTPS and NOT on localhost in dev
+    const isLocalhost = window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '';
+
+    if ('serviceWorker' in navigator) {
+      if (isLocalhost) {
+        // Aggressively unregister any existing SW on localhost to fix "Failed to fetch" errors in dev
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister();
+            console.log('Unregistered SW on localhost for development stability');
+          }
+        });
+      } else if (window.location.protocol !== 'file:') {
+        // Only register in non-local environments
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('SW registered:', reg.scope))
             .catch(err => console.log('SW registration failed:', err));
         });
       }
-    </script>
-  </body>
+    }
+  </script>
+</body>
+
 </html>

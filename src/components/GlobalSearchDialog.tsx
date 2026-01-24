@@ -27,8 +27,27 @@ interface SearchResult {
     link: string;
 }
 
-export function GlobalSearchDialog() {
-    const [open, setOpen] = useState(false);
+
+interface GlobalSearchDialogProps {
+    isOpen?: boolean;
+    onClose?: () => void;
+    onNavigateToTab?: (tabId: string) => void;
+    onOpenNewMuslims?: () => void;
+}
+
+export function GlobalSearchDialog({
+    isOpen,
+    onClose,
+    onNavigateToTab,
+    onOpenNewMuslims
+}: GlobalSearchDialogProps = {}) {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    // Use prop if provided, otherwise internal state
+    const isControlled = typeof isOpen !== 'undefined';
+    const show = isControlled ? isOpen : internalOpen;
+    const setShow = isControlled && onClose ? (val: boolean) => !val && onClose() : setInternalOpen;
+
     const [query, setQuery] = useState('');
     const debouncedQuery = useDebounce(query, 300);
     const [results, setResults] = useState<SearchResult[]>([]);
@@ -40,12 +59,12 @@ export function GlobalSearchDialog() {
         const down = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                setOpen((open) => !open);
+                setShow((prev: boolean) => !prev);
             }
         };
         document.addEventListener('keydown', down);
         return () => document.removeEventListener('keydown', down);
-    }, []);
+    }, [setShow]);
 
     useEffect(() => {
         if (debouncedQuery.trim().length > 1) {
@@ -98,12 +117,12 @@ export function GlobalSearchDialog() {
     };
 
     const handleSelect = (result: SearchResult) => {
-        setOpen(false);
+        setShow(false);
         navigate(result.link);
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={show} onOpenChange={setShow}>
             <DialogContent className="p-0 sm:max-w-[550px] gap-0 overflow-hidden">
                 <DialogHeader className="px-4 py-3 border-b">
                     <div className="flex items-center gap-2">

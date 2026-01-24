@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3, Bell, Pill, DollarSign, CheckCircle, AlertTriangle } from 'lucide-react';
-import PrintOptionsDialog from '@/components/PrintOptionsDialog';
-import DailyCalendar from '@/components/DailyCalendar';
-import WeeklyCalendar from '@/components/WeeklyCalendar';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3, Bell, Pill, DollarSign, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+
+// Lazy Load Components to prevent circular deps and reduce bundle size
+const PrintOptionsDialog = lazy(() => import('@/components/PrintOptionsDialog'));
+const DailyCalendar = lazy(() => import('@/components/DailyCalendar'));
+const WeeklyCalendar = lazy(() => import('@/components/WeeklyCalendar'));
+
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
@@ -160,16 +163,22 @@ const CalendarSection: React.FC = () => {
 
             </div>
 
-            <PrintOptionsDialog isOpen={showPrintDialog} onClose={() => setShowPrintDialog(false)} />
+            <Suspense fallback={null}>
+                {showPrintDialog && <PrintOptionsDialog isOpen={showPrintDialog} onClose={() => setShowPrintDialog(false)} />}
+            </Suspense>
 
             {/* Daily View */}
             {viewMode === 'daily' && (
-                <DailyCalendar />
+                <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>}>
+                    <DailyCalendar />
+                </Suspense>
             )}
 
             {/* Weekly View (Standard) */}
             {viewMode === 'weekly' && (
-                <WeeklyCalendar />
+                <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>}>
+                    <WeeklyCalendar />
+                </Suspense>
             )}
 
             {/* Grid 3x3 View (Custom Request) */}

@@ -4,12 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Share2, Trash2, Pencil, Plus, StickyNote, ChevronDown, Pin, PinOff, Search, Bold, Italic, Underline, X, Maximize2 } from 'lucide-react';
-import { useHidayaNotes, NoteData } from '@/hooks/useHidayaNotes';
+import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes'; // Updated import
+
+// ...
+
+
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface NoteItem {
-    id: number;
+    id: string; // UNIFICATION: Changed from number to string to match UUID
     title: string;
     content: string;
     createdAt: string;
@@ -19,8 +23,8 @@ interface NoteItem {
 const NoteItemComponent: React.FC<{
     note: NoteItem;
     onSelect: (note: NoteItem) => void;
-    onTogglePin: (e: React.MouseEvent, index: number) => void;
-    onEditInMainEditor?: (note: { id: number, content: string }) => void;
+    onTogglePin: (e: React.MouseEvent, id: string) => void; // Update to string
+    onEditInMainEditor?: (note: { id: string, content: string }) => void; // Update to string
 }> = ({ note, onSelect, onTogglePin, onEditInMainEditor }) => {
     return (
         <div
@@ -75,9 +79,13 @@ const NoteItemComponent: React.FC<{
     );
 };
 
-export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note: { id: number, content: string }) => void }) => {
-    const { notesHistory, archiveNote, deleteHistoryItem, togglePin } = useHidayaNotes();
+export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note: { id: string, content: string }) => void }) => {
+    // UNIFICATION: Use useQuickNotes instead of properietary hook
+    const { notesHistory, addNote, deleteNoteById, togglePin, updateNoteById } = useQuickNotes();
     const { toast } = useToast();
+    // ...
+
+    // ... in edit handler
     const [selectedNote, setSelectedNote] = useState<NoteItem | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [showAddNote, setShowAddNote] = useState(false);
@@ -87,12 +95,12 @@ export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note
     const [searchQuery, setSearchQuery] = useState('');
     const noteEditorRef = useRef<HTMLDivElement>(null);
 
-    // Convert NoteData objects to NoteItem format
-    const notes: NoteItem[] = notesHistory.map((note, idx) => {
+    // Convert NoteData objects to NoteItem format, using REAL IDs
+    const notes: NoteItem[] = notesHistory.map((note) => {
         const lines = note.content.split('\n');
         return {
-            id: idx,
-            title: lines[0]?.substring(0, 30) || 'ملاحظة',
+            id: note.id, // Use string ID
+            title: note.title || lines[0]?.substring(0, 30) || 'ملاحظة',
             content: note.content,
             createdAt: note.createdAt || new Date().toISOString(),
             isPinned: note.isPinned
@@ -106,22 +114,22 @@ export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note
 
     const displayedNotes = showAll ? filteredNotes : filteredNotes.slice(0, 6);
 
-    const handleAddNote = () => {
+    const handleAddNote = async () => {
         if (!newNote.content) {
             toast({ title: 'أدخل محتوى الملاحظة' });
             return;
         }
-        const noteText = newNote.title ? `${newNote.title}\n${newNote.content}` : newNote.content;
-        archiveNote(noteText, false);
+        // Unified addNote(content, type, title, isSecure)
+        await addNote(newNote.content, 'quick', newNote.title || 'ملاحظة جديدة', false);
+
         setNewNote({ title: '', content: '' });
         setShowAddNote(false);
-        toast({ title: 'تم حفظ الملاحظة ✓' });
+        // toast handles in hook usually, but consistent feedback is good
     };
 
-    const handleTogglePin = (e: React.MouseEvent, index: number) => {
+    const handleTogglePin = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        togglePin(index);
-        toast({ title: 'تم تحديث التثبيت' });
+        togglePin(id); // useQuickNotes expects ID
     };
 
     const handleShare = async (note: NoteItem) => {
@@ -133,10 +141,10 @@ export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note
         }
     };
 
-    const handleDelete = (idx: number) => {
-        deleteHistoryItem(idx);
+    const handleDelete = async (id: any) => {
+        await deleteNoteById(id);
         setSelectedNote(null);
-        toast({ title: 'تم الحذف' });
+        // toast in hook
     };
 
     const handleShareAll = async () => {
@@ -320,12 +328,13 @@ export const HidayaNotes = ({ onEditInMainEditor }: { onEditInMainEditor?: (note
                                 </Button>
                                 <Button
                                     className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (selectedNote) {
-                                            deleteHistoryItem(selectedNote.id);
-                                            const noteText = editNote.title ? `${editNote.title}\n${editNote.content}` : editNote.content;
-                                            archiveNote(noteText, false); // This might push to top, losing pinned status if logic isn't preserving it. Ideally edit should preserve pin.
-                                            // Since archiveNote creates new, we might lose pin. But for now, let's assume user re-pins if needed or we'll fix later.
+                                            // UNIFICATION: Use proper updateNoteById
+                                            await updateNoteById(String(selectedNote.id), {
+                                                title: editNote.title,
+                                                content: editNote.content
+                                            });
                                             setIsEditing(false);
                                             setSelectedNote(null);
                                             toast({ title: 'تم التعديل ✓' });

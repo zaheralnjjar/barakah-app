@@ -6,6 +6,9 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import NotesLayoutV2 from "./pages/notes-v2/Index";
 
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -28,6 +31,7 @@ import { App as CapApp } from '@capacitor/app';
 
 // Untracked/New Component
 import ThesisLayout from "./pages/thesis/ThesisLayout";
+import { DiagnosticPage } from "./components/DiagnosticPage";
 
 import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 
@@ -81,7 +85,7 @@ const PermissionRequester = () => {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => console.log("Location granted", pos),
-            (err) => console.error("Location denied", err),
+            (err) => console.log("Location permission status:", err.message),
             { timeout: 5000, enableHighAccuracy: true }
           );
         }
@@ -146,6 +150,8 @@ const App = () => {
             <GlobalSearchDialog />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/notes-v2" element={<NotesLayoutV2 />} />
+              <Route path="/diagnostic" element={<DiagnosticPage />} />
 
 
               {/* Thesis Manager Routes - Wrapped with Layout for BottomNavBar */}

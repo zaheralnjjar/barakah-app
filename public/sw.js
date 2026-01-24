@@ -39,8 +39,16 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
+    // Bypass SW for localhost/development
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return;
+    }
+
     // Skip non-GET requests
     if (request.method !== 'GET') return;
+
+    // Skip requests not using http/https (e.g., chrome-extension://)
+    if (!url.protocol.startsWith('http')) return;
 
     // Skip API requests (Supabase)
     if (url.hostname.includes('supabase')) {

@@ -1,0 +1,54 @@
+-- Notes V2 Schema
+-- Independent table for the new system
+
+create table if not exists public.notes_advanced (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) not null,
+    
+    title text default 'Untitled',
+    content text default '',
+    
+    -- Organization
+    bucket_id text default 'inbox', -- 'inbox', 'personal', 'work', etc.
+    folder_path text[] default array[]::text[], -- Future proofing for nested folders
+    tags text[] default array[]::text[],
+    
+    -- Metadata
+    is_pinned boolean default false,
+    is_locked boolean default false,
+    lock_pin text, -- Encrypted or hashed pin if needed specific to note
+    color text default 'default',
+    
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Indexes for performance
+create index notes_advanced_user_id_idx on public.notes_advanced(user_id);
+create index notes_advanced_bucket_id_idx on public.notes_advanced(bucket_id);
+
+-- RLS Policies
+alter table public.notes_advanced enable row level security;
+
+-- CRUD Policies (Strictly scoped to user_id)
+create policy "Users can view their own notes_advanced"
+    on public.notes_advanced for select
+    using (auth.uid() = user_id);
+
+create policy "Users can create their own notes_advanced"
+    on public.notes_advanced for insert
+    with check (auth.uid() = user_id);
+
+create policy "Users can update their own notes_advanced"
+    on public.notes_advanced for update
+    using (auth.uid() = user_id);
+
+create policy "Users can delete their own notes_advanced"
+    on public.notes_advanced for delete
+    using (auth.uid() = user_id);
+
+-- Trigger for updated_at
+create extension if not exists moddatetime schema extensions;
+
+create trigger handle_updated_at before update on public.notes_advanced
+    for each row execute procedure moddatetime (updated_at);

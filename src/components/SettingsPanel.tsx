@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Share } from '@capacitor/share';
-import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,7 +56,7 @@ import DataArchiver from '@/components/DataArchiver';
 import { BatteryOptimizationGuide } from '@/components/BatteryOptimizationGuide';
 import { PWAInstallButton } from '@/components/PWAInstallButton';
 // import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
-
+const NewMuslimsManager = React.lazy(() => import('@/components/NewMuslims/NewMuslimsManager'));
 
 
 import { DateRange } from 'react-day-picker';
@@ -330,13 +329,21 @@ const SettingsPanel = () => {
     ];
 
     const [sectionsOrder, setSectionsOrder] = useState<string[]>(() => {
-        const saved = localStorage.getItem('baraka_settings_order');
-        return saved ? JSON.parse(saved) : DEFAULT_SECTIONS_ORDER;
+        try {
+            const saved = localStorage.getItem('baraka_settings_order');
+            return saved ? JSON.parse(saved) : DEFAULT_SECTIONS_ORDER;
+        } catch {
+            return DEFAULT_SECTIONS_ORDER;
+        }
     });
 
     const [presets, setPresets] = useState<any[]>(() => {
-        const saved = localStorage.getItem('baraka_layout_presets');
-        return saved ? JSON.parse(saved) : [];
+        try {
+            const saved = localStorage.getItem('baraka_layout_presets');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
     });
 
     const [newPresetName, setNewPresetName] = useState('');
@@ -396,21 +403,18 @@ const SettingsPanel = () => {
     ];
 
     const [dashboardSectionsOrder, setDashboardSectionsOrder] = useState<string[]>(() => {
-        const saved = localStorage.getItem('baraka_dashboard_order');
-        if (saved) {
-            try {
+        try {
+            const saved = localStorage.getItem('baraka_dashboard_order');
+            if (saved) {
                 const parsed = JSON.parse(saved);
-                // Validate: ensure all default sections exist
                 const validIds = DEFAULT_DASHBOARD_ORDER;
                 const hasAllSections = validIds.every(id => parsed.includes(id));
                 if (hasAllSections && parsed.length === validIds.length) {
                     return parsed;
                 }
-                // Reset if corrupted
-                localStorage.removeItem('baraka_dashboard_order');
-            } catch {
-                localStorage.removeItem('baraka_dashboard_order');
             }
+        } catch (e) {
+            console.error('[SettingsPanel] Dashboard order parse error:', e);
         }
         return DEFAULT_DASHBOARD_ORDER;
     });
@@ -1612,7 +1616,9 @@ const SettingsPanel = () => {
                         </Button>
                     </DialogHeader>
                     <div className="p-2 sm:p-4">
-                        <NewMuslimsManager />
+                        <React.Suspense fallback={<div className="p-10 text-center">جاري تحميل نظام هداية...</div>}>
+                            <NewMuslimsManager />
+                        </React.Suspense>
                     </div>
                 </DialogContent>
             </Dialog>
