@@ -8,6 +8,8 @@ export interface Folder {
     name: string;
     parent_id: string | null;
     icon: string;
+    color?: string;
+    is_deleted?: boolean;
     created_at: string;
 }
 
@@ -22,6 +24,7 @@ export const useFolders = () => {
             const { data, error } = await supabase
                 .from('folders')
                 .select('*')
+                .eq('is_deleted', false)
                 .order('name');
 
             if (error) {
@@ -32,12 +35,17 @@ export const useFolders = () => {
         },
     });
 
-    // 2. Create Folder
     const createFolderMut = useMutation({
-        mutationFn: async ({ name, parent_id }: { name: string; parent_id: string | null }) => {
+        mutationFn: async ({ name, parent_id, icon, color }: { name: string; parent_id: string | null; icon?: string; color?: string }) => {
             const { data, error } = await supabase
                 .from('folders')
-                .insert([{ name, parent_id, user_id: (await supabase.auth.getUser()).data.user?.id }])
+                .insert([{
+                    name,
+                    parent_id,
+                    icon: icon || '📁',
+                    color: color || '#E5E7EB', // Default gray
+                    user_id: (await supabase.auth.getUser()).data.user?.id
+                }])
                 .select()
                 .single();
 
@@ -77,12 +85,21 @@ export const useFolders = () => {
     // 4. Delete Folder
     const deleteFolderMut = useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase
+            // Soft delete folder
+            const { error: folderError } = await supabase
                 .from('folders')
-                .delete()
+                .update({ is_deleted: true })
                 .eq('id', id);
 
-            if (error) throw error;
+            if (folderError) throw folderError;
+
+            // Cascade to notes
+            const { error: notesError } = await supabase
+                .from('notes_v2')
+                .update({ is_deleted: true })
+                .eq('folder_id', id);
+
+            if (notesError) throw notesError;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });

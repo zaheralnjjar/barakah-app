@@ -44,8 +44,7 @@ export const generateGenericPDF = (data: ReportData, filename: string) => {
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: 'a4',
-        putOnlyUsedFonts: true
+        format: 'a4'
     });
 
     // Add Arabic Font
@@ -170,8 +169,7 @@ export const generatePDF = (
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: 'a4',
-        putOnlyUsedFonts: true
+        format: 'a4'
     });
 
     // Add Arabic Font

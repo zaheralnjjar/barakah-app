@@ -58,6 +58,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const { items: shoppingItems } = useShoppingList();
     const { notesHistory } = useQuickNotes();
 
+    const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('ar');
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
     const [reportData, setReportData] = useState<ReportData | null>(null);
 
@@ -78,6 +79,27 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const hijriDate = today.toLocaleDateString('ar-SA-u-ca-islamic', { dateStyle: 'full' });
+
+    // Helper for Translations
+    const t = (key: string, lang: 'ar' | 'es') => {
+        const dict: Record<string, { ar: string, es: string }> = {
+            gender: { ar: 'الجنس', es: 'Género' },
+            male: { ar: 'ذكر', es: 'Masculino' },
+            female: { ar: 'أنثى', es: 'Femenino' },
+            country: { ar: 'البلد', es: 'País' },
+            phone: { ar: 'الهاتف', es: 'Teléfono' },
+            conversionDate: { ar: 'تاريخ الإسلام', es: 'Fecha de Conversión' },
+            stage: { ar: 'المرحلة', es: 'Etapa' },
+            address: { ar: 'العنوان', es: 'Dirección' },
+            notes: { ar: 'ملاحظات', es: 'Notas' },
+            details: { ar: 'التفاصيل', es: 'Detalles' },
+            statement: { ar: 'البيان', es: 'Dato' },
+            dataFor: { ar: 'بيانات', es: 'Datos de' },
+            newMuslimReport: { ar: 'تقرير المسلمين الجدد', es: 'Reporte de Nuevos Musulmanes' },
+            prayerTimesToday: { ar: 'أوقات الصلاة - اليوم', es: 'Horarios de Oración - Hoy' },
+        };
+        return dict[key]?.[lang] || key;
+    };
 
     // --- Data Fetching ---
     const fetchContacts = useCallback(async () => {
@@ -337,13 +359,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     };
 
     const generateTodayPrayer = (): ReportData => {
-        // Horizontal Table
+        const titles = reportLanguage === 'es'
+            ? ['Fajr', 'Shuruq', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']
+            : prayerTimes.map(p => p.nameAr);
+
         return {
-            title: 'أوقات الصلاة - اليوم',
+            title: t('prayerTimesToday', reportLanguage),
             sections: [
                 {
                     type: 'table',
-                    headers: prayerTimes.map(p => p.nameAr),
+                    headers: titles,
                     rows: [prayerTimes.map(p => p.time)]
                 }
             ]
@@ -394,29 +419,33 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         selected.forEach(m => {
             sections.push({
                 type: 'text',
-                content: `بيانات: ${m.name}`,
-                align: 'right'
+                content: `${t('dataFor', reportLanguage)}: ${m.name}`,
+                align: reportLanguage === 'es' ? 'left' : 'right'
             });
             sections.push({
                 type: 'table',
-                headers: ['البيان', 'التفاصيل'],
+                headers: [t('statement', reportLanguage), t('details', reportLanguage)],
                 rows: [
-                    ['الجنس', m.gender === 'male' ? 'ذكر' : 'أنثى'],
-                    ['البلد', m.country || '-'],
-                    ['الهاتف', m.phone || '-'],
-                    ['تاريخ الإسلام', m.conversionDate || '-'],
-                    ['المرحلة', m.stage || '-'],
-                    ['العنوان', m.address || '-']
+                    [t('gender', reportLanguage), m.gender === 'male' ? t('male', reportLanguage) : t('female', reportLanguage)],
+                    [t('country', reportLanguage), m.country || '-'],
+                    [t('phone', reportLanguage), m.phone || '-'],
+                    [t('conversionDate', reportLanguage), m.conversionDate || '-'],
+                    [t('stage', reportLanguage), m.stage || '-'],
+                    [t('address', reportLanguage), m.address || '-']
                 ]
             });
             if (m.notes) {
-                sections.push({ type: 'text', content: `ملاحظات: ${m.notes}`, align: 'right' });
+                sections.push({
+                    type: 'text',
+                    content: `${t('notes', reportLanguage)}: ${m.notes}`,
+                    align: reportLanguage === 'es' ? 'left' : 'right'
+                });
             }
             sections.push({ type: 'text', content: ' ', align: 'center' }); // Spacer
         });
 
         return {
-            title: 'تقرير المسلمين الجدد',
+            title: t('newMuslimReport', reportLanguage),
             sections: sections
         };
     };
@@ -466,6 +495,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const handleSelectReport = (reportId: string) => {
         const report = reportTypes.find(r => r.id === reportId);
         if (report) {
+
+            if (reportId === 'newMuslim' || reportId === 'prayerToday') {
+                setReportLanguage('es');
+            } else {
+                setReportLanguage('ar');
+            }
+
             if (report.id === 'newMuslim') {
                 setSelectedMuslims([]); setShowMuslimPicker(true); setSelectedReportId(reportId);
             } else if (report.id === 'notes') {
@@ -520,16 +556,30 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         setSearchQuery('');
     };
 
-    const emojiOptions = ['👤', '👩', '👨', '👴', '👵', '👨‍💼', '👩‍💼', '🏠', '💼', '❤️', '⭐', '📱'];
-
     return (
         <Dialog open={isOpen} onOpenChange={() => { resetState(); onClose(); }}>
             <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-right">
-                        <FileText className="w-5 h-5 text-primary" />
-                        إرسال تقرير (PDF)
-                    </DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setReportLanguage('ar')}
+                                className={`px-2 py-1 text-xs rounded-md border ${reportLanguage === 'ar' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'text-gray-500 border-gray-200'}`}
+                            >
+                                🇰🇼 AR
+                            </button>
+                            <button
+                                onClick={() => setReportLanguage('es')}
+                                className={`px-2 py-1 text-xs rounded-md border ${reportLanguage === 'es' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'text-gray-500 border-gray-200'}`}
+                            >
+                                🇪🇸 ES
+                            </button>
+                        </div>
+                        <DialogTitle className="flex items-center gap-2 text-right">
+                            <FileText className="w-5 h-5 text-primary" />
+                            إرسال تقرير (PDF)
+                        </DialogTitle>
+                    </div>
                 </DialogHeader>
 
                 {/* Muslim Picker */}

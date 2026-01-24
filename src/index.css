@@ -188,7 +188,7 @@
   }
 
   /* ===== إصلاحات RTL الشاملة ===== */
-  
+
   /* جميع النوافذ المنبثقة */
   [role="dialog"],
   [role="alertdialog"],
@@ -225,20 +225,53 @@
   }
 
   /* إصلاح margins و paddings للعربية */
-  .ms-2 { margin-inline-start: 0.5rem; }
-  .me-2 { margin-inline-end: 0.5rem; }
-  .ps-2 { padding-inline-start: 0.5rem; }
-  .pe-2 { padding-inline-end: 0.5rem; }
+  .ms-2 {
+    margin-inline-start: 0.5rem;
+  }
 
-  .ms-3 { margin-inline-start: 0.75rem; }
-  .me-3 { margin-inline-end: 0.75rem; }
-  .ps-3 { padding-inline-start: 0.75rem; }
-  .pe-3 { padding-inline-end: 0.75rem; }
+  .me-2 {
+    margin-inline-end: 0.5rem;
+  }
 
-  .ms-4 { margin-inline-start: 1rem; }
-  .me-4 { margin-inline-end: 1rem; }
-  .ps-4 { padding-inline-start: 1rem; }
-  .pe-4 { padding-inline-end: 1rem; }
+  .ps-2 {
+    padding-inline-start: 0.5rem;
+  }
+
+  .pe-2 {
+    padding-inline-end: 0.5rem;
+  }
+
+  .ms-3 {
+    margin-inline-start: 0.75rem;
+  }
+
+  .me-3 {
+    margin-inline-end: 0.75rem;
+  }
+
+  .ps-3 {
+    padding-inline-start: 0.75rem;
+  }
+
+  .pe-3 {
+    padding-inline-end: 0.75rem;
+  }
+
+  .ms-4 {
+    margin-inline-start: 1rem;
+  }
+
+  .me-4 {
+    margin-inline-end: 1rem;
+  }
+
+  .ps-4 {
+    padding-inline-start: 1rem;
+  }
+
+  .pe-4 {
+    padding-inline-end: 1rem;
+  }
 
   /* إصلاح gap للأزرار */
   .gap-rtl-2 {
@@ -252,8 +285,8 @@
   }
 
   /* إصلاح موضع زر الإغلاق */
-  [data-radix-dialog-content] > button:last-of-type,
-  [data-radix-alert-dialog-content] > button:last-of-type {
+  [data-radix-dialog-content]>button:last-of-type,
+  [data-radix-alert-dialog-content]>button:last-of-type {
     left: 0.75rem;
     right: auto;
   }
@@ -275,13 +308,15 @@
   }
 
   /* إصلاح Cards */
-  .card, [data-card] {
+  .card,
+  [data-card] {
     direction: rtl;
     text-align: right;
   }
 
   /* إصلاح Forms */
-  form, .form {
+  form,
+  .form {
     direction: rtl;
     text-align: right;
   }
@@ -605,4 +640,20 @@ html {
 
 .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
+}
+
+.custom-scrollbar-visible::-webkit-scrollbar {
+  width: 8px;
+  display: block !important;
+}
+
+.custom-scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: #6366f1 !important;
+  border-radius: 10px;
+  border: 2px solid white;
+}
+
+.custom-scrollbar-visible::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
 }

@@ -1,43 +1,109 @@
 
 import React, { useEffect, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
 import TextAlign from '@tiptap/extension-text-align';
 import Image from '@tiptap/extension-image';
+import TiptapHighlight from '@tiptap/extension-highlight';
 import { EditorToolbar } from './EditorToolbar';
-import { DrawingCanvas } from './DrawingCanvas';
 import { TemplatesGallery } from './TemplatesGallery';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { AlignJustify } from 'lucide-react';
+import { AlignJustify, Bookmark } from 'lucide-react';
+
+const FontSize = Extension.create({
+    name: 'fontSize',
+    addOptions() {
+        return {
+            types: ['textStyle'],
+        };
+    },
+    addGlobalAttributes() {
+        return [
+            {
+                types: this.options.types,
+                attributes: {
+                    fontSize: {
+                        default: null,
+                        parseHTML: element => element.style.fontSize.replace('px', ''),
+                        renderHTML: attributes => {
+                            if (!attributes.fontSize) {
+                                return {};
+                            }
+                            return {
+                                style: `font-size: ${attributes.fontSize}px`,
+                            };
+                        },
+                    },
+                },
+            },
+        ];
+    },
+    addCommands() {
+        return {
+            setFontSize: (fontSize: string) => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { fontSize })
+                    .run();
+            },
+            unsetFontSize: () => ({ chain }) => {
+                return chain()
+                    .setMark('textStyle', { fontSize: null })
+                    .removeEmptyTextStyle()
+                    .run();
+            },
+        };
+    },
+    addKeyboardShortcuts() {
+        return {
+            'Mod-=': () => {
+                const currentSize = parseInt(this.editor.getAttributes('textStyle').fontSize || '16');
+                return this.editor.commands.setFontSize(`${currentSize + 2}`);
+            },
+            'Mod--': () => {
+                const currentSize = parseInt(this.editor.getAttributes('textStyle').fontSize || '16');
+                return this.editor.commands.setFontSize(`${Math.max(10, currentSize - 2)}`);
+            },
+            'Mod-0': () => this.editor.commands.setFontSize('16'),
+        };
+    },
+});
 
 interface NoteEditorV2Props {
     initialContent: string;
     onUpdate: (content: string) => void;
     editable?: boolean;
     autoInsertSeparator?: boolean;
+    isBookmarked?: boolean;
+    onToggleBookmark?: () => void;
 }
 
 export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     initialContent,
     onUpdate,
     editable = true,
-    autoInsertSeparator = true
+    autoInsertSeparator = true,
+    isBookmarked = false,
+    onToggleBookmark
 }) => {
-    const [showDrawing, setShowDrawing] = useState(false);
     const [showTemplates, setShowTemplates] = useState(false);
     const [pageRuling, setPageRuling] = useState(false);
+    const [pageBackground, setPageBackground] = useState<string | null>(null);
 
     const editor = useEditor({
         extensions: [
             StarterKit,
             TextStyle,
+            FontSize,
             Color,
             FontFamily,
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
+            }),
+            TiptapHighlight.configure({
+                multicolor: true,
             }),
             Image,
         ],
@@ -48,13 +114,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         },
         editorProps: {
             attributes: {
-                class: 'prose prose-lg max-w-none focus:outline-none min-h-[300px] px-8 py-6 text-gray-700 leading-relaxed dir-rtl',
+                class: 'prose prose-lg max-w-none focus:outline-none min-h-[300px] px-4 py-4 md:px-8 md:py-6 text-gray-700 leading-relaxed dir-rtl',
                 dir: 'auto',
                 style: 'min-height: 100%;' // Help click-anywhere behavior
             },
         },
     });
 
+    // ... (effects and handlers same as before)
     // Auto-insert separator logic
     useEffect(() => {
         if (editor && initialContent && autoInsertSeparator) {
@@ -72,13 +139,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }
     }, [initialContent, editor]);
 
-    const handleInsertDrawing = (imageSrc: string) => {
-        editor?.chain().focus().setImage({ src: imageSrc }).run();
-        setShowDrawing(false);
-    };
 
-    const handleSelectTemplate = (html: string) => {
-        editor?.chain().focus().insertContent(html).run();
+
+    const handleSelectTemplate = (content: string, type: 'text' | 'background' = 'text') => {
+        if (type === 'background') {
+            setPageBackground(content);
+            setPageRuling(false);
+        } else {
+            editor?.chain().focus().insertContent(content).run();
+        }
     };
 
     return (
@@ -88,14 +157,19 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 <div className="flex-1 overflow-x-auto custom-scrollbar pb-2">
                     <EditorToolbar
                         editor={editor}
-                        onOpenDrawing={() => setShowDrawing(true)}
+
                         onOpenTemplates={() => setShowTemplates(true)}
                     />
                 </div>
 
+                {/* Bookmark Removed */}
+
                 {/* Page Ruling Toggle */}
                 <button
-                    onClick={() => setPageRuling(!pageRuling)}
+                    onClick={() => {
+                        setPageRuling(!pageRuling);
+                        setPageBackground(null);
+                    }}
                     className={`p-2.5 mt-2 rounded-xl transition-all shadow-sm border ${pageRuling ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-white text-gray-400 border-white hover:bg-gray-50'}`}
                     title="تسطير الصفحة"
                 >
@@ -115,23 +189,46 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             >
                 <div
                     className={`bg-white min-h-full rounded-2xl shadow-sm border border-gray-100 p-0 transition-all duration-300 ${pageRuling ? 'ruled-paper' : ''}`}
-                    style={pageRuling ? {
-                        backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
-                        backgroundAttachment: 'local',
-                        lineHeight: '32px',
-                        paddingTop: '4px' // Align typical line height
-                    } : {}}
+                    style={(() => {
+                        if (pageBackground) {
+                            let bgImage = pageBackground;
+                            let bgSize = 'cover';
+                            let bgRepeat = 'no-repeat';
+
+                            try {
+                                if (pageBackground.startsWith('{')) {
+                                    const parsed = JSON.parse(pageBackground);
+                                    bgImage = parsed.image;
+                                    bgSize = parsed.size || 'cover';
+                                    bgRepeat = parsed.repeat || 'no-repeat';
+                                }
+                            } catch (e) {
+                                // Not JSON, assume simple string
+                            }
+
+                            return {
+                                backgroundImage: bgImage,
+                                backgroundSize: bgSize,
+                                backgroundAttachment: 'local',
+                                backgroundRepeat: bgRepeat,
+                                minHeight: '1000px'
+                            };
+                        } else if (pageRuling) {
+                            return {
+                                backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
+                                backgroundAttachment: 'local',
+                                lineHeight: '32px',
+                                paddingTop: '4px'
+                            };
+                        }
+                        return {};
+                    })()}
                 >
                     <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
                 </div>
             </div>
 
-            {/* Dialogs */}
-            <Dialog open={showDrawing} onOpenChange={setShowDrawing}>
-                <DialogContent className="max-w-4xl h-[80vh] p-0 border-0 bg-transparent shadow-none [&>button]:hidden">
-                    <DrawingCanvas onSave={handleInsertDrawing} onCancel={() => setShowDrawing(false)} />
-                </DialogContent>
-            </Dialog>
+
 
             <TemplatesGallery
                 isOpen={showTemplates}

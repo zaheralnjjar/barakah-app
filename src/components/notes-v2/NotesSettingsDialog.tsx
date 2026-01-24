@@ -1,10 +1,9 @@
 
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Toggle } from '@/components/ui/toggle';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch'; // Assuming shadcn switch
-import { Settings, Zap, Type, Palette } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Settings, Zap, Palette, Save, Download, Trash2 } from 'lucide-react';
 
 interface NotesSettingsDialogProps {
     isOpen: boolean;
@@ -14,17 +13,29 @@ interface NotesSettingsDialogProps {
         showFolderGridInitial: boolean;
     };
     onUpdateSettings: (key: string, value: boolean) => void;
+    onExportBackup?: () => void;
+    onExportPDF?: () => void;
 }
 
 export const NotesSettingsDialog: React.FC<NotesSettingsDialogProps> = ({
     isOpen,
     onClose,
     settings,
-    onUpdateSettings
+    onUpdateSettings,
+    onExportBackup,
+    onExportPDF
 }) => {
+    const handleExport = () => {
+        if (onExportBackup) onExportBackup();
+    };
+
+    const handleExportPDFClick = () => {
+        if (onExportPDF) onExportPDF();
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100">
+            <DialogContent className="max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto" dir="rtl">
                 <DialogHeader className="mb-4">
                     <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-800">
                         <Settings className="w-6 h-6 text-indigo-500" />
@@ -32,7 +43,7 @@ export const NotesSettingsDialog: React.FC<NotesSettingsDialogProps> = ({
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4">
                     {/* Auto Separator */}
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                         <div className="flex flex-col gap-1">
@@ -63,10 +74,26 @@ export const NotesSettingsDialog: React.FC<NotesSettingsDialogProps> = ({
                         />
                     </div>
 
-                    {/* Placeholder for future settings */}
-                    <div className="p-4 rounded-xl border border-dashed border-gray-200 text-center text-gray-400 text-sm">
-                        سيتم إضافة المزيد من خيارات الخطوط والنسخ الاحتياطي هنا.
+                    {/* Data Management */}
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col gap-4">
+                        <div className="flex items-center gap-2 font-semibold text-gray-700">
+                            <Save className="w-4 h-4 text-green-500" />
+                            إدارة البيانات
+                        </div>
+                        <Button variant="outline" className="w-full justify-start text-xs" onClick={handleExportPDFClick}>
+                            <Download className="w-4 h-4 ml-2" />
+                            تصدير الكل كملف PDF
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start text-xs" onClick={handleExport}>
+                            <Download className="w-4 h-4 ml-2" />
+                            تصدير نسخة احتياطية (JSON)
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4 ml-2" />
+                            حذف جميع الملاحظات
+                        </Button>
                     </div>
+
                 </div>
             </DialogContent>
         </Dialog>

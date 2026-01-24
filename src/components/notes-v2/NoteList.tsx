@@ -1,16 +1,27 @@
-
-import React from 'react';
-import { useNotesV2 } from '@/hooks/useNotesV2';
-import { FileText, Clock, Pin } from 'lucide-react';
+import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
+import { FileText, Clock, Pin, RotateCcw, Trash, Trash2, Bookmark } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface NoteListProps {
     folderId: string | null;
-    onSelectNote: (note: any) => void;
+    searchQuery?: string;
+    onSelectNote: (note: NoteV2) => void;
     activeNoteId?: string;
 }
 
-export const NoteList: React.FC<NoteListProps> = ({ folderId, onSelectNote, activeNoteId }) => {
-    const { notes, isLoading, deleteNote } = useNotesV2(folderId);
+export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSelectNote, activeNoteId }) => {
+    const { notes, isLoading, deleteNote, restoreNote, permanentDelete } = useNotesV2(folderId, searchQuery);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'soft' | 'permanent' } | null>(null);
 
     if (isLoading) return <div className="p-8 text-center text-gray-400">جاري التحميل...</div>;
 
@@ -40,7 +51,10 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, onSelectNote, acti
                         <h3 className={`font-bold text-gray-800 line-clamp-1 ${activeNoteId === note.id ? 'text-indigo-700' : ''}`}>
                             {note.title || 'بدون عنوان'}
                         </h3>
-                        {note.is_pinned && <Pin className="w-4 h-4 text-amber-500 fill-amber-500 rotate-45" />}
+                        <div className="flex items-center gap-1">
+                            {note.is_bookmarked && <Bookmark className="w-4 h-4 text-amber-500 fill-amber-500" />}
+                            {note.is_pinned && <Pin className="w-4 h-4 text-indigo-500 rotate-45" />}
+                        </div>
                     </div>
 
                     <p className="text-xs text-gray-500 line-clamp-2 mb-2 h-8 opacity-70">
@@ -54,18 +68,77 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, onSelectNote, acti
                         </span>
                     </div>
 
-                    {/* Delete Action (Hidden until hover) */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('حذف الملاحظة؟')) deleteNote(note.id);
-                        }}
-                        className="absolute bottom-2 left-2 text-red-400 opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 rounded"
-                    >
-                        حذف
-                    </button>
+                    {/* Actions */}
+                    <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {folderId === 'trash' ? (
+                            <>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        restoreNote(note.id);
+                                    }}
+                                    className="text-green-600 hover:bg-green-50 p-1.5 rounded-full"
+                                    title="استعادة"
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setConfirmDelete({ id: note.id, type: 'permanent' });
+                                    }}
+                                    className="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
+                                    title="حذف نهائي"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDelete({ id: note.id, type: 'soft' });
+                                }}
+                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full"
+                                title="حذف"
+                            >
+                                <Trash className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             ))}
+
+            {/* Deletion Confirmation Dialog */}
+            <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
+                <AlertDialogContent dir="rtl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {confirmDelete?.type === 'permanent' ? 'حذف نهائي للملاحظة؟' : 'نقل الملاحظة لسلة المهملات؟'}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {confirmDelete?.type === 'permanent'
+                                ? 'سيتم حذف هذه الملاحظة نهائياً ولا يمكن استعادتها مرة أخرى.'
+                                : 'سوف يتم نقل هذه الملاحظة إلى سلة المحذوفات حيث يمكنك استعادتها لاحقاً.'}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2">
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction
+                            className={confirmDelete?.type === 'permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}
+                            onClick={() => {
+                                if (confirmDelete) {
+                                    if (confirmDelete.type === 'permanent') permanentDelete(confirmDelete.id);
+                                    else deleteNote(confirmDelete.id);
+                                    setConfirmDelete(null);
+                                }
+                            }}
+                        >
+                            تأكيد الحذف
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

@@ -8,18 +8,23 @@ import {
     ChevronDown,
     Minus,
     LayoutTemplate,
-    PenTool
+    AlignLeft,
+    AlignCenter,
+    AlignRight,
+    AlignJustify,
+    Highlighter
 } from 'lucide-react';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface EditorToolbarProps {
     editor: Editor | null;
     onOpenTemplates?: () => void;
-    onOpenDrawing?: () => void;
+
 }
 
 const fontFamilies = [
@@ -36,10 +41,14 @@ const colors = [
     '#2563EB', '#7C3AED', '#DB2777'
 ];
 
+const highlights = [
+    '#ffff00', '#a1ffba', '#ffcba1', '#ffb0e7', '#a6fcfc', '#e7e7e7', 'transparent'
+];
+
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     editor,
     onOpenTemplates,
-    onOpenDrawing
+
 }) => {
     if (!editor) return null;
 
@@ -56,14 +65,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-2 p-2 mb-4 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl sticky top-0 z-10 transition-all">
+        <div className="flex items-center gap-1.5 p-2 mb-4 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl sticky top-0 z-10 transition-all flex-wrap">
 
             {/* Font Family Selector */}
             <Popover>
                 <PopoverTrigger asChild>
                     <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm">
                         <Type className="w-4 h-4 text-indigo-500" />
-                        <span className="max-w-[80px] truncate">
+                        <span className="max-w-[70px] truncate">
                             {fontFamilies.find(f => editor.isActive('textStyle', { fontFamily: f.value }))?.name || 'الخط'}
                         </span>
                         <ChevronDown className="w-3 h-3 opacity-50" />
@@ -90,13 +99,44 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 </PopoverContent>
             </Popover>
 
+            {/* Font Size Picker - Moved here */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm border border-transparent hover:border-gray-200">
+                        <Type className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className="min-w-[20px] text-center">
+                            {editor.getAttributes('textStyle').fontSize?.replace('px', '') || '16'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-20 p-1 rounded-xl shadow-xl border-gray-100 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    <div className="flex flex-col gap-0.5">
+                        {Array.from({ length: 21 }, (_, i) => 10 + i).map((size) => (
+                            <button
+                                key={size}
+                                onClick={() => editor.chain().focus().setMark('textStyle', { fontSize: `${size}px` }).run()}
+                                className={`
+                                    flex items-center justify-center px-2 py-1.5 rounded-lg text-sm transition-colors
+                                    ${editor.isActive('textStyle', { fontSize: `${size}px` })
+                                        ? 'bg-indigo-50 text-indigo-600 font-bold'
+                                        : 'hover:bg-gray-50 text-gray-700'}
+                                `}
+                            >
+                                {size}
+                            </button>
+                        ))}
+                    </div>
+                </PopoverContent>
+            </Popover>
+
             <div className="w-px h-5 bg-gray-200 mx-1" />
 
             {/* Color Picker */}
             <Popover>
                 <PopoverTrigger asChild>
                     <button
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-colors"
                         title="لون النص"
                     >
                         <div
@@ -130,6 +170,70 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 </PopoverContent>
             </Popover>
 
+            {/* Highlight Picker */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl transition-colors ${editor.isActive('highlight') ? 'bg-gray-100' : 'hover:bg-gray-100 text-gray-600'}`}
+                        title="لون الخلفية"
+                        style={{ color: editor.getAttributes('highlight').color || undefined }}
+                    >
+                        <Highlighter className="w-4 h-4" />
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-3 rounded-2xl shadow-xl border-gray-100">
+                    <div className="grid grid-cols-4 gap-2">
+                        {highlights.map((color) => (
+                            <button
+                                key={color}
+                                onClick={() => {
+                                    if (color === 'transparent') {
+                                        editor.chain().focus().unsetHighlight().run();
+                                    } else {
+                                        editor.chain().focus().toggleHighlight({ color }).run();
+                                    }
+                                }}
+                                className={`
+                                    w-8 h-8 rounded-md border transition-transform hover:scale-105 flex items-center justify-center
+                                    ${editor.isActive('highlight', { color }) ? 'ring-2 ring-offset-1 ring-yellow-400 border-transparent' : 'border-gray-100'}
+                                `}
+                                style={{ backgroundColor: color === 'transparent' ? 'white' : color }}
+                                title={color === 'transparent' ? 'إزالة الخلفية' : color}
+                            >
+                                {color === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                            </button>
+                        ))}
+                    </div>
+                </PopoverContent>
+            </Popover>
+
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+
+            {/* Alignment */}
+            <div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr">
+                <button
+                    onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                    className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    title="Left"
+                ><AlignLeft className="w-4 h-4" /></button>
+                <button
+                    onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                    className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    title="Center"
+                ><AlignCenter className="w-4 h-4" /></button>
+                <button
+                    onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                    className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    title="Right"
+                ><AlignRight className="w-4 h-4" /></button>
+                <button
+                    onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                    className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                    title="Justify"
+                ><AlignJustify className="w-4 h-4" /></button>
+            </div>
+
             <div className="w-px h-5 bg-gray-200 mx-1" />
 
             {/* Time Separator */}
@@ -140,10 +244,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             >
                 <Minus className="w-4 h-4" />
                 <Clock className="w-3.5 h-3.5" />
-                <span className="text-sm font-medium hidden sm:inline">فاصل</span>
             </button>
-
-            <div className="w-px h-5 bg-gray-200 mx-1" />
 
             {/* Templates */}
             <button
@@ -152,37 +253,11 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 title="قوالب جاهزة"
             >
                 <LayoutTemplate className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">قوالب</span>
             </button>
 
-            {/* Drawing */}
-            <button
-                onClick={onOpenDrawing}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-pink-50 text-gray-600 hover:text-pink-600 transition-colors"
-                title="رسم"
-            >
-                <PenTool className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">رسم</span>
-            </button>
 
-            <div className="w-px h-5 bg-gray-200 mx-1" />
 
-            {/* Font Size (Simplified Toggles) */}
-            <div className="flex items-center gap-1 mr-auto" dir="ltr">
-                <button
-                    onClick={() => editor.chain().focus().setParagraph().run()}
-                    className={`p-1.5 rounded-lg text-xs font-medium border ${editor.isActive('paragraph') ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-transparent hover:bg-gray-100'}`}
-                >
-                    Normal
-                </button>
-                <button
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={`p-1.5 rounded-lg text-xs font-bold border ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'border-transparent hover:bg-gray-100'}`}
-                >
-                    Large
-                </button>
-            </div>
-
+            {/* Removed Font Size Toggles as per request */}
         </div>
     );
 };
