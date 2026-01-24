@@ -11,7 +11,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useMedications } from '@/hooks/useMedications';
 import { useShoppingList } from '@/hooks/useShoppingList';
-import { useQuickNotes } from '@/hooks/useQuickNotes';
+import { useNotesV2 } from '@/hooks/useNotesV2';
 import { generateGenericPDF, ReportData } from '@/utils/pdfGenerator';
 import {
     FileText, Calendar, CheckSquare, Pill, Moon, MapPin, ShoppingCart,
@@ -56,7 +56,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const { appointments } = useAppointments();
     const { medications } = useMedications();
     const { items: shoppingItems } = useShoppingList();
-    const { notesHistory } = useQuickNotes();
+    const { notes: notesHistory } = useNotesV2();
 
     const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('ar');
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -352,7 +352,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                 {
                     type: 'table',
                     headers: ['الدواء', 'الوقت', 'ملاحظات'],
-                    rows: activeMeds.map(m => [m.name, m.time || '-', m.notes || '-'])
+                    rows: activeMeds.map(m => [m.name, m.time || '-', (m as any).notes || '-'])
                 }
             ]
         };
@@ -535,7 +535,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         if (!reportData) return;
         try {
             await generateGenericPDF(reportData, `Barakah-Report-${Date.now()}.pdf`);
-            if (window.Capacitor) {
+            if ((window as any).Capacitor) {
                 // generateGenericPDF handles sharing on mobile
             } else {
                 toast({ title: 'تم تحميل ملف PDF ✅' });

@@ -16,13 +16,15 @@ interface FolderGridProps {
     onOpenNote?: (note: NoteV2) => void;
     onRequestCreateNote?: (folderId?: string) => void;
     onRequestCreateFolder?: () => void;
+    isMobile?: boolean;
 }
 
 export const FolderGrid: React.FC<FolderGridProps> = ({
     onOpenFolder,
     onOpenNote,
     onRequestCreateNote,
-    onRequestCreateFolder
+    onRequestCreateFolder,
+    isMobile
 }) => {
     const { folders, deleteFolder } = useFolders();
     const { notes, isLoading, updateNote } = useNotesV2(null); // Fetch all notes
@@ -82,42 +84,65 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
             <div className="p-4 h-full flex flex-col">
                 {/* Header Removed - Moved to Top Bar */}
 
-                {/* Content Area - 2 Independent Rows */}
+                {/* Content Area - 2 Independent Rows or Single Stacks */}
                 <div className="flex flex-col h-full gap-4 pb-4 overflow-hidden">
-                    {/* Row 1 */}
-                    <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
-                        {folders.filter((_, i) => i % 2 === 0).map(folder => (
-                            <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
-                                <KanbanFolderColumn
-                                    folder={folder}
-                                    notes={notesByFolder[folder.id] || []}
-                                    onAddNote={() => onRequestCreateNote?.(folder.id)}
-                                    onEditFolder={(id) => setEditingFolderId(id)}
-                                    onDeleteFolder={() => deleteFolder(folder.id)}
-                                    onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
-                                    onClickHeader={onOpenFolder}
-                                />
+                    {isMobile ? (
+                        /* Mobile: Single Vertical Axis with Horizontal Internal Scrolling? 
+                           Actually, user said "صف واحد بدلا من صفين" 
+                           So just show all folders in one scrollable list.
+                        */
+                        <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-4">
+                            {folders.map(folder => (
+                                <div key={folder.id} className="w-full h-[250px]">
+                                    <KanbanFolderColumn
+                                        folder={folder}
+                                        notes={notesByFolder[folder.id] || []}
+                                        onAddNote={() => onRequestCreateNote?.(folder.id)}
+                                        onEditFolder={(id) => setEditingFolderId(id)}
+                                        onDeleteFolder={() => deleteFolder(folder.id)}
+                                        onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
+                                        onClickHeader={onOpenFolder}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Row 1 */}
+                            <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
+                                {folders.filter((_, i) => i % 2 === 0).map(folder => (
+                                    <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
+                                        <KanbanFolderColumn
+                                            folder={folder}
+                                            notes={notesByFolder[folder.id] || []}
+                                            onAddNote={() => onRequestCreateNote?.(folder.id)}
+                                            onEditFolder={(id) => setEditingFolderId(id)}
+                                            onDeleteFolder={() => deleteFolder(folder.id)}
+                                            onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
+                                            onClickHeader={onOpenFolder}
+                                        />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                        {/* Placeholder to maintain width if few items? No, flex handles it. */}
-                    </div>
 
-                    {/* Row 2 */}
-                    <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
-                        {folders.filter((_, i) => i % 2 !== 0).map(folder => (
-                            <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
-                                <KanbanFolderColumn
-                                    folder={folder}
-                                    notes={notesByFolder[folder.id] || []}
-                                    onAddNote={() => onRequestCreateNote?.(folder.id)}
-                                    onEditFolder={(id) => setEditingFolderId(id)}
-                                    onDeleteFolder={() => deleteFolder(folder.id)}
-                                    onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
-                                    onClickHeader={onOpenFolder}
-                                />
+                            {/* Row 2 */}
+                            <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
+                                {folders.filter((_, i) => i % 2 !== 0).map(folder => (
+                                    <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
+                                        <KanbanFolderColumn
+                                            folder={folder}
+                                            notes={notesByFolder[folder.id] || []}
+                                            onAddNote={() => onRequestCreateNote?.(folder.id)}
+                                            onEditFolder={(id) => setEditingFolderId(id)}
+                                            onDeleteFolder={() => deleteFolder(folder.id)}
+                                            onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
+                                            onClickHeader={onOpenFolder}
+                                        />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </>
+                    )}
                 </div>
             </div>
 

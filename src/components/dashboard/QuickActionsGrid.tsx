@@ -27,10 +27,9 @@ interface QuickActionsGridProps {
     onOpenNewMuslims?: () => void;
     onActivateWidgets?: (widgets: string[]) => void;
     activeWidgets?: string[];
-    onOpenNotes?: () => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets, onOpenNotes }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();

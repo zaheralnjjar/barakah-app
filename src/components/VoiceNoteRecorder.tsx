@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mic, MicOff, Check, X, Loader2, Plus, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useQuickNotes, NoteData } from '@/hooks/useQuickNotes';
+import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 interface VoiceNoteRecorderProps {
@@ -26,7 +26,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, onSaveToActivities }) => {
     const { toast } = useToast();
-    const { notesHistory, appendToNote, archiveNote } = useQuickNotes();
+    const { notes, createNote, updateNote } = useNotesV2();
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -294,7 +294,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         }
     }, [useNativeSpeech]);
 
-    const handleSave = useCallback(() => {
+    const handleSave = useCallback(async () => {
         // Cleaning up spaces
         const finalText = (transcript + interimTranscript).replace(/\s+/g, ' ').trim();
         if (!finalText) {
@@ -306,12 +306,17 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         try {
             if (selectedNoteIndex === 'new') {
                 // Create a new regular note
-                archiveNote(finalText);
+                await createNote({ title: `تسجيل ${new Date().toLocaleTimeString('ar-SA')}`, folder_id: null, content: `<p>${finalText}</p>` });
                 toast({ title: 'تم إنشاء ملاحظة جديدة ✓' });
             } else {
-                const noteIndex = parseInt(selectedNoteIndex);
-                if (!isNaN(noteIndex) && notesHistory[noteIndex]) {
-                    appendToNote(noteIndex, finalText);
+                const note = notes.find(n => n.id === selectedNoteIndex);
+                if (note) {
+                    await updateNote({
+                        id: note.id,
+                        updates: {
+                            content: (note.content || '') + `<p>${finalText}</p>`
+                        }
+                    });
                     toast({ title: 'تم الحفظ في الملاحظة المختارة ✓' });
                 }
             }
@@ -321,7 +326,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         } finally {
             setIsProcessing(false);
         }
-    }, [transcript, interimTranscript, selectedNoteIndex, notesHistory, archiveNote, onClose, toast, appendToNote]);
+    }, [transcript, interimTranscript, selectedNoteIndex, notes, createNote, updateNote, onClose, toast]);
 
     const handleClose = useCallback(() => {
         if (isRecording) stopRecording();
@@ -335,9 +340,8 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         }
     }, [isOpen, speechSupported, startRecording, manualMode]);
 
-    const getNoteTitle = (note: NoteData, index: number) => {
-        const firstLine = note.content.split('\n')[0].trim();
-        return firstLine.substring(0, 30) || `ملاحظة ${index + 1}`;
+    const getNoteTitle = (note: NoteV2) => {
+        return note.title || 'ملاحظة بدون عنوان';
     };
 
     // Always show the dialog - even without speech support, user can type
@@ -366,14 +370,14 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                                         <span>إنشاء ملاحظة جديدة</span>
                                     </div>
                                 </SelectItem>
-                                {notesHistory.length > 0 && (
+                                {notes.length > 0 && (
                                     <>
-                                        <div className="px-2 py-1.5 text-xs text-gray-500 border-t mt-1 text-right">الملاحظات الموجودة ({notesHistory.length}):</div>
+                                        <div className="px-2 py-1.5 text-xs text-gray-500 border-t mt-1 text-right">الملاحظات الموجودة ({notes.length}):</div>
                                         <div className="max-h-[200px] overflow-y-auto">
-                                            {notesHistory.map((note, index) => (
-                                                <SelectItem key={index} value={index.toString()} className="text-right">
+                                            {notes.map((note) => (
+                                                <SelectItem key={note.id} value={note.id} className="text-right">
                                                     <div className="flex items-center gap-2 justify-end w-full">
-                                                        <span className="truncate text-right w-full">{getNoteTitle(note, index)}</span>
+                                                        <span className="truncate text-right w-full">{getNoteTitle(note)}</span>
                                                         <FileText className="w-4 h-4 text-gray-400 shrink-0" />
                                                     </div>
                                                 </SelectItem>

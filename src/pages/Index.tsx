@@ -41,9 +41,8 @@ import NavSummaryDialogs from '@/components/NavSummaryDialogs';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
-import { useQuickNotes } from '@/hooks/useQuickNotes';
+import { useNotesV2 } from '@/hooks/useNotesV2';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
-import { NotesManager } from '@/components/notes/NotesManager';
 
 
 // NEW FEATURE: Salary Manager
@@ -71,7 +70,6 @@ const Index = () => {
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showReportGenerator, setShowReportGenerator] = useState(false);
-  const [showNotesManager, setShowNotesManager] = useState(false);
   const { toast } = useToast();
 
   // Collapsible states
@@ -88,9 +86,23 @@ const Index = () => {
   });
 
   // Drag state
-  const [draggedSection, setDraggedSection] = useState<SectionId | null>(null);
+  const { notes, createNote, updateNote } = useNotesV2();
 
-  const { appendToActivitiesNote } = useQuickNotes();
+  const appendToActivitiesNote = async (content: string) => {
+    const today = new Date().toLocaleDateString('ar-SA');
+    const activityTitle = `نشاط يوم ${today}`;
+
+    const existing = notes.find(n => n.title === activityTitle);
+
+    if (existing) {
+      await updateNote({
+        id: existing.id,
+        updates: { content: (existing.content || '') + `<p>${content}</p>` }
+      });
+    } else {
+      await createNote({ title: activityTitle, folder_id: null, content: `<p>${content}</p>` });
+    }
+  };
 
   // Sync Hooks
   const { syncNow, isSyncing, lastSync, isOnline, pendingActions, failedActions } = useCloudSync();
@@ -334,7 +346,6 @@ const Index = () => {
           toast({ title: '🔄 جاري المزامنة...', description: 'يتم تحديث البيانات' });
         }}
         onOpenReports={() => setShowReportGenerator(true)}
-        onOpenNotes={() => setShowNotesManager(true)}
         onLongPress={(id) => {
           if (id === 'settings_sync') {
             syncNow();
@@ -346,7 +357,7 @@ const Index = () => {
       />
 
       <div
-        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pr-16 relative"
+        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern lg:pr-16 pb-16 lg:pb-0 relative"
       >        {/* Content Area - Padding right for sidebar */}
         <div className="w-full">
 
@@ -360,7 +371,6 @@ const Index = () => {
                 <SmartDashboard
                   onNavigateToTab={setActiveTab}
                   onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
-                  onOpenNotes={() => setShowNotesManager(true)}
                 />
               </TabsContent>
 
@@ -448,12 +458,7 @@ const Index = () => {
           onClose={() => setShowReportGenerator(false)}
         />
 
-        {/* Notes Manager */}
-        {showNotesManager && (
-          <div className="fixed inset-0 z-[10000] bg-white">
-            <NotesManager onClose={() => setShowNotesManager(false)} />
-          </div>
-        )}
+        {/* Notes Manager Removed */}
 
       </div>
     </>

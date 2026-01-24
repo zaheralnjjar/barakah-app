@@ -44,7 +44,6 @@ import { useAppointments } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import { usePomodoro } from '@/hooks/usePomodoro';
-import { useQuickNotes } from '@/hooks/useQuickNotes';
 
 // Components
 import { TaskSection } from '@/components/logistics/TaskSection';
@@ -52,7 +51,6 @@ import { TaskStats } from '@/components/logistics/TaskStats';
 import { HabitTracker } from '@/components/logistics/HabitTracker';
 import { MedicationManager } from '@/components/logistics/MedicationManager';
 // import { QuickNotes } from '@/components/logistics/QuickNotes'; // Replaced
-import { UnifiedNotesHub } from '@/components/logistics/UnifiedNotesHub';
 import { DailyChecklist } from '@/components/logistics/DailyChecklist';
 import AppointmentManager from '@/components/AppointmentManager';
 

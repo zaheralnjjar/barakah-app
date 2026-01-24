@@ -30,20 +30,20 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick })
             style={style}
             onClick={onClick}
             className={`
-                bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative select-none
+                bg-white p-1.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative select-none
                 ${isDragging ? 'shadow-lg border-indigo-300 rotate-2 z-50' : ''}
             `}
         >
-            <div className="flex justify-between items-center gap-2 mb-1">
+            <div className="flex justify-between items-center gap-1.5 mb-0.5">
                 {/* Title */}
-                <h4 className="font-bold text-gray-800 text-[13px] line-clamp-1 flex-1">
+                <h4 className="font-bold text-gray-800 text-[11px] line-clamp-1 flex-1">
                     {note.title || 'بدون عنوان'}
                 </h4>
 
                 {/* Date & Grip in same row */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <div className="flex items-center gap-0.5 text-[9px] text-gray-400">
-                        <Clock className="w-2.5 h-2.5" />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-0.5 text-[8px] text-gray-400">
+                        <Clock className="w-2 h-2" />
                         <span>{new Date(note.updated_at).toLocaleDateString('ar-SA', { day: 'numeric', month: 'numeric' })}</span>
                     </div>
 
@@ -54,12 +54,12 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick })
                         className="p-0.5 text-gray-300 hover:text-indigo-400 cursor-grab active:cursor-grabbing"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <GripVertical className="w-3.5 h-3.5" />
+                        <GripVertical className="w-3 h-3" />
                     </div>
                 </div>
             </div>
 
-            <p className="text-[11px] text-gray-400 line-clamp-1 h-4 leading-tight truncate opacity-80">
+            <p className="text-[10px] text-gray-400 line-clamp-1 h-3 leading-none truncate opacity-80">
                 {previewText}
             </p>
         </div>

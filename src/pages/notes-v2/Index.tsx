@@ -4,11 +4,12 @@ import { SidebarTree } from '@/components/notes-v2/SidebarTree';
 import { FolderGrid } from '@/components/notes-v2/FolderGrid';
 import { NoteList } from '@/components/notes-v2/NoteList';
 import { NoteEditorV2 } from '@/components/notes-v2/NoteEditorV2';
+import { KanbanView } from '@/components/notes-v2/KanbanView';
 import { NotesSettingsDialog } from '@/components/notes-v2/NotesSettingsDialog';
 import { CreateFolderDialog } from '@/components/notes-v2/CreateFolderDialog';
 import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { Button } from '@/components/ui/button';
-import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus } from 'lucide-react';
+import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid } from 'lucide-react';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
 import { useToast } from '@/hooks/use-toast';
 import SideNavBar from '@/components/SideNavBar';
@@ -22,7 +23,7 @@ const NotesLayoutV2 = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
     const [activeNote, setActiveNote] = useState<NoteV2 | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'editor'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'editor' | 'kanban'>('grid');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
     const [showCreateNote, setShowCreateNote] = useState(false);
@@ -232,7 +233,6 @@ const NotesLayoutV2 = () => {
     return (
         <div className="flex h-screen bg-white w-full overflow-hidden" dir="rtl">
 
-            {/* Global SideNavBar (Fixed) */}
             <SideNavBar
                 activeTab="notes-v2"
                 onNavigate={(tab) => {
@@ -241,9 +241,7 @@ const NotesLayoutV2 = () => {
                     }
                 }}
                 onOpenReports={() => setShowReportGenerator(true)}
-                onOpenNotes={() => setShowNotesManager(true)}
                 onSync={() => {
-                    // Sync logic placeholder if needed, or pass empty function
                     toast({ title: 'المزامنة متاحة في الصفحة الرئيسية' });
                 }}
             />
@@ -251,9 +249,10 @@ const NotesLayoutV2 = () => {
             {/* Sidebar (Collapsible) - Shifted left to make room for fixed nav */}
             <div
                 className={`
-                    flex-shrink-0 bg-gray-50 border-l border-gray-100 transition-all duration-300 flex flex-col mr-16
+                    flex-shrink-0 bg-gray-50 border-l border-gray-100 transition-all duration-300 flex flex-col
+                    ${isMobile ? 'mr-0' : 'mr-16'}
                     ${isSidebarOpen
-                        ? (isMobile ? 'w-16' : 'w-64')
+                        ? (isMobile ? 'w-0 hidden' : 'w-64')
                         : 'w-0 opacity-0 overflow-hidden'
                     }
                 `}
@@ -330,6 +329,28 @@ const NotesLayoutV2 = () => {
                     {/* Header Actions (New Folder/Note) - Shown when not in Editor */}
                     {!activeNote && (
                         <div className="mr-auto flex items-center gap-2">
+                            {/* View Switcher */}
+                            <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200 ml-1">
+                                <Button
+                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setViewMode('grid')}
+                                    className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                                >
+                                    <LayoutGrid className="w-3 h-3 sm:ml-1" />
+                                    <span className="hidden xs:inline">مجلدات</span>
+                                </Button>
+                                <Button
+                                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setViewMode('kanban')}
+                                    className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
+                                >
+                                    <Menu className="w-3 h-3 sm:ml-1" />
+                                    <span className="hidden xs:inline">كنبان</span>
+                                </Button>
+                            </div>
+
                             <Button
                                 onClick={() => setShowCreateFolder(true)}
                                 className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-3 text-xs md:text-sm rounded-lg shadow-sm"
@@ -372,6 +393,20 @@ const NotesLayoutV2 = () => {
                 {/* Content Views */}
                 <div className="flex-1 overflow-hidden relative p-4 bg-gray-50/30">
 
+                    {/* View: Kanban */}
+                    {viewMode === 'kanban' && !searchQuery && !activeNote && (
+                        <div className="h-full animate-in fade-in duration-300">
+                            <KanbanView
+                                onOpenNote={handleSelectNote}
+                                onOpenFolder={(f) => handleSelectFolder(f.id)}
+                                onRequestCreateNote={(folderId) => {
+                                    setActiveFolderId(folderId || null);
+                                    setShowCreateNote(true);
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {/* View: Folder Grid (Library) */}
                     {viewMode === 'grid' && !searchQuery && activeFolderId !== 'bookmarked' && (
                         <div className="h-full flex flex-col animate-in fade-in zoom-in-95 duration-300">
@@ -383,6 +418,7 @@ const NotesLayoutV2 = () => {
                                     setShowCreateNote(true);
                                 }}
                                 onRequestCreateFolder={() => setShowCreateFolder(true)}
+                                isMobile={isMobile}
                             />
                         </div>
                     )}

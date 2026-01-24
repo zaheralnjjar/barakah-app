@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useLocationReminders } from '@/hooks/useLocationReminders';
-import { useQuickNotes } from '@/hooks/useQuickNotes';
+import { useNotesV2 } from '@/hooks/useNotesV2';
 import { searchLocation } from '@/services/GeocodingService';
 
 // Icons
@@ -46,10 +46,9 @@ import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
     onOpenVoiceRecorder: () => void;
-    onOpenNotes: () => void;
 }
 
-const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpenVoiceRecorder, onOpenNotes }) => {
+const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpenVoiceRecorder }) => {
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -72,7 +71,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { medications } = useMedications();
     const { tasks, refreshTasks, addTask } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
-    const { addNote } = useQuickNotes();
+    const { createNote } = useNotesV2();
 
 
     // State
@@ -194,7 +193,6 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                             onActivateWidgets={(widgets: string[]) => setActiveWidgets(widgets)}
                             activeWidgets={activeWidgets}
-                            onOpenNotes={onOpenNotes}
                         />
 
                         {/* 4. Parking Widget - Dynamic */}
@@ -275,9 +273,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             {/* === DIALOGS === */}
 
-            import {QuickNoteDialog} from '@/components/notes-v2/QuickNoteDialog';
 
-            // ... existing code ...
 
             <GlobalSearchDialog
                 isOpen={isSearchOpen}
