@@ -11,25 +11,72 @@ import ArabicReshaper from 'arabic-reshaper';
 
 type Language = 'ar' | 'es';
 
-const getT = (lang: Language) => (key: string) => translations[lang]?.[key] || key;
-
-// Helper function to reshape Arabic text for correct PDF rendering
-// Note: We only reshape Arabic characters for ligatures, no reversal needed
-// jsPDF with Amiri font handles RTL direction correctly
 // Helper function to reshape Arabic text for correct PDF rendering
 // Note: We only reshape Arabic characters for ligatures, no reversal needed
 // jsPDF with Amiri font handles RTL direction correctly
 const reshapeArabic = (text: string): string => {
+    // For Spanish mode, we don't need reshaping, but keep function for compat
     if (!text) return text;
+    // Check if text has Arabic chars
+    const hasArabic = /[\u0600-\u06FF]/.test(text);
+    if (!hasArabic) return text;
+
     try {
-        // Only reshape Arabic ligatures, don't reverse
-        // The PDF library with Amiri font handles RTL direction
         return ArabicReshaper.convertArabic(text);
     } catch (e) {
-        console.warn('Arabic reshaping failed:', e);
         return text;
     }
 };
+
+// Force Spanish for Reports
+const REPORT_LABELS: Record<string, string> = {
+    'report_title': 'Informe General',
+    'period': 'Período',
+    'prayer_times': 'Horarios de Oración',
+    'appointments': 'Citas',
+    'tasks': 'Tareas',
+    'shopping': 'Lista de Compras',
+    'expenses': 'Gastos',
+    'unified_timeline': 'Línea de Tiempo Unificada',
+    'page': 'Página',
+    'of': 'de',
+    'generated_by': 'Generado por Barakah Life',
+    'student_report': 'Informe de Estudiantes',
+    'report_date': 'Fecha del Informe',
+    'status': 'Estado',
+    'phone': 'Teléfono',
+    'student': 'Estudiante',
+    'active': 'Activo',
+    'personal_info': 'Información Personal',
+    'nationality': 'Nacionalidad',
+    'conversion_date': 'Fecha de Conversión',
+    'address': 'Dirección',
+    'occupation': 'Ocupación',
+    'education': 'Educación',
+    'communications_log': 'Registro de Comunicaciones',
+    'notes': 'Notas',
+    'direction': 'Dirección',
+    'type': 'Tipo',
+    'time': 'Hora',
+    'lessons_log': 'Registro de Lecciones',
+    'attended': 'Asistió',
+    'teacher': 'Profesor',
+    'topic': 'Tema',
+    'education_plan': 'Plan Educativo',
+    'deadline': 'Fecha Límite',
+    'task': 'Tarea',
+    'no_tasks': 'No hay tareas asignadas',
+    'absent': 'Ausente',
+    'details': 'Detalles',
+    'title': 'Título',
+    'amount': 'Monto',
+    'category': 'Categoría',
+    'quantity': 'Cantidad',
+    'name': 'Nombre',
+    'priority': 'Prioridad'
+};
+
+const getLabel = (key: string) => REPORT_LABELS[key] || key;
 
 export type ReportSection =
     | { type: 'text', content: string; align?: 'left' | 'center' | 'right' }
@@ -55,11 +102,11 @@ export const generateGenericPDF = (data: ReportData, filename: string) => {
     // Header
     doc.setFontSize(22);
     doc.setTextColor(41, 128, 185); // Blue
-    doc.text(reshapeArabic(data.title), 105, 20, { align: 'center' });
+    doc.text(data.title, 105, 20, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`${reshapeArabic('تاريخ التقرير')}: ${new Date().toLocaleDateString('ar-SA')}`, 105, 30, { align: 'center' });
+    doc.text(`Fecha del Informe: ${new Date().toLocaleDateString('es-ES')}`, 105, 30, { align: 'center' });
 
     let yPos = 40;
 
@@ -161,30 +208,29 @@ export const generatePDF = (
     viewType: 'table' | 'timeline',
     data: PrintData,
     dateRange: string,
-    lang: Language = 'ar'
+    lang: Language = 'es' // Default to ES
 ) => {
-    const t = getT(lang);
-    const R = (text: string) => lang === 'ar' ? reshapeArabic(text) : text;
-
+    const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
         format: 'a4'
     });
 
-    // Add Arabic Font
+    // Add Arabic Font (Support for any residual Arabic names)
     doc.addFileToVFS("Amiri-Regular.ttf", AmiriFontBase64);
     doc.addFont("Amiri-Regular.ttf", "Amiri", "normal");
-    doc.setFont("Amiri"); // Set as default
+    doc.setFont("Amiri");
 
     // Header
     doc.setFontSize(22);
     doc.setTextColor(41, 128, 185); // Blue
-    doc.text(R(t('report_title')), 105, 20, { align: 'center' });
+    doc.text(t('report_title'), 105, 20, { align: 'center' });
 
     doc.setFontSize(12);
     doc.setTextColor(100);
-    doc.text(`${R(t('period'))}: ${dateRange}`, 105, 30, { align: 'center' });
+    // Use Spanish date format if possible or keep dateRange string
+    doc.text(`${t('period')}: ${dateRange}`, 105, 30, { align: 'center' });
 
     let yPos = 40;
 
@@ -195,16 +241,16 @@ export const generatePDF = (
         if (data.prayerTimes && data.prayerTimes.length > 0) {
             doc.setFontSize(14);
             doc.setTextColor(39, 174, 96); // Green
-            doc.text(R(t('prayer_times')), 180, yPos, { align: 'right' });
+            doc.text(t('prayer_times'), 190, yPos, { align: 'right' }); // Align right for tidiness
             yPos += 5;
 
             autoTable(doc, {
                 startY: yPos,
-                head: [[R('الوقت'), R('الصلاة')]],
-                body: data.prayerTimes.map(p => [p.time, R(p.name)]),
+                head: [[t('time'), t('name')]], // Swapped columns for LTR? No, keep standard
+                body: data.prayerTimes.map(p => [p.time, p.name]), // Removed reshapeArabic for static text unless needed
                 theme: 'striped',
-                headStyles: { fillColor: [39, 174, 96], font: 'Amiri', halign: 'right' }, // Green
-                styles: { halign: 'right', font: 'Amiri' }, // Font fixed
+                headStyles: { fillColor: [39, 174, 96], font: 'Amiri', halign: 'right' },
+                styles: { halign: 'right', font: 'Amiri' },
                 margin: { top: 10 }
             });
             yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -214,15 +260,15 @@ export const generatePDF = (
         if (data.appointments && data.appointments.length > 0) {
             doc.setFontSize(14);
             doc.setTextColor(142, 68, 173); // Purple
-            doc.text(R(t('appointments')), 180, yPos, { align: 'right' });
+            doc.text(t('appointments'), 190, yPos, { align: 'right' });
             yPos += 5;
 
             autoTable(doc, {
                 startY: yPos,
-                head: [[R('التفاصيل'), R('الوقت'), R('العنوان')]],
-                body: data.appointments.map(a => [R(a.details || '-'), a.time, R(a.title)]),
+                head: [[t('details'), t('time'), t('title')]],
+                body: data.appointments.map(a => [a.details || '-', a.time, a.title]),
                 theme: 'grid',
-                headStyles: { fillColor: [142, 68, 173], font: 'Amiri', halign: 'right' }, // Purple
+                headStyles: { fillColor: [142, 68, 173], font: 'Amiri', halign: 'right' },
                 styles: { halign: 'right', font: 'Amiri' },
             });
             yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -232,15 +278,15 @@ export const generatePDF = (
         if (data.tasks && data.tasks.length > 0) {
             doc.setFontSize(14);
             doc.setTextColor(41, 128, 185); // Blue
-            doc.text(R(t('tasks')), 180, yPos, { align: 'right' });
+            doc.text(t('tasks'), 190, yPos, { align: 'right' });
             yPos += 5;
 
             autoTable(doc, {
                 startY: yPos,
-                head: [[R('الحالة'), R('الأولوية'), R('المهمة')]],
-                body: data.tasks.map(t => [R(t.status || 'معلق'), R(t.priority), R(t.title)]),
+                head: [[t('status'), t('priority'), t('title')]],
+                body: data.tasks.map(t => [t.status || 'Pendiente', t.priority, t.title]),
                 theme: 'striped',
-                headStyles: { fillColor: [41, 128, 185], font: 'Amiri', halign: 'right' }, // Blue
+                headStyles: { fillColor: [41, 128, 185], font: 'Amiri', halign: 'right' },
                 styles: { halign: 'right', font: 'Amiri' },
             });
             yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -250,15 +296,15 @@ export const generatePDF = (
         if (data.shopping && data.shopping.length > 0) {
             doc.setFontSize(14);
             doc.setTextColor(211, 84, 0); // Orange
-            doc.text(R(t('shopping')), 180, yPos, { align: 'right' });
+            doc.text(t('shopping'), 190, yPos, { align: 'right' });
             yPos += 5;
 
             autoTable(doc, {
                 startY: yPos,
-                head: [[R('الكمية'), R('الصنف')]],
-                body: data.shopping.map(s => [R(s.quantity || '1'), R(s.name)]),
+                head: [[t('quantity'), t('name')]],
+                body: data.shopping.map(s => [s.quantity || '1', s.name]),
                 theme: 'grid',
-                headStyles: { fillColor: [211, 84, 0], font: 'Amiri', halign: 'right' }, // Orange
+                headStyles: { fillColor: [211, 84, 0], font: 'Amiri', halign: 'right' },
                 styles: { halign: 'right', font: 'Amiri' },
             });
             yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -268,15 +314,15 @@ export const generatePDF = (
         if (data.expenses && data.expenses.length > 0) {
             doc.setFontSize(14);
             doc.setTextColor(192, 57, 43); // Red
-            doc.text(R(t('expenses')), 180, yPos, { align: 'right' });
+            doc.text(t('expenses'), 190, yPos, { align: 'right' });
             yPos += 5;
 
             autoTable(doc, {
                 startY: yPos,
-                head: [[R('المبلغ'), R('البند')]],
-                body: data.expenses.map(e => [e.amount, R(e.category)]),
+                head: [[t('amount'), t('category')]],
+                body: data.expenses.map(e => [e.amount, e.category]),
                 theme: 'striped',
-                headStyles: { fillColor: [192, 57, 43], font: 'Amiri', halign: 'right' }, // Red
+                headStyles: { fillColor: [192, 57, 43], font: 'Amiri', halign: 'right' },
                 styles: { halign: 'right', font: 'Amiri' },
             });
             yPos = (doc as any).lastAutoTable.finalY + 15;
@@ -285,21 +331,21 @@ export const generatePDF = (
     } else {
         // --- Timeline View (Hours) ---
         doc.setFontSize(14);
-        doc.text(R(t('unified_timeline')), 180, yPos, { align: 'right' });
+        doc.text(t('unified_timeline'), 190, yPos, { align: 'right' });
         yPos += 10;
 
         // Combine all time-based items
         const timelineItems = [];
-        if (data.prayerTimes) timelineItems.push(...data.prayerTimes.map(p => ({ time: p.time.split(' ')[0], type: 'صلاة', title: p.name, color: [39, 174, 96] })));
-        if (data.appointments) timelineItems.push(...data.appointments.map(a => ({ time: a.time, type: 'موعد', title: a.title, color: [142, 68, 173] })));
+        if (data.prayerTimes) timelineItems.push(...data.prayerTimes.map(p => ({ time: p.time.split(' ')[0], type: 'Oración', title: p.name, color: [39, 174, 96] })));
+        if (data.appointments) timelineItems.push(...data.appointments.map(a => ({ time: a.time, type: 'Cita', title: a.title, color: [142, 68, 173] })));
 
         // Sort by time
         timelineItems.sort((a, b) => a.time.localeCompare(b.time));
 
         autoTable(doc, {
             startY: yPos,
-            head: [[R('النشاط'), R('النوع'), R('الوقت')]],
-            body: timelineItems.map(i => [R(i.title), R(i.type), i.time]),
+            head: [[t('title'), t('type'), t('time')]],
+            body: timelineItems.map(i => [i.title, i.type, i.time]),
             theme: 'grid',
             headStyles: { font: 'Amiri', halign: 'right' },
             styles: { halign: 'right', font: 'Amiri' },
@@ -311,9 +357,9 @@ export const generatePDF = (
                 // Color coding rows based on type
                 if (data.section === 'body') {
                     const type = data.row.raw[1];
-                    if (type === 'صلاة' || type === R('صلاة')) {
+                    if (type === 'Oración') {
                         data.cell.styles.textColor = [39, 174, 96];
-                    } else if (type === 'موعد' || type === R('موعد')) {
+                    } else if (type === 'Cita') {
                         data.cell.styles.textColor = [142, 68, 173];
                     }
                 }
@@ -327,15 +373,16 @@ export const generatePDF = (
         doc.setPage(i);
         doc.setFontSize(10);
         doc.setTextColor(150);
-        doc.text(`${R(t('page'))} ${i} ${R(t('of'))} ${pageCount}`, 105, 290, { align: 'center' });
-        doc.text(R(t('generated_by')), 10, 290, { align: 'left' });
+        doc.text(`${t('page')} ${i} ${t('of')} ${pageCount}`, 105, 290, { align: 'center' });
+        doc.text(t('generated_by'), 10, 290, { align: 'left' });
     }
 
     saveAndSharePDF(doc, `barakah-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const generateStudentReport = (students: any[], lang: Language = 'ar') => {
-    const t = getT(lang);
+export const generateStudentReport = (students: any[], lang: Language = 'es') => {
+    lang = 'es';
+    const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -354,14 +401,14 @@ export const generateStudentReport = (students: any[], lang: Language = 'ar') =>
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES')}`, 105, 30, { align: 'center' });
+    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('es-ES')}`, 105, 30, { align: 'center' });
 
     autoTable(doc, {
         startY: 40,
         head: [[
-            lang === 'ar' ? reshapeArabic(t('status')) : t('status'),
-            lang === 'ar' ? reshapeArabic(t('phone')) : t('phone'),
-            lang === 'ar' ? reshapeArabic(t('student')) : t('student'),
+            t('status'),
+            t('phone'),
+            t('student'),
             '#'
         ]],
         body: students.map((s, idx) => [
@@ -371,8 +418,8 @@ export const generateStudentReport = (students: any[], lang: Language = 'ar') =>
             idx + 1
         ]),
         theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185], halign: lang === 'ar' ? 'right' : 'left', font: 'Amiri' },
-        styles: { halign: lang === 'ar' ? 'right' : 'left', font: 'Amiri' },
+        headStyles: { fillColor: [41, 128, 185], halign: 'left', font: 'Amiri' },
+        styles: { halign: 'left', font: 'Amiri' },
         columnStyles: {
             3: { cellWidth: 15 } // Count column
         }
@@ -382,14 +429,15 @@ export const generateStudentReport = (students: any[], lang: Language = 'ar') =>
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(10);
-        doc.text(lang === 'ar' ? reshapeArabic(`صفحة ${i} من ${pageCount}`) : `Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+        doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
     }
 
     saveAndSharePDF(doc, `students-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const generateStudentProfile = (student: any, communications: any[], lessons: any[], lang: Language = 'ar') => {
-    const t = getT(lang);
+export const generateStudentProfile = (student: any, communications: any[], lessons: any[], lang: Language = 'es') => {
+    lang = 'es';
+    const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -409,7 +457,7 @@ export const generateStudentProfile = (student: any, communications: any[], less
 
     doc.setFontSize(24);
     doc.setTextColor(44, 62, 80);
-    doc.text(lang === 'ar' ? (student.arabicName || student.fullName) : (student.fullName || student.arabicName), 190, 30, { align: 'right' });
+    doc.text((student.fullName || student.arabicName), 190, 30, { align: 'right' });
 
     doc.setFontSize(14);
     doc.setTextColor(127, 140, 141);
@@ -508,8 +556,9 @@ export const generateStudentProfile = (student: any, communications: any[], less
     saveAndSharePDF(doc, `${student.fullName}-profile.pdf`);
 };
 
-export const generateProtocolPDF = (protocol: any, studentName?: string, lang: Language = 'ar') => {
-    const t = getT(lang);
+export const generateProtocolPDF = (protocol: any, studentName?: string, lang: Language = 'es') => {
+    lang = 'es';
+    const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'mm',
@@ -533,7 +582,7 @@ export const generateProtocolPDF = (protocol: any, studentName?: string, lang: L
     }
 
     doc.setFontSize(10);
-    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES')}`, 105, 40, { align: 'center' });
+    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('es-ES')}`, 105, 40, { align: 'center' });
 
     let yPos = 50;
 
@@ -551,8 +600,8 @@ export const generateProtocolPDF = (protocol: any, studentName?: string, lang: L
 
             if (stage.items && stage.items.length > 0) {
                 const body = stage.items.map((item: any) => [
-                    item.deadline || '-',
-                    lang === 'ar' ? reshapeArabic(item.name) : item.name
+                    '-',
+                    item.name
                 ]);
 
                 autoTable(doc, {
@@ -598,8 +647,9 @@ export const generateCertificatePDF = (data: {
     customDateLabel?: string;
     customSheikhLabel?: string;
     customFooter?: string;
-}, lang: Language = 'ar') => {
-    const t = getT(lang);
+}, lang: Language = 'es') => {
+    lang = 'es';
+    const t = getLabel;
     const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -649,7 +699,7 @@ export const generateCertificatePDF = (data: {
     // Bismillah
     doc.setFontSize(20);
     doc.setTextColor(5, 150, 105);
-    const bismillah = lang === 'ar' ? reshapeArabic("بسم الله الرحمن الرحيم") : "بسم الله الرحمن الرحيم";
+    const bismillah = "بسم الله الرحمن الرحيم";
     doc.text(bismillah, pageWidth / 2, yPos, { align: 'center' });
     yPos += 15;
 
@@ -660,9 +710,7 @@ export const generateCertificatePDF = (data: {
     // Use custom title if provided
     let title = "";
     if (data.customTitle) {
-        title = lang === 'ar' ? reshapeArabic(data.customTitle) : data.customTitle;
-    } else {
-        title = lang === 'ar' ? reshapeArabic("شهادة اعتناق الإسلام") : "CERTIFICADO DE CONVERSIÓN AL ISLAM";
+        title = "CERTIFICADO DE CONVERSIÓN AL ISLAM";
     }
 
     doc.text(title, pageWidth / 2, yPos, { align: 'center' });
@@ -673,12 +721,6 @@ export const generateCertificatePDF = (data: {
     doc.setTextColor(55, 65, 81);
 
     let certifyText = "";
-    if (data.customBody1) {
-        certifyText = lang === 'ar' ? reshapeArabic(data.customBody1) : data.customBody1;
-    } else {
-        certifyText = lang === 'ar' ? reshapeArabic("نشهد بأن") : "Por medio del presente se certifica que";
-    }
-
     doc.text(certifyText, pageWidth / 2, yPos, { align: 'center' });
     yPos += 12;
 

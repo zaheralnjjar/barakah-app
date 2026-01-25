@@ -21,8 +21,13 @@ import { searchLocation } from '@/services/GeocodingService';
 // Icons
 import {
     CalendarPlus, ShoppingCart, DollarSign, FileText, CheckSquare, Target, MapPin,
-    Users, LayoutGrid, Calendar as CalendarIcon
+    Users, LayoutGrid, Calendar as CalendarIcon, Pill
 } from 'lucide-react';
+
+import { QuadrantProductivity } from './dashboard/QuadrantProductivity';
+import { QuadrantFinance } from './dashboard/QuadrantFinance';
+import { QuadrantNotes } from './dashboard/QuadrantNotes';
+import { QuadrantLocations } from './dashboard/QuadrantLocations';
 
 
 import NewMuslimsManager from './NewMuslims/NewMuslimsManager';
@@ -71,7 +76,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { medications } = useMedications();
     const { tasks, refreshTasks, addTask } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
-    const { createNote } = useNotesV2();
+    const { notes, createNote } = useNotesV2();
+    const { locations, saveParking } = useLocations();
 
 
     // State
@@ -119,7 +125,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     // Helper to check if a section should be visible
     const isSectionVisible = (sectionId: string) => routineVisibleSections.includes(sectionId);
 
-    const { saveParking } = useLocations();
+    // Use locations from destructured hook at top level
 
     // Shopping Add Form State
     const [shoppingItemName, setShoppingItemName] = useState('');
@@ -173,14 +179,16 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
             {/* 1. Header - Fixed */}
             <DashboardHeader />
 
-            {/* Outer Container with 3% margin on sides */}
-            <div className="mx-[3%] mt-2 w-[94%]">
+            {/* Outer Container with 2% margin on sides for tighter look */}
+            <div className="mx-[2%] mt-1 w-[96%]">
                 {/* Main Layout Container - 70/30 split when widgets active */}
-                <div className={`flex flex-col ${activeWidgets.length > 0 ? 'lg:flex-row-reverse' : ''} gap-4`}>
-                    {/* Main Content Area - 70% on desktop when widgets active */}
-                    <div className={`${activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full'} space-y-4`}>
+                <div className={`flex flex-col ${activeWidgets.length > 0 ? 'lg:flex-row-reverse' : ''} gap-3`}>
+                    {/* Main Content Area */}
+                    <div className={`${activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full'} space-y-3`}>
                         {/* 2. Prayer Times */}
-                        <DashboardHeaderStrip />
+                        <div className="-mt-1">
+                            <DashboardHeaderStrip />
+                        </div>
 
                         {/* 3. Quick Actions Icons - Always Expanded */}
                         <QuickActionsGrid
@@ -198,47 +206,38 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                         {/* 4. Parking Widget - Dynamic */}
                         <DashboardParking />
 
-                        {/* 5. Financial Summary - Collapsible */}
-                        <CollapsibleSection title="الملخص المالي" icon={DollarSign} defaultOpen={false}>
-                            <DashboardStats
-                                onNavigateToFinance={() => onNavigateToTab('finance')}
-                                financeData={financeData}
-                                todayExpense={todayExpense}
-                                dailyLimitARS={dailyLimitARS}
-                                newMuslimsCount={newMuslimsCount}
-                            />
-                        </CollapsibleSection>
-
-
-                        {/* Shopping List - Collapsible */}
-                        {isSectionVisible('shopping') && (
-                            <CollapsibleSection
-                                title="قائمة التسوق"
-                                icon={ShoppingCart}
-                                defaultOpen={showAddDialog === 'shopping' || shoppingItems.length > 0}
-                                badge={shoppingItems.length}
-                            >
-                                <DashboardShopping />
-                            </CollapsibleSection>
-                        )}
-
-                        {/* 8. Calendar & Appointments - Collapsible */}
-                        {isSectionVisible('calendar') && (
-                            <CollapsibleSection title="المواعيد" icon={CalendarIcon}>
-
-                                <DashboardCalendar
-                                    tasks={tasks}
+                        {/* 5. The 4 Quadrants Grid - 2x2 */}
+                        <div className="grid grid-cols-2 gap-3 pb-4">
+                            {/* Q1: Productivity */}
+                            <div className="h-[200px]">
+                                <QuadrantProductivity
                                     appointments={appointments}
-                                    habits={habits}
+                                    tasks={tasks}
                                     medications={medications}
-                                    prayerTimes={prayerTimes}
-                                    onNavigateToTab={onNavigateToTab}
-                                    weekStartDate={weekStartDate}
-                                    setWeekStartDate={setWeekStartDate}
-                                    refetch={refetch}
+                                    habits={habits}
                                 />
-                            </CollapsibleSection>
-                        )}
+                            </div>
+
+                            {/* Q2: Finance */}
+                            <div className="h-[200px]">
+                                <QuadrantFinance
+                                    financeData={{
+                                        ...financeData,
+                                        today_expense: todayExpense
+                                    }}
+                                />
+                            </div>
+
+                            {/* Q3: Notes */}
+                            <div className="h-[200px]">
+                                <QuadrantNotes notes={notes} />
+                            </div>
+
+                            {/* Q4: Locations */}
+                            <div className="h-[200px]">
+                                <QuadrantLocations locations={locations} />
+                            </div>
+                        </div>
 
 
 

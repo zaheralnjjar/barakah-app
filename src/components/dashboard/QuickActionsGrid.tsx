@@ -129,7 +129,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         { id: 'show_shopping', name: 'قائمة التسوق', icon: ShoppingCart, category: 'info', description: 'عرض عدد العناصر في قائمة التسوق' },
         { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
         { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض تقدم العادات اليومية' },
-        { id: 'show_goals', name: 'الأهداف', icon: Target, category: 'info', description: 'عرض تقدم الأهداف الحالية' },
+
 
         // Quick Actions
         { id: 'add_expense', name: 'إضافة مصروف', icon: DollarSign, category: 'action', description: 'إضافة مصروف سريع' },
@@ -587,7 +587,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     <DialogHeader>
                         <DialogTitle className="text-center">اختر نوع الحدث</DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-3 gap-3 py-4">
+                    <div className="grid grid-cols-2 gap-3 py-4">
                         <button
                             onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }}
                             className="flex flex-col items-center p-4 rounded-xl bg-orange-100 text-orange-600 hover:scale-105 transition-transform"

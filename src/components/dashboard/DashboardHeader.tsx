@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { isAndroid } from '@/utils/platformDetection';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -39,11 +40,41 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
     const { appointments, tasks } = useAppStore();
     const { isSyncing, lastSync, isOnline, pendingActions, failedActions, syncNow } = useCloudSync();
 
-    const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+    const spanishDate = currentDate.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long'
     });
+
+    const hijriDate = currentDate.toLocaleDateString('ar-SA-u-ca-islamic', {
+        day: 'numeric',
+        month: 'long'
+    });
+
+    // Helper to transliterate or map Hijri month to Spanish/English script as per user image
+    const getSpanishHijri = () => {
+        const parts = hijriDate.split(' ');
+        const day = parts[0];
+        const monthAr = parts[1];
+
+        const monthMap: Record<string, string> = {
+            'محرم': 'Muharram',
+            'صفر': 'Safar',
+            'ربيع الأول': 'Rabi I',
+            'ربيع الآخر': 'Rabi II',
+            'جمادى الأولى': 'Jumada I',
+            'جمادى الآخرة': 'Jumada II',
+            'رجب': 'Rajab',
+            'شعبان': 'Shaban',
+            'رمضان': 'Ramadan',
+            'شوال': 'Shawwal',
+            'ذو القعدة': 'Dhu al-Qi\'dah',
+            'ذو الحجة': 'Dhu al-Hijjah'
+        };
+
+        return `${day} de ${monthMap[monthAr] || monthAr}`;
+    };
+
+    const hijriSpanish = getSpanishHijri();
 
     // Check for upcoming events every 30 seconds
     useEffect(() => {
@@ -118,7 +149,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
     return (
         <>
             {/* ===== INTERACTIVE HEADER ===== */}
-            <div className="relative mb-6">
+            <div className={`relative ${isAndroid() ? 'pt-[6mm]' : 'pt-2'} mb-2`}>
                 {/* Event Notification Banner (slides in when event is near) */}
                 {showEventBanner && upcomingEvent && (
                     <div
@@ -139,16 +170,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 )}
 
                 {/* Normal Header */}
-                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-3 shadow-sm border border-emerald-100 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
+                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-2 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                        {/* Notification Bell - Right Side (First in RTL) */}
-                        <div className="flex items-center gap-1">
+                        {/* Notification Bell - Left Side */}
+                        <div className="flex items-center gap-1 order-1">
                             <NotificationBell />
                         </div>
 
                         {/* Logo - Centered */}
                         <div
-                            className="flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 transition-transform"
+                            className="flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 transition-transform order-2"
                             onMouseDown={() => {
                                 (window as any).logoPressTimer = setTimeout(() => {
                                     (window as any).logoIsLongPress = true;
@@ -178,17 +209,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                                 (window as any).logoIsLongPress = false;
                             }}
                         >
-                            <h1 className="text-xl md:text-2xl font-bold text-emerald-700 tracking-tight">البركة</h1>
-                            <span className="text-[10px] text-gray-400 font-light -mt-1 tracking-widest uppercase">Barakah Life</span>
+                            <h1 className="text-3xl md:text-3xl font-extrabold text-gray-900 tracking-tight font-arabic">البركة</h1>
                         </div>
 
-                        {/* Date Info - Left Side (Last in RTL) - COMPACT */}
+                        {/* Date Info - Right Side */}
                         <div
-                            className="bg-white border border-emerald-200 text-emerald-800 rounded-lg px-2 py-1 text-center cursor-pointer hover:bg-emerald-50 transition-all shadow-sm flex flex-col items-center justify-center min-w-[70px]"
+                            className="text-right flex flex-col items-end gap-0.5 order-3 min-w-[70px] cursor-pointer"
                             onClick={() => setShowHolidaysPopup(true)}
                         >
-                            <span className="text-xs font-bold leading-none">{currentDate.getDate()} {currentDate.toLocaleDateString('ar', { month: 'short' })}</span>
-                            <span className="text-[9px] text-emerald-600/80 leading-none mt-0.5">{hijriDate.split(' ')[0]} {hijriDate.split(' ')[1]}</span>
+                            <span className="text-[12px] font-medium text-gray-600 leading-none">{spanishDate}</span>
+                            <span className="text-[11px] text-gray-400 leading-none">{hijriSpanish}</span>
                         </div>
                     </div>
                 </div>

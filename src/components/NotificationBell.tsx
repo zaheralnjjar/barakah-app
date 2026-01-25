@@ -153,9 +153,9 @@ export const NotificationBell = () => {
                     <Button
                         variant="outline"
                         size="icon"
-                        className="h-10 w-10 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200 rounded-full shadow-sm"
+                        className="h-10 w-10 bg-amber-50 hover:bg-amber-100 text-amber-500 border-amber-200 rounded-full shadow-sm"
                     >
-                        <Bell className="w-5 h-5" />
+                        <Bell className="w-5 h-5 fill-amber-400" />
                     </Button>
                     {unreadCount > 0 && (
                         <span className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 rounded-full text-[11px] text-white flex items-center justify-center font-bold shadow-lg animate-pulse border-2 border-white">

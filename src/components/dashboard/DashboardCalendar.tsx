@@ -172,7 +172,7 @@ const DashboardCalendar: React.FC<DashboardCalendarProps> = ({
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-gray-700 flex items-center gap-2">
                         <CalendarPlus className="w-5 h-5 text-purple-500" />
-                        التقويم الأسبوعي
+                        المواعيد
                     </h3>
                     <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setWeekStartDate(new Date(weekStartDate.setDate(weekStartDate.getDate() - 7)))}>
