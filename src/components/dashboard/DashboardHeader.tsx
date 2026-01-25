@@ -170,8 +170,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 )}
 
                 {/* Normal Header */}
-                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-2 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
-                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-1 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
+                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
                         {/* Notification Bell - Left Side */}
                         <div className="flex items-center gap-1 order-1">
                             <NotificationBell />
@@ -209,16 +209,16 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                                 (window as any).logoIsLongPress = false;
                             }}
                         >
-                            <h1 className="text-3xl md:text-3xl font-extrabold text-gray-900 tracking-tight font-arabic">البركة</h1>
+                            <h1 className="text-2xl md:text-2xl font-extrabold text-gray-900 tracking-tight font-arabic">البركة</h1>
                         </div>
 
                         {/* Date Info - Right Side */}
                         <div
-                            className="text-right flex flex-col items-end gap-0.5 order-3 min-w-[70px] cursor-pointer"
+                            className="text-right flex flex-col items-end gap-0 order-3 min-w-[65px] cursor-pointer"
                             onClick={() => setShowHolidaysPopup(true)}
                         >
-                            <span className="text-[12px] font-medium text-gray-600 leading-none">{spanishDate}</span>
-                            <span className="text-[11px] text-gray-400 leading-none">{hijriSpanish}</span>
+                            <span className="text-[11px] font-bold text-gray-600 leading-none">{spanishDate}</span>
+                            <span className="text-[10px] text-gray-400 leading-none">{hijriSpanish}</span>
                         </div>
                     </div>
                 </div>

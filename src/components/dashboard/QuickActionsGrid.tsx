@@ -507,9 +507,34 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
     return (
         <>
-            {/* ===== CUSTOM SHORTCUTS BAR ===== */}
+            {/* ===== 3. QUICK ACTIONS - Two Rows Grid ===== */}
+            <div className="grid grid-cols-5 gap-2 mb-3">
+                {[
+                    { icon: Timer, label: 'مؤقت', color: 'bg-orange-100 text-orange-600', action: () => onOpenTimer?.() },
+                    { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
+                    { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
+                    { icon: ShoppingCart, label: 'تسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
+                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
+                    { icon: Calendar, label: 'تقويم', color: 'bg-indigo-100 text-indigo-600', action: () => onNavigateToTab?.('calendar') },
+                    { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
+                    { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-600', action: () => onOpenNewMuslims?.() },
+                    { icon: GraduationCap, label: 'أكاديميا', color: 'bg-violet-100 text-violet-600', action: () => navigate('/thesis') },
+                ].map((item, idx) => (
+                    <button
+                        key={idx}
+                        onClick={item.action}
+                        className={`flex flex-col items-center justify-center p-2 rounded-xl ${item.color} hover:scale-105 transition-transform`}
+                    >
+                        <item.icon className="w-5 h-5 mb-0.5" />
+                        <span className="text-[8px] font-medium whitespace-nowrap">{item.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* ===== CUSTOM SHORTCUTS BAR (NOW BELOW) ===== */}
             {(customShortcuts.length > 0 || customLocations.length > 0) && (
-                <div className="mb-3">
+                <div className="mb-2">
                     <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-4 h-4 text-emerald-500" />
                         <span className="text-xs font-bold text-gray-600">اختصاراتي</span>
@@ -555,31 +580,6 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                     </div>
                 </div>
             )}
-
-            {/* ===== 3. QUICK ACTIONS - Two Rows Grid ===== */}
-            <div className="grid grid-cols-5 gap-2 mb-2">
-                {[
-                    { icon: Timer, label: 'مؤقت', color: 'bg-orange-100 text-orange-600', action: () => onOpenTimer?.() },
-                    { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
-                    { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
-                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
-                    { icon: ShoppingCart, label: 'تسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
-                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
-                    { icon: Calendar, label: 'تقويم', color: 'bg-indigo-100 text-indigo-600', action: () => onNavigateToTab?.('calendar') },
-                    { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
-                    { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-600', action: () => onOpenNewMuslims?.() },
-                    { icon: GraduationCap, label: 'أكاديميا', color: 'bg-violet-100 text-violet-600', action: () => navigate('/thesis') },
-                ].map((item, idx) => (
-                    <button
-                        key={idx}
-                        onClick={item.action}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl ${item.color} hover:scale-105 transition-transform`}
-                    >
-                        <item.icon className="w-5 h-5 mb-0.5" />
-                        <span className="text-[8px] font-medium whitespace-nowrap">{item.label}</span>
-                    </button>
-                ))}
-            </div>
 
             {/* Event Type Selection Menu */}
             <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>

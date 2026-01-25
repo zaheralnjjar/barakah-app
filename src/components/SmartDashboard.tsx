@@ -175,22 +175,67 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
 
     return (
-        <div className="min-h-screen bg-gray-50/50 pb-24 animate-fade-in relative w-full max-w-[100vw] overflow-x-hidden">
+        <div className="min-h-screen bg-transparent pb-32 animate-fade-in relative w-full max-w-[100vw] overflow-y-auto">
             {/* 1. Header - Fixed */}
             <DashboardHeader />
 
             {/* Outer Container with 2% margin on sides for tighter look */}
-            <div className="mx-[2%] mt-1 w-[96%]">
-                {/* Main Layout Container - 70/30 split when widgets active */}
-                <div className={`flex flex-col ${activeWidgets.length > 0 ? 'lg:flex-row-reverse' : ''} gap-3`}>
+            <div className="mx-[2%] mt-0.5 w-[96%]">
+                {/* Main Layout Container */}
+                <div className={`flex flex-col ${activeWidgets.length > 0 ? 'lg:flex-row-reverse' : ''} gap-2`}>
                     {/* Main Content Area */}
-                    <div className={`${activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full'} space-y-3`}>
+                    <div className={`${activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full'} space-y-2`}>
                         {/* 2. Prayer Times */}
-                        <div className="-mt-1">
-                            <DashboardHeaderStrip />
+                        <DashboardHeaderStrip />
+
+                        {/* 3. The 4 Quadrants Grid - 2x2 (NOW HIGHER) */}
+                        <div className="grid grid-cols-2 gap-2 pb-1">
+                            {/* Q1: Productivity */}
+                            <div className="h-[180px]">
+                                <QuadrantProductivity
+                                    appointments={appointments}
+                                    tasks={tasks}
+                                    medications={medications}
+                                    habits={habits}
+                                    onOpenDetail={(type, item) => {
+                                        if (type === 'task') {
+                                            window.dispatchEvent(new CustomEvent('open-task-editor', { detail: item }));
+                                        } else if (type === 'appointment') {
+                                            window.dispatchEvent(new CustomEvent('open-appointment-editor', { detail: item }));
+                                        } else {
+                                            toast({ title: item.title || item.name, description: 'فتح التفاصيل...' });
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* Q2: Finance */}
+                            <div className="h-[180px]">
+                                <QuadrantFinance
+                                    financeData={{
+                                        ...financeData,
+                                        today_expense: todayExpense
+                                    }}
+                                />
+                            </div>
+
+                            {/* Q3: Notes */}
+                            <div className="h-[180px]">
+                                <QuadrantNotes
+                                    notes={notes}
+                                    onOpenNote={(note) => {
+                                        window.dispatchEvent(new CustomEvent('open-note-editor', { detail: note }));
+                                    }}
+                                />
+                            </div>
+
+                            {/* Q4: Locations */}
+                            <div className="h-[180px]">
+                                <QuadrantLocations locations={locations} />
+                            </div>
                         </div>
 
-                        {/* 3. Quick Actions Icons - Always Expanded */}
+                        {/* 4. Quick Actions Icons - (NOW BELOW QUADRANTS) */}
                         <QuickActionsGrid
                             onOpenAddDialog={setShowAddDialog}
                             onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
@@ -203,51 +248,17 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             activeWidgets={activeWidgets}
                         />
 
-                        {/* 4. Parking Widget - Dynamic */}
+                        {/* 5. Parking Widget - Dynamic */}
                         <DashboardParking />
-
-                        {/* 5. The 4 Quadrants Grid - 2x2 */}
-                        <div className="grid grid-cols-2 gap-3 pb-4">
-                            {/* Q1: Productivity */}
-                            <div className="h-[200px]">
-                                <QuadrantProductivity
-                                    appointments={appointments}
-                                    tasks={tasks}
-                                    medications={medications}
-                                    habits={habits}
-                                />
-                            </div>
-
-                            {/* Q2: Finance */}
-                            <div className="h-[200px]">
-                                <QuadrantFinance
-                                    financeData={{
-                                        ...financeData,
-                                        today_expense: todayExpense
-                                    }}
-                                />
-                            </div>
-
-                            {/* Q3: Notes */}
-                            <div className="h-[200px]">
-                                <QuadrantNotes notes={notes} />
-                            </div>
-
-                            {/* Q4: Locations */}
-                            <div className="h-[200px]">
-                                <QuadrantLocations locations={locations} />
-                            </div>
-                        </div>
-
-
 
                         {/* Pomodoro Timer (Hidden Trigger) */}
                         <PomodoroTimer hideTrigger={true} />
                     </div>
 
-                    {/* Tools Panel - 30% on desktop, full width below on mobile */}
+                    {/* Tools Panel - Bottom or Sidebar */}
                     {activeWidgets.length > 0 && (
                         <aside className="w-full lg:w-[30%] lg:sticky lg:top-4 lg:self-start">
+
                             <div className="bg-white border-2 border-teal-100 rounded-2xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-left-5">
                                 <div className="bg-gradient-to-r from-teal-500 to-emerald-500 p-3 flex items-center justify-between sticky top-0 z-10">
                                     <span className="text-white text-sm font-bold flex items-center gap-2">

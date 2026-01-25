@@ -12,13 +12,13 @@ export const QuadrantFinance: React.FC<QuadrantFinanceProps> = ({ financeData })
 
     return (
         <Card className="h-full border-emerald-100 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-            <div className="p-3 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between">
-                <h3 className="font-bold text-emerald-800 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
+            <div className="p-1.5 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between">
+                <h3 className="font-bold text-emerald-800 flex items-center gap-1.5 text-[10px]">
+                    <DollarSign className="w-3.5 h-3.5" />
                     المالية
                 </h3>
             </div>
-            <CardContent className="p-3 space-y-4">
+            <CardContent className="p-2 space-y-2">
                 {/* Balances */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">

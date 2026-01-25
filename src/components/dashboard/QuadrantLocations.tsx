@@ -15,29 +15,29 @@ export const QuadrantLocations: React.FC<QuadrantLocationsProps> = ({ locations 
 
     return (
         <Card className="h-full border-purple-100 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-            <div className="p-3 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between">
-                <h3 className="font-bold text-purple-800 flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
+            <div className="p-1.5 bg-purple-50/50 border-b border-purple-100 flex items-center justify-between">
+                <h3 className="font-bold text-purple-800 flex items-center gap-1.5 text-[10px]">
+                    <MapPin className="w-3.5 h-3.5" />
                     المواقع
                 </h3>
             </div>
-            <CardContent className="p-3 h-[calc(100%-45px)] overflow-y-auto custom-scrollbar">
+            <CardContent className="p-1 h-[calc(100%-30px)] overflow-y-auto custom-scrollbar">
                 {locations.length === 0 ? (
-                    <div className="p-8 text-center text-gray-400 text-xs">
-                        لا توجد مواقع محفوظة
+                    <div className="p-8 text-center text-gray-400 text-[10px]">
+                        لا توجد مواقع
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                        {locations.slice(0, 8).map((loc, idx) => (
+                    <div className="space-y-1">
+                        {locations.slice(0, 10).map((loc, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => handleNavigate(loc)}
-                                className="p-2 rounded-xl bg-white border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all flex flex-col items-center justify-center gap-1 group text-center"
+                                className="w-full p-1.5 rounded-lg bg-white border border-purple-100 hover:border-purple-300 hover:shadow-sm transition-all flex items-center gap-2 group text-right"
                             >
-                                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-500 transition-colors">
-                                    <Navigation className="w-4 h-4 text-purple-500 group-hover:text-white" />
+                                <div className="w-6 h-6 rounded-md bg-purple-50 flex items-center justify-center group-hover:bg-purple-500 transition-colors shrink-0">
+                                    <Navigation className="w-3 h-3 text-purple-500 group-hover:text-white" />
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-700 truncate w-full">
+                                <span className="text-[10px] font-bold text-gray-700 truncate flex-1">
                                     {loc.name || 'موقع غير معروف'}
                                 </span>
                             </button>
