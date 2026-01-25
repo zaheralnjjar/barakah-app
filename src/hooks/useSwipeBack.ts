@@ -30,12 +30,18 @@ export const useSwipeBack = (options: SwipeBackOptions = {}) => {
         }
 
         const handleTouchStart = (e: TouchEvent) => {
-            // Only detect swipes starting from the right edge
             const touch = e.touches[0];
             const screenWidth = window.innerWidth;
+            const EDGE_ZONE = 50;
 
-            // Start detection from right 50px of screen
-            if (touch.clientX > screenWidth - 50) {
+            // Detect swipe from LEFT edge (standard LTR back) OR RIGHT edge (standard RTL back/forward)
+            // On Android, back gesture works from BOTH edges usually.
+            // We will check if touch starts near either edge.
+            if (touch.clientX < EDGE_ZONE) {
+                touchStartX.current = touch.clientX;
+                touchStartY.current = touch.clientY;
+                isSwiping.current = true;
+            } else if (touch.clientX > screenWidth - EDGE_ZONE) {
                 touchStartX.current = touch.clientX;
                 touchStartY.current = touch.clientY;
                 isSwiping.current = true;
@@ -46,7 +52,20 @@ export const useSwipeBack = (options: SwipeBackOptions = {}) => {
             if (!isSwiping.current) return;
 
             const touch = e.touches[0];
-            const deltaX = touchStartX.current - touch.clientX;
+            // Delta calculation depends on start side.
+            // If started Left: Delta is Current - Start (Positive)
+            // If started Right: Delta is Start - Current (Positive)
+
+            const screenWidth = window.innerWidth;
+            const startedRight = touchStartX.current > screenWidth / 2;
+
+            let deltaX = 0;
+            if (startedRight) {
+                deltaX = touchStartX.current - touch.clientX;
+            } else {
+                deltaX = touch.clientX - touchStartX.current;
+            }
+
             const deltaY = Math.abs(touchStartY.current - touch.clientY);
 
             // If vertical movement is too much, cancel swipe
@@ -59,15 +78,22 @@ export const useSwipeBack = (options: SwipeBackOptions = {}) => {
             if (!isSwiping.current) return;
 
             const touch = e.changedTouches[0];
-            const deltaX = touchStartX.current - touch.clientX;
+            const screenWidth = window.innerWidth;
+            const startedRight = touchStartX.current > screenWidth / 2;
 
-            // Swipe left (positive deltaX) and exceeds threshold
+            let deltaX = 0;
+            if (startedRight) {
+                deltaX = touchStartX.current - touch.clientX;
+            } else {
+                deltaX = touch.clientX - touchStartX.current;
+            }
+
+            // Swipe exceeds threshold
             if (deltaX > threshold) {
                 if (onSwipeBack) {
                     onSwipeBack();
                 } else {
-                    // Default: navigate to dashboard
-                    navigate('/');
+                    navigate(-1);
                 }
             }
 

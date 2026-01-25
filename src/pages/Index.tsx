@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,10 +63,11 @@ interface SectionConfig {
 }
 
 const Index = () => {
+  const { activeTab, setActiveTab } = useOutletContext<{ activeTab: string, setActiveTab: (t: string) => void }>();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(true);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  // const [activeTab, setActiveTab] = useState("dashboard"); // Managed by CoreLayout now
   const [dashboardOrder, setDashboardOrder] = useState(['stats', 'appointments', 'shopping', 'map']);
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
@@ -141,12 +143,15 @@ const Index = () => {
       }
     };
 
+    const handleReportGenerator = () => setShowReportGenerator(true);
     window.addEventListener('open-quick-actions', handleQuickActions);
     window.addEventListener('trigger-cloud-sync', handleCloudSync);
+    window.addEventListener('open-report-generator', handleReportGenerator);
 
     return () => {
       window.removeEventListener('open-quick-actions', handleQuickActions);
       window.removeEventListener('trigger-cloud-sync', handleCloudSync);
+      window.removeEventListener('open-report-generator', handleReportGenerator);
     };
   }, [syncNow]);
 
@@ -338,26 +343,10 @@ const Index = () => {
       {showSetup && <PinLock isSetupMode onUnlock={() => { }} onSetupComplete={onSetupComplete} />}
 
       {/* Sidebar Navigation - Fixed on Right */}
-      <SideNavBar
-        activeTab={getActiveNavId()}
-        onNavigate={handleNavChange}
-        onSync={() => {
-          syncNow();
-          toast({ title: '🔄 جاري المزامنة...', description: 'يتم تحديث البيانات' });
-        }}
-        onOpenReports={() => setShowReportGenerator(true)}
-        onLongPress={(id) => {
-          if (id === 'settings_sync') {
-            syncNow();
-            toast({ title: 'جاري المزامنة...' });
-          } else {
-            setActiveSummary(id);
-          }
-        }}
-      />
+
 
       <div
-        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern lg:pr-16 pb-16 lg:pb-0 relative"
+        className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 islamic-pattern pb-16 lg:pb-0 relative"
       >        {/* Content Area - Padding right for sidebar */}
         <div className="w-full">
 

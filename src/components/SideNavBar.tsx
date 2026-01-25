@@ -26,14 +26,14 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
     }, []);
 
     const navItems = [
-        { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
-        { id: 'finance', label: 'المالية', icon: Calculator },
-        { id: 'productivity', label: 'الإنتاجية', icon: Briefcase },
-        { id: 'calendar', label: 'التقويم', icon: Calendar },
-        { id: 'prayer', label: 'الصلاة', icon: Moon },
-        { id: 'map', label: 'الخريطة', icon: MapPin },
-        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true },
-        { id: 'settings', label: 'الإعدادات', icon: Settings },
+        { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true, color: 'text-blue-600', activeBg: 'bg-blue-50' },
+        { id: 'finance', label: 'المالية', icon: Calculator, color: 'text-green-600', activeBg: 'bg-green-50' },
+        { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
+        { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-rose-600', activeBg: 'bg-rose-50' },
+        { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-600', activeBg: 'bg-emerald-50' },
+        { id: 'map', label: 'الخريطة', icon: MapPin, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
+        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, color: 'text-amber-600', activeBg: 'bg-amber-50' },
+        { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
     ];
 
     // Refs for long press
@@ -85,17 +85,17 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
                         onTouchEnd={() => handleEnd(item)}
                         onContextMenu={(e) => e.preventDefault()}
                         className={`
-                            ${isMobile ? 'flex-1' : 'w-12 h-12'} 
-                            h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-200
+                            ${isMobile ? 'flex-1 h-14' : 'w-12 h-12 rounded-xl'} 
+                            flex flex-col items-center justify-center transition-all duration-300
                             ${isActive
-                                ? 'bg-primary/15 text-primary shadow-sm'
-                                : 'text-gray-400 hover:bg-gray-100'
+                                ? `${item.activeBg} ${item.color} shadow-sm scale-110` // Active state with color
+                                : `text-gray-400 hover:bg-gray-50 hover:${item.color}` // Inactive state
                             }
                             active:scale-95
                         `}
                     >
-                        <Icon className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />
-                        {isMobile && <span className="text-[9px] mt-1 font-medium">{item.label}</span>}
+                        <Icon className={`${isMobile ? 'w-7 h-7' : 'w-6 h-6'} transition-colors`} />
+                        {/* Labels Removed for Mobile as requested */}
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side={isMobile ? "top" : "left"} className="bg-gray-900 text-white text-xs px-2 py-1 rounded-lg">
@@ -108,17 +108,9 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
     if (isMobile) {
         return (
             <TooltipProvider delayDuration={200}>
-                <nav className="fixed bottom-0 left-0 w-full h-16 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center px-2">
-                    {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
-
-                    {/* Action Buttons on Mobile */}
-                    <div className="flex items-center border-r border-gray-100 pr-1 mr-1 gap-1">
-                        <button
-                            onClick={onOpenReports}
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-blue-500 hover:bg-blue-50 active:scale-90 transition-transform"
-                        >
-                            <Send className="w-5 h-5" />
-                        </button>
+                <nav className="fixed bottom-0 left-0 w-full h-14 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center justify-between px-2">
+                    <div className="flex-1 flex items-center justify-around">
+                        {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                     </div>
                 </nav>
                 <EditorModalV2 isOpen={isNoteV2ModalOpen} onClose={() => setIsNoteV2ModalOpen(false)} />

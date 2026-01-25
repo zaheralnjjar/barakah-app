@@ -106,20 +106,14 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
                                 if (pressTimer.current) clearTimeout(pressTimer.current);
                             }}
                             onContextMenu={(e) => e.preventDefault()}
-                            className="flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-95 select-none"
+                            className="flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90 select-none"
                         >
                             <div className={`
-                                flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200
+                                flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200
                                 ${isActive ? 'bg-primary/10' : ''}
                             `}>
-                                <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-primary' : 'text-gray-400'}`} />
+                                <Icon className={`w-6 h-6 transition-colors ${isActive ? 'text-primary' : 'text-gray-400'}`} />
                             </div>
-                            <span className={`
-                                text-[9px] mt-0.5 font-medium transition-colors
-                                ${isActive ? 'text-primary' : 'text-gray-400'}
-                            `}>
-                                {item.label}
-                            </span>
                         </button>
                     );
                 })}

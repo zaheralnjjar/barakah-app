@@ -13,6 +13,7 @@ import { useMedications } from '@/hooks/useMedications';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useNotesV2 } from '@/hooks/useNotesV2';
 import { generateGenericPDF, ReportData } from '@/utils/pdfGenerator';
+import { generateGenericWord } from '@/utils/wordGenerator';
 import {
     FileText, Calendar, CheckSquare, Pill, Moon, MapPin, ShoppingCart,
     StickyNote, Users, User, Share2, Download, Search, ChevronLeft, Check, Plus, Trash2, MessageCircle, Sun
@@ -535,13 +536,20 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         if (!reportData) return;
         try {
             await generateGenericPDF(reportData, `Barakah-Report-${Date.now()}.pdf`);
-            if ((window as any).Capacitor) {
-                // generateGenericPDF handles sharing on mobile
-            } else {
-                toast({ title: 'تم تحميل ملف PDF ✅' });
-            }
+            toast({ title: 'تم تحميل ملف PDF ✅' });
         } catch (e) {
             toast({ title: 'خطأ في إنشاء ملف PDF', variant: 'destructive' });
+        }
+    };
+
+    const handleShareWord = async () => {
+        if (!reportData) return;
+        try {
+            await generateGenericWord(reportData, `Barakah-Report-${Date.now()}.docx`);
+            toast({ title: 'تم تحميل ملف Word ✅' });
+        } catch (e) {
+            console.error(e);
+            toast({ title: 'خطأ في إنشاء ملف Word', variant: 'destructive' });
         }
     };
 
@@ -698,9 +706,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                         </div>
 
                         <div className="flex gap-2">
-                            <Button onClick={handleSharePDF} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+                            <Button onClick={handleSharePDF} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
                                 <Share2 className="w-4 h-4 ml-2" />
-                                مشاركة / تحميل PDF
+                                تصدير PDF
+                            </Button>
+                            <Button onClick={handleShareWord} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                                <Download className="w-4 h-4 ml-2" />
+                                تصدير Word
                             </Button>
                         </div>
                     </div>

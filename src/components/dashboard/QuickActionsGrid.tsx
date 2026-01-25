@@ -602,13 +602,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                             <CheckSquare className="w-8 h-8 mb-2" />
                             <span className="text-sm font-medium">مهمة</span>
                         </button>
-                        <button
-                            onClick={() => { setShowEventMenu(false); onOpenAddDialog('goal'); }}
-                            className="flex flex-col items-center p-4 rounded-xl bg-emerald-100 text-emerald-600 hover:scale-105 transition-transform"
-                        >
-                            <Target className="w-8 h-8 mb-2" />
-                            <span className="text-sm font-medium">هدف</span>
-                        </button>
+
                     </div>
                 </DialogContent>
             </Dialog>

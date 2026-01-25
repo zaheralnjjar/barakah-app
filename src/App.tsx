@@ -32,8 +32,9 @@ import { App as CapApp } from '@capacitor/app';
 // Untracked/New Component
 import ThesisLayout from "./pages/thesis/ThesisLayout";
 import { DiagnosticPage } from "./components/DiagnosticPage";
-
+import WidgetPage from "./pages/WidgetPage";
 import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
+import CoreLayout from "./components/CoreLayout";
 
 const queryClient = new QueryClient();
 
@@ -149,10 +150,13 @@ const App = () => {
           <HashRouter>
             <GlobalSearchDialog />
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/notes-v2" element={<NotesLayoutV2 />} />
-              <Route path="/diagnostic" element={<DiagnosticPage />} />
-
+              {/* Core Layout Routes */}
+              <Route element={<CoreLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/notes-v2" element={<NotesLayoutV2 />} />
+                <Route path="/widget" element={<WidgetPage />} />
+                <Route path="/diagnostic" element={<DiagnosticPage />} />
+              </Route>
 
               {/* Thesis Manager Routes - Wrapped with Layout for BottomNavBar */}
               <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />
@@ -174,7 +178,7 @@ const App = () => {
         </ErrorBoundary>
       </TooltipProvider>
 
-    </QueryClientProvider>
+    </QueryClientProvider >
   );
 };
 

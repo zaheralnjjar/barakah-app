@@ -11,6 +11,7 @@ import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { Button } from '@/components/ui/button';
 import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid } from 'lucide-react';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
+import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
 import SideNavBar from '@/components/SideNavBar';
 import { useNavigate } from 'react-router-dom';
@@ -43,8 +44,12 @@ const NotesLayoutV2 = () => {
 
     // Hooks
     const {
-        notes, // Index fetches this, but NoteList might fetch its own or accept props. Ideally NoteList should receive notes prop if we want single source of truth. Does NoteList accept notes? Let's check NoteList... 
-        // Actually if NoteList fetches internally, we need to pass searchQuery to it.
+        folders,
+        isLoading: foldersLoading
+    } = useFolders();
+
+    const {
+        notes,
         updateNote
     } = useNotesV2(activeFolderId, searchQuery);
 
@@ -233,24 +238,13 @@ const NotesLayoutV2 = () => {
     return (
         <div className="flex h-screen bg-white w-full overflow-hidden" dir="rtl">
 
-            <SideNavBar
-                activeTab="notes-v2"
-                onNavigate={(tab) => {
-                    if (tab !== 'notes-v2') {
-                        navigate('/'); // Return to main system
-                    }
-                }}
-                onOpenReports={() => setShowReportGenerator(true)}
-                onSync={() => {
-                    toast({ title: 'المزامنة متاحة في الصفحة الرئيسية' });
-                }}
-            />
+
 
             {/* Sidebar (Collapsible) - Shifted left to make room for fixed nav */}
             <div
                 className={`
                     flex-shrink-0 bg-gray-50 border-l border-gray-100 transition-all duration-300 flex flex-col
-                    ${isMobile ? 'mr-0' : 'mr-16'}
+                    ${isMobile ? 'mr-0' : 'mr-0'}
                     ${isSidebarOpen
                         ? (isMobile ? 'w-0 hidden' : 'w-64')
                         : 'w-0 opacity-0 overflow-hidden'
@@ -284,14 +278,14 @@ const NotesLayoutV2 = () => {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-white">
 
-                {/* Top Navigation Bar */}
-                <div className="h-14 border-b border-gray-100 flex items-center px-4 gap-4 bg-white/50 backdrop-blur z-20">
+                {/* Top Navigation Bar - Lowered for Android */}
+                <div className="h-14 mt-6 border-b border-gray-100 flex items-center px-4 gap-4 bg-white/50 backdrop-blur z-20">
                     {/* Sidebar Toggle Removed as per request */}
 
                     {/* Breadcrumbs / Title */}
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                         <span
-                            className="hover:text-indigo-600 cursor-pointer"
+                            className="hover:text-indigo-600 cursor-pointer text-lg font-bold"
                             onClick={() => {
                                 setViewMode('grid');
                                 setActiveFolderId(null);
@@ -314,7 +308,7 @@ const NotesLayoutV2 = () => {
                                 <span className="font-medium text-gray-900">
                                     {activeFolderId === 'trash' ? 'سلة المحذوفات' :
                                         activeFolderId === 'bookmarked' ? 'إشارات مرجعية' :
-                                            `مجلد ${activeFolderId.slice(0, 4)}...`}
+                                            (folders.find(f => f.id === activeFolderId)?.name || 'مجلد')}
                                 </span>
                             </>
                         )}
@@ -337,18 +331,19 @@ const NotesLayoutV2 = () => {
                                     onClick={() => setViewMode('grid')}
                                     className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
                                 >
-                                    <LayoutGrid className="w-3 h-3 sm:ml-1" />
-                                    <span className="hidden xs:inline">مجلدات</span>
+                                    <span className="inline">مجلدات</span>
                                 </Button>
-                                <Button
-                                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setViewMode('kanban')}
-                                    className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
-                                >
-                                    <Menu className="w-3 h-3 sm:ml-1" />
-                                    <span className="hidden xs:inline">كنبان</span>
-                                </Button>
+                                {!isMobile && (
+                                    <Button
+                                        variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('kanban')}
+                                        className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
+                                    >
+                                        <Menu className="w-3 h-3 sm:ml-1" />
+                                        <span className="hidden xs:inline">كنبان</span>
+                                    </Button>
+                                )}
                             </div>
 
                             <Button
@@ -372,22 +367,7 @@ const NotesLayoutV2 = () => {
                         </div>
                     )}
 
-                    {/* Back Button (List or Editor Mode) */}
-                    <div className="flex items-center gap-2">
-                        {(activeNote || viewMode === 'list') && (
-                            <Button
-                                variant="ghost"
-                                className="text-gray-600 hover:text-indigo-600 font-bold"
-                                onClick={() => {
-                                    if (activeNote) handleCloseEditor();
-                                    else handleSelectFolder(null);
-                                }}
-                            >
-                                <ChevronRight className="w-5 h-5 ml-2 rtl:rotate-0" />
-                                <span>رجوع للرئيسية</span>
-                            </Button>
-                        )}
-                    </div>
+
                 </div>
 
                 {/* Content Views */}

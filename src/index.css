@@ -653,7 +653,37 @@ html {
   border: 2px solid white;
 }
 
-.custom-scrollbar-visible::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 10px;
+/* Tiptap / ProseMirror Editor Styles */
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-right: 1.5rem;
+  margin: 1em 0;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-right: 1.5rem;
+  margin: 1em 0;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+/* Ensure lists are visible in read-only mode too if shared styles used */
+.prose ul {
+  list-style-type: disc !important;
+  padding-right: 1.5em !important;
+}
+
+.prose ol {
+  list-style-type: decimal !important;
+  padding-right: 1.5em !important;
 }

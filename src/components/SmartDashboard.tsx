@@ -212,14 +212,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
                         {/* Shopping List - Collapsible */}
                         {isSectionVisible('shopping') && (
-                            <CollapsibleSection title="قائمة التسوق" icon={ShoppingCart} defaultOpen={false} badge={shoppingItems.length}>
+                            <CollapsibleSection
+                                title="قائمة التسوق"
+                                icon={ShoppingCart}
+                                defaultOpen={showAddDialog === 'shopping' || shoppingItems.length > 0}
+                                badge={shoppingItems.length}
+                            >
                                 <DashboardShopping />
                             </CollapsibleSection>
                         )}
 
                         {/* 8. Calendar & Appointments - Collapsible */}
                         {isSectionVisible('calendar') && (
-                            <CollapsibleSection title="التقويم والمواعيد" icon={CalendarIcon}>
+                            <CollapsibleSection title="المواعيد" icon={CalendarIcon}>
 
                                 <DashboardCalendar
                                     tasks={tasks}

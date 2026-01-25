@@ -147,7 +147,37 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                         </div>
 
                         {/* Logo - Centered */}
-                        <div className="flex flex-col items-center justify-center cursor-pointer" onClick={() => setShowBarakahPopup(true)}>
+                        <div
+                            className="flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 transition-transform"
+                            onMouseDown={() => {
+                                (window as any).logoPressTimer = setTimeout(() => {
+                                    (window as any).logoIsLongPress = true;
+                                    if (navigator.vibrate) navigator.vibrate(50);
+                                    window.dispatchEvent(new Event('open-report-generator'));
+                                }, 600);
+                            }}
+                            onMouseUp={() => {
+                                clearTimeout((window as any).logoPressTimer);
+                                if (!(window as any).logoIsLongPress) {
+                                    setShowBarakahPopup(true);
+                                }
+                                (window as any).logoIsLongPress = false;
+                            }}
+                            onTouchStart={() => {
+                                (window as any).logoPressTimer = setTimeout(() => {
+                                    (window as any).logoIsLongPress = true;
+                                    if (navigator.vibrate) navigator.vibrate(50);
+                                    window.dispatchEvent(new Event('open-report-generator'));
+                                }, 600);
+                            }}
+                            onTouchEnd={() => {
+                                clearTimeout((window as any).logoPressTimer);
+                                if (!(window as any).logoIsLongPress) {
+                                    setShowBarakahPopup(true);
+                                }
+                                (window as any).logoIsLongPress = false;
+                            }}
+                        >
                             <h1 className="text-xl md:text-2xl font-bold text-emerald-700 tracking-tight">البركة</h1>
                             <span className="text-[10px] text-gray-400 font-light -mt-1 tracking-widest uppercase">Barakah Life</span>
                         </div>

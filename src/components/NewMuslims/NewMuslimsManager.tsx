@@ -850,12 +850,21 @@ const NewMuslimsManager = () => {
 
                 // Schedule Notification
                 const apptDate = new Date(`${date}T${time}`);
-                NotificationManager.schedule({
-                    id: parseInt(data.id) || Date.now(),
-                    title: `موعد: ${type}`,
-                    body: `مع الطالب: ${studentName}`,
-                    schedule: apptDate
-                });
+                // Use numeric ID for notification (Capacitor requirement)
+                // If ID is UUID, parseInt fails. Fallback to timestamp or hash.
+                const notifId = data.id && !isNaN(parseInt(data.id)) ? parseInt(data.id) : Math.floor(Date.now() % 100000);
+
+                try {
+                    NotificationManager.schedule({
+                        id: notifId,
+                        title: `موعد: ${type}`,
+                        body: `مع الطالب: ${studentName}`,
+                        schedule: apptDate
+                    });
+                } catch (ne) {
+                    console.error("Notification schedule error", ne);
+                    // Do not fail the booking if notification fails
+                }
 
                 toast({ title: "تم الحجز", description: "تم حجز الموعد وتفعيل التذكير" });
                 setIsApptOpen(false);
