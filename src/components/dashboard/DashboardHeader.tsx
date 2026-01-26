@@ -170,7 +170,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 )}
 
                 {/* Normal Header */}
-                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-1 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`}>
+                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-1 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`} dir="ltr">
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
                         {/* Notification Bell - Left Side */}
                         <div className="flex items-center gap-1 order-1">

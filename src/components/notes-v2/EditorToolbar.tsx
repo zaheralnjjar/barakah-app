@@ -18,7 +18,8 @@ import {
     Download,
     Image as ImageIcon,
     FileText,
-    File as FileIcon
+    File as FileIcon,
+    Plus
 } from 'lucide-react';
 import {
     Popover,
@@ -30,7 +31,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 interface EditorToolbarProps {
     editor: Editor | null;
     onOpenTemplates?: () => void;
-    onExport?: (type: 'image' | 'pdf' | 'word') => void;
+    onExport?: (type: 'image' | 'pdf' | 'word' | 'text') => void;
 
 }
 
@@ -140,6 +141,30 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
 
+                {/* Zoom Controls */}
+                < div className="flex bg-gray-50 rounded-lg p-0.5 items-center mr-1" >
+                    <button
+                        onClick={() => {
+                            const current = parseInt(editor.getAttributes('textStyle').fontSize || '16');
+                            editor.chain().focus().setMark('textStyle', { fontSize: `${Math.max(10, current - 2)}` }).run();
+                        }}
+                        className="p-1 rounded-md hover:bg-white hover:shadow-sm text-gray-500 hover:text-indigo-600 transition-all"
+                        title="تصغير الخط"
+                    >
+                        <Minus className="w-3 h-3" />
+                    </button>
+                    <button
+                        onClick={() => {
+                            const current = parseInt(editor.getAttributes('textStyle').fontSize || '16');
+                            editor.chain().focus().setMark('textStyle', { fontSize: `${current + 2}` }).run();
+                        }}
+                        className="p-1 rounded-md hover:bg-white hover:shadow-sm text-gray-500 hover:text-indigo-600 transition-all"
+                        title="تكبير الخط"
+                    >
+                        <Plus className="w-3 h-3" />
+                    </button>
+                </div >
+
                 <div className="w-px h-5 bg-gray-200 mx-1" />
 
                 {/* Color Picker */}
@@ -211,12 +236,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </div>
                     </PopoverContent>
                 </Popover>
-            </div>
+            </div >
 
             {/* Row 2: Alignment, Lists, Extra */}
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+            < div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1" >
                 {/* Alignment */}
-                <div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr">
+                < div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr" >
                     <button
                         onClick={() => editor.chain().focus().setTextAlign('left').run()}
                         className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
@@ -233,7 +258,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
                         className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
                     ><AlignJustify className="w-4 h-4" /></button>
-                </div>
+                </div >
 
                 <div className="w-px h-5 bg-gray-200 mx-1" />
 
@@ -310,7 +335,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </div>
                     </PopoverContent>
                 </Popover>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

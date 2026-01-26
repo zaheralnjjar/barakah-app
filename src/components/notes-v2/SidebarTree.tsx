@@ -1,7 +1,15 @@
 import React from 'react';
 import { useFolders } from '@/hooks/useFolders';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Trash2, Search, Bookmark } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Trash2, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Edit, Trash2 as TrashIcon } from "lucide-react";
+import { EditFolderDialog } from "./EditFolderDialog";
 
 interface SidebarTreeProps {
     activeFolderId: string | null;
@@ -11,9 +19,38 @@ interface SidebarTreeProps {
 }
 
 export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSelectFolder, onSearch, collapsed }) => {
-    const { folders } = useFolders();
+    const { folders, deleteFolder } = useFolders();
     const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
+    const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null);
 
+    const editingFolder = React.useMemo(() =>
+        folders.find(f => f.id === editingFolderId) || null
+        , [folders, editingFolderId]);
+
+    const handleDeleteFolder = async (folderId: string, folderName: string) => {
+        if (window.confirm(`هل أنت متأكد من حذف مجلد "${folderName}" وكافة محتوياته؟ (سيتم حذف المجلدات الفرعية أيضاً)`)) {
+            // Find all descendants recursively
+            const getAllDescendants = (parentId: string): string[] => {
+                const children = folders.filter(f => f.parent_id === parentId);
+                let ids = children.map(c => c.id);
+                children.forEach(child => {
+                    ids = [...ids, ...getAllDescendants(child.id)];
+                });
+                return ids;
+            };
+
+            const idsToDelete = [folderId, ...getAllDescendants(folderId)];
+
+            // Delete all collected IDs
+            // We do this concurrently or sequentially
+            try {
+                await Promise.all(idsToDelete.map(id => deleteFolder(id)));
+                // Also trigger a refresh if needed, but hook handles it
+            } catch (error) {
+                console.error("Error deleting folders:", error);
+            }
+        }
+    };
 
     const toggleFolder = (e: React.MouseEvent, folderId: string) => {
         e.stopPropagation();
@@ -37,50 +74,51 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
 
         return (
             <div key={folder.id} className="select-none">
-                <div
-                    onClick={() => onSelectFolder(folder.id)}
-                    className={`
-                        flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm mb-0.5
-                        ${isActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}
-                        ${collapsed ? 'justify-center px-1' : ''}
-                    `}
-                    style={!collapsed ? { paddingRight: `${depth * 12 + 12}px` } : {}} // RTL Padding only when not collapsed
-                >
-                    {/* Expand Toggle */}
-                    {!collapsed && (
-                        <button
-                            onClick={(e) => toggleFolder(e, folder.id)}
-                            className={`p-0.5 rounded-md hover:bg-gray-200 transition-colors ${!hasChildren ? 'opacity-0 pointer-events-none' : ''}`}
+                <ContextMenu>
+                    <ContextMenuTrigger>
+                        <div
+                            onClick={() => onSelectFolder(folder.id)}
+                            className={`
+                                flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm mb-0.5
+                                ${isActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}
+                                ${collapsed ? 'justify-center px-1' : ''}
+                            `}
+                            style={!collapsed ? { paddingRight: `${depth * 12 + 12}px` } : {}} // RTL Padding only when not collapsed
                         >
-                            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rtl:rotate-180" />}
-                        </button>
-                    )}
+                            {/* Expand Toggle */}
+                            {!collapsed && (
+                                <button
+                                    onClick={(e) => toggleFolder(e, folder.id)}
+                                    className={`p-0.5 rounded-md hover:bg-gray-200 transition-colors ${!hasChildren ? 'opacity-0 pointer-events-none' : ''}`}
+                                >
+                                    {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rtl:rotate-180" />}
+                                </button>
+                            )}
 
-                    {/* Icon */}
-                    {isExpanded ?
-                        <FolderOpen className="w-4 h-4" style={{ color: folder.color || '#818cf8' }} /> :
-                        <Folder className="w-4 h-4" style={{ color: folder.color || '#9ca3af' }} />
-                    }
+                            {/* Icon */}
+                            {isExpanded ?
+                                <FolderOpen className="w-4 h-4" style={{ color: folder.color || '#818cf8' }} /> :
+                                <Folder className="w-4 h-4" style={{ color: folder.color || '#9ca3af' }} />
+                            }
 
-                    {!collapsed && <span className="truncate">{folder.name}</span>}
-                </div>
+                            {!collapsed && <span className="truncate">{folder.name}</span>}
+                        </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-48 text-right" dir="rtl">
+                        <ContextMenuItem onClick={() => setEditingFolderId(folder.id)} className="flex items-center gap-2 cursor-pointer">
+                            <Edit className="w-4 h-4" />
+                            <span>تعديل المجلد</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                            onClick={() => handleDeleteFolder(folder.id, folder.name)}
+                            className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                            <span>حذف المجلد</span>
+                        </ContextMenuItem>
+                    </ContextMenuContent>
+                </ContextMenu>
 
-                {/* If collapsed, we don't show children unless we want a popover tree. For now, hide children in collapsed mode or just render them flat?
-                   Actually simpler: if collapsed, don't show children indent.
-                   Wait, user said "Icons only". If hierarchy is important, maybe we shouldn't hide it.
-                   But for "small icons only", typically we just show roots or flattening is hard.
-                   Let's assume collapsed mode is simple list.
-                   BUT if I hide children in collapsed mode, navigation is broken for subfolders.
-                   Let's render children but without indentation in collapsed mode? No that's confusing.
-                   Let's rendering children ONLY if expanded. Even if collapsed, user can't toggle expand because I hid the button.
-                   So in collapsed mode, maybe we only show root folders?
-                   Or we show ALL flat?
-                   Let's keep rendering children, but user can't toggle. 
-                   If they are already expanded, they show.
-                   Let's better HIDE children in collapsed mode for simplicity, OR rely on `expandedFolders` but user can't click toggle.
-                   Let's assume collapsed is mainly for quick access to *some* folders.
-                   Actually, let's just hide children render if collapsed to avoid clutter.
-                */}
                 {isExpanded && hasChildren && !collapsed && (
                     <div>
                         {children.map(child => renderFolder(child, depth + 1))}
@@ -125,7 +163,6 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                 {!collapsed && <span>كل الملاحظات</span>}
             </div>
 
-            {/* Bookmarks Removed */}
             <div className="mb-4" />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar w-full">
@@ -148,6 +185,12 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                 <Trash2 className="w-4 h-4" />
                 {!collapsed && <span>سلة المحذوفات</span>}
             </div>
+
+            <EditFolderDialog
+                isOpen={!!editingFolderId}
+                onClose={() => setEditingFolderId(null)}
+                folder={editingFolder}
+            />
         </div>
     );
 };

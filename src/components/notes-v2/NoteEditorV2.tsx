@@ -122,7 +122,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             attributes: {
                 class: 'prose prose-lg max-w-none focus:outline-none min-h-[300px] px-4 py-4 md:px-8 md:py-6 text-gray-700 leading-relaxed dir-rtl',
                 dir: 'auto',
-                style: 'min-height: 100%;' // Help click-anywhere behavior
+                style: 'min-height: 100%; font-size: 12pt; font-family: inherit;' // Enforce 12pt for body
             },
         },
     });
@@ -156,11 +156,21 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }
     };
 
-    const handleExport = async (type: 'image' | 'pdf' | 'word') => {
+    const handleExport = async (type: 'image' | 'pdf' | 'word' | 'text') => {
         if (!editor) return;
 
         try {
-            if (type === 'word') {
+            if (type === 'text') {
+                const text = editor.getText();
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Note-${Date.now()}.txt`;
+                link.click();
+                URL.revokeObjectURL(url);
+                toast({ title: 'تم تصدير الملف النصي' });
+            } else if (type === 'word') {
                 const json = editor.getJSON();
                 // ... (word logic)
             } else if (type === 'pdf' || type === 'image') {
@@ -288,6 +298,12 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     })()}
                 >
                     <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
+                    {/* Force 12pt on everything as requested */}
+                    <style>{`
+                        .ProseMirror p, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror ul, .ProseMirror ol {
+                            font-size: 12pt !important;
+                        }
+                    `}</style>
                 </div>
             </div>
 
