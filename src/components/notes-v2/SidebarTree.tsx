@@ -10,6 +10,16 @@ import {
 } from "@/components/ui/context-menu";
 import { Edit, Trash2 as TrashIcon } from "lucide-react";
 import { EditFolderDialog } from "./EditFolderDialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SidebarTreeProps {
     activeFolderId: string | null;
@@ -27,28 +37,30 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
         folders.find(f => f.id === editingFolderId) || null
         , [folders, editingFolderId]);
 
-    const handleDeleteFolder = async (folderId: string, folderName: string) => {
-        if (window.confirm(`هل أنت متأكد من حذف مجلد "${folderName}" وكافة محتوياته؟ (سيتم حذف المجلدات الفرعية أيضاً)`)) {
-            // Find all descendants recursively
-            const getAllDescendants = (parentId: string): string[] => {
-                const children = folders.filter(f => f.parent_id === parentId);
-                let ids = children.map(c => c.id);
-                children.forEach(child => {
-                    ids = [...ids, ...getAllDescendants(child.id)];
-                });
-                return ids;
-            };
+    const [folderToDelete, setFolderToDelete] = React.useState<{ id: string, name: string } | null>(null);
 
-            const idsToDelete = [folderId, ...getAllDescendants(folderId)];
+    const handleDeleteFolder = (folderId: string, folderName: string) => {
+        setFolderToDelete({ id: folderId, name: folderName });
+    };
 
-            // Delete all collected IDs
-            // We do this concurrently or sequentially
-            try {
-                await Promise.all(idsToDelete.map(id => deleteFolder(id)));
-                // Also trigger a refresh if needed, but hook handles it
-            } catch (error) {
-                console.error("Error deleting folders:", error);
-            }
+    const confirmDeleteFolder = async (folderId: string) => {
+        // Find all descendants recursively
+        const getAllDescendants = (parentId: string): string[] => {
+            const children = folders.filter(f => f.parent_id === parentId);
+            let ids = children.map(c => c.id);
+            children.forEach(child => {
+                ids = [...ids, ...getAllDescendants(child.id)];
+            });
+            return ids;
+        };
+
+        const idsToDelete = [folderId, ...getAllDescendants(folderId)];
+
+        try {
+            await Promise.all(idsToDelete.map(id => deleteFolder(id)));
+            setFolderToDelete(null);
+        } catch (error) {
+            console.error("Error deleting folders:", error);
         }
     };
 
@@ -191,6 +203,32 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                 onClose={() => setEditingFolderId(null)}
                 folder={editingFolder}
             />
+
+            <AlertDialog open={!!folderToDelete} onOpenChange={(open) => !open && setFolderToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-right">حذف المجلد</AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                            هل أنت متأكد من حذف مجلد "{folderToDelete?.name}" وكافة محتوياته؟
+                            <br />
+                            سيتم نقل المجلد والملاحظات بداخله إلى سلة المحذوفات.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex-row-reverse gap-2">
+                        <AlertDialogCancel className="mt-0">إلغاء</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => {
+                                if (folderToDelete) {
+                                    confirmDeleteFolder(folderToDelete.id);
+                                }
+                            }}
+                        >
+                            حذف
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

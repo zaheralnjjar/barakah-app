@@ -165,16 +165,22 @@ export const useLocations = () => {
             type?: 'location' | 'parking';
         }
     ): Promise<SavedLocation | null> => {
+        const now = new Date();
+        const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        // Append date/time if not already present
+        const formattedTitle = title.includes(dateTimeStr) ? title : `${title} ${dateTimeStr}`;
+
         const newLocation: SavedLocation = {
             id: Date.now().toString(),
-            title,
+            title: formattedTitle,
             address: options?.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
             lat,
             lng,
             url: `geo:${lat},${lng}`,
             category: options?.category || 'other',
             type: options?.type || 'location',
-            createdAt: new Date().toISOString()
+            createdAt: now.toISOString()
         };
 
         try {

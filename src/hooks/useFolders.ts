@@ -99,12 +99,24 @@ export const useFolders = () => {
                 .update({ is_deleted: true })
                 .eq('folder_id', id);
 
-            if (notesError) throw notesError;
+            if (notesError) {
+                console.warn('Cascade to notes failed (column may be missing):', notesError);
+                // We proceed since the folder itself was marked deleted if folderError was null
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });
             toast({ title: 'تم حذف المجلد' });
         },
+        onError: (err: any) => {
+            console.error('Delete folder error:', err);
+            toast({
+                title: 'فشل الحذف',
+                description: 'تأكد من وجود عمود is_deleted في جدول folders في Supabase. يرجى مراجعة التعليمات.',
+                variant: 'destructive',
+                duration: 5000
+            });
+        }
     });
 
     return {

@@ -10,6 +10,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { useCloudSync } from '@/hooks/useCloudSync';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 import { Timer, Play } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DashboardHeaderProps {
     currentDate?: Date;
@@ -169,56 +170,31 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                     </div>
                 )}
 
-                {/* Normal Header */}
-                <div className={`bg-gradient-to-br from-white to-emerald-50/50 rounded-2xl p-1 shadow-sm border border-emerald-50/50 transition-opacity ${showEventBanner ? 'opacity-0' : 'opacity-100'}`} dir="ltr">
-                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
-                        {/* Notification Bell - Left Side */}
-                        <div className="flex items-center gap-1 order-1">
+                {/* Normal Header (Web/Compact) */}
+                <div className="bg-white/80 backdrop-blur-md rounded-2xl p-1.5 px-4 shadow-sm border border-emerald-50/50 transition-all hover:shadow-md" dir="ltr">
+                    <div className="flex items-center justify-between gap-4">
+                        {/* Notification Bell - Left Section */}
+                        <div className="flex items-center gap-2">
                             <NotificationBell />
                         </div>
 
-                        {/* Logo - Centered */}
+                        {/* Logo - Centered Section */}
                         <div
-                            className="flex flex-col items-center justify-center cursor-pointer select-none active:scale-95 transition-transform order-2"
-                            onMouseDown={() => {
-                                (window as any).logoPressTimer = setTimeout(() => {
-                                    (window as any).logoIsLongPress = true;
-                                    if (navigator.vibrate) navigator.vibrate(50);
-                                    window.dispatchEvent(new Event('open-report-generator'));
-                                }, 600);
-                            }}
-                            onMouseUp={() => {
-                                clearTimeout((window as any).logoPressTimer);
-                                if (!(window as any).logoIsLongPress) {
-                                    setShowBarakahPopup(true);
-                                }
-                                (window as any).logoIsLongPress = false;
-                            }}
-                            onTouchStart={() => {
-                                (window as any).logoPressTimer = setTimeout(() => {
-                                    (window as any).logoIsLongPress = true;
-                                    if (navigator.vibrate) navigator.vibrate(50);
-                                    window.dispatchEvent(new Event('open-report-generator'));
-                                }, 600);
-                            }}
-                            onTouchEnd={() => {
-                                clearTimeout((window as any).logoPressTimer);
-                                if (!(window as any).logoIsLongPress) {
-                                    setShowBarakahPopup(true);
-                                }
-                                (window as any).logoIsLongPress = false;
-                            }}
+                            className="flex items-center gap-2 cursor-pointer select-none active:scale-95 transition-transform"
+                            onClick={() => setShowBarakahPopup(true)}
                         >
-                            <h1 className="text-2xl md:text-2xl font-extrabold text-gray-900 tracking-tight font-arabic">البركة</h1>
+                            <h1 className="font-extrabold text-gray-900 tracking-tighter font-arabic text-xl md:text-3xl">البركة</h1>
                         </div>
 
-                        {/* Date Info - Right Side */}
+                        {/* Date Info - Right Section (One line for Web/Compact) */}
                         <div
-                            className="text-right flex flex-col items-end gap-0 order-3 min-w-[65px] cursor-pointer"
+                            className="flex items-center gap-3 cursor-pointer text-right"
                             onClick={() => setShowHolidaysPopup(true)}
                         >
-                            <span className="text-[11px] font-bold text-gray-600 leading-none">{spanishDate}</span>
-                            <span className="text-[10px] text-gray-400 leading-none">{hijriSpanish}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-700 text-sm md:text-lg">{spanishDate}</span>
+                                <span className="text-gray-400 text-[10px] md:text-xs border-r border-gray-100 pr-2">{hijriSpanish}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

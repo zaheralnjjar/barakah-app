@@ -16,6 +16,53 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Available Actions (25+ options)
+export const AVAILABLE_ACTIONS = [
+    { id: 'show_new_muslims', name: 'هداية', icon: Users, category: 'info', description: 'الانتقال إلى قسم هداية' },
+    // Information Display
+    { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },
+    { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
+    { id: 'show_dollar', name: 'سعر الدولار', icon: DollarSign, category: 'info', description: 'عرض سعر الدولار الرسمي والبلو' },
+    { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
+    { id: 'show_today_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'عرض عدد المهام المتبقية لليوم' },
+    { id: 'show_appointments', name: 'المواعيد القادمة', icon: Calendar, category: 'info', description: 'عرض أقرب موعد قادم' },
+    { id: 'show_shopping', name: 'قائمة التسوق', icon: ShoppingCart, category: 'info', description: 'عرض عدد العناصر في قائمة التسوق' },
+    { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
+    { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض تقدم العادات اليومية' },
+
+    // Quick Actions
+    { id: 'add_expense', name: 'إضافة مصروف', icon: DollarSign, category: 'action', description: 'إضافة مصروف سريع' },
+    { id: 'add_task', name: 'إضافة مهمة', icon: ListChecks, category: 'action', description: 'إضافة مهمة جديدة' },
+    { id: 'add_note', name: 'ملاحظة صوتية', icon: Mic, category: 'action', description: 'تسجيل ملاحظة صوتية' },
+    { id: 'save_parking', name: 'حفظ موقف', icon: MapPin, category: 'action', description: 'حفظ موقف السيارة الحالي' },
+    { id: 'find_parking', name: 'مكان سيارتي', icon: Navigation, category: 'action', description: 'الملاحة إلى آخر موقف محفوظ' },
+    { id: 'start_pomodoro', name: 'بومودورو', icon: Timer, category: 'action', description: 'بدء مؤقت تركيز 25 دقيقة' },
+    { id: 'add_shopping', name: 'للتسوق', icon: ShoppingCart, category: 'action', description: 'إضافة عنصر لقائمة التسوق' },
+    { id: 'copy_location', name: 'نسخ موقعي', icon: Copy, category: 'action', description: 'نسخ رابط الموقع الحالي' },
+    { id: 'open_map', name: 'فتح الخريطة', icon: ExternalLink, category: 'action', description: 'فتح الموقع على الخريطة' },
+
+    // Calculators
+    { id: 'calc_currency', name: 'تحويل العملات', icon: Calculator, category: 'calc', description: 'حاسبة تحويل ARS ↔ USD' },
+    { id: 'calc_percentage', name: 'حساب النسبة', icon: Calculator, category: 'calc', description: 'حاسبة النسبة المئوية' },
+    { id: 'calc_age', name: 'حساب العمر', icon: Calendar, category: 'calc', description: 'حساب العمر بالهجري والميلادي' },
+    { id: 'calc_days', name: 'الفرق بين تاريخين', icon: Calendar, category: 'calc', description: 'حساب عدد الأيام بين تاريخين' },
+    { id: 'calc_salary', name: 'حساب الراتب اليومي', icon: DollarSign, category: 'calc', description: 'حساب الدخل اليومي من الراتب الشهري' },
+
+    // Reminders
+    { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'remind', description: 'تذكير بعد 5 دقائق' },
+    { id: 'remind_15min', name: 'تذكير 15 دقيقة', icon: Bell, category: 'remind', description: 'تذكير بعد 15 دقيقة' },
+    { id: 'remind_1hour', name: 'تذكير ساعة', icon: Bell, category: 'remind', description: 'تذكير بعد ساعة' },
+    { id: 'remind_water', name: 'شرب الماء', icon: Droplets, category: 'remind', description: 'تذكير بشرب الماء كل ساعة' },
+    { id: 'remind_break', name: 'استراحة', icon: Coffee, category: 'remind', description: 'تذكير بأخذ استراحة' },
+
+    // AI/Smart
+    { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'smart', description: 'ملخص ذكي لنشاطات اليوم' },
+    { id: 'quick_insights', name: 'رؤى سريعة', icon: Zap, category: 'smart', description: 'تحليل سريع للمصاريف والمهام' },
+    { id: 'routine_modes', name: 'أوضاع دائمة', icon: Settings, category: 'smart', description: 'إدارة القوالب الروتينية' },
+];
+
+export const getActionById = (id: string) => AVAILABLE_ACTIONS.find(a => a.id === id);
+
 interface QuickActionsGridProps {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal') => void;
     onQuickParking?: () => void;
@@ -113,75 +160,6 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
         setNewLocUrl(link);
         if (!newLocName) setNewLocName(searchAddress);
     };
-
-    // Available Actions (25+ options)
-    const AVAILABLE_ACTIONS = [
-        { id: 'show_new_muslims', name: 'هداية', icon: Users, category: 'info', description: 'الانتقال إلى قسم هداية' },
-
-        // Information Display
-        { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },
-        // ... rest of actions ...
-        { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
-        { id: 'show_dollar', name: 'سعر الدولار', icon: DollarSign, category: 'info', description: 'عرض سعر الدولار الرسمي والبلو' },
-        { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
-        { id: 'show_today_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'عرض عدد المهام المتبقية لليوم' },
-        { id: 'show_appointments', name: 'المواعيد القادمة', icon: Calendar, category: 'info', description: 'عرض أقرب موعد قادم' },
-        { id: 'show_shopping', name: 'قائمة التسوق', icon: ShoppingCart, category: 'info', description: 'عرض عدد العناصر في قائمة التسوق' },
-        { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
-        { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض تقدم العادات اليومية' },
-
-
-        // Quick Actions
-        { id: 'add_expense', name: 'إضافة مصروف', icon: DollarSign, category: 'action', description: 'إضافة مصروف سريع' },
-        { id: 'add_task', name: 'إضافة مهمة', icon: ListChecks, category: 'action', description: 'إضافة مهمة جديدة' },
-        { id: 'add_note', name: 'ملاحظة صوتية', icon: Mic, category: 'action', description: 'تسجيل ملاحظة صوتية' },
-        { id: 'save_parking', name: 'حفظ موقف', icon: MapPin, category: 'action', description: 'حفظ موقف السيارة الحالي' },
-        { id: 'find_parking', name: 'مكان سيارتي', icon: Navigation, category: 'action', description: 'الملاحة إلى آخر موقف محفوظ' },
-        { id: 'start_pomodoro', name: 'بومودورو', icon: Timer, category: 'action', description: 'بدء مؤقت تركيز 25 دقيقة' },
-        { id: 'add_shopping', name: 'للتسوق', icon: ShoppingCart, category: 'action', description: 'إضافة عنصر لقائمة التسوق' },
-        { id: 'copy_location', name: 'نسخ موقعي', icon: Copy, category: 'action', description: 'نسخ رابط الموقع الحالي' },
-        { id: 'open_map', name: 'فتح الخريطة', icon: ExternalLink, category: 'action', description: 'فتح الموقع على الخريطة' },
-
-        // Calculators
-        { id: 'calc_currency', name: 'تحويل العملات', icon: Calculator, category: 'calc', description: 'حاسبة تحويل ARS ↔ USD' },
-        { id: 'calc_percentage', name: 'حساب النسبة', icon: Calculator, category: 'calc', description: 'حاسبة النسبة المئوية' },
-        { id: 'calc_age', name: 'حساب العمر', icon: Calendar, category: 'calc', description: 'حساب العمر بالهجري والميلادي' },
-        { id: 'calc_days', name: 'الفرق بين تاريخين', icon: Calendar, category: 'calc', description: 'حساب عدد الأيام بين تاريخين' },
-        { id: 'calc_salary', name: 'حساب الراتب اليومي', icon: DollarSign, category: 'calc', description: 'حساب الدخل اليومي من الراتب الشهري' },
-
-        // Reminders
-        { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'remind', description: 'تذكير بعد 5 دقائق' },
-        { id: 'remind_15min', name: 'تذكير 15 دقيقة', icon: Bell, category: 'remind', description: 'تذكير بعد 15 دقيقة' },
-        { id: 'remind_1hour', name: 'تذكير ساعة', icon: Bell, category: 'remind', description: 'تذكير بعد ساعة' },
-        { id: 'remind_water', name: 'شرب الماء', icon: Droplets, category: 'remind', description: 'تذكير بشرب الماء كل ساعة' },
-        { id: 'remind_break', name: 'استراحة', icon: Coffee, category: 'remind', description: 'تذكير بأخذ استراحة' },
-
-        // AI/Smart
-        { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'smart', description: 'ملخص ذكي لنشاطات اليوم' },
-        { id: 'quick_insights', name: 'رؤى سريعة', icon: Zap, category: 'smart', description: 'تحليل سريع للمصاريف والمهام' },
-        { id: 'routine_modes', name: 'أوضاع دائمة', icon: Settings, category: 'smart', description: 'إدارة القوالب الروتينية' },
-    ];
-
-    const addShortcut = (actionId: string) => {
-        if (!customShortcuts.includes(actionId)) {
-            setCustomShortcuts([...customShortcuts, actionId]);
-        }
-    };
-
-    const removeShortcut = (actionId: string) => {
-        setCustomShortcuts(customShortcuts.filter(id => id !== actionId));
-    };
-
-    const addCustomLocation = (name: string, url: string) => {
-        const newLoc = { id: Date.now().toString(), name, url };
-        setCustomLocations([...customLocations, newLoc]);
-    };
-
-    const removeCustomLocation = (id: string) => {
-        setCustomLocations(customLocations.filter(l => l.id !== id));
-    };
-
-    const getActionById = (id: string) => AVAILABLE_ACTIONS.find(a => a.id === id);
 
     // Check if running on mobile
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -532,54 +510,14 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 ))}
             </div>
 
-            {/* ===== CUSTOM SHORTCUTS BAR (NOW BELOW) ===== */}
+            {/* ===== CUSTOM SHORTCUTS BAR (REMOVED - Rendered externally) ===== */}
+            {/* 
             {(customShortcuts.length > 0 || customLocations.length > 0) && (
                 <div className="mb-2">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-4 h-4 text-emerald-500" />
-                        <span className="text-xs font-bold text-gray-600">اختصاراتي</span>
-                        <button
-                            onClick={() => setShowShortcutsSettings(true)}
-                            className="p-1 rounded-full hover:bg-gray-100 text-gray-400"
-                        >
-                            <Settings className="w-3 h-3" />
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {customLocations.map(loc => (
-                            <button
-                                key={loc.id}
-                                onClick={() => window.open(loc.url, '_blank')}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all hover:scale-105 bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100"
-                            >
-                                <MapPin className="w-3.5 h-3.5" />
-                                <span>{loc.name}</span>
-                            </button>
-                        ))}
-                        {customShortcuts.map(id => {
-                            const action = getActionById(id);
-                            if (!action) return null;
-                            const Icon = action.icon;
-                            return (
-                                <button
-                                    key={id}
-                                    onClick={() => executeShortcut(id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all hover:scale-105 ${action.category === 'info' ? 'bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100' :
-                                        action.category === 'action' ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100' :
-                                            action.category === 'calc' ? 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100' :
-                                                action.category === 'remind' ? 'bg-amber-50 border-amber-100 text-amber-700 hover:bg-amber-100' :
-                                                    'bg-pink-50 border-pink-100 text-pink-700 hover:bg-pink-100'
-                                        }`}
-                                    title={action.description}
-                                >
-                                    <Icon className="w-3.5 h-3.5" />
-                                    <span>{action.name}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                   ...
                 </div>
-            )}
+            )} 
+            */}
 
             {/* Event Type Selection Menu */}
             <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
@@ -1231,6 +1169,21 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                             </div>
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Shortcut Result Dialog */}
+            <Dialog open={!!shortcutResult} onOpenChange={(open) => !open && setShortcutResult(null)}>
+                <DialogContent className="sm:max-w-sm text-center" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="text-center text-lg">{shortcutResult?.title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 whitespace-pre-line text-gray-700 font-medium leading-relaxed bg-gray-50 rounded-lg p-4 mx-2">
+                        {shortcutResult?.content}
+                    </div>
+                    <Button onClick={() => setShortcutResult(null)} className="w-full">
+                        حسناً
+                    </Button>
                 </DialogContent>
             </Dialog>
         </>

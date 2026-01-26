@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotesLayoutV2 from "./pages/notes-v2/Index";
+import NotesOnlyView from "./components/notes-app/NotesOnlyView";
 
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -150,6 +151,7 @@ const App = () => {
           <HashRouter>
             <GlobalSearchDialog />
             <Routes>
+              <Route path="/notes-only" element={<NotesOnlyView />} />
               {/* Core Layout Routes */}
               <Route element={<CoreLayout />}>
                 <Route path="/" element={<Index />} />

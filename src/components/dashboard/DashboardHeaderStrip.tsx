@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import {
     Wallet, ChevronDown, ChevronUp, BadgeDollarSign, Clock
 } from 'lucide-react';
+import { isAndroid } from '@/utils/platformDetection';
 import { useFinance } from '@/hooks/useFinance';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { cn } from '@/lib/utils';
@@ -90,78 +91,119 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     // 4. States for Collapsibility
     // expandFinance declared above
 
-    // 5. Calculations
-    const dailyLimitARS = dailyLimit || 0;
+    // 4. Calculate Intervals
+    const getInterval = (currentKey: string): string => {
+        const currentIdx = PRAYER_ORDER.indexOf(currentKey);
+        if (currentIdx === -1) return '--';
 
-    // Calculate Today's Expense
-    const todayExpense = useMemo(() => {
-        if (!financeData?.pending_expenses) return 0;
-        const todayStr = new Date().toISOString().split('T')[0];
-        return financeData.pending_expenses
-            .filter((t: any) => t.type === 'expense' && t.timestamp.startsWith(todayStr))
-            .reduce((sum: number, t: any) => sum + (t.currency === 'ARS' ? t.amount : t.amount * (dollarRates?.blue || 1200)), 0);
-    }, [financeData?.pending_expenses, dollarRates]);
+        const nextIdx = (currentIdx + 1) % PRAYER_ORDER.length;
+        const nextKey = PRAYER_ORDER[nextIdx];
 
-    const remainingDaily = dailyLimitARS - todayExpense;
+        const currentP = prayerTimes.find(p => p.name.toLowerCase() === currentKey);
+        const nextP = prayerTimes.find(p => p.name.toLowerCase() === nextKey);
+
+        if (!currentP || !nextP) return '--';
+
+        const [h1, m1] = currentP.time.split(':').map(Number);
+        const [h2, m2] = nextP.time.split(':').map(Number);
+
+        const d1 = new Date(); d1.setHours(h1, m1, 0, 0);
+        const d2 = new Date(); d2.setHours(h2, m2, 0, 0);
+
+        if (d2 < d1) d2.setDate(d2.getDate() + 1); // Cross midnight interval (Isha -> Fajr)
+
+        const diffMs = d2.getTime() - d1.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+
+        return `${hours > 0 ? hours + 'س ' : ''}${mins}د`;
+    };
 
     return (
         <div className="flex flex-col gap-2">
-            {/* 1. Prayer Times Card - Ultra Compact Single Row */}
-            <Card className="w-full border-0 shadow-sm bg-white overflow-hidden">
+            <Card className="w-full border-0 shadow-sm bg-white overflow-hidden rounded-xl">
                 <CardContent className="p-0">
-                    {/* Top Status Bar (Next Prayer & Remaining Time) */}
-                    <div
-                        className="bg-emerald-50/50 px-2 py-1 flex justify-between items-center border-b border-emerald-100 cursor-pointer select-none transition-colors hover:bg-emerald-100/50"
-                        onClick={handleHeaderTimeClick}
-                    >
-                        <div className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3 text-emerald-600" />
-                            <span className="text-[10px] font-bold text-emerald-800">
-                                {nextPrayer ? `${nextPrayer.nameAr}` : 'الصلاة'}
+                    {/* Top Status Bar */}
+                    <div className="bg-white px-3 py-2 flex justify-between items-center border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-emerald-600" />
+                            <span className="text-xs font-bold text-emerald-800">
+                                القادمة: {nextPrayer ? nextPrayer.nameAr : '...'}
                             </span>
                         </div>
-
-                        <div className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all border ${showElapsedHeader
-                            ? 'bg-amber-100 text-amber-800 border-amber-200'
-                            : 'bg-white text-emerald-700 border-emerald-200'
-                            }`}>
-                            {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--:--')}
+                        <div
+                            className={`px-3 py-1 border rounded-lg text-xs font-bold shadow-sm cursor-pointer select-none transition-all ${showElapsedHeader
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-white text-emerald-700 border-emerald-200'
+                                }`}
+                            onClick={handleHeaderTimeClick}
+                        >
+                            {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--')}
                         </div>
                     </div>
 
-                    {/* Compact Grid Row (Name + Time) */}
-                    <div className="grid grid-cols-6 bg-white text-center">
-                        {
-                            PRAYER_ORDER.map((prayerKey, idx) => {
-                                const isNext = nextPrayer?.name?.toLowerCase() === prayerKey;
-                                const pData = prayerTimes.find(p => p.name.toLowerCase() === prayerKey);
-                                const pTime = pData?.time || '--:--';
+                    {/* Table-like Grid */}
+                    <div className="w-full">
+                        {/* 1. Header Row (Names) */}
+                        <div className="grid grid-cols-6 bg-[#0F8A74] text-white">
+                            {PRAYER_ORDER.map((key) => (
+                                <div key={key} className={cn(
+                                    "text-center border-l border-emerald-600/30 last:border-l-0",
+                                    !isAndroid() ? "py-1" : "py-2"
+                                )}>
+                                    <span className="text-[10px] font-bold">{PRAYER_NAMES[key as keyof typeof PRAYER_NAMES]}</span>
+                                </div>
+                            ))}
+                        </div>
 
+                        {/* 2. Times Row */}
+                        <div className="grid grid-cols-6 bg-emerald-50/30">
+                            {PRAYER_ORDER.map((key) => {
+                                const isNext = nextPrayer?.name.toLowerCase() === key;
+                                const pData = prayerTimes.find(p => p.name.toLowerCase() === key);
                                 return (
                                     <div
-                                        key={prayerKey}
+                                        key={key}
                                         className={cn(
-                                            "py-0.5 flex flex-col items-center justify-center border-emerald-50 relative",
-                                            idx < 5 && "border-l",
-                                            isNext && "bg-emerald-50/80 ring-1 ring-inset ring-emerald-200"
+                                            "flex items-center justify-center border-l border-gray-100 last:border-l-0 relative",
+                                            !isAndroid() ? "py-1.5" : "py-3",
+                                            isNext && "bg-emerald-100/50"
                                         )}
                                     >
                                         <span className={cn(
-                                            "text-[8px] font-bold leading-none mb-0.5",
-                                            isNext ? "text-emerald-800" : "text-gray-400"
+                                            "text-xs font-bold font-mono",
+                                            isNext ? "text-emerald-900" : "text-emerald-700"
                                         )}>
-                                            {PRAYER_NAMES[prayerKey as keyof typeof PRAYER_NAMES]}
+                                            {pData?.time || '--:--'}
                                         </span>
-                                        <span className={cn(
-                                            "text-[10px] font-bold font-mono leading-none tracking-tighter",
-                                            isNext ? "text-emerald-900" : "text-emerald-600"
-                                        )}>
-                                            {pTime}
+                                        {/* Active Indicator Line */}
+                                        {isNext && <div className="absolute bottom-0 w-8 h-0.5 bg-emerald-500 rounded-full" />}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* 3. Intervals Row (The requested "Calculation") */}
+                        <div className="grid grid-cols-6 bg-white border-t border-gray-100">
+                            {PRAYER_ORDER.map((key) => {
+                                const isNext = nextPrayer?.name.toLowerCase() === key;
+                                return (
+                                    <div
+                                        key={key}
+                                        className={cn(
+                                            "flex items-center justify-center border-l border-gray-100 last:border-l-0",
+                                            !isAndroid() ? "py-1" : "py-2",
+                                            isNext && "bg-emerald-50/30"
+                                        )}
+                                    >
+                                        <span className="text-[9px] text-gray-400 font-medium">
+                                            {getInterval(key)}
                                         </span>
                                     </div>
                                 );
-                            })
-                        }
+                            })}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
