@@ -528,6 +528,30 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 }}>بدء المشروع</Button>
                             </div>
                         )}
+                        {showAddDialog === 'goal' && (
+                            <div className="space-y-4">
+                                <Input id="goal-title" placeholder="اسم الهدف 🎯" className="text-right h-12 rounded-xl" />
+                                <div className="space-y-1">
+                                    <label className="text-xs text-gray-400 px-1">تاريخ التحقيق</label>
+                                    <Input id="goal-deadline" type="date" className="text-right h-12 rounded-xl" defaultValue={todayStr} />
+                                </div>
+                                <Button className="w-full bg-purple-600 hover:bg-purple-700 font-bold py-6 rounded-2xl text-lg shadow-lg active:scale-95 transition-all" onClick={async () => {
+                                    const title = (document.getElementById('goal-title') as HTMLInputElement).value;
+                                    const deadline = (document.getElementById('goal-deadline') as HTMLInputElement).value;
+                                    if (!title) return;
+
+                                    await addTask({
+                                        title,
+                                        deadline: deadline || todayStr,
+                                        priority: 'high',
+                                        type: 'goal'
+                                    } as any); // Type cast if 'goal' isn't yet in MainTask type definition, but DB will accept text
+
+                                    toast({ title: 'تمت إضافة الهدف بنجاح 🎯' });
+                                    setShowAddDialog(null);
+                                }}>حفظ الهدف</Button>
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
