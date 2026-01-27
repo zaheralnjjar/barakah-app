@@ -26,9 +26,10 @@ interface SidebarTreeProps {
     onSelectFolder: (id: string | null) => void;
     onSearch?: (query: string) => void;
     collapsed?: boolean;
+    onFolderDeleted?: (id: string) => void;
 }
 
-export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSelectFolder, onSearch, collapsed }) => {
+export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSelectFolder, onSearch, collapsed, onFolderDeleted }) => {
     const { folders, deleteFolder } = useFolders();
     const [expandedFolders, setExpandedFolders] = React.useState<Set<string>>(new Set());
     const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null);
@@ -58,6 +59,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
 
         try {
             await Promise.all(idsToDelete.map(id => deleteFolder(id)));
+            onFolderDeleted?.(folderId);
             setFolderToDelete(null);
         } catch (error) {
             console.error("Error deleting folders:", error);
@@ -92,9 +94,10 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                             onClick={() => onSelectFolder(folder.id)}
                             className={`
                                 flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-colors text-sm mb-0.5
-                                ${isActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}
+                                ${isActive ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}
                                 ${collapsed ? 'justify-center px-1' : ''}
                             `}
+                            title={collapsed ? folder.name : undefined}
                             style={!collapsed ? { paddingRight: `${depth * 12 + 12}px` } : {}} // RTL Padding only when not collapsed
                         >
                             {/* Expand Toggle */}
@@ -116,7 +119,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                             {!collapsed && <span className="truncate">{folder.name}</span>}
                         </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="w-48 text-right" dir="rtl">
+                    <ContextMenuContent className="w-48 text-right">
                         <ContextMenuItem onClick={() => setEditingFolderId(folder.id)} className="flex items-center gap-2 cursor-pointer">
                             <Edit className="w-4 h-4" />
                             <span>تعديل المجلد</span>
@@ -144,7 +147,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
     const rootFolders = folders.filter(f => !f.parent_id);
 
     return (
-        <div className={`flex flex-col h-full bg-gray-50/50 border-l border-gray-100 p-2 ${collapsed ? 'w-16 items-center' : 'w-64'}`}>
+        <div className={`flex flex-col h-full bg-gray-50/50 border-l border-gray-100 p-2 transition-all duration-300 ${collapsed ? 'w-16 items-center' : 'w-full'}`}>
 
             {/* Search Bar - Global Search logic */}
             {!collapsed && (
@@ -166,16 +169,16 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                 onClick={() => onSelectFolder(null)}
                 className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm mb-1 font-medium w-full
-                    ${activeFolderId === null ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100'}
+                    ${activeFolderId === null ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700 hover:bg-gray-100'}
                     ${collapsed ? 'justify-center px-0' : ''}
                 `}
                 title={collapsed ? "كل الملاحظات" : undefined}
             >
-                <Hash className="w-4 h-4" />
+                <Hash className={`w-4 h-4 ${activeFolderId === null ? 'text-emerald-500' : 'text-gray-400'}`} />
                 {!collapsed && <span>كل الملاحظات</span>}
             </div>
 
-            <div className="mb-4" />
+            <div className="mb-2" />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar w-full">
                 {rootFolders.map(folder => renderFolder(folder))}

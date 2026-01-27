@@ -171,30 +171,28 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
                 )}
 
                 {/* Normal Header (Web/Compact) */}
-                <div className="bg-white/80 backdrop-blur-md rounded-2xl p-1.5 px-4 shadow-sm border border-emerald-50/50 transition-all hover:shadow-md" dir="ltr">
-                    <div className="flex items-center justify-between gap-4">
-                        {/* Notification Bell - Left Section */}
-                        <div className="flex items-center gap-2">
+                <div className="bg-white/90 backdrop-blur-md rounded-2xl p-2 px-4 shadow-sm border border-emerald-50/50 transition-all hover:shadow-md relative" dir="ltr">
+                    <div className="flex items-center justify-between w-full h-12">
+                        {/* Notification Bell - Left Section (1/3) */}
+                        <div className="flex-[1] flex items-center justify-start">
                             <NotificationBell />
                         </div>
 
-                        {/* Logo - Centered Section */}
+                        {/* Logo - Centered Section (Absolute) */}
                         <div
-                            className="flex items-center gap-2 cursor-pointer select-none active:scale-95 transition-transform"
-                            onClick={() => setShowBarakahPopup(true)}
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 cursor-pointer select-none active:scale-95 transition-transform z-10"
+                            onClick={() => window.dispatchEvent(new Event('open-report-generator'))}
                         >
-                            <h1 className="font-extrabold text-gray-900 tracking-tighter font-arabic text-xl md:text-3xl">البركة</h1>
+                            <h1 className="font-black text-gray-900 tracking-tighter font-arabic text-2xl md:text-3xl">البركة</h1>
                         </div>
 
-                        {/* Date Info - Right Section (One line for Web/Compact) */}
+                        {/* Date Info - Right Section (1/3) */}
                         <div
-                            className="flex items-center gap-3 cursor-pointer text-right"
+                            className="flex-[1] flex flex-col items-end justify-center cursor-pointer text-right gap-0.5"
                             onClick={() => setShowHolidaysPopup(true)}
                         >
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-gray-700 text-sm md:text-lg">{spanishDate}</span>
-                                <span className="text-gray-400 text-[10px] md:text-xs border-r border-gray-100 pr-2">{hijriSpanish}</span>
-                            </div>
+                            <span className="font-bold text-gray-800 text-[11px] md:text-sm leading-none">{spanishDate}</span>
+                            <span className="text-gray-500 font-medium text-[9px] md:text-xs leading-none tracking-tight">{hijriSpanish}</span>
                         </div>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mic, MicOff, Check, X, Loader2, Plus, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
+import { useFolders } from '@/hooks/useFolders';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 interface VoiceNoteRecorderProps {
@@ -27,6 +28,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, onSaveToActivities }) => {
     const { toast } = useToast();
     const { notes, createNote, updateNote } = useNotesV2();
+    const { folders, createFolder } = useFolders();
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [interimTranscript, setInterimTranscript] = useState('');
@@ -305,9 +307,28 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         setIsProcessing(true);
         try {
             if (selectedNoteIndex === 'new') {
-                // Create a new regular note
-                await createNote({ title: `تسجيل ${new Date().toLocaleTimeString('ar-SA')}`, folder_id: null, content: `<p>${finalText}</p>` });
-                toast({ title: 'تم إنشاء ملاحظة جديدة ✓' });
+                // Find or create "General" (عام) folder
+                let folderId = null;
+                const generalFolder = folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
+
+                if (generalFolder) {
+                    folderId = generalFolder.id;
+                } else {
+                    try {
+                        const newFolder = await createFolder({ name: 'عام', parent_id: null, icon: '📁' });
+                        folderId = newFolder.id;
+                    } catch (e) {
+                        console.error('Failed to create general folder:', e);
+                    }
+                }
+
+                // Create a new regular note in the general folder
+                await createNote({
+                    title: `تسجيل ${new Date().toLocaleTimeString('ar-SA')}`,
+                    folder_id: folderId,
+                    content: `<p>${finalText}</p>`
+                });
+                toast({ title: 'تم إنشاء ملاحظة جديدة في مجلد عام ✓' });
             } else {
                 const note = notes.find(n => n.id === selectedNoteIndex);
                 if (note) {

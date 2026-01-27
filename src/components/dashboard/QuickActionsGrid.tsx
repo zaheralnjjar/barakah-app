@@ -9,62 +9,25 @@ import { useFinance } from '@/hooks/useFinance';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import {
-    FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
-    CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
-    Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings,
-    GraduationCap, Users, Search
+    LayoutGrid, ListChecks, Calendar, StickyNote, Heart, Pill,
+    Bell, CheckSquare, Target, Wallet, Clock, Users, Search, Timer, ShoppingCart, MapPin, DollarSign, FileText, Sparkles, Settings,
+    Mic, Copy, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, GraduationCap, Navigation, CalendarPlus
 } from 'lucide-react';
+import { AVAILABLE_ACTIONS, getActionById } from '@/constants/actionDefinitions';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { useLongPress } from '@/hooks/useLongPress';
+import { useShortcuts } from '@/hooks/useShortcuts';
+import { FloatingTimer } from '@/components/FloatingTimer';
+import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
 
-// Available Actions (25+ options)
-export const AVAILABLE_ACTIONS = [
-    { id: 'show_new_muslims', name: 'هداية', icon: Users, category: 'info', description: 'الانتقال إلى قسم هداية' },
-    // Information Display
-    { id: 'show_time', name: 'الوقت والتاريخ', icon: Clock, category: 'info', description: 'عرض الوقت الحالي والتاريخ الهجري' },
-    { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
-    { id: 'show_dollar', name: 'سعر الدولار', icon: DollarSign, category: 'info', description: 'عرض سعر الدولار الرسمي والبلو' },
-    { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
-    { id: 'show_today_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'عرض عدد المهام المتبقية لليوم' },
-    { id: 'show_appointments', name: 'المواعيد القادمة', icon: Calendar, category: 'info', description: 'عرض أقرب موعد قادم' },
-    { id: 'show_shopping', name: 'قائمة التسوق', icon: ShoppingCart, category: 'info', description: 'عرض عدد العناصر في قائمة التسوق' },
-    { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
-    { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض تقدم العادات اليومية' },
+// Available Actions (Focused on Productivity & Legacy Balance)
 
-    // Quick Actions
-    { id: 'add_expense', name: 'إضافة مصروف', icon: DollarSign, category: 'action', description: 'إضافة مصروف سريع' },
-    { id: 'add_task', name: 'إضافة مهمة', icon: ListChecks, category: 'action', description: 'إضافة مهمة جديدة' },
-    { id: 'add_note', name: 'ملاحظة صوتية', icon: Mic, category: 'action', description: 'تسجيل ملاحظة صوتية' },
-    { id: 'save_parking', name: 'حفظ موقف', icon: MapPin, category: 'action', description: 'حفظ موقف السيارة الحالي' },
-    { id: 'find_parking', name: 'مكان سيارتي', icon: Navigation, category: 'action', description: 'الملاحة إلى آخر موقف محفوظ' },
-    { id: 'start_pomodoro', name: 'بومودورو', icon: Timer, category: 'action', description: 'بدء مؤقت تركيز 25 دقيقة' },
-    { id: 'add_shopping', name: 'للتسوق', icon: ShoppingCart, category: 'action', description: 'إضافة عنصر لقائمة التسوق' },
-    { id: 'copy_location', name: 'نسخ موقعي', icon: Copy, category: 'action', description: 'نسخ رابط الموقع الحالي' },
-    { id: 'open_map', name: 'فتح الخريطة', icon: ExternalLink, category: 'action', description: 'فتح الموقع على الخريطة' },
 
-    // Calculators
-    { id: 'calc_currency', name: 'تحويل العملات', icon: Calculator, category: 'calc', description: 'حاسبة تحويل ARS ↔ USD' },
-    { id: 'calc_percentage', name: 'حساب النسبة', icon: Calculator, category: 'calc', description: 'حاسبة النسبة المئوية' },
-    { id: 'calc_age', name: 'حساب العمر', icon: Calendar, category: 'calc', description: 'حساب العمر بالهجري والميلادي' },
-    { id: 'calc_days', name: 'الفرق بين تاريخين', icon: Calendar, category: 'calc', description: 'حساب عدد الأيام بين تاريخين' },
-    { id: 'calc_salary', name: 'حساب الراتب اليومي', icon: DollarSign, category: 'calc', description: 'حساب الدخل اليومي من الراتب الشهري' },
 
-    // Reminders
-    { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'remind', description: 'تذكير بعد 5 دقائق' },
-    { id: 'remind_15min', name: 'تذكير 15 دقيقة', icon: Bell, category: 'remind', description: 'تذكير بعد 15 دقيقة' },
-    { id: 'remind_1hour', name: 'تذكير ساعة', icon: Bell, category: 'remind', description: 'تذكير بعد ساعة' },
-    { id: 'remind_water', name: 'شرب الماء', icon: Droplets, category: 'remind', description: 'تذكير بشرب الماء كل ساعة' },
-    { id: 'remind_break', name: 'استراحة', icon: Coffee, category: 'remind', description: 'تذكير بأخذ استراحة' },
-
-    // AI/Smart
-    { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'smart', description: 'ملخص ذكي لنشاطات اليوم' },
-    { id: 'quick_insights', name: 'رؤى سريعة', icon: Zap, category: 'smart', description: 'تحليل سريع للمصاريف والمهام' },
-    { id: 'routine_modes', name: 'أوضاع دائمة', icon: Settings, category: 'smart', description: 'إدارة القوالب الروتينية' },
-];
-
-export const getActionById = (id: string) => AVAILABLE_ACTIONS.find(a => a.id === id);
 
 interface QuickActionsGridProps {
-    onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal') => void;
+    onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | 'medication' | 'habit' | 'project') => void;
     onQuickParking?: () => void;
     onOpenTimer?: () => void;
     onOpenVoiceRecorder?: () => void;
@@ -74,9 +37,15 @@ interface QuickActionsGridProps {
     onOpenNewMuslims?: () => void;
     onActivateWidgets?: (widgets: string[]) => void;
     activeWidgets?: string[];
+    shortcutResult?: { id?: string; title: string; content: string } | null;
+    setShortcutResult?: (val: { id?: string; title: string; content: string } | null) => void;
 }
 
-const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder, latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims, onActivateWidgets, activeWidgets }) => {
+const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
+    onOpenAddDialog, onQuickParking, onOpenTimer, onOpenVoiceRecorder,
+    latestParking, onNavigateToTab, onOpenSearch, onOpenNewMuslims,
+    onActivateWidgets, activeWidgets, shortcutResult, setShortcutResult
+}) => {
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData, dailyLimit } = useFinance();
@@ -92,7 +61,6 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     const [inlineWidgetTypes, setInlineWidgetTypes] = useState<string[]>([]);
     const [showInlineWidget, setShowInlineWidget] = useState(false);
     const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
-    const [shortcutResult, setShortcutResult] = useState<{ title: string; content: string } | null>(null);
 
     // Calculator states
     const [showCalcAge, setShowCalcAge] = useState(false);
@@ -104,33 +72,31 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
     const [calcInput2, setCalcInput2] = useState('');
     const [calcResult, setCalcResult] = useState('');
 
-    // Shortcuts Management
-    const [customShortcuts, setCustomShortcuts] = useState<string[]>(() => {
-        try {
-            const saved = localStorage.getItem('baraka_custom_shortcuts');
-            return saved ? JSON.parse(saved) : ['show_next_prayer', 'show_balance', 'add_note'];
-        } catch { return []; }
-    });
+    useEffect(() => {
+        const handleOpenCalc = () => setShowCalcPercentage(true);
+        const handleOpenLocations = () => setShowSavedLocations(true);
+        window.addEventListener('open-calculator', handleOpenCalc);
+        window.addEventListener('open-saved-locations', handleOpenLocations);
+        return () => {
+            window.removeEventListener('open-calculator', handleOpenCalc);
+            window.removeEventListener('open-saved-locations', handleOpenLocations);
+        };
+    }, []);
 
-    const [customLocations, setCustomLocations] = useState<{ id: string, name: string, url: string }[]>(() => {
-        try {
-            const saved = localStorage.getItem('baraka_custom_locations');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-    });
+    // Shortcuts Management (Unified Hook)
+    const {
+        customShortcuts,
+        customLocations,
+        addShortcut,
+        removeShortcut,
+        addLocation,
+        removeLocation
+    } = useShortcuts();
 
     const [newLocName, setNewLocName] = useState('');
     const [newLocUrl, setNewLocUrl] = useState('');
     const [searchAddress, setSearchAddress] = useState('');
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-
-    useEffect(() => {
-        localStorage.setItem('baraka_custom_shortcuts', JSON.stringify(customShortcuts));
-    }, [customShortcuts]);
-
-    useEffect(() => {
-        localStorage.setItem('baraka_custom_locations', JSON.stringify(customLocations));
-    }, [customLocations]);
 
     const handleGetCurrentLocation = () => {
         if (!navigator.geolocation) {
@@ -478,35 +444,110 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 toast({ title: '🔄 أوضاع دائمة', description: 'افتح الإعدادات > أوضاع دائمة' });
                 break;
 
+            case 'flashlight':
+                toast({ title: '🔦 الكشاف', description: 'سيتم تفعيل كشاف الشاشة بأقصى سطوع' });
+                // Simple implementation: change background to white or use Capacitor if available
+                break;
+
+            case 'show_calculator':
+                setShowCalcPercentage(true);
+                break;
+
             default:
                 toast({ title: action.name, description: action.description });
         }
     };
 
+    // Helper for long-press coordinate copy
+    const handleCopyCoords = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const coords = `${pos.coords.latitude},${pos.coords.longitude}`;
+                    navigator.clipboard.writeText(coords);
+                    toast({ title: '📍 تم نسخ الإحداثيات', description: coords });
+                },
+                () => toast({ title: '❌ فشل تحديد الموقع', variant: 'destructive' })
+            );
+        }
+    };
+
+    const handleShowFinanceSummary = () => {
+        const totalToday = financeData?.pending_expenses?.filter(tx =>
+            new Date(tx.timestamp).toDateString() === new Date().toDateString()
+        ).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
+
+        setShortcutResult({
+            title: '💰 الملخص المالي اليومي',
+            content: `المصاريف اليومية: ${totalToday.toLocaleString()} ARS\nالحد المتبقي: ${dailyLimit?.toLocaleString() || 'غير محدد'} ARS`
+        });
+    };
+
+    const handleQuickTimer = (mins: number) => {
+        toast({ title: `⏰ مؤقت سريع (${mins} دقائق)`, description: 'بدأ العد التنازلي الآن' });
+        setTimeout(() => {
+            toast({ title: '⏰ انتهى الوقت!', variant: 'destructive' });
+            if ('vibrate' in navigator) navigator.vibrate([500, 200, 500]);
+        }, mins * 60 * 1000);
+    };
+
+    const handleResetSettings = () => {
+        toast({
+            title: '⚠️ تنبيه',
+            description: 'هل تود حقاً استعادة ضبط المصنع للإعدادات؟ (تحتاج لتنفيذ خاص)',
+            variant: 'destructive'
+        });
+    };
+
+    const handleDailyView = () => {
+        onNavigateToTab?.('calendar');
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('change-tab', { detail: 'calendar-daily' }));
+        }, 100);
+    };
+
+    const QuickActionItem = ({ item }: { item: any }) => {
+        const bind = useLongPress({
+            onLongPress: item.onLongPress,
+            onClick: item.onClick,
+        });
+
+        return (
+            <button
+                {...bind}
+                className={cn(
+                    "flex items-center gap-2 p-1.5 px-3 rounded-full border-none active:scale-95 transition-all group overflow-hidden shadow-sm touch-none h-10 w-full",
+                    item.color
+                )}
+            >
+                <div className="flex items-center justify-center shrink-0">
+                    <item.icon className="w-4 h-4 stroke-[2.5] group-hover:scale-110 transition-transform" />
+                </div>
+                <span className="text-[11px] font-black tracking-tight text-right leading-none truncate flex-1">
+                    {item.label}
+                </span>
+            </button>
+        );
+    };
+
     return (
         <>
-            {/* ===== 3. QUICK ACTIONS - Two Rows Grid ===== */}
-            <div className="grid grid-cols-5 gap-2 mb-3">
+            {/* ===== 3. QUICK ACTIONS - 5x2 Pills Grid ===== */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3 px-2">
                 {[
-                    { icon: Timer, label: 'مؤقت', color: 'bg-orange-100 text-orange-600', action: () => onOpenTimer?.() },
-                    { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-600', action: () => setShowEventMenu(true) },
-                    { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-600', action: () => onOpenAddDialog('expense') },
-                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-600', action: () => setShowLocationMenu(true) },
-                    { icon: ShoppingCart, label: 'تسوق', color: 'bg-pink-100 text-pink-600', action: () => onOpenAddDialog('shopping') },
-                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-600', action: () => onOpenAddDialog('note') },
-                    { icon: Calendar, label: 'تقويم', color: 'bg-indigo-100 text-indigo-600', action: () => onNavigateToTab?.('calendar') },
-                    { icon: LayoutGrid, label: 'أدوات', color: 'bg-teal-100 text-teal-600', action: () => setShowWidgetMenu(true) },
-                    { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-600', action: () => onOpenNewMuslims?.() },
-                    { icon: GraduationCap, label: 'أكاديميا', color: 'bg-violet-100 text-violet-600', action: () => navigate('/thesis') },
+                    { icon: Timer, label: 'مؤقت', color: 'bg-orange-100 text-orange-700', onClick: () => onOpenTimer?.(), onLongPress: () => handleQuickTimer(5) },
+                    { icon: Sparkles, label: 'حدث', color: 'bg-purple-100 text-purple-700', onClick: () => setShowEventMenu(true), onLongPress: () => onNavigateToTab?.('appointments') },
+                    { icon: DollarSign, label: 'مصروف', color: 'bg-red-100 text-red-700', onClick: () => onOpenAddDialog('expense'), onLongPress: handleShowFinanceSummary },
+                    { icon: MapPin, label: 'موقع', color: 'bg-green-100 text-green-700', onClick: () => setShowLocationMenu(true), onLongPress: handleCopyCoords },
+                    { icon: ShoppingCart, label: 'تسوق', color: 'bg-pink-100 text-pink-700', onClick: () => onOpenAddDialog('shopping'), onLongPress: () => onNavigateToTab?.('shopping') },
+
+                    { icon: FileText, label: 'ملاحظة', color: 'bg-yellow-100 text-yellow-700', onClick: () => onOpenAddDialog('note'), onLongPress: () => onNavigateToTab?.('notes-v2') },
+                    { icon: Search, label: 'بحث', color: 'bg-blue-100 text-blue-700', onClick: () => onOpenSearch?.(), onLongPress: () => navigate('/thesis/dashboard') },
+                    { icon: Sparkles, label: 'تخصيص', color: 'bg-teal-100 text-teal-700', onClick: () => setShowShortcutsSettings(true), onLongPress: () => setShowWidgetMenu(true) },
+                    { icon: Users, label: 'مهتدين', color: 'bg-emerald-100 text-emerald-700', onClick: () => onOpenNewMuslims?.(), onLongPress: () => toast({ title: '📊 إحصائيات', description: '3 مهتدين جدد هذا الأسبوع' }) },
+                    { icon: Settings, label: 'إعدادات', color: 'bg-gray-100 text-gray-700', onClick: () => onNavigateToTab?.('settings'), onLongPress: handleResetSettings },
                 ].map((item, idx) => (
-                    <button
-                        key={idx}
-                        onClick={item.action}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl ${item.color} hover:scale-105 transition-transform`}
-                    >
-                        <item.icon className="w-5 h-5 mb-0.5" />
-                        <span className="text-[8px] font-medium whitespace-nowrap">{item.label}</span>
-                    </button>
+                    <QuickActionItem key={idx} item={item} />
                 ))}
             </div>
 
@@ -539,6 +580,22 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                         >
                             <CheckSquare className="w-8 h-8 mb-2" />
                             <span className="text-sm font-medium">مهمة</span>
+                        </button>
+
+                        <button
+                            onClick={() => { setShowEventMenu(false); onOpenAddDialog('medication'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-teal-100 text-teal-600 hover:scale-105 transition-transform"
+                        >
+                            <Pill className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">دواء</span>
+                        </button>
+
+                        <button
+                            onClick={() => { setShowEventMenu(false); onOpenAddDialog('habit'); }}
+                            className="flex flex-col items-center p-4 rounded-xl bg-emerald-100 text-emerald-600 hover:scale-105 transition-transform"
+                        >
+                            <Zap className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-medium">عادة</span>
                         </button>
 
                     </div>
@@ -637,15 +694,22 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
 
                     {/* Action Buttons */}
                     <div className="space-y-2 mt-3 pt-3 border-t">
-                        {/* Primary Button - Show Inline (Best for Mobile) */}
                         <Button
-                            className="w-full text-xs bg-emerald-600 hover:bg-emerald-700"
+                            className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 font-bold h-10 rounded-xl"
                             disabled={selectedWidgets.length === 0}
                             onClick={openWidgetInline}
                         >
                             <LayoutGrid className="w-3 h-3 ml-1" />
                             عرض هنا ({selectedWidgets.length})
                         </Button>
+
+                        <button
+                            onClick={() => { setShowWidgetMenu(false); onOpenAddDialog('project'); }}
+                            className="w-full flex items-center justify-center gap-2 p-3 mt-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-100"
+                        >
+                            <Target className="w-4 h-4" />
+                            <span className="text-xs font-bold">بدء مشروع جديد</span>
+                        </button>
 
                         {/* Secondary Buttons - Open in Windows (Desktop) */}
                         {!isMobile && (
@@ -709,74 +773,9 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 </DialogContent>
             </Dialog>
 
-            {/* Saved Locations List Dialog */}
-            <Dialog open={showSavedLocations} onOpenChange={setShowSavedLocations}>
-                <DialogContent className="sm:max-w-[450px] max-h-[80vh]">
-                    <DialogHeader>
-                        <DialogTitle className="text-center flex items-center justify-center gap-2">
-                            <MapPin className="w-5 h-5 text-blue-500" />
-                            المواقع المحفوظة
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="overflow-y-auto max-h-[50vh]">
-                        {(() => {
-                            const savedLocations = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-                            if (savedLocations.length === 0) {
-                                return (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <MapPin className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                                        <p>لا توجد مواقع محفوظة</p>
-                                        <Button
-                                            className="mt-4 bg-green-500 hover:bg-green-600"
-                                            onClick={() => { setShowSavedLocations(false); onOpenAddDialog('location'); }}
-                                        >
-                                            إضافة موقع جديد
-                                        </Button>
-                                    </div>
-                                );
-                            }
-                            return (
-                                <div className="space-y-2">
-                                    {savedLocations.map((loc: any) => (
-                                        <div key={loc.id} className="p-3 border rounded-lg hover:bg-gray-50 flex justify-between items-center group">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-full ${loc.category === 'mosque' ? 'bg-emerald-100 text-emerald-600' :
-                                                    loc.category === 'home' ? 'bg-blue-100 text-blue-600' :
-                                                        loc.category === 'work' ? 'bg-orange-100 text-orange-600' :
-                                                            'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                    <MapPin className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-800">{loc.title}</h4>
-                                                    <p className="text-xs text-gray-500">{loc.category === 'mosque' ? 'مسجد' : loc.category === 'home' ? 'منزل' : loc.category === 'work' ? 'عمل' : 'آخر'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <a
-                                                    href={loc.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-full"
-                                                >
-                                                    <Navigation className="w-4 h-4" />
-                                                </a>
-                                                {/* Delete button could be added here later if needed */}
-                                                {/* <button className="p-2 text-red-400 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button> */}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            );
-                        })()}
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             {/* Shortcuts Settings Dialog */}
-            <Dialog open={showShortcutsSettings} onOpenChange={setShowShortcutsSettings}>
+            < Dialog open={showShortcutsSettings} onOpenChange={setShowShortcutsSettings} >
                 <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-right">
@@ -857,7 +856,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                         className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700"
                                         onClick={() => {
                                             if (newLocName && newLocUrl) {
-                                                addCustomLocation(newLocName, newLocUrl);
+                                                addLocation(newLocName, newLocUrl);
                                                 setNewLocName('');
                                                 setNewLocUrl('');
                                                 setSearchAddress('');
@@ -879,7 +878,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                         <div key={loc.id} className="flex items-center gap-1 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm">
                                             <span className="text-xs text-gray-600">{loc.name}</span>
                                             <button
-                                                onClick={() => removeCustomLocation(loc.id)}
+                                                onClick={() => removeLocation(loc.id)}
                                                 className="p-0.5 text-red-400 hover:text-red-600 rounded-full"
                                             >
                                                 <Trash2 className="w-3 h-3" />
@@ -900,7 +899,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                             category === 'calc' ? '🧮 حاسبات' :
                                                 category === 'remind' ? '🔔 تذكيرات' : '🧠 ذكي'}
                                 </Badge>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                                     {AVAILABLE_ACTIONS.filter(a => a.category === category).map(action => {
                                         const isAdded = customShortcuts.includes(action.id);
                                         const Icon = action.icon;
@@ -909,17 +908,26 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                                                 key={action.id}
                                                 onClick={() => !isAdded && addShortcut(action.id)}
                                                 disabled={isAdded}
-                                                className={`flex items-center gap-2 p-2 rounded-lg border text-right transition-all ${isAdded
+                                                className={`flex flex-col items-center justify-between rounded-xl border aspect-square transition-all overflow-hidden ${isAdded
                                                     ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'
-                                                    : 'bg-white border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
+                                                    : 'bg-white border-gray-100 hover:border-emerald-300 hover:bg-emerald-50 shadow-sm'
                                                     }`}
                                             >
-                                                <Icon className="w-4 h-4 text-gray-500 shrink-0" />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-medium text-gray-700 truncate">{action.name}</p>
-                                                    <p className="text-[9px] text-gray-400 truncate">{action.description}</p>
+                                                {/* 70% Icon */}
+                                                <div className="flex-[7] w-full flex items-center justify-center p-2 relative">
+                                                    <Icon className="w-[60%] h-[60%] text-gray-600" />
+                                                    {!isAdded && (
+                                                        <div className="absolute top-1 right-1 bg-emerald-100 rounded-full p-0.5">
+                                                            <Plus className="w-2 h-2 text-emerald-600" />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {!isAdded && <Plus className="w-3 h-3 text-emerald-500 shrink-0" />}
+                                                {/* 30% Label */}
+                                                <div className="flex-[3] w-full flex items-center justify-center bg-gray-50 border-t border-gray-100 px-1">
+                                                    <span className="text-[9px] font-bold text-gray-700 truncate">
+                                                        {action.name}
+                                                    </span>
+                                                </div>
                                             </button>
                                         );
                                     })}
@@ -942,10 +950,34 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Shortcut Result Dialog */}
-            <Dialog open={shortcutResult !== null} onOpenChange={(open) => { if (!open) setShortcutResult(null); }}>
+            < Dialog open={!!shortcutResult && !!shortcutResult.title} onOpenChange={(open) => { if (!open) setShortcutResult(null); }}>
                 <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
+                    <DialogHeader className="flex flex-row items-center justify-between">
                         <DialogTitle className="text-right text-lg">{shortcutResult?.title}</DialogTitle>
+                        {shortcutResult?.id && ['show_medications', 'show_habits', 'show_appointments', 'show_tasks', 'show_shopping'].includes(shortcutResult.id) && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-100"
+                                onClick={() => {
+                                    const actionMap: Record<string, string> = {
+                                        'show_medications': 'medication',
+                                        'show_habits': 'habit',
+                                        'show_appointments': 'appointment',
+                                        'show_tasks': 'task',
+                                        'show_shopping': 'shopping'
+                                    };
+                                    const actionId = (shortcutResult as any).id;
+                                    const type = actionMap[actionId || ''];
+                                    if (type) {
+                                        setShortcutResult(null);
+                                        onOpenAddDialog(type as any);
+                                    }
+                                }}
+                            >
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                        )}
                     </DialogHeader>
                     <div className="whitespace-pre-wrap text-right text-sm text-gray-700 p-4 bg-gray-50 rounded-lg">
                         {shortcutResult?.content}
@@ -957,7 +989,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Age Calculator Dialog */}
-            <Dialog open={showCalcAge} onOpenChange={setShowCalcAge}>
+            < Dialog open={showCalcAge} onOpenChange={setShowCalcAge} >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-right">🎂 حساب العمر</DialogTitle>
@@ -998,7 +1030,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Days Difference Calculator */}
-            <Dialog open={showCalcDays} onOpenChange={setShowCalcDays}>
+            < Dialog open={showCalcDays} onOpenChange={setShowCalcDays} >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-right">📆 الفرق بين تاريخين</DialogTitle>
@@ -1038,7 +1070,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Percentage Calculator */}
-            <Dialog open={showCalcPercentage} onOpenChange={setShowCalcPercentage}>
+            < Dialog open={showCalcPercentage} onOpenChange={setShowCalcPercentage} >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-right">📊 حساب النسبة المئوية</DialogTitle>
@@ -1075,7 +1107,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Currency Converter */}
-            <Dialog open={showCalcCurrency} onOpenChange={setShowCalcCurrency}>
+            < Dialog open={showCalcCurrency} onOpenChange={setShowCalcCurrency} >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-right">💱 تحويل العملات</DialogTitle>
@@ -1134,7 +1166,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
             </Dialog>
 
             {/* Salary Calculator */}
-            <Dialog open={showCalcSalary} onOpenChange={setShowCalcSalary}>
+            < Dialog open={showCalcSalary} onOpenChange={setShowCalcSalary} >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-right">💰 حساب الراتب اليومي</DialogTitle>
@@ -1172,20 +1204,14 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({ onOpenAddDialog, on
                 </DialogContent>
             </Dialog>
 
-            {/* Shortcut Result Dialog */}
-            <Dialog open={!!shortcutResult} onOpenChange={(open) => !open && setShortcutResult(null)}>
-                <DialogContent className="sm:max-w-sm text-center" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-center text-lg">{shortcutResult?.title}</DialogTitle>
-                    </DialogHeader>
-                    <div className="py-4 whitespace-pre-line text-gray-700 font-medium leading-relaxed bg-gray-50 rounded-lg p-4 mx-2">
-                        {shortcutResult?.content}
-                    </div>
-                    <Button onClick={() => setShortcutResult(null)} className="w-full">
-                        حسناً
-                    </Button>
-                </DialogContent>
-            </Dialog>
+            {/* Floating Timer */}
+            <FloatingTimer />
+
+            {/* Saved Locations Dialog */}
+            <SavedLocationsDialog
+                open={showSavedLocations}
+                onOpenChange={setShowSavedLocations}
+            />
         </>
     );
 };

@@ -687,3 +687,33 @@ html {
   list-style-type: decimal !important;
   padding-right: 1.5em !important;
 }
+
+/* Power Mode - Reduce Motion */
+body.reduce-motion,
+body.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+body.reduce-motion .animate-fade-in,
+body.reduce-motion .animate-slide-up,
+body.reduce-motion .animate-slide-in-right,
+body.reduce-motion .animate-pulse-glow,
+body.reduce-motion .animate-bounce-subtle {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+body.reduce-motion .stagger-animation>* {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* Disable hover effects in power mode */
+body.reduce-motion .agent-card:hover,
+body.reduce-motion button:hover {
+  transform: none !important;
+}

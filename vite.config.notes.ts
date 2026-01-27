@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
         outDir: 'dist-notes',
         rollupOptions: {
             input: {
-                main: path.resolve(__dirname, 'index.html'),
+                index: path.resolve(__dirname, 'index.notes.html'),
             },
         },
     },

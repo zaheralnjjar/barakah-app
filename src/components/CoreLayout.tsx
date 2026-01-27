@@ -37,12 +37,26 @@ const CoreLayout = () => {
     // Handler for navigation from SideNavBar
     const handleNavigate = (tabId: string) => {
         setActiveTab(tabId);
-        if (tabId === 'notes-v2') {
+        // Dispatch global event to close any overlays (like Hidayah manager)
+        window.dispatchEvent(new CustomEvent('global-nav-change', { detail: { tabId } }));
+
+        if (tabId === 'calendar') {
+            // Force monthly calendar view as requested
+            navigate('/');
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('change-tab', { detail: 'calendar-monthly' }));
+            }, 50);
+        } else if (tabId === 'notes-v2') {
             navigate('/notes-v2');
+        } else if (tabId === 'dashboard') {
+            navigate('/');
         } else {
             if (location.pathname !== '/') {
                 navigate('/');
             }
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('change-tab', { detail: tabId }));
+            }, 50);
         }
     };
 
@@ -59,7 +73,7 @@ const CoreLayout = () => {
                 }}
             />
             {/* Main Content: Add margin for Desktop Sidebar (Right side in RTL) */}
-            <div className={`flex-1 h-full overflow-hidden transition-all duration-300 ${!isMobile ? 'mr-16' : 'pb-14'}`}>
+            <div className={`flex-1 h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16' : 'pb-14'}`}>
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
         </div>

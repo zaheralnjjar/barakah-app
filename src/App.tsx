@@ -158,21 +158,21 @@ const App = () => {
                 <Route path="/notes-v2" element={<NotesLayoutV2 />} />
                 <Route path="/widget" element={<WidgetPage />} />
                 <Route path="/diagnostic" element={<DiagnosticPage />} />
-              </Route>
 
-              {/* Thesis Manager Routes - Wrapped with Layout for BottomNavBar */}
-              <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />
-              <Route path="/thesis/dashboard" element={<ThesisLayout><ThesisDashboard /></ThesisLayout>} />
-              <Route path="/thesis/tasks" element={<ThesisLayout><ThesisTasks /></ThesisLayout>} />
-              <Route path="/thesis/structure" element={<ThesisLayout><ThesisStructure /></ThesisLayout>} />
-              <Route path="/thesis/calendar" element={<ThesisLayout><ThesisCalendar /></ThesisLayout>} />
-              <Route path="/thesis/indexes" element={<ThesisLayout><ThesisIndexes /></ThesisLayout>} />
-              <Route path="/thesis/settings" element={<ThesisLayout><ThesisSettings /></ThesisLayout>} />
-              <Route path="/thesis/references" element={<ThesisLayout><ThesisReferences /></ThesisLayout>} />
-              <Route path="/thesis/trash" element={<ThesisLayout><ThesisTrash /></ThesisLayout>} />
-              <Route path="/thesis/links" element={<ThesisLayout><ThesisLinks /></ThesisLayout>} />
-              <Route path="/thesis/mindmap" element={<ThesisLayout><ThesisMindMap /></ThesisLayout>} />
-              <Route path="/thesis/timeline" element={<ThesisLayout><ThesisTimeline /></ThesisLayout>} />
+                {/* Thesis Manager Routes - Now inside CoreLayout for SideNavBar */}
+                <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />
+                <Route path="/thesis/dashboard" element={<ThesisLayout><ThesisDashboard /></ThesisLayout>} />
+                <Route path="/thesis/tasks" element={<ThesisLayout><ThesisTasks /></ThesisLayout>} />
+                <Route path="/thesis/structure" element={<ThesisLayout><ThesisStructure /></ThesisLayout>} />
+                <Route path="/thesis/calendar" element={<ThesisLayout><ThesisCalendar /></ThesisLayout>} />
+                <Route path="/thesis/indexes" element={<ThesisLayout><ThesisIndexes /></ThesisLayout>} />
+                <Route path="/thesis/settings" element={<ThesisLayout><ThesisSettings /></ThesisLayout>} />
+                <Route path="/thesis/references" element={<ThesisLayout><ThesisReferences /></ThesisLayout>} />
+                <Route path="/thesis/trash" element={<ThesisLayout><ThesisTrash /></ThesisLayout>} />
+                <Route path="/thesis/links" element={<ThesisLayout><ThesisLinks /></ThesisLayout>} />
+                <Route path="/thesis/mindmap" element={<ThesisLayout><ThesisMindMap /></ThesisLayout>} />
+                <Route path="/thesis/timeline" element={<ThesisLayout><ThesisTimeline /></ThesisLayout>} />
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>

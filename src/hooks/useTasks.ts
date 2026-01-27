@@ -34,6 +34,44 @@ export const useTasks = () => {
     const [tasks, setTasks] = useState<MainTask[]>([]);
     const { toast } = useToast();
 
+    // Helper to map DB snake_case to Client camelCase
+    const mapTaskFromDb = (dbTask: any): MainTask => ({
+        id: dbTask.id,
+        title: dbTask.title || '',
+        description: dbTask.description,
+        startDate: dbTask.start_date, // Assuming start_date exists in DB or added
+        deadline: dbTask.deadline,
+        time: dbTask.time,
+        subtasks: dbTask.subtasks || [],
+        progress: dbTask.progress || 0,
+        priority: dbTask.priority || 'medium',
+        type: dbTask.type || 'task',
+        linkedAppointmentId: dbTask.linked_appointment_id,
+        isPreparatoryFor: dbTask.is_preparatory_for,
+        reminderBeforeAppointment: dbTask.reminder_before_appointment,
+        location: dbTask.location,
+        latitude: dbTask.latitude,
+        longitude: dbTask.longitude
+    });
+
+    // Helper to map Client camelCase to DB snake_case
+    const mapTaskToDb = (task: Partial<MainTask>) => {
+        const dbTask: any = { ...task };
+        // Remove client-only fields if any, map others
+        if (task.linkedAppointmentId !== undefined) dbTask.linked_appointment_id = task.linkedAppointmentId;
+        if (task.isPreparatoryFor !== undefined) dbTask.is_preparatory_for = task.isPreparatoryFor;
+        if (task.reminderBeforeAppointment !== undefined) dbTask.reminder_before_appointment = task.reminderBeforeAppointment;
+        if (task.startDate !== undefined) dbTask.start_date = task.startDate;
+
+        // Clean up camelCase keys
+        delete dbTask.linkedAppointmentId;
+        delete dbTask.isPreparatoryFor;
+        delete dbTask.reminderBeforeAppointment;
+        delete dbTask.startDate;
+
+        return dbTask;
+    };
+
     // Fetch tasks from Supabase
     const loadTasks = async () => {
         try {
@@ -43,18 +81,15 @@ export const useTasks = () => {
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
-                .eq('user_id', user.id); // Assuming table has user_id
+                .eq('user_id', user.id);
 
             if (error) throw error;
-            if (data) setTasks(data as unknown as MainTask[]);
+            if (data) setTasks(data.map(mapTaskFromDb));
         } catch (e) {
             console.error("Error loading tasks", e);
-            // Fallback to local storage if offline or error? 
-            // For "Instant Sync" priority, we focus on cloud.
-            // But let's check local storage as backup if cloud is empty (migration)
             const savedTasks = localStorage.getItem('baraka_tasks');
             if (savedTasks && (!tasks || tasks.length === 0)) {
-                // Option: We could auto-migrate here if we wanted.
+                // Potential offline support or migration
             }
         }
     };
@@ -62,7 +97,6 @@ export const useTasks = () => {
     useEffect(() => {
         loadTasks();
 
-        // Realtime Subscription
         const channel = supabase
             .channel('tasks_realtime')
             .on(
@@ -79,9 +113,8 @@ export const useTasks = () => {
         };
     }, []);
 
-    // Sync to Capacitor Preferences for Widget usage (Client side cache)
+    // Sync to Capacitor Preferences
     useEffect(() => {
-        // We still sync to local preferences for purely local widgets/watch functionality compatibility
         if (tasks.length > 0) {
             localStorage.setItem('baraka_tasks', JSON.stringify(tasks));
             Preferences.set({
@@ -114,8 +147,11 @@ export const useTasks = () => {
         // Optimistic update
         setTasks(prev => [...prev, newTask]);
 
+        // Map to DB format
+        const dbTask = mapTaskToDb(newTask);
+
         const { error } = await supabase.from('tasks').insert({
-            ...newTask,
+            ...dbTask,
             user_id: user.id
         });
 
@@ -132,7 +168,9 @@ export const useTasks = () => {
         // Optimistic
         setTasks(prev => prev.map(t => t.id === task.id ? task : t));
 
-        const { error } = await supabase.from('tasks').update(task).eq('id', task.id);
+        const dbTask = mapTaskToDb(task);
+        const { error } = await supabase.from('tasks').update(dbTask).eq('id', task.id);
+
         if (error) {
             console.error(error);
             toast({ title: 'خطأ في التحديث', variant: 'destructive' });
@@ -170,7 +208,7 @@ export const useTasks = () => {
         if (updatedTask) {
             const { error } = await supabase.from('tasks').update({
                 subtasks: updatedTask.subtasks,
-                progress: updatedTask.progress
+                progress: updatedTask.progress // subtasks and progress are same in DB (jsonb/int)
             }).eq('id', taskId);
 
             if (error) {
@@ -230,12 +268,11 @@ export const useTasks = () => {
         }
     };
 
-    // Linking functions (update DB directly)
     const linkToAppointment = async (taskId: string, appointmentId: string) => {
         setTasks(prev => prev.map(t =>
             t.id === taskId ? { ...t, linkedAppointmentId: appointmentId } : t
         ));
-        await supabase.from('tasks').update({ linkedAppointmentId: appointmentId }).eq('id', taskId);
+        await supabase.from('tasks').update({ linked_appointment_id: appointmentId }).eq('id', taskId);
         toast({ title: 'تم الربط', description: 'تم ربط المهمة بالموعد' });
     };
 
@@ -243,7 +280,7 @@ export const useTasks = () => {
         setTasks(prev => prev.map(t =>
             t.id === taskId ? { ...t, linkedAppointmentId: undefined } : t
         ));
-        await supabase.from('tasks').update({ linkedAppointmentId: null }).eq('id', taskId);
+        await supabase.from('tasks').update({ linked_appointment_id: null }).eq('id', taskId);
     };
 
     const setPreparatoryFor = async (taskId: string, appointmentId: string, reminderMinutes: number = 60) => {
@@ -255,13 +292,12 @@ export const useTasks = () => {
             } : t
         ));
         await supabase.from('tasks').update({
-            isPreparatoryFor: appointmentId,
-            reminderBeforeAppointment: reminderMinutes
+            is_preparatory_for: appointmentId,
+            reminder_before_appointment: reminderMinutes
         }).eq('id', taskId);
         toast({ title: 'تم التعيين', description: 'تم تعيين المهمة كمهمة تحضيرية' });
     };
 
-    // Getters work on local state (which is synced)
     const getPreparatoryTasks = (appointmentId: string): MainTask[] => {
         return tasks.filter(t => t.isPreparatoryFor === appointmentId);
     };

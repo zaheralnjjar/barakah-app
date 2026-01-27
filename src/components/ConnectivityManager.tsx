@@ -59,11 +59,11 @@ const INITIAL_FILES_MOCK: FileSystemItem[] = [
 ];
 
 const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0 || bytes === null || isNaN(bytes)) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat(((bytes || 0) / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 const formatDate = (dateString: string) => {
@@ -358,7 +358,7 @@ const ConnectivityManager = () => {
                             <div
                                 key={device.id}
                                 onClick={() => setSelectedDevice(device.id)}
-                                className={`p-3 rounded-lg cursor-pointer transition-all flex items-center gap-3 ${selectedDevice === device.id ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : 'hover:bg-gray-100'}`}
+                                className={`p-3 rounded-lg cursor-pointer transition-all flex items-center gap-3 ${selectedDevice === device.id ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200' : ''}`}
                             >
                                 {device.type === 'phone' ? <Smartphone className="w-5 h-5" /> :
                                     device.type === 'watch' ? <Watch className="w-5 h-5 ml-0.5" /> : <Laptop className="w-5 h-5" />}
@@ -388,19 +388,19 @@ const ConnectivityManager = () => {
                     <nav className="space-y-1">
                         <button
                             onClick={() => setMainView('files')}
-                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'files' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'files' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600'}`}
                         >
                             <Folder className="w-4 h-4" /> مدير الملفات
                         </button>
                         <button
                             onClick={() => setMainView('apps')}
-                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'apps' ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'apps' ? 'bg-purple-100 text-purple-700 font-medium' : 'text-gray-600'}`}
                         >
                             <AppWindow className="w-4 h-4" /> التطبيقات المثبتة
                         </button>
                         <button
                             onClick={() => setMainView('sync')}
-                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'sync' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${mainView === 'sync' ? 'bg-emerald-100 text-emerald-700 font-medium' : 'text-gray-600'}`}
                         >
                             <RefreshCw className="w-4 h-4" /> المزامنة والربط
                         </button>
@@ -431,7 +431,7 @@ const ConnectivityManager = () => {
                                         {fileHistory.map((h, i) => (
                                             <React.Fragment key={h.id}>
                                                 {i > 0 && <span className="text-gray-400">/</span>}
-                                                <button onClick={() => handleNavigate(h.id, '')} className={`hover:text-blue-600 truncate ${i === fileHistory.length - 1 ? 'font-bold text-gray-900' : ''}`}>
+                                                <button onClick={() => handleNavigate(h.id, '')} className={`truncate ${i === fileHistory.length - 1 ? 'font-bold text-gray-900' : ''}`}>
                                                     {h.path.split('/').pop() || 'الجذر'}
                                                 </button>
                                             </React.Fragment>
@@ -474,7 +474,7 @@ const ConnectivityManager = () => {
                                                 key={file.id}
                                                 onClick={() => toggleSelection(file.id, false)}
                                                 onDoubleClick={() => file.type === 'folder' ? handleNavigate(file.id, file.name) : setPreviewFile(file)}
-                                                className={`group p-4 rounded-xl border flex flex-col items-center text-center gap-3 cursor-pointer hover:bg-blue-50 ${selectedFiles.includes(file.id) ? 'border-blue-500 bg-blue-50' : ''}`}
+                                                className={`group p-4 rounded-xl border flex flex-col items-center text-center gap-3 cursor-pointer ${selectedFiles.includes(file.id) ? 'border-blue-500 bg-blue-50' : ''}`}
                                             >
                                                 <FileIcon type={file.type} className="w-12 h-12" />
                                                 <div className="text-sm font-medium truncate w-full" dir="ltr">{file.name}</div>
@@ -489,7 +489,7 @@ const ConnectivityManager = () => {
                                                 <tr key={file.id}
                                                     onClick={() => toggleSelection(file.id, false)}
                                                     onDoubleClick={() => file.type === 'folder' ? handleNavigate(file.id, file.name) : setPreviewFile(file)}
-                                                    className={`hover:bg-blue-50 cursor-pointer ${selectedFiles.includes(file.id) ? 'bg-blue-50' : ''}`}
+                                                    className={`cursor-pointer ${selectedFiles.includes(file.id) ? 'bg-blue-50' : ''}`}
                                                 >
                                                     <td className="p-3 flex items-center gap-3"><FileIcon type={file.type} className="w-5 h-5" /><span dir="ltr">{file.name}</span></td>
                                                     <td className="p-3 dir-ltr text-gray-500">{file.type === 'folder' ? '-' : formatSize(file.size)}</td>
@@ -534,13 +534,13 @@ const ConnectivityManager = () => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {installedApps.map(app => (
-                                    <div key={app.id} className="flex items-center p-3 border rounded-lg bg-gray-50 hover:bg-white transition-colors">
+                                    <div key={app.id} className="flex items-center p-3 border rounded-lg bg-gray-50 transition-colors">
                                         <div className="w-10 h-10 min-w-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3"><Box className="w-5 h-5 text-purple-600" /></div>
                                         <div className="flex-1 overflow-hidden">
                                             <h4 className="font-bold text-sm truncate">{app.name}</h4>
                                             <p className="text-xs text-gray-500 truncate">{app.pkg} • {app.ver}</p>
                                         </div>
-                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                        <Button variant="ghost" size="sm" className="text-red-500" onClick={() => {
                                             setInstalledApps(prev => prev.filter(a => a.id !== app.id));
                                             toast({ title: 'تم الحذف', description: `تم إزالة ${app.name}` });
                                         }}>حذف</Button>
@@ -555,7 +555,7 @@ const ConnectivityManager = () => {
                 {mainView === 'sync' && (
                     <div className="p-6 space-y-6 flex flex-col items-center justify-center h-full overflow-y-auto">
                         <div className="bg-emerald-50 p-8 rounded-full mb-6 relative group">
-                            <RefreshCw className="w-16 h-16 text-emerald-500 animate-pulse group-hover:rotate-180 transition-transform duration-700" />
+                            <RefreshCw className="w-16 h-16 text-emerald-500 animate-pulse" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800">مركز المزامنة</h2>
                         <p className="text-gray-500 max-w-md text-center mb-6">شارك بياناتك، إعداداتك، وأوضاعك مع الأجهزة الأخرى عبر الشبكة أو ملفات النسخ الاحتياطي.</p>

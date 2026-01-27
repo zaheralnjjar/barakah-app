@@ -56,6 +56,7 @@ import DataArchiver from '@/components/DataArchiver';
 import { BatteryOptimizationGuide } from '@/components/BatteryOptimizationGuide';
 import { PWAInstallButton } from '@/components/PWAInstallButton';
 // import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
+import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 const NewMuslimsManager = React.lazy(() => import('@/components/NewMuslims/NewMuslimsManager'));
 
 
@@ -434,6 +435,9 @@ const SettingsPanel = () => {
 
     const [activeSection, setActiveSection] = useState<string | null>(null);
 
+
+    const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
+
     const SETTINGS_SECTIONS_DATA = [
         {
             id: 'notifications',
@@ -442,6 +446,16 @@ const SettingsPanel = () => {
             color: 'text-orange-500',
             borderColor: 'border-orange-100',
             description: 'تخصيص تنبيهات الصلاة والمهام'
+        },
+        // ADDED SHORTCUTS SECTION
+        {
+            id: 'shortcuts',
+            title: 'إدارة الاختصارات',
+            icon: LayoutDashboard,
+            color: 'text-indigo-600',
+            bg: 'bg-indigo-50',
+            borderColor: 'border-indigo-100',
+            description: 'تخصيص أيقونات الوصول السريع'
         },
         {
             id: 'new_muslims',
@@ -536,7 +550,13 @@ const SettingsPanel = () => {
                     return (
                         <div
                             key={section.id}
-                            onClick={() => setActiveSection(section.id)}
+                            onClick={() => {
+                                if (section.id === 'shortcuts') {
+                                    setShowShortcutsSettings(true);
+                                } else {
+                                    setActiveSection(section.id);
+                                }
+                            }}
                             className={`cursor-pointer p-4 rounded-xl border-2 transition-all hover:scale-[1.02] active:scale-95 ${section.borderColor} ${section.bg} hover:shadow-md h-full flex flex-col items-center justify-center text-center gap-3`}
                         >
                             <div className={`p-3 rounded-full bg-white shadow-sm ${section.color}`}>
@@ -1623,6 +1643,11 @@ const SettingsPanel = () => {
                 </DialogContent>
             </Dialog>
 
+            {/* Shortcuts Settings Dialog */}
+            <ShortcutsSettingsDialog
+                open={showShortcutsSettings}
+                onOpenChange={setShowShortcutsSettings}
+            />
 
         </div >
     );

@@ -207,6 +207,9 @@ export const handleShortcut = async (shortcutType: string): Promise<void> => {
         case 'prayer-times':
             await handlePrayerTimes();
             break;
+        case 'saved-locations':
+            window.dispatchEvent(new Event('open-saved-locations'));
+            break;
         default:
             console.log('Unknown shortcut:', shortcutType);
     }

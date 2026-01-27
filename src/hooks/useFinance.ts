@@ -35,15 +35,18 @@ export const useFinance = () => {
     const calculateDailyLimit = (data: FinanceData) => {
         if (!data) return 0;
         const currentRate = data.exchange_rate || 1200;
-        const totalBalance = data.current_balance_ars + (data.current_balance_usd * currentRate);
-        // Ensure we handle debts if needed, typically debt reduces available
-        const availableBalance = totalBalance - (data.emergency_buffer || 0) - (data.total_debt || 0);
+        const balanceARS = Number(data.current_balance_ars) || 0;
+        const balanceUSD = Number(data.current_balance_usd) || 0;
+        const buffer = Number(data.emergency_buffer) || 0;
+        const debt = Number(data.total_debt) || 0;
+
+        const totalBalance = balanceARS + (balanceUSD * currentRate);
+        const availableBalance = totalBalance - buffer - debt;
 
         const today = new Date();
         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         const remainingDays = daysInMonth - today.getDate();
 
-        // Add minimal buffer of 3 days explicitly as per existing logic
         return Math.max(0, availableBalance / (remainingDays + 3));
     };
 

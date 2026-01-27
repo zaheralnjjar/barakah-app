@@ -46,4 +46,19 @@
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 
+    <!-- Saved Locations Shortcut -->
+    <shortcut
+        android:shortcutId="saved_locations"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_directions"
+        android:shortcutShortLabel="@string/shortcut_saved_locations"
+        android:shortcutLongLabel="@string/shortcut_saved_locations_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.barakah.app"
+            android:targetClass="com.barakah.app.MainActivity"
+            android:data="barakah://saved-locations" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
 </shortcuts>

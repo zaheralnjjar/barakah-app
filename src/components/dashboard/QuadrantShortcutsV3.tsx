@@ -1,9 +1,12 @@
-import React from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Sparkles, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Sparkles, MapPin, Navigation, Map, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isAndroid } from '@/utils/platformDetection';
 import { getActionById } from './QuickActionsGrid';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuadrantShortcutsV3Props {
     customShortcuts: string[];
@@ -15,6 +18,39 @@ interface QuadrantShortcutsV3Props {
 export const QuadrantShortcutsV3: React.FC<QuadrantShortcutsV3Props> = ({
     customShortcuts, customLocations, onManageShortcuts, onExecuteShortcut
 }) => {
+    const { toast } = useToast();
+    const [locName, setLocName] = useState('');
+    const [isLoadingLoc, setIsLoadingLoc] = useState(false);
+
+    const handleSaveCurrentLoc = () => {
+        if (!navigator.geolocation) {
+            toast({ title: 'خطأ', description: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
+            return;
+        }
+        setIsLoadingLoc(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const url = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                const name = locName || "موقعي";
+
+                // Save to local storage (or via prop if available)
+                const existing = JSON.parse(localStorage.getItem('baraka_custom_locations') || '[]');
+                const updated = [{ id: crypto.randomUUID(), name, url }, ...existing];
+                localStorage.setItem('baraka_custom_locations', JSON.stringify(updated));
+
+                window.dispatchEvent(new Event('locations-updated'));
+                setLocName('');
+                setIsLoadingLoc(false);
+                toast({ title: 'تم حفظ الموقع بنجاح' });
+            },
+            (err) => {
+                console.error(err);
+                setIsLoadingLoc(false);
+                toast({ title: 'فشل تحديد الموقع', variant: 'destructive' });
+            }
+        );
+    };
+
     // Combine locations and shortcuts (Unlimited items, will wrap in grid)
     const allItems = [
         ...customLocations.map(loc => ({ type: 'location', data: loc })),
@@ -25,56 +61,69 @@ export const QuadrantShortcutsV3: React.FC<QuadrantShortcutsV3Props> = ({
         return null;
     }
 
+    const categories = [
+        { id: 'info', name: '📊 رؤى باركة (Insights)', color: 'text-blue-600', bg: 'bg-blue-50' },
+        { id: 'action', name: '⚡ تحكم سريع (Control)', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { id: 'smart', name: '🧠 المخطط الذكي (Smart)', color: 'text-pink-600', bg: 'bg-pink-50' }
+    ];
+
     return (
-        <Card className="border-emerald-100 shadow-sm bg-white overflow-hidden p-2 md:p-3">
-            {/* Dynamic Grid: 5 columns (Mobile) / 10 columns (Desktop) */}
-            <div className="grid grid-cols-5 md:grid-cols-10 gap-1 md:gap-2">
-                {allItems.map((item, idx) => {
-                    if (item.type === 'location') {
-                        const loc = item.data;
-                        return (
-                            <button
-                                key={`loc-${idx}`}
-                                onClick={() => window.open(loc.url, '_blank')}
-                                className="flex flex-col items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 hover:bg-indigo-100 transition-all aspect-square p-1 group"
-                            >
-                                <span className="text-lg md:text-xl mb-0.5 transition-transform group-hover:scale-110">📍</span>
-                                <span className="font-bold text-center leading-tight line-clamp-2 text-[7px] md:text-[8px]">
-                                    {loc.name}
-                                </span>
-                            </button>
-                        );
-                    } else {
-                        const action = getActionById(item.data);
-                        if (!action) return null;
-                        const Icon = action.icon;
+        <Card className="border-rose-100 shadow-sm bg-rose-50/20 overflow-hidden p-3 rounded-[2rem] border-2">
+            <div className="space-y-5">
 
-                        const colorMap: Record<string, string> = {
-                            'info': 'bg-blue-50 border-blue-100 text-blue-700 hover:bg-blue-100',
-                            'action': 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100',
-                            'calc': 'bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100',
-                            'remind': 'bg-amber-50 border-amber-100 text-amber-700 hover:bg-amber-100',
-                            'smart': 'bg-pink-50 border-pink-100 text-pink-700 hover:bg-pink-100'
-                        };
 
-                        return (
-                            <button
-                                key={`shortcut-${idx}`}
-                                onClick={() => onExecuteShortcut(item.data)}
-                                className={cn(
-                                    `flex flex-col items-center justify-center rounded-xl border transition-all aspect-square group ${colorMap[action.category] || colorMap['info']}`,
-                                    "p-1"
-                                )}
-                                title={action.description}
-                            >
-                                <Icon className="w-5 h-5 md:w-6 md:h-6 mb-0.5 transition-transform group-hover:scale-110" />
-                                <span className="font-bold text-center leading-tight line-clamp-2 text-[7px] md:text-[8px]">
-                                    {action.name}
-                                </span>
-                            </button>
-                        );
-                    }
-                })}
+                {/* Locations Grid */}
+                {customLocations.length > 0 && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black text-indigo-800 uppercase tracking-tighter">المواقع المحفوظة</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-2">
+                            {customLocations.map((loc, idx) => (
+                                <button
+                                    key={`loc-${idx}`}
+                                    onClick={() => window.open(loc.url, '_blank')}
+                                    className="flex flex-col items-center justify-center rounded-2xl bg-white border-2 border-indigo-50 text-indigo-700 aspect-square p-1 active:scale-95 transition-all shadow-sm group hover:border-indigo-200"
+                                >
+                                    <div className="flex-1 flex items-center justify-center">
+                                        <Navigation className="w-[60%] h-[60%] group-hover:scale-110 transition-transform" />
+                                    </div>
+                                    <div className="h-[30%] w-full flex items-center justify-center">
+                                        <span className="font-bold text-center leading-none text-[7px] truncate px-0.5">
+                                            {loc.name}
+                                        </span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Simple Shortcuts Grid (Text-Focused) */}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                        <span className="text-[10px] font-black text-rose-800 uppercase tracking-tighter">الاختصارات المخصصة</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {customShortcuts.map((id, idx) => {
+                            const action = getActionById(id);
+                            if (!action) return null;
+                            const Icon = action.icon;
+                            return (
+                                <button
+                                    key={`shortcut-${idx}`}
+                                    onClick={() => onExecuteShortcut(action.id)}
+                                    className="flex flex-col items-center justify-center rounded-2xl bg-white border border-rose-100 aspect-square p-2 active:scale-95 transition-all shadow-sm hover:border-rose-300"
+                                    title={action.description}
+                                >
+                                    <span className="font-bold text-center leading-tight text-[10px] text-gray-800 line-clamp-3">
+                                        {action.name}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </Card>
     );

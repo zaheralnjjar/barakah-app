@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ملاحظاتي</string>
+    <string name="title_activity_main">ملاحظاتي</string>
+    <string name="package_name">com.barakah.notes</string>
+    <string name="custom_url_scheme">com.barakah.notes</string>
+</resources>

@@ -82,7 +82,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm">
-                            <Type className="w-4 h-4 text-indigo-500" />
+                            <Type className="w-4 h-4 text-emerald-500" />
                             <span className="max-w-[70px] truncate">
                                 {fontFamilies.find(f => editor.isActive('textStyle', { fontFamily: f.value }))?.name || 'الخط'}
                             </span>
@@ -98,7 +98,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                     className={`
                                         flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
                                         ${editor.isActive('textStyle', { fontFamily: font.value })
-                                            ? 'bg-indigo-50 text-indigo-600 font-bold'
+                                            ? 'bg-emerald-50 text-emerald-600 font-bold'
                                             : 'hover:bg-gray-50 text-gray-700'}
                                     `}
                                     style={{ fontFamily: font.value }}
@@ -114,7 +114,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm border border-transparent hover:border-gray-200">
-                            <Type className="w-3.5 h-3.5 text-indigo-400" />
+                            <Type className="w-3.5 h-3.5 text-emerald-500" />
                             <span className="min-w-[20px] text-center">
                                 {editor.getAttributes('textStyle').fontSize?.replace('px', '') || '16'}
                             </span>
@@ -122,15 +122,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-20 p-1 rounded-xl shadow-xl border-gray-100 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-0.5" dir="rtl">
                             {Array.from({ length: 21 }, (_, i) => 10 + i).map((size) => (
                                 <button
                                     key={size}
-                                    onClick={() => editor.chain().focus().setMark('textStyle', { fontSize: `${size}px` }).run()}
+                                    onClick={() => editor.chain().focus().setMark('textStyle', { fontSize: `${size}` }).run()}
                                     className={`
                                         flex items-center justify-center px-2 py-1.5 rounded-lg text-sm transition-colors
-                                        ${editor.isActive('textStyle', { fontSize: `${size}px` })
-                                            ? 'bg-indigo-50 text-indigo-600 font-bold'
+                                        ${editor.getAttributes('textStyle').fontSize === `${size}`
+                                            ? 'bg-emerald-50 text-emerald-600 font-bold'
                                             : 'hover:bg-gray-50 text-gray-700'}
                                     `}
                                 >
@@ -141,29 +141,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     </PopoverContent>
                 </Popover>
 
-                {/* Zoom Controls */}
-                < div className="flex bg-gray-50 rounded-lg p-0.5 items-center mr-1" >
-                    <button
-                        onClick={() => {
-                            const current = parseInt(editor.getAttributes('textStyle').fontSize || '16');
-                            editor.chain().focus().setMark('textStyle', { fontSize: `${Math.max(10, current - 2)}` }).run();
-                        }}
-                        className="p-1 rounded-md hover:bg-white hover:shadow-sm text-gray-500 hover:text-indigo-600 transition-all"
-                        title="تصغير الخط"
-                    >
-                        <Minus className="w-3 h-3" />
-                    </button>
-                    <button
-                        onClick={() => {
-                            const current = parseInt(editor.getAttributes('textStyle').fontSize || '16');
-                            editor.chain().focus().setMark('textStyle', { fontSize: `${current + 2}` }).run();
-                        }}
-                        className="p-1 rounded-md hover:bg-white hover:shadow-sm text-gray-500 hover:text-indigo-600 transition-all"
-                        title="تكبير الخط"
-                    >
-                        <Plus className="w-3 h-3" />
-                    </button>
-                </div >
+                <div className="w-px h-5 bg-gray-200 mx-1" />
 
                 <div className="w-px h-5 bg-gray-200 mx-1" />
 
@@ -244,19 +222,19 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 < div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr" >
                     <button
                         onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
                     ><AlignLeft className="w-4 h-4" /></button>
                     <button
                         onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
                     ><AlignCenter className="w-4 h-4" /></button>
                     <button
                         onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
                     ><AlignRight className="w-4 h-4" /></button>
                     <button
                         onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}
+                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
                     ><AlignJustify className="w-4 h-4" /></button>
                 </div >
 
@@ -265,14 +243,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 {/* Lists */}
                 <button
                     onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`p-2 rounded-xl transition-all ${editor.isActive('bulletList') ? 'bg-indigo-100 text-indigo-600 border border-indigo-200' : 'hover:bg-gray-100 text-gray-500'}`}
+                    className={`p-2 rounded-xl transition-all ${editor.isActive('bulletList') ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'hover:bg-gray-100 text-gray-500'}`}
                     title="تعداد نقطي"
                 >
                     <List className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-2 rounded-xl transition-all ${editor.isActive('orderedList') ? 'bg-indigo-100 text-indigo-600 border border-indigo-200' : 'hover:bg-gray-100 text-gray-500'}`}
+                    className={`p-2 rounded-xl transition-all ${editor.isActive('orderedList') ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'hover:bg-gray-100 text-gray-500'}`}
                     title="تعداد رقمي"
                 >
                     <ListOrdered className="w-4 h-4" />
@@ -283,7 +261,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 {/* Time Separator */}
                 <button
                     onClick={addTimeSeparator}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-emerald-50 text-gray-600 hover:text-emerald-600 transition-colors"
                 >
                     <Minus className="w-4 h-4" />
                     <Clock className="w-3.5 h-3.5" />

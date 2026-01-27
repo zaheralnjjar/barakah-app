@@ -13,7 +13,7 @@ export interface SavedLocation {
     lat: number;
     lng: number;
     url: string;
-    category: 'home' | 'work' | 'mosque' | 'market' | 'restaurant' | 'parking' | 'other';
+    category: 'home' | 'work' | 'mosque' | 'market' | 'restaurant' | 'parking' | 'pinned' | 'other';
     type: 'location' | 'parking';
     createdAt: string;
     user_id?: string;
@@ -166,14 +166,29 @@ export const useLocations = () => {
         }
     ): Promise<SavedLocation | null> => {
         const now = new Date();
-        const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const titleWithInfo = async () => {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+                const data = await res.json();
+                const addr = data.address || {};
+                const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+                const number = addr.house_number || '';
+                const streetInfo = road ? (number ? `${road} ${number}` : road) : '';
 
-        // Append date/time if not already present
-        const formattedTitle = title.includes(dateTimeStr) ? title : `${title} ${dateTimeStr}`;
+                if (streetInfo) {
+                    return `${title} ${streetInfo}`.trim();
+                }
+            } catch (e) {
+                console.error('Error fetching address for title:', e);
+            }
+            return title;
+        };
+
+        const finalTitle = await titleWithInfo();
 
         const newLocation: SavedLocation = {
             id: Date.now().toString(),
-            title: formattedTitle,
+            title: finalTitle,
             address: options?.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
             lat,
             lng,
@@ -228,10 +243,6 @@ export const useLocations = () => {
     const saveParking = useCallback(async (customLocation?: { lat: number, lng: number, address?: string, name?: string }): Promise<SavedLocation | null> => {
         return new Promise((resolve) => {
             const processLocation = async (latitude: number, longitude: number) => {
-                const now = new Date();
-                // Compact date format: DD.MM HH:MM
-                const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
                 let streetAddress = customLocation?.address || 'موقف';
 
                 // If address not provided, fetch it
@@ -250,7 +261,7 @@ export const useLocations = () => {
                     }
                 }
 
-                const title = customLocation?.name ? `${customLocation.name} ${dateTimeStr}` : `${streetAddress} ${dateTimeStr}`;
+                const title = customLocation?.name ? customLocation.name : streetAddress;
 
                 const location = await saveLocation(title, latitude, longitude, {
                     category: 'parking',

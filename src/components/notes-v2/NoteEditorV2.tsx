@@ -31,13 +31,13 @@ const FontSize = Extension.create({
                 attributes: {
                     fontSize: {
                         default: null,
-                        parseHTML: element => element.style.fontSize.replace('px', ''),
+                        parseHTML: element => element.style.fontSize.replace(/['"]+/g, '').replace('px', ''),
                         renderHTML: attributes => {
                             if (!attributes.fontSize) {
                                 return {};
                             }
                             return {
-                                style: `font-size: ${attributes.fontSize}px`,
+                                style: `font-size: ${attributes.fontSize}px !important`,
                             };
                         },
                     },
@@ -121,13 +121,11 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         editorProps: {
             attributes: {
                 class: 'prose prose-lg max-w-none focus:outline-none min-h-[300px] px-4 py-4 md:px-8 md:py-6 text-gray-700 leading-relaxed dir-rtl',
-                dir: 'auto',
-                style: 'min-height: 100%; font-size: 12pt; font-family: inherit;' // Enforce 12pt for body
+                dir: 'auto'
             },
         },
     });
 
-    // ... (effects and handlers same as before)
     // Auto-insert separator logic
     useEffect(() => {
         if (editor && initialContent && autoInsertSeparator) {
@@ -144,8 +142,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             // editor.commands.setContent(initialContent); // Optional sync
         }
     }, [initialContent, editor]);
-
-
 
     const handleSelectTemplate = (content: string, type: 'text' | 'background' = 'text') => {
         if (type === 'background') {
@@ -196,9 +192,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         const imgProps = pdf.getImageProperties(imgData);
                         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-                        // Add image. If height > page, we might need multi-page logic (html2pdf or jspdf html method is better for long content, but this is simple snapshot)
-                        // For a simple note, single page snapshot is often requested, but for long notes this will stretch/cut. 
-                        // Given constraints, this is fine for now as "Export Note Image/PDF".
                         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                         pdf.save(`Note-${Date.now()}.pdf`);
                         toast({ title: 'تم تصدير ملف PDF' });
@@ -229,25 +222,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 ref={editorRef}
                 className="flex-1 overflow-y-auto custom-scrollbar px-2 sm:px-6 cursor-text pb-6"
                 onClick={(e) => {
-                    // Click Anywhere logic
                     if (e.target === e.currentTarget && editor) {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const clickY = e.clientY - rect.top;
-
-                        // If near bottom of existing content, just focus end
-                        // But if significantly below, insert newlines
-
-                        // Simple heuristic: Focus end for now to ensure we capture the click.
-                        // True "Click Positioning" requires measuring rendered height vs click Y.
-                        // We will try to simulate it by focusing end.
-                        // For "Starting at line 6" on empty note:
-                        const lineHeight = 32; // Approx
+                        const lineHeight = 32;
                         const contentHeight = editorRef.current?.querySelector('.ProseMirror')?.clientHeight || 0;
 
                         if (clickY > contentHeight + lineHeight) {
                             const linesToAdd = Math.floor((clickY - contentHeight) / lineHeight);
                             if (linesToAdd > 0) {
-                                // Insert lines
                                 let newLines = '';
                                 for (let i = 0; i < linesToAdd; i++) newLines += '<p><br></p>';
                                 editor.chain().focus('end').insertContent(newLines).run();
@@ -276,7 +259,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                     bgRepeat = parsed.repeat || 'no-repeat';
                                 }
                             } catch (e) {
-                                // Not JSON, assume simple string
                             }
 
                             return {
@@ -298,16 +280,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     })()}
                 >
                     <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
-                    {/* Force 12pt on everything as requested */}
-                    <style>{`
-                        .ProseMirror p, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror ul, .ProseMirror ol {
-                            font-size: 12pt !important;
-                        }
-                    `}</style>
                 </div>
             </div>
-
-
 
             <TemplatesGallery
                 isOpen={showTemplates}

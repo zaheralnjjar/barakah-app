@@ -5,4 +5,12 @@
     <string name="package_name">com.barakah.app</string>
     <string name="custom_url_scheme">com.barakah.app</string>
     <string name="widget_description">عرض ملخص يومي للصلاة والمهام</string>
+    <string name="shortcut_save_location">حفظ الموقف</string>
+    <string name="shortcut_save_location_long">حفظ موقع السيارة الحالي</string>
+    <string name="shortcut_dollar_rate">سعر الدولار</string>
+    <string name="shortcut_dollar_rate_long">عرض سعر صرف الدولار المحدث</string>
+    <string name="shortcut_prayer_times">مواقيت الصلاة</string>
+    <string name="shortcut_prayer_times_long">عرض مواقيت الصلاة لليوم</string>
+    <string name="shortcut_saved_locations">المواقع المحفوظة</string>
+    <string name="shortcut_saved_locations_long">عرض المواقع المحفوظة والملاحة</string>
 </resources>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditorModalV2 } from './notes-v2/EditorModalV2';
@@ -32,7 +32,8 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
         { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-rose-600', activeBg: 'bg-rose-50' },
         { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-600', activeBg: 'bg-emerald-50' },
         { id: 'map', label: 'الخريطة', icon: MapPin, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
-        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, color: 'text-amber-600', activeBg: 'bg-amber-50' },
+        { id: 'academia', label: 'بحث أكاديمي', icon: GraduationCap, isRoute: true, route: '/thesis', color: 'text-violet-600', activeBg: 'bg-violet-50' },
+        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2', color: 'text-amber-600', activeBg: 'bg-amber-50' },
         { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
     ];
 
@@ -52,7 +53,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
     const handleEnd = (item: any) => {
         if (pressTimer.current) clearTimeout(pressTimer.current);
         if (!isLongPress.current) {
-            if (item.isRoute) navigate('/notes-v2');
+            if (item.isRoute) navigate(item.route);
             else onNavigate(item.id);
         } else if (isLongPress.current) {
             if (item.isHome && onLongPress) {

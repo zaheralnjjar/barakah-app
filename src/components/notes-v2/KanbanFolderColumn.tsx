@@ -91,6 +91,7 @@ export const KanbanFolderColumn: React.FC<KanbanFolderColumnProps> = ({
                             <button
                                 className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
                                 title="حذف"
+                                onClick={(e) => e.stopPropagation()}
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>

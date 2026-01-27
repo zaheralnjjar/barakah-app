@@ -104,7 +104,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
     if (!position) return null;
 
     // Use street name as default if no name provided
-    const getDisplayName = () => addressName.trim() || addressDetails || `${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`;
+    const getDisplayName = () => addressName.trim() || addressDetails || `${(position?.lat || 0).toFixed(4)}, ${(position?.lng || 0).toFixed(4)}`;
 
     return (
         <Marker position={position}>
@@ -147,7 +147,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                                 >✕</button>
                             </div>
                         ) : (
-                            <label className="flex items-center justify-center gap-2 p-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-400 hover:bg-green-50 text-xs">
+                            <label className="flex items-center justify-center gap-2 p-2 border border-dashed border-gray-300 rounded-lg cursor-pointer text-xs">
                                 <span>📷</span>
                                 <span className="text-gray-500">إضافة صورة</span>
                                 <input
@@ -171,7 +171,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                     <div className="flex items-center justify-center gap-2 pt-2">
                         <Button
                             size="sm"
-                            className="flex-1 h-9 bg-green-500 hover:bg-green-600 text-white"
+                            className="flex-1 h-9 bg-green-500 text-white"
                             onClick={() => {
                                 const saveName = getDisplayName();
                                 onSave(saveName, addressDetails, position);
@@ -183,7 +183,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 border-purple-200 hover:bg-purple-50"
+                            className="h-9 w-9 border-purple-200"
                             onClick={() => onShare(position)}
                             title="مشاركة"
                         >
@@ -193,7 +193,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 border-blue-200 hover:bg-blue-50"
+                            className="h-9 w-9 border-blue-200"
                             onClick={handleNavigate}
                             title="ملاحة خارجية"
                         >
@@ -205,7 +205,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
                         <Button
                             variant="outline"
                             size="icon"
-                            className="w-full h-10 mt-2 border-orange-200 hover:bg-orange-50 text-orange-700 flex items-center justify-center gap-2"
+                            className="w-full h-10 mt-2 border-orange-200 text-orange-700 flex items-center justify-center gap-2"
                             onClick={() => {
                                 // Direct save without name if needed, or use default name
                                 const saveName = getDisplayName() || 'موقف';
@@ -364,7 +364,7 @@ const InteractiveMap = () => {
             const newLocation = {
                 id: Date.now().toString(),
                 title: titleWithTime,
-                address: addressDetails ? addressDetails : `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
+                address: addressDetails ? addressDetails : `${(position?.lat || 0).toFixed(6)}, ${(position?.lng || 0).toFixed(6)}`,
                 category: selectedCategory,
                 lat: position.lat,
                 lng: position.lng,
@@ -741,7 +741,7 @@ const InteractiveMap = () => {
                             />
                             <Button
                                 size="icon"
-                                className="h-10 w-10 bg-blue-600 hover:bg-blue-700 shadow-md shrink-0"
+                                className="h-10 w-10 bg-blue-600 shadow-md shrink-0"
                                 onClick={performSearch}
                             >
                                 <Search className="w-5 h-5" />
@@ -760,7 +760,7 @@ const InteractiveMap = () => {
                                         return (
                                             <div
                                                 key={idx}
-                                                className="p-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 text-right"
+                                                className="p-2.5 cursor-pointer border-b last:border-b-0 text-right"
                                                 onMouseDown={() => {
                                                     const lat = parseFloat(s.lat);
                                                     const lng = parseFloat(s.lon);
@@ -775,7 +775,7 @@ const InteractiveMap = () => {
                                                 <p className="text-sm font-medium">{formattedName}</p>
                                                 <p className="text-xs text-gray-500 truncate">{s.display_name.split(',').slice(1, 3).join(',')}</p>
                                                 {s.distance && (
-                                                    <span className="text-xs text-blue-500">{s.distance.toFixed(1)} كم</span>
+                                                    <span className="text-xs text-blue-500">{(s.distance || 0).toFixed(1)} كم</span>
                                                 )}
                                             </div>
                                         );
@@ -808,7 +808,7 @@ const InteractiveMap = () => {
                                 <tbody>
                                     {savedLocations.map((loc: any) => {
                                         return (
-                                            <tr key={loc.id} className="border-b hover:bg-blue-50/50 transition-colors">
+                                            <tr key={loc.id} className="border-b transition-colors text-right">
                                                 <td className="p-3">
                                                     <div className="flex items-center gap-2">
                                                         <div className="bg-blue-100 p-1.5 rounded-full">
@@ -823,7 +823,7 @@ const InteractiveMap = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-green-600 hover:bg-green-50"
+                                                            className="h-8 w-8 text-green-600"
                                                             onClick={() => {
                                                                 const url = `https://www.google.com/maps/dir/?api=1&destination=${loc.url.replace('geo:', '')}`;
                                                                 window.open(url, '_blank');
@@ -838,7 +838,7 @@ const InteractiveMap = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-blue-600 hover:bg-blue-50"
+                                                            className="h-8 w-8 text-blue-600"
                                                             onClick={() => {
                                                                 const url = `https://www.google.com/maps/search/?api=1&query=${loc.url.replace('geo:', '')}`;
                                                                 if (navigator.share) {
@@ -856,7 +856,7 @@ const InteractiveMap = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-orange-600 hover:bg-orange-50"
+                                                            className="h-8 w-8 text-orange-600"
                                                             onClick={() => {
                                                                 setEditingResource(loc);
                                                                 setIsEditOpen(true);
@@ -869,7 +869,7 @@ const InteractiveMap = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-red-600 hover:bg-red-50"
+                                                            className="h-8 w-8 text-red-600"
                                                             onClick={() => deleteLocation(loc.id)}
                                                             title="حذف"
                                                         >

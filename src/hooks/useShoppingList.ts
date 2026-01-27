@@ -114,6 +114,9 @@ export const useShoppingList = () => {
             created_at: newItem.createdAt
         });
 
+        // Dispatch global event for cross-component sync
+        window.dispatchEvent(new CustomEvent('shopping-list-updated'));
+
         return newItem;
     };
 

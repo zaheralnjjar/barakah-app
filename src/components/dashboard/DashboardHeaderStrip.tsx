@@ -150,9 +150,9 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                             {PRAYER_ORDER.map((key) => (
                                 <div key={key} className={cn(
                                     "text-center border-l border-emerald-600/30 last:border-l-0",
-                                    !isAndroid() ? "py-1" : "py-2"
+                                    !isAndroid() ? "py-1.5 md:py-3" : "py-2"
                                 )}>
-                                    <span className="text-[10px] font-bold">{PRAYER_NAMES[key as keyof typeof PRAYER_NAMES]}</span>
+                                    <span className="text-[10px] md:text-xs font-bold">{PRAYER_NAMES[key as keyof typeof PRAYER_NAMES]}</span>
                                 </div>
                             ))}
                         </div>
@@ -172,13 +172,13 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                         )}
                                     >
                                         <span className={cn(
-                                            "text-xs font-bold font-mono",
+                                            "text-xs md:text-sm font-bold font-mono",
                                             isNext ? "text-emerald-900" : "text-emerald-700"
                                         )}>
                                             {pData?.time || '--:--'}
                                         </span>
                                         {/* Active Indicator Line */}
-                                        {isNext && <div className="absolute bottom-0 w-8 h-0.5 bg-emerald-500 rounded-full" />}
+                                        {isNext && <div className="absolute bottom-0 w-8 md:w-12 h-0.5 md:h-1 bg-emerald-500 rounded-full" />}
                                     </div>
                                 );
                             })}

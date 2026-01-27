@@ -11,9 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 interface QuickNoteDialogProps {
     isOpen: boolean;
     onClose: () => void;
+    defaultTag?: string;
 }
 
-export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClose }) => {
+export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClose, defaultTag }) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [folderId, setFolderId] = useState<string | null>(null);
@@ -28,7 +29,12 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         }
 
         try {
-            await createNote({ title, content, folder_id: folderId });
+            await createNote({
+                title,
+                content,
+                folder_id: folderId,
+                tags: defaultTag ? [defaultTag] : [] // Simplest implementation for now
+            });
             toast({ title: 'تم حفظ الملاحظة بنجاح ✅' });
             setTitle('');
             setContent('');
