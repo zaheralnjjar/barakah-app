@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
 import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder } from 'lucide-react';
+import { ProductivityTicker } from './ProductivityTicker';
 import * as Icons from 'lucide-react';
 
 interface QuickActionsGridV2Props {
@@ -185,16 +186,41 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
     // Android Layout - Proper Order: Fixed Actions → Custom Shortcuts
     if (isAndroid()) {
+        const row1Ids = ['timer', 'event', 'expense', 'location', 'shopping'];
+
         return (
             <div className="space-y-3">
-                {/* 1. Fixed Quick Actions (2 rows x 5 cols) */}
+                {/* 1. Row 1: Fixed Quick Actions (5 cols) */}
                 <div className="px-1" dir="rtl">
                     <div className="grid grid-cols-5 gap-2">
-                        {fixedActionIds.map(id => <ActionButton key={id} shortcutId={id} isFixed={true} />)}
+                        {row1Ids.map(id => <ActionButton key={id} shortcutId={id} isFixed={true} />)}
                     </div>
                 </div>
 
-                {/* 2. Custom Shortcuts from Settings - Conditional Render */}
+                {/* 2. Row 2: Note | Productivity Ticker (3) | Customize */}
+                <div className="px-1" dir="rtl">
+                    <div className="grid grid-cols-5 gap-2" style={{ height: '70px' }}>
+                        {/* Right: Add Note */}
+                        <div className="col-span-1 h-full">
+                            <ActionButton shortcutId="note" isFixed={true} />
+                        </div>
+
+                        {/* Center: Productivity Ticker (Span 3) */}
+                        <div className="col-span-3 h-full">
+                            <ProductivityTicker
+                                onClick={() => toast({ title: "التقرير اليومي", description: "قيد التطوير..." })}
+                                onLongPress={() => toast({ title: "التقرير الأسبوعي", description: "قيد التطوير..." })}
+                            />
+                        </div>
+
+                        {/* Left: Customize/Tools */}
+                        <div className="col-span-1 h-full">
+                            <ActionButton shortcutId="open_tools" isFixed={true} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Custom Shortcuts from Settings - Conditional Render */}
                 {!isCleanMode && gridShortcuts.length > 0 && (
                     <div className="px-1 animate-in slide-in-from-top-2 fade-in duration-300" dir="rtl">
                         <div className="grid grid-cols-5 gap-2">

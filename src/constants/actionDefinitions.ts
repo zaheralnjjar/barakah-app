@@ -14,6 +14,7 @@ export const AVAILABLE_ACTIONS = [
     { id: 'show_new_muslims', name: 'المهتدين', icon: Users, category: 'navigation', description: 'الانتقال إلى قسم هداية' },
     { id: 'open_academic', name: 'الأكاديمية', icon: GraduationCap, category: 'navigation', description: 'الانتقال إلى الأكاديمية' },
     { id: 'open_settings', name: 'الإعدادات', icon: Settings, category: 'navigation', description: 'إعدادات التطبيق' },
+    { id: 'toggle_clean_mode', name: 'إخفاء/إظهار', icon: LayoutGrid, category: 'navigation', description: 'تبديل وضع العرض' },
     { id: 'open_tools', name: 'تخصيص', icon: Sparkles, category: 'navigation', description: 'تخصيص الاختصارات والأدوات' },
     { id: 'search', name: 'بحث', icon: Search, category: 'navigation', description: 'البحث في التطبيق' },
 
