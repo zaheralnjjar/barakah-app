@@ -76,7 +76,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             : 'bg-slate-100/80 text-slate-700 border-slate-200',
     };
 
-    const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'open_academic', 'note'];
+    const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'note'];
 
     // Unified Button Component
     const ActionButton = ({ shortcutId, isFixed = false, customData, className }: { shortcutId: string, isFixed?: boolean, customData?: any, className?: string }) => {

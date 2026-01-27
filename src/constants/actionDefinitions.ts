@@ -56,9 +56,13 @@ export const AVAILABLE_ACTIONS = [
     { id: 'clear_cache', name: 'تنظيف الذاكرة', icon: Trash2, category: 'system', description: 'إصلاح مشاكل العرض' },
     { id: 'show_calculator', name: 'آلة حاسبة', icon: Calculator, category: 'system', description: 'فتح الآلة الحاسبة' },
 
-    // ===== الإنتاجية =====
+    // ===== الإنتاجية والإيمانيات =====
     { id: 'log_distraction', name: 'سجل تشتت', icon: Zap, category: 'productivity', description: 'تسجيل سبب التشتت الحالي' },
     { id: 'remind_water', name: 'تذكير الماء', icon: Droplets, category: 'productivity', description: 'تذكير لشرب الماء' },
+    { id: 'open_mushaf', name: 'المصحف', icon: FileText, category: 'islamic', description: 'فتح المصحف الإلكتروني' },
+    { id: 'open_adhkar', name: 'الأذكار', icon: Heart, category: 'islamic', description: 'أذكار اليوم' },
+    { id: 'open_tasbih', name: 'مسبحة', icon: RefreshCw, category: 'islamic', description: 'المسبحة الإلكترونية' },
+    { id: 'open_qibla', name: 'القبلة', icon: Navigation, category: 'islamic', description: 'تحديد القبلة' },
 
     // ===== تذكيرات =====
     { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'reminder', description: 'تنبيه بعد 5 دقائق' },

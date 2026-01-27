@@ -329,6 +329,11 @@ export const useShortcutExecution = (props: {
                 break;
             }
 
+            case 'open_mushaf': window.open('https://quran.com', '_blank'); break;
+            case 'open_adhkar': window.open('https://www.duas.org/mobile/morning-evening-adhkar.html', '_blank'); break;
+            case 'open_tasbih': window.dispatchEvent(new CustomEvent('open-tasbih')); break;
+            case 'open_qibla': window.open('https://qiblafinder.withgoogle.com', '_blank'); break;
+
             default:
                 console.log('Unhandled shortcut:', actionId);
                 toast({ title: 'قريباً', description: 'هذا الاختصار قيد التطوير' });

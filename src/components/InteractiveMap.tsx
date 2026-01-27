@@ -37,13 +37,16 @@ import { Share } from '@capacitor/share';
 
 
 
-// Fix Leaflet icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Fix Leaflet icons - Move to a function that can be called inside useEffect
+const fixLeafletIcons = () => {
+    if (typeof window === 'undefined') return;
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    });
+};
 
 interface LocationMarkerProps {
     position: { lat: number; lng: number } | null;
@@ -267,6 +270,11 @@ const InteractiveMap = () => {
 
     const { toast } = useToast();
     const { saveParking } = useLocations(); // Added hook usage
+
+    // Move Leaflet setup to useEffect
+    useEffect(() => {
+        fixLeafletIcons();
+    }, []);
 
     // Get user location for sorting
     useEffect(() => {

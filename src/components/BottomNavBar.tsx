@@ -15,7 +15,6 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase },
         { id: 'calendar', label: 'التقويم', icon: Calendar },
         { id: 'prayer', label: 'الصلاة', icon: Moon },
-        { id: 'academia', label: 'بحث أكاديمي', icon: GraduationCap, isRoute: true, route: '/thesis' },
         { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2' },
         { id: 'settings', label: 'الإعدادات', icon: Settings },
         { id: 'map', label: 'الخريطة', icon: MapPin },

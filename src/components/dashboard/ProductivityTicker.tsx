@@ -16,11 +16,10 @@ export const ProductivityTicker: React.FC<ProductivityTickerProps> = ({ onClick,
     const [timeLeft, setTimeLeft] = useState<string>('');
 
     // Long press logic
-    const bind = useLongPress(() => {
-        onLongPress?.();
-    }, {
-        onCancel: () => onClick?.(), // If not long press, trigger click
-        threshold: 600
+    const bind = useLongPress({
+        onLongPress: () => onLongPress?.(),
+        onClick: () => onClick?.(),
+        ms: 600
     });
 
     // Time diff calculation

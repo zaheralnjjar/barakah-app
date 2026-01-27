@@ -31,7 +31,6 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
         { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-rose-600', activeBg: 'bg-rose-50' },
         { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-600', activeBg: 'bg-emerald-50' },
-        { id: 'academia', label: 'بحث أكاديمي', icon: GraduationCap, isRoute: true, route: '/thesis', color: 'text-violet-600', activeBg: 'bg-violet-50' },
         { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2', color: 'text-amber-600', activeBg: 'bg-amber-50' },
         { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
         { id: 'map', label: 'الخريطة', icon: MapPin, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },

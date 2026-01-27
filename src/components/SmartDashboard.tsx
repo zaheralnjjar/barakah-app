@@ -155,7 +155,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         window.addEventListener('save-parking', handleSaveParking);
         window.addEventListener('find-parking', handleFindParking);
 
+        const handleExecuteShortcut = (e: any) => {
+            if (e.detail) executeShortcut(e.detail);
+        };
+        window.addEventListener('execute-shortcut', handleExecuteShortcut);
+
         return () => {
+            window.removeEventListener('execute-shortcut', handleExecuteShortcut);
             window.removeEventListener('routines-updated', applyRoutineSettings);
             window.removeEventListener('save-parking', handleSaveParking);
             window.removeEventListener('find-parking', handleFindParking);
