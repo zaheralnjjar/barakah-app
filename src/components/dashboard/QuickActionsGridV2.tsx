@@ -88,8 +88,15 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             const action = getActionById(shortcutId);
             if (!action) return null;
 
-            displayName = (shortcutId === 'open_settings' && isCleanMode) ? 'إظهار' : action.name;
-            DisplayIcon = (shortcutId === 'open_settings' && isCleanMode) ? LayoutGrid : action.icon;
+            // Override name and icon for settings button
+            if (shortcutId === 'open_settings') {
+                displayName = isCleanMode ? 'إظهار' : 'إخفاء';
+                DisplayIcon = isCleanMode ? LayoutGrid : Icons.EyeOff;
+            } else {
+                displayName = action.name;
+                DisplayIcon = null; // No icon for others
+            }
+
             colorClass = colorMap[shortcutId] || 'text-gray-700';
 
             // Handlers
@@ -98,14 +105,12 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             // Specific overrides
             if (shortcutId === 'open_settings') {
                 onClickHandler = () => {
-                    if (isAndroid && onToggleCleanMode) {
+                    if (onToggleCleanMode) {
                         onToggleCleanMode();
                         if (navigator.vibrate) navigator.vibrate(50);
-                    } else {
-                        setShowShortcutsDialog(true);
                     }
                 };
-                onLongPressHandler = () => setShowShortcutsDialog(true);
+                onLongPressHandler = () => { }; // Disable long press for settings
             } else if (shortcutId === 'timer') {
                 onClickHandler = () => executeShortcut('start_pomodoro');
                 onLongPressHandler = () => executeShortcut('quick_timer_5');
@@ -137,10 +142,8 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             displayName = customData.custom_name || 'اختصار';
             colorClass = `bg-${customData.icon_color || 'gray'}-50 text-${customData.icon_color || 'gray'}-700 border-${customData.icon_color || 'gray'}-200`;
 
-            // Icon
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const IconComponent = (Icons as any)[customData.custom_icon] || Link;
-            DisplayIcon = customData.is_folder ? Folder : IconComponent;
+            // No Icon for custom shortcuts to match the minimal text-only style
+            DisplayIcon = null;
 
             // Handlers
             if (customData.is_folder) {
@@ -169,8 +172,11 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                     colorClass
                 )}
             >
-                <DisplayIcon className="w-7 h-7 stroke-[2]" />
-                <span className="text-xs font-bold tracking-tight text-center leading-tight mt-1 line-clamp-2">
+                {DisplayIcon && <DisplayIcon className="w-6 h-6 stroke-[2]" />}
+                <span className={cn(
+                    "font-bold tracking-tight text-center leading-tight line-clamp-2",
+                    DisplayIcon ? "text-[10px] mt-1" : "text-xs px-1"
+                )}>
                     {displayName}
                 </span>
             </button>

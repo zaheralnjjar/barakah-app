@@ -228,16 +228,6 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                     <div className="space-y-2 relative">
                         <div className="flex items-center justify-between">
                             <Label>المحتوى</Label>
-                            <Button
-                                type="button"
-                                variant={isRecording ? "destructive" : "outline"}
-                                size="sm"
-                                onClick={toggleRecording}
-                                className={`gap-2 h-8 ${isRecording ? 'animate-pulse' : ''}`}
-                            >
-                                {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                                {isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}
-                            </Button>
                         </div>
                         <Textarea
                             placeholder="اكتب تفاصيل الملاحظة هنا..."
