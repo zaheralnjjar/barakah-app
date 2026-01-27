@@ -79,6 +79,16 @@ export const SavedLocationsDialog: React.FC<SavedLocationsDialogProps> = ({ open
                         >
                             {isSelectionMode ? 'إلغاء' : 'تحديد'}
                         </Button>
+                        {isSelectionMode && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-white h-8 px-2 text-xs hover:bg-emerald-600"
+                                onClick={() => setSelectedIds(selectedIds.length === locations.length ? [] : locations.map(l => l.id))}
+                            >
+                                {selectedIds.length === locations.length ? 'إلغاء الكل' : 'الكل'}
+                            </Button>
+                        )}
                     </div>
 
                     <DialogTitle className="text-right flex items-center justify-end gap-2 text-base">

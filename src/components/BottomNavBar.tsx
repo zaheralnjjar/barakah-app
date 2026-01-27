@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, StickyNote } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, StickyNote, GraduationCap, LayoutGrid } from 'lucide-react';
 
 interface BottomNavBarProps {
     activeTab: string;
@@ -8,13 +8,15 @@ interface BottomNavBarProps {
 }
 
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLongPress }) => {
-    // 7 icons: 3 left, home center, 3 right
+    // Updated 9 icons order matching SideNavBar:
     const navItems = [
+        { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
         { id: 'finance', label: 'المالية', icon: Calculator },
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase },
         { id: 'calendar', label: 'التقويم', icon: Calendar },
-        { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true },
         { id: 'prayer', label: 'الصلاة', icon: Moon },
+        { id: 'academia', label: 'بحث أكاديمي', icon: GraduationCap, isRoute: true, route: '/thesis' },
+        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2' },
         { id: 'map', label: 'الخريطة', icon: MapPin },
         { id: 'settings', label: 'الإعدادات', icon: Settings },
     ];

@@ -38,6 +38,7 @@ import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
 
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
+import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
 import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
@@ -206,6 +207,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', isAndroid() ? "space-y-1.5" : "space-y-1")}>
                         <DashboardHeaderStrip />
 
+                        {/* Quick Access Grid - Sky Identity - MOVED UP */}
+                        <div className="bg-sky-50/40 border border-sky-100 rounded-3xl p-1.5 shadow-sm mb-1.5 transition-all">
+                            <QuickActionsGridV2
+                                onOpenAddDialog={setShowAddDialog}
+                                onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
+                                onOpenVoiceRecorder={onOpenVoiceRecorder}
+                                onNavigateToTab={onNavigateToTab}
+                                onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
+                                onOpenShortcuts={() => setShowShortcutsSettings(true)}
+                                onOpenSearch={() => setIsSearchOpen(true)}
+                            />
+                        </div>
+
                         {/* Financial Summary - Emerald Identity */}
                         <div className="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-3 px-4 shadow-sm space-y-2 mb-1.5 transition-all">
                             <div className="flex justify-between items-center border-b border-emerald-100 pb-1.5">
@@ -257,18 +271,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             </div>
                         </div>
 
-                        {/* Quick Access Grid - Sky Identity */}
-                        <div className="bg-sky-50/40 border border-sky-100 rounded-3xl p-1.5 shadow-sm mb-1.5 transition-all">
-                            <QuickActionsGridV2
-                                onOpenAddDialog={setShowAddDialog}
-                                onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
-                                onOpenVoiceRecorder={onOpenVoiceRecorder}
-                                onNavigateToTab={onNavigateToTab}
-                                onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
-                                onOpenShortcuts={() => setShowShortcutsSettings(true)}
-                                onOpenSearch={() => setIsSearchOpen(true)}
-                            />
-                        </div>
+                        {/* DashboardLocations - MOVED DOWN */}
+                        <DashboardLocations />
 
 
 
@@ -292,7 +296,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     </div>
 
                     {/* DashboardShopping removed - was linking to shopping list */}
-                    <DashboardParking />
+
                     <PomodoroTimer hideTrigger={true} />
                 </div>
 
@@ -585,6 +589,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     ))}
                 </div>
             )}
+
+            {/* Parking Section - Move to bottom */}
+            <div className="mx-[2%] mt-2 mb-20">
+                <DashboardParking />
+            </div>
 
             {/* Shortcut Dialogs */}
             <ShortcutDialogs />

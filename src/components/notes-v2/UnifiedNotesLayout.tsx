@@ -371,6 +371,16 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     isOpen={showReportGenerator}
                     onClose={() => setShowReportGenerator(false)}
                 />
+
+                {/* Floating Add Button - Green & Circular */}
+                {!activeNote && (
+                    <Button
+                        onClick={() => { setActiveFolderId(activeFolderId === 'trash' ? null : activeFolderId); setShowCreateNote(true); }}
+                        className="fixed bottom-24 left-6 h-14 w-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl active:scale-95 transition-all z-[60] flex items-center justify-center border-4 border-white/20"
+                    >
+                        <Plus className="w-8 h-8 stroke-[3]" />
+                    </Button>
+                )}
             </div>
         </div>
     );

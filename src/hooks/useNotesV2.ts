@@ -53,15 +53,21 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
     // 2. Create Note
     const createNoteMut = useMutation({
         mutationFn: async ({ title, folder_id, content = '', color, tags = [] }: { title: string; folder_id: string | null, content?: string, color?: string, tags?: string[] }) => {
+            const userId = (await supabase.auth.getUser()).data.user?.id;
+            if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
+
             const { data, error } = await supabase
                 .from('notes_v2')
                 .insert([{
                     title,
-                    folder_id: folder_id === 'trash' ? null : folder_id, // Safety check
+                    folder_id: folder_id === 'trash' ? null : folder_id,
                     content,
-                    cover_image: color, // Storing color in cover_image for now as requested "color"
+                    cover_image: color,
                     tags,
-                    user_id: (await supabase.auth.getUser()).data.user?.id
+                    user_id: userId,
+                    is_deleted: false,
+                    is_pinned: false,
+                    is_bookmarked: false
                 }])
                 .select()
                 .single();

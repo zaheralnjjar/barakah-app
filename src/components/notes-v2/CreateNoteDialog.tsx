@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNotesV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreateNoteDialogProps {
     isOpen: boolean;
@@ -24,6 +25,7 @@ const NOTE_COLORS = [
 
 export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onClose, initialFolderId }) => {
     const { createNote } = useNotesV2(null);
+    const { toast } = useToast();
     const { folders } = useFolders();
     const [title, setTitle] = useState('');
     const [folderId, setFolderId] = useState<string>(initialFolderId || 'none');
@@ -44,15 +46,21 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         setIsLoading(true);
         try {
+            console.log('Creating note with:', { title, folderId, color }); // Debug log
             await createNote({
-                title,
+                title: title.trim(),
                 folder_id: folderId === 'none' ? null : folderId,
-                content: '',
+                content: '', // Empty content is fine
                 color: color
             });
             onClose();
-        } catch (error) {
-            console.error(error);
+        } catch (error: any) {
+            console.error('Failed to create note:', error);
+            toast({
+                title: "فشل إنشاء الملاحظة",
+                description: error.message || "حدث خطأ غير متوقع",
+                variant: "destructive"
+            });
         } finally {
             setIsLoading(false);
         }

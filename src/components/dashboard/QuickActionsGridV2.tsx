@@ -113,39 +113,83 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         );
     };
 
-    // Android Layout (Current 2x5 Grid)
+    // Android Layout - Proper Order: Fixed Actions → Custom Shortcuts
     if (isAndroid()) {
         return (
-            <div className="space-y-4">
-                {/* Quick Locations Row */}
-                {pinnedLocationsList.length > 0 && (
-                    <div className="overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none">
-                        <div className="grid grid-cols-5 gap-1.5 direction-rtl min-w-[350px]">
-                            {pinnedLocationsList.map(loc => (
-                                <button
-                                    key={loc.id}
-                                    onClick={() => window.open(loc.url, '_blank')}
-                                    className="flex flex-col items-center justify-center p-0 rounded-2xl border-none h-14 w-[90%] mx-auto active:scale-95 transition-all group overflow-hidden shadow-sm bg-white text-emerald-700"
-                                >
-                                    <span className="text-[11px] font-bold tracking-tight text-center leading-tight line-clamp-2 w-full px-1">
-                                        {loc.title}
-                                    </span>
-                                </button>
-                            ))}
+            <div className="space-y-3">
+                {/* 1. Fixed Quick Actions (2 rows x 5 cols) */}
+                <div className="px-1" dir="rtl">
+                    <div className="grid grid-cols-5 gap-2">
+                        {fixedActionIds.map(id => <ActionButton key={id} shortcutId={id} isFixed={true} />)}
+                    </div>
+                </div>
+
+                {/* 2. Custom Shortcuts from Settings (اختصارات مخصصة) */}
+                {customShortcuts.filter(id => !fixedActionIds.includes(id)).length > 0 && (
+                    <div className="px-1" dir="rtl">
+                        <div className="grid grid-cols-5 gap-2">
+                            {customShortcuts
+                                .filter(id => !fixedActionIds.includes(id))
+                                .map(id => <ActionButton key={id} shortcutId={id} />)}
                         </div>
                     </div>
                 )}
 
-                {/* 2x5 Shortcuts Grid */}
-                {customShortcuts.length > 0 && (
-                    <div className="mt-4 px-1" dir="rtl">
-                        <div className="grid grid-cols-5 gap-3">
-                            {customShortcuts.map(id => <ActionButton key={id} shortcutId={id} />)}
+                {/* Event Type Selection Menu */}
+                <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
+                    <DialogContent className="max-w-[90vw] rounded-3xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-center text-lg">اختر نوع الحدث</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-4 py-4">
+                            <button
+                                onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }}
+                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-600 active:scale-95"
+                            >
+                                <CalendarPlus className="w-10 h-10 mb-2" />
+                                <span className="text-sm font-bold">موعد</span>
+                            </button>
+                            <button
+                                onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }}
+                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
+                            >
+                                <CheckSquare className="w-10 h-10 mb-2" />
+                                <span className="text-sm font-bold">مهمة</span>
+                            </button>
                         </div>
-                    </div>
-                )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* Location Type Selection Menu */}
+                <Dialog open={showLocationMenu} onOpenChange={setShowLocationMenu}>
+                    <DialogContent className="max-w-[90vw] rounded-3xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-center flex items-center justify-center gap-2">
+                                <MapPin className="w-5 h-5 text-green-500" />
+                                الموقع
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-4 py-4">
+                            <button
+                                onClick={() => { setShowLocationMenu(false); onQuickParking?.(); }}
+                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-700 active:scale-95"
+                            >
+                                <span className="text-3xl mb-2">🅿️</span>
+                                <span className="text-sm font-bold">حفظ موقف</span>
+                            </button>
+                            <button
+                                onClick={() => { setShowLocationMenu(false); setShowSavedLocations(true); }}
+                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
+                            >
+                                <MapPin className="w-8 h-8 mb-2" />
+                                <span className="text-sm font-bold">المواقع</span>
+                            </button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
+                <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
             </div>
         );
     }
