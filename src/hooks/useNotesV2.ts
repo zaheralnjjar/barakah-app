@@ -6,47 +6,47 @@ import { useToast } from '@/hooks/use-toast';
 export interface NoteV2 {
     id: string;
     title: string;
-    content: string; // HTML or JSON
+    content: string;
     folder_id: string | null;
     is_pinned: boolean;
-    is_bookmarked?: boolean; // New field
-    tags: string[];
+    tags: string[] | null;
+    color: string;
     created_at: string;
     updated_at: string;
+    // Removed fields not in quick_notes: is_deleted, is_bookmarked
 }
 
 export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    // 1. Fetch Notes (optionally filtered by folder or search)
+    // 1. Fetch Notes
     const { data: notes = [], isLoading } = useQuery({
-        queryKey: ['notes_v2', folderId, searchQuery],
+        queryKey: ['quick_notes', folderId, searchQuery],
         queryFn: async () => {
             let query = supabase
-                .from('notes_v2')
+                .from('quick_notes')
                 .select('*')
                 .order('is_pinned', { ascending: false })
                 .order('updated_at', { ascending: false });
 
             if (searchQuery && searchQuery.trim().length > 0) {
-                // Global Search
-                query = query.eq('is_deleted', false)
-                    .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
-            } else if (folderId === 'trash') {
-                query = query.eq('is_deleted', true);
-            } else if (folderId === 'bookmarked') {
-                query = query.eq('is_bookmarked', true).eq('is_deleted', false);
-            } else {
-                query = query.eq('is_deleted', false); // Default view shows only active notes
-                if (folderId && folderId !== 'all') { // 'all' could be a virtual folder for "All Notes"
+                query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
+            } else if (folderId) {
+                if (folderId !== 'all' && folderId !== 'trash') {
+                    // 'trash' is not supported in quick_notes schema yet (no is_deleted), so we just ignore it or return empty
                     query = query.eq('folder_id', folderId);
+                } else if (folderId === 'trash') {
+                    // No soft delete support yet, return empty for now
+                    return [] as NoteV2[];
                 }
             }
 
             const { data, error } = await query;
             if (error) throw error;
-            return data as NoteV2[];
+
+            // Map quick_notes response to NoteV2 interface if needed, or just return as is
+            return data as unknown as NoteV2[];
         },
     });
 
@@ -57,17 +57,15 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
             if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
 
             const { data, error } = await supabase
-                .from('notes_v2')
+                .from('quick_notes')
                 .insert([{
                     title,
-                    folder_id: folder_id === 'trash' ? null : folder_id,
+                    folder_id: (folder_id === 'trash' || folder_id === 'all') ? null : folder_id,
                     content,
-                    cover_image: color,
-                    tags,
+                    color: color || '#ffffff',
+                    tags: tags,
                     user_id: userId,
-                    is_deleted: false,
-                    is_pinned: false,
-                    is_bookmarked: false
+                    is_pinned: false
                 }])
                 .select()
                 .single();
@@ -76,17 +74,21 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notes_v2'] });
-            toast({ title: 'تم إنشاء الملاحظة' });
+            queryClient.invalidateQueries({ queryKey: ['quick_notes'] });
+            toast({ title: 'تم إنشاء الملاحظة بنجاح' });
         },
     });
 
     // 3. Update Note
     const updateNoteMut = useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<NoteV2> }) => {
+            // Map updates to quick_notes columns
+            const dbUpdates: any = { ...updates };
+            if (updates.color) dbUpdates.color = updates.color; // Ensure key match
+
             const { data, error } = await supabase
-                .from('notes_v2')
-                .update(updates)
+                .from('quick_notes')
+                .update(dbUpdates)
                 .eq('id', id)
                 .select()
                 .single();
@@ -95,56 +97,39 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notes_v2'] });
+            queryClient.invalidateQueries({ queryKey: ['quick_notes'] });
         },
     });
 
-    // 4. Soft Delete Note (Move to Trash)
+    // 4. Delete Note (Hard Delete for now as quick_notes lacks is_deleted)
     const deleteNoteMut = useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase
-                .from('notes_v2')
-                .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-                .eq('id', id);
-
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notes_v2'] });
-            toast({ title: 'تم نقل الملاحظة لسلة المهملات' });
-        },
-    });
-
-    // 5. Restore Note
-    const restoreNoteMut = useMutation({
-        mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from('notes_v2')
-                .update({ is_deleted: false, deleted_at: null })
-                .eq('id', id);
-
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notes_v2'] });
-            toast({ title: 'تم استعادة الملاحظة' });
-        },
-    });
-
-    // 6. Permanent Delete (Empty Trash)
-    const permanentDeleteMut = useMutation({
-        mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from('notes_v2')
+                .from('quick_notes')
                 .delete()
                 .eq('id', id);
 
             if (error) throw error;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['notes_v2'] });
+            queryClient.invalidateQueries({ queryKey: ['quick_notes'] });
+            toast({ title: 'تم حذف الملاحظة' });
         },
     });
+
+    // 5. Restore Note (Not supported yet, placeholder)
+    const restoreNoteMut = useMutation({
+        mutationFn: async (id: string) => {
+            // No-op for hard delete system
+            console.warn("Restore not supported in hard-delete mode");
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quick_notes'] });
+        },
+    });
+
+    // 6. Permanent Delete (Same as Delete)
+    const permanentDeleteMut = deleteNoteMut;
 
     return {
         notes,

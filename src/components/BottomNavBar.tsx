@@ -17,8 +17,8 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
         { id: 'prayer', label: 'الصلاة', icon: Moon },
         { id: 'academia', label: 'بحث أكاديمي', icon: GraduationCap, isRoute: true, route: '/thesis' },
         { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2' },
-        { id: 'map', label: 'الخريطة', icon: MapPin },
         { id: 'settings', label: 'الإعدادات', icon: Settings },
+        { id: 'map', label: 'الخريطة', icon: MapPin },
     ];
 
     // Refs for long press
@@ -56,7 +56,8 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onNavigate, onLo
             if (isHome && onLongPress) {
                 onLongPress('home_summary');
             } else if (id === 'settings' && onLongPress) {
-                onLongPress('settings_sync');
+                // Force sync when long pressing settings
+                onLongPress('force_sync');
             } else if (id === 'calendar' && onLongPress) {
                 onLongPress('calendar_weekly');
             } else if (onLongPress) {

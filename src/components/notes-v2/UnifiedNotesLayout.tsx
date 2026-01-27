@@ -334,13 +334,10 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                     setIsSaving(false);
                                 }}
                                 autoInsertSeparator={settings.autoInsertSeparator}
-                                isBookmarked={activeNote.is_bookmarked}
+                                isBookmarked={false}
                                 onToggleBookmark={async () => {
-                                    const updated = await updateNote({
-                                        id: activeNote.id,
-                                        updates: { is_bookmarked: !activeNote.is_bookmarked }
-                                    });
-                                    if (updated) setActiveNote({ ...activeNote, is_bookmarked: !activeNote.is_bookmarked });
+                                    // Feature not available in quick_notes
+                                    toast({ title: 'غير متوفر', description: 'الإشارات المرجعية غير مدعومة حالياً' });
                                 }}
                             />
                         </div>
@@ -372,16 +369,79 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     onClose={() => setShowReportGenerator(false)}
                 />
 
-                {/* Floating Add Button - Green & Circular */}
+                {/* Floating Add Button - Green & Circular with Long Press for Voice */}
                 {!activeNote && (
-                    <Button
-                        onClick={() => { setActiveFolderId(activeFolderId === 'trash' ? null : activeFolderId); setShowCreateNote(true); }}
-                        className="fixed bottom-24 left-6 h-14 w-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl active:scale-95 transition-all z-[60] flex items-center justify-center border-4 border-white/20"
-                    >
-                        <Plus className="w-8 h-8 stroke-[3]" />
-                    </Button>
+                    <FloatingAddButton
+                        onTap={() => {
+                            setActiveFolderId(activeFolderId === 'trash' ? null : activeFolderId);
+                            setShowCreateNote(true);
+                        }}
+                        onLongPress={() => {
+                            // Trigger voice recording for new note
+                            window.dispatchEvent(new CustomEvent('start-voice-note', {
+                                detail: { folderId: activeFolderId === 'trash' ? null : activeFolderId }
+                            }));
+                            toast({ title: '🎤 ابدأ التحدث...', description: 'سيتم إنشاء ملاحظة صوتية جديدة' });
+                        }}
+                    />
                 )}
             </div>
         </div>
     );
 };
+
+// Floating Add Button Component with Long Press Support
+const FloatingAddButton: React.FC<{ onTap: () => void; onLongPress: () => void }> = ({ onTap, onLongPress }) => {
+    const timerRef = React.useRef<NodeJS.Timeout>();
+    const isLongPressActive = React.useRef(false);
+    const hasStarted = React.useRef(false);
+    const [isPressed, setIsPressed] = React.useState(false);
+
+    const handleStart = () => {
+        hasStarted.current = true;
+        isLongPressActive.current = false;
+        setIsPressed(true);
+
+        timerRef.current = setTimeout(() => {
+            if (navigator.vibrate) navigator.vibrate(50);
+            onLongPress();
+            isLongPressActive.current = true;
+            setIsPressed(false);
+        }, 500);
+    };
+
+    const handleEnd = () => {
+        if (!hasStarted.current) return;
+        setIsPressed(false);
+
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (!isLongPressActive.current) {
+            onTap();
+        }
+        isLongPressActive.current = false;
+        hasStarted.current = false;
+    };
+
+    const handleCancel = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        isLongPressActive.current = false;
+        hasStarted.current = false;
+        setIsPressed(false);
+    };
+
+    return (
+        <button
+            onMouseDown={handleStart}
+            onMouseUp={handleEnd}
+            onMouseLeave={handleCancel}
+            onTouchStart={handleStart}
+            onTouchEnd={handleEnd}
+            onTouchMove={handleCancel}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`fixed bottom-24 left-6 h-14 w-14 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl transition-all z-[60] flex items-center justify-center border-4 border-white/20 ${isPressed ? 'scale-110 bg-emerald-600' : 'active:scale-95'}`}
+        >
+            <Plus className="w-8 h-8 stroke-[3]" />
+        </button>
+    );
+};
+

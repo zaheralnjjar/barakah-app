@@ -1,10 +1,10 @@
 /**
- * TypeScript types for Custom Shortcuts system
- * Supports: actions, URLs, contacts, and macros
+ * TypeScript types for Custom Shortcuts system V2
+ * Supports: actions, URLs, contacts, macros, locations, and folders
  */
 
 export type ActionPlacement = 'quick_access' | 'shortcuts_grid';
-export type ShortcutType = 'action' | 'url' | 'contact' | 'macro';
+export type ShortcutType = 'action' | 'url' | 'contact' | 'macro' | 'location' | 'folder';
 
 export interface CustomShortcut {
     id: string;
@@ -29,6 +29,16 @@ export interface CustomShortcut {
     contact_phone?: string;
     contact_name?: string;
 
+    // Location support
+    location_lat?: number;
+    location_lng?: number;
+    location_address?: string;
+
+    // Folder support
+    parent_folder_id?: string | null;
+    is_folder?: boolean;
+    folder_color?: string;
+
     // Placement & Order
     placement: ActionPlacement;
     order_index: number;
@@ -52,8 +62,25 @@ export interface NewCustomShortcut {
     url?: string;
     contact_phone?: string;
     contact_name?: string;
+    location_lat?: number;
+    location_lng?: number;
+    location_address?: string;
+    parent_folder_id?: string | null;
+    is_folder?: boolean;
+    folder_color?: string;
     placement: ActionPlacement;
     order_index?: number;
+}
+
+// Saved Preset (Configuration Snapshot)
+export interface ShortcutPreset {
+    id: string;
+    user_id: string;
+    preset_name: string;
+    preset_description?: string;
+    shortcuts_config: CustomShortcut[];
+    created_at: string;
+    updated_at: string;
 }
 
 // All available actions for dropdowns

@@ -20,7 +20,9 @@ export const SavedLocationsDialog: React.FC<SavedLocationsDialogProps> = ({ open
 
     const handleNavigate = (lat: number, lng: number) => {
         if (isSelectionMode) return;
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+        // Google Maps Navigation - starts from current location automatically
+        const navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        window.open(navigationUrl, '_blank');
         onOpenChange(false);
     };
 

@@ -129,7 +129,7 @@ export const CustomShortcutButton: React.FC<CustomShortcutButtonProps> = ({
                 {...longPressHandlers}
                 onContextMenu={(e) => { e.preventDefault(); onEdit?.(shortcut); }}
                 className={cn(
-                    "relative flex items-center justify-center shadow-sm border transition-all duration-200 touch-none",
+                    "relative flex items-center justify-center shadow-sm border transition-all duration-200",
                     sizeClasses[size],
                     Icon ? colorClass : "bg-white border-gray-200",
                     isPressed && "scale-90 shadow-inner",

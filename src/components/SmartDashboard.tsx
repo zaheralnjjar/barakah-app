@@ -179,7 +179,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         }
     }, []);
 
-    // Custom Shortcuts & Locations (Unified Hook)
+    const [isCleanMode, setIsCleanMode] = useState(false);
+
+    // ... existing shortcuts hook ...
     const {
         customShortcuts,
         customLocations,
@@ -217,6 +219,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                                 onOpenShortcuts={() => setShowShortcutsSettings(true)}
                                 onOpenSearch={() => setIsSearchOpen(true)}
+                                isCleanMode={isCleanMode}
+                                onToggleCleanMode={() => setIsCleanMode(!isCleanMode)}
                             />
                         </div>
 
@@ -271,8 +275,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             </div>
                         </div>
 
-                        {/* DashboardLocations - MOVED DOWN */}
-                        <DashboardLocations />
+                        {/* DashboardLocations - Conditionally Hidden in Clean Mode */}
+                        {!isCleanMode && <DashboardLocations />}
 
 
 

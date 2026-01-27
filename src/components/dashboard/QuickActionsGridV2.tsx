@@ -23,10 +23,13 @@ interface QuickActionsGridV2Props {
     onOpenShortcuts?: () => void;
     onOpenSearch?: () => void;
     onQuickParking?: () => void;
+    isCleanMode?: boolean;
+    onToggleCleanMode?: () => void;
 }
 
 export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
-    onOpenAddDialog, onOpenTimer, onOpenVoiceRecorder, onNavigateToTab, onOpenNewMuslims, onOpenShortcuts, onOpenSearch, onQuickParking
+    onOpenAddDialog, onOpenTimer, onOpenVoiceRecorder, onNavigateToTab, onOpenNewMuslims, onOpenShortcuts, onOpenSearch, onQuickParking,
+    isCleanMode = false, onToggleCleanMode
 }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -63,7 +66,9 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         'open_academic': 'bg-indigo-50/80 text-indigo-700 border-indigo-100',
         'open_tools': 'bg-emerald-50/80 text-emerald-700 border-emerald-100',
         'show_new_muslims': 'bg-green-50/80 text-green-700 border-green-100',
-        'open_settings': 'bg-slate-100/80 text-slate-700 border-slate-200',
+        'open_settings': isCleanMode
+            ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-200'
+            : 'bg-slate-100/80 text-slate-700 border-slate-200',
     };
 
     const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'open_academic', 'note'];
@@ -73,6 +78,10 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         if (!action) return null;
 
         const colorClass = colorMap[shortcutId] || 'text-gray-700';
+
+        // Override name for settings button if in clean mode
+        const displayName = (shortcutId === 'open_settings' && isCleanMode) ? 'إظهار' : action.name;
+        const DisplayIcon = (shortcutId === 'open_settings' && isCleanMode) ? LayoutGrid : action.icon;
 
         const getHandlers = () => {
             if (!isFixed) return { onClick: () => executeShortcut(shortcutId), onLongPress: () => { } };
@@ -86,7 +95,18 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 case 'note': return { onClick: () => onOpenAddDialog('note'), onLongPress: () => onOpenVoiceRecorder?.() };
                 case 'open_academic': return { onClick: () => navigate('/thesis'), onLongPress: () => { } };
                 case 'show_new_muslims': return { onClick: () => onOpenNewMuslims?.(), onLongPress: () => toast({ title: '📊 إحصائيات', description: 'تم تحديث البيانات' }) };
-                case 'open_settings': return { onClick: () => setShowShortcutsDialog(true), onLongPress: () => onNavigateToTab?.('settings') };
+                // REPLACED BEHAVIOR FOR OPEN_SETTINGS
+                case 'open_settings': return {
+                    onClick: () => {
+                        if (onToggleCleanMode) {
+                            onToggleCleanMode();
+                            if (navigator.vibrate) navigator.vibrate(50);
+                        } else {
+                            setShowShortcutsDialog(true);
+                        }
+                    },
+                    onLongPress: () => setShowShortcutsDialog(true) // Long press still opens settings
+                };
                 case 'open_tools': return { onClick: () => setShowShortcutsDialog(true), onLongPress: () => toast({ title: 'إعدادات', description: 'استعادة الإعدادات الافتراضية قريباً' }) };
                 default: return { onClick: () => executeShortcut(shortcutId), onLongPress: () => { } };
             }
@@ -100,14 +120,14 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 {...bind}
                 className={cn(
                     "flex flex-col items-center justify-center p-2",
-                    "aspect-square w-full active:scale-90 transition-transform touch-none",
+                    "aspect-square w-full active:scale-90 transition-transform",
                     "rounded-2xl border shadow-sm",
                     colorClass
                 )}
             >
-                <action.icon className="w-7 h-7 stroke-[2]" />
+                <DisplayIcon className="w-7 h-7 stroke-[2]" />
                 <span className="text-xs font-bold tracking-tight text-center leading-tight mt-1">
-                    {action.name}
+                    {displayName}
                 </span>
             </button>
         );
@@ -124,9 +144,9 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                     </div>
                 </div>
 
-                {/* 2. Custom Shortcuts from Settings (اختصارات مخصصة) */}
-                {customShortcuts.filter(id => !fixedActionIds.includes(id)).length > 0 && (
-                    <div className="px-1" dir="rtl">
+                {/* 2. Custom Shortcuts from Settings - Conditional Render */}
+                {!isCleanMode && customShortcuts.filter(id => !fixedActionIds.includes(id)).length > 0 && (
+                    <div className="px-1 animate-in slide-in-from-top-2 fade-in duration-300" dir="rtl">
                         <div className="grid grid-cols-5 gap-2">
                             {customShortcuts
                                 .filter(id => !fixedActionIds.includes(id))

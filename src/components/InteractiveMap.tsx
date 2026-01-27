@@ -698,17 +698,53 @@ const InteractiveMap = () => {
 
                                 if (isNaN(lat) || isNaN(lng)) return null;
 
+                                // Check if this location is selected
+                                const isSelected = selectedLocations.has(loc.id);
+
+                                // Custom icon for selected locations (green)
+                                const selectedIcon = new L.Icon({
+                                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                                    iconSize: [25, 41],
+                                    iconAnchor: [12, 41],
+                                    popupAnchor: [1, -34],
+                                    shadowSize: [41, 41]
+                                });
+
                                 return (
-                                    <Marker key={loc.id} position={[lat, lng]}>
+                                    <Marker
+                                        key={loc.id}
+                                        position={[lat, lng]}
+                                        icon={isSelected ? selectedIcon : undefined}
+                                    >
                                         <Popup>
-                                            <div className="text-center min-w-[150px]">
+                                            <div className="text-center min-w-[180px]">
                                                 <p className="font-bold text-sm mb-1">{getCategoryIcon(loc.category)} {loc.title}</p>
                                                 {loc.address && <p className="text-xs text-gray-500 mb-2 whitespace-normal">{loc.address}</p>}
-                                                <div className="flex gap-1 mt-2 justify-center">
-                                                    <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => {
-                                                        setMapCenter([lat, lng]);
-                                                    }}>تركيز</Button>
-                                                    <Button size="sm" variant="destructive" className="h-6 text-xs" onClick={() => deleteLocation(loc.id)}>حذف</Button>
+                                                <div className="flex flex-col gap-2 mt-2">
+                                                    {/* Navigation Button - Primary Action */}
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white w-full gap-1"
+                                                        onClick={() => {
+                                                            const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+                                                            window.open(navUrl, '_blank');
+                                                        }}
+                                                    >
+                                                        <Navigation className="w-3 h-3" />
+                                                        انطلق للموقع
+                                                    </Button>
+                                                    <div className="flex gap-1 justify-center">
+                                                        <Button size="sm" variant="outline" className="h-6 text-xs flex-1" onClick={() => {
+                                                            setMapCenter([lat, lng]);
+                                                        }}>تركيز</Button>
+                                                        <Button size="sm" variant="outline" className="h-6 text-xs flex-1" onClick={() => {
+                                                            toggleSelectLocation(loc.id);
+                                                        }}>
+                                                            {isSelected ? '✓ محدد' : 'تحديد'}
+                                                        </Button>
+                                                        <Button size="sm" variant="destructive" className="h-6 text-xs" onClick={() => deleteLocation(loc.id)}>حذف</Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </Popup>

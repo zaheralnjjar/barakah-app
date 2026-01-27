@@ -40,8 +40,13 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
             setContent('');
             setFolderId(null);
             onClose();
-        } catch (error) {
-            toast({ title: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+        } catch (error: any) {
+            console.error('Error creating note:', error);
+            toast({
+                title: 'حدث خطأ أثناء الحفظ',
+                description: error.message || error.details || 'يرجى المحاولة مرة أخرى',
+                variant: 'destructive'
+            });
         }
     };
 

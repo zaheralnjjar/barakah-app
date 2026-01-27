@@ -10,6 +10,8 @@ export const useLongPress = ({ onLongPress, onClick, ms = 500 }: UseLongPressOpt
     const timerRef = useRef<NodeJS.Timeout>();
     const isLongPressActive = useRef(false);
     const hasStarted = useRef(false);
+    const startX = useRef(0);
+    const startY = useRef(0);
     const [isPressed, setIsPressed] = useState(false);
 
     const start = useCallback(() => {
@@ -42,7 +44,10 @@ export const useLongPress = ({ onLongPress, onClick, ms = 500 }: UseLongPressOpt
         hasStarted.current = false;
     }, [onClick]);
 
-    const handleLeave = useCallback(() => {
+    // Cancel without triggering click
+    const cancel = useCallback(() => {
+        if (!hasStarted.current) return;
+
         if (timerRef.current) {
             clearTimeout(timerRef.current);
         }
@@ -51,12 +56,39 @@ export const useLongPress = ({ onLongPress, onClick, ms = 500 }: UseLongPressOpt
         setIsPressed(false);
     }, []);
 
+    const handleLeave = useCallback(() => {
+        cancel();
+    }, [cancel]);
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        startX.current = e.touches[0].clientX;
+        startY.current = e.touches[0].clientY;
+        start();
+    }, [start]);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!hasStarted.current) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+
+        // Calculate distance moved
+        const diffX = Math.abs(currentX - startX.current);
+        const diffY = Math.abs(currentY - startY.current);
+
+        // If moved more than 10px, it's likely a scroll/drag, so cancel
+        if (diffX > 10 || diffY > 10) {
+            cancel();
+        }
+    }, [cancel]);
+
     return {
         onMouseDown: start,
         onMouseUp: stop,
         onMouseLeave: handleLeave,
-        onTouchStart: start,
+        onTouchStart: handleTouchStart,
         onTouchEnd: stop,
+        onTouchMove: handleTouchMove,
         isPressed, // For visual feedback (scale animation)
     };
 };

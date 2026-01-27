@@ -516,7 +516,7 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
             <button
                 {...bind}
                 className={cn(
-                    "flex items-center gap-2 p-1.5 px-3 rounded-full border-none active:scale-95 transition-all group overflow-hidden shadow-sm touch-none h-10 w-full",
+                    "flex items-center gap-2 p-1.5 px-3 rounded-full border-none active:scale-95 transition-all group overflow-hidden shadow-sm h-10 w-full",
                     item.color
                 )}
             >

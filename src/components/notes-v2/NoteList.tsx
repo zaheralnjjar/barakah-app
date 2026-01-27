@@ -52,7 +52,6 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSel
                             {note.title || 'بدون عنوان'}
                         </h3>
                         <div className="flex items-center gap-1">
-                            {note.is_bookmarked && <Bookmark className="w-4 h-4 text-amber-500 fill-amber-500" />}
                             {note.is_pinned && <Pin className="w-4 h-4 text-indigo-500 rotate-45" />}
                         </div>
                     </div>
@@ -97,12 +96,12 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSel
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setConfirmDelete({ id: note.id, type: 'soft' });
+                                    setConfirmDelete({ id: note.id, type: 'permanent' });
                                 }}
                                 className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full"
-                                title="حذف"
+                                title="حذف نهائي"
                             >
-                                <Trash className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                             </button>
                         )}
                     </div>
@@ -113,23 +112,18 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSel
             <AlertDialog open={!!confirmDelete} onOpenChange={(open) => !open && setConfirmDelete(null)}>
                 <AlertDialogContent dir="rtl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            {confirmDelete?.type === 'permanent' ? 'حذف نهائي للملاحظة؟' : 'نقل الملاحظة لسلة المهملات؟'}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>حذف الملاحظة نهائياً؟</AlertDialogTitle>
                         <AlertDialogDescription>
-                            {confirmDelete?.type === 'permanent'
-                                ? 'سيتم حذف هذه الملاحظة نهائياً ولا يمكن استعادتها مرة أخرى.'
-                                : 'سوف يتم نقل هذه الملاحظة إلى سلة المحذوفات حيث يمكنك استعادتها لاحقاً.'}
+                            سيتم حذف هذه الملاحظة بشكل نهائي ولا يمكن استعادتها.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel>إلغاء</AlertDialogCancel>
                         <AlertDialogAction
-                            className={confirmDelete?.type === 'permanent' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}
+                            className="bg-red-600 hover:bg-red-700"
                             onClick={() => {
                                 if (confirmDelete) {
-                                    if (confirmDelete.type === 'permanent') permanentDelete(confirmDelete.id);
-                                    else deleteNote(confirmDelete.id);
+                                    permanentDelete(confirmDelete.id);
                                     setConfirmDelete(null);
                                 }
                             }}
