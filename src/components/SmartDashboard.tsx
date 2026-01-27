@@ -220,7 +220,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 onOpenShortcuts={() => setShowShortcutsSettings(true)}
                                 onOpenSearch={() => setIsSearchOpen(true)}
                                 isCleanMode={isCleanMode}
-                                onToggleCleanMode={() => setIsCleanMode(!isCleanMode)}
+                                onToggleCleanMode={() => setIsCleanMode(prev => !prev)}
                             />
                         </div>
 

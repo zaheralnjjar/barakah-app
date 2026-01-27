@@ -62,7 +62,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                     title,
                     folder_id: (folder_id === 'trash' || folder_id === 'all') ? null : folder_id,
                     content,
-                    color: color || '#ffffff',
+                    // color: color || '#ffffff', // Suspended until DB migration
                     tags: tags,
                     user_id: userId,
                     is_pinned: false
@@ -84,7 +84,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<NoteV2> }) => {
             // Map updates to quick_notes columns
             const dbUpdates: any = { ...updates };
-            if (updates.color) dbUpdates.color = updates.color; // Ensure key match
+            // if (updates.color) dbUpdates.color = updates.color; // Suspended until DB migration
 
             const { data, error } = await supabase
                 .from('quick_notes')
