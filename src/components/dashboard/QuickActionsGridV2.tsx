@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useShortcuts } from '@/hooks/useShortcuts';
+import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { useLocations } from '@/hooks/useLocations';
 import { useShortcutExecution } from '@/hooks/useShortcutExecution';
 import { getActionById } from '@/constants/actionDefinitions';
@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils';
 import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
-import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation } from 'lucide-react';
+import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder } from 'lucide-react';
+import * as Icons from 'lucide-react';
 
 interface QuickActionsGridV2Props {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | 'medication' | 'habit' | 'project') => void;
@@ -33,7 +34,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { customShortcuts } = useShortcuts();
+    const { gridShortcuts } = useCustomShortcuts();
     const { locations } = useLocations();
     const pinnedLocationsList = locations.filter(l => l.category === 'pinned' || l.type === 'location');
 
@@ -73,47 +74,90 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
     const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'open_academic', 'note'];
 
-    const ActionButton = ({ shortcutId, isFixed = false }: { shortcutId: string, isFixed?: boolean }) => {
-        const action = getActionById(shortcutId);
-        if (!action) return null;
+    // Unified Button Component
+    const ActionButton = ({ shortcutId, isFixed = false, customData }: { shortcutId: string, isFixed?: boolean, customData?: any }) => {
+        let displayName = '';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let DisplayIcon: any = FileText;
+        let colorClass = 'text-gray-700 bg-white border-gray-200';
+        let onClickHandler = () => { };
+        let onLongPressHandler = () => { };
 
-        const colorClass = colorMap[shortcutId] || 'text-gray-700';
+        // 1. Fixed Actions
+        if (isFixed) {
+            const action = getActionById(shortcutId);
+            if (!action) return null;
 
-        // Override name for settings button if in clean mode
-        const displayName = (shortcutId === 'open_settings' && isCleanMode) ? 'إظهار' : action.name;
-        const DisplayIcon = (shortcutId === 'open_settings' && isCleanMode) ? LayoutGrid : action.icon;
+            displayName = (shortcutId === 'open_settings' && isCleanMode) ? 'إظهار' : action.name;
+            DisplayIcon = (shortcutId === 'open_settings' && isCleanMode) ? LayoutGrid : action.icon;
+            colorClass = colorMap[shortcutId] || 'text-gray-700';
 
-        const getHandlers = () => {
-            if (!isFixed) return { onClick: () => executeShortcut(shortcutId), onLongPress: () => { } };
+            // Handlers
+            onClickHandler = () => executeShortcut(shortcutId);
 
-            switch (shortcutId) {
-                case 'timer': return { onClick: () => executeShortcut('start_pomodoro'), onLongPress: () => executeShortcut('quick_timer_5') };
-                case 'event': return { onClick: () => setShowEventMenu(true), onLongPress: () => onNavigateToTab?.('appointments') };
-                case 'expense': return { onClick: () => onOpenAddDialog('expense'), onLongPress: () => executeShortcut('finance_summary') };
-                case 'location': return { onClick: () => setShowLocationMenu(true), onLongPress: () => executeShortcut('copy_coords') };
-                case 'shopping': return { onClick: () => onOpenAddDialog('shopping'), onLongPress: () => onNavigateToTab?.('shopping') };
-                case 'note': return { onClick: () => onOpenAddDialog('note'), onLongPress: () => onOpenVoiceRecorder?.() };
-                case 'open_academic': return { onClick: () => navigate('/thesis'), onLongPress: () => { } };
-                case 'show_new_muslims': return { onClick: () => onOpenNewMuslims?.(), onLongPress: () => toast({ title: '📊 إحصائيات', description: 'تم تحديث البيانات' }) };
-                // REPLACED BEHAVIOR FOR OPEN_SETTINGS
-                case 'open_settings': return {
-                    onClick: () => {
-                        if (onToggleCleanMode) {
-                            onToggleCleanMode();
-                            if (navigator.vibrate) navigator.vibrate(50);
-                        } else {
-                            setShowShortcutsDialog(true);
-                        }
-                    },
-                    onLongPress: () => setShowShortcutsDialog(true) // Long press still opens settings
+            // Specific overrides
+            if (shortcutId === 'open_settings') {
+                onClickHandler = () => {
+                    if (onToggleCleanMode) {
+                        onToggleCleanMode();
+                        if (navigator.vibrate) navigator.vibrate(50);
+                    } else {
+                        setShowShortcutsDialog(true);
+                    }
                 };
-                case 'open_tools': return { onClick: () => setShowShortcutsDialog(true), onLongPress: () => toast({ title: 'إعدادات', description: 'استعادة الإعدادات الافتراضية قريباً' }) };
-                default: return { onClick: () => executeShortcut(shortcutId), onLongPress: () => { } };
+                onLongPressHandler = () => setShowShortcutsDialog(true);
+            } else if (shortcutId === 'timer') {
+                onClickHandler = () => executeShortcut('start_pomodoro');
+                onLongPressHandler = () => executeShortcut('quick_timer_5');
+            } else if (shortcutId === 'event') {
+                onClickHandler = () => setShowEventMenu(true);
+                onLongPressHandler = () => onNavigateToTab?.('appointments');
+            } else if (shortcutId === 'expense') {
+                onClickHandler = () => onOpenAddDialog('expense');
+                onLongPressHandler = () => executeShortcut('finance_summary');
+            } else if (shortcutId === 'location') {
+                onClickHandler = () => setShowLocationMenu(true);
+                onLongPressHandler = () => executeShortcut('copy_coords');
+            } else if (shortcutId === 'shopping') {
+                onClickHandler = () => onOpenAddDialog('shopping');
+                onLongPressHandler = () => onNavigateToTab?.('shopping');
+            } else if (shortcutId === 'note') {
+                onClickHandler = () => onOpenAddDialog('note');
+                onLongPressHandler = () => onOpenVoiceRecorder?.();
+            } else if (shortcutId === 'open_academic') {
+                onClickHandler = () => navigate('/thesis');
+            } else if (shortcutId === 'show_new_muslims') {
+                onClickHandler = () => onOpenNewMuslims?.();
+                onLongPressHandler = () => toast({ title: '📊 إحصائيات', description: 'تم تحديث البيانات' });
             }
-        };
 
-        const { onClick, onLongPress } = getHandlers();
-        const bind = useLongPress({ onClick, onLongPress });
+        }
+        // 2. Custom Shortcuts (DB)
+        else if (customData) {
+            displayName = customData.custom_name || 'اختصار';
+            colorClass = `bg-${customData.icon_color || 'gray'}-50 text-${customData.icon_color || 'gray'}-700 border-${customData.icon_color || 'gray'}-200`;
+
+            // Icon
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const IconComponent = (Icons as any)[customData.custom_icon] || Link;
+            DisplayIcon = customData.is_folder ? Folder : IconComponent;
+
+            // Handlers
+            if (customData.is_folder) {
+                onClickHandler = () => {
+                    toast({ title: customData.custom_name, description: 'فتح المجلد...' });
+                    // TODO: Implement folder opening logic
+                };
+            } else if (customData.shortcut_type === 'action') {
+                onClickHandler = () => executeShortcut(customData.action_id);
+            } else if (customData.shortcut_type === 'url') {
+                onClickHandler = () => window.open(customData.action_payload, '_blank');
+            }
+
+            onLongPressHandler = () => setShowShortcutsDialog(true); // Edit on long press
+        }
+
+        const bind = useLongPress({ onClick: onClickHandler, onLongPress: onLongPressHandler });
 
         return (
             <button
@@ -126,7 +170,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 )}
             >
                 <DisplayIcon className="w-7 h-7 stroke-[2]" />
-                <span className="text-xs font-bold tracking-tight text-center leading-tight mt-1">
+                <span className="text-xs font-bold tracking-tight text-center leading-tight mt-1 line-clamp-2">
                     {displayName}
                 </span>
             </button>
@@ -145,12 +189,12 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 </div>
 
                 {/* 2. Custom Shortcuts from Settings - Conditional Render */}
-                {!isCleanMode && customShortcuts.filter(id => !fixedActionIds.includes(id)).length > 0 && (
+                {!isCleanMode && gridShortcuts.length > 0 && (
                     <div className="px-1 animate-in slide-in-from-top-2 fade-in duration-300" dir="rtl">
                         <div className="grid grid-cols-5 gap-2">
-                            {customShortcuts
-                                .filter(id => !fixedActionIds.includes(id))
-                                .map(id => <ActionButton key={id} shortcutId={id} />)}
+                            {gridShortcuts.map(shortcut => (
+                                <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
+                            ))}
                         </div>
                     </div>
                 )}
@@ -261,13 +305,17 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 size="md"
             />
 
-            {/* Row 4: Enabled Functions from Settings (بدون عنوان) */}
-            {customShortcuts.filter(id => !fixedActionIds.includes(id)).length > 0 && (
+            {/* Row 4: Shortcuts from DB displayed as ActionButtons (Alternative view if needed) */}
+            {!isCleanMode && gridShortcuts.length > 0 && (
                 <div className="px-1">
+                    <h3 className="text-sm font-black text-gray-400 px-2 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-500" />
+                        اختصاراتي اضافية
+                    </h3>
                     <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
-                        {customShortcuts
-                            .filter(id => !fixedActionIds.includes(id))
-                            .map(id => <ActionButton key={id} shortcutId={id} />)}
+                        {gridShortcuts.map(shortcut => (
+                            <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
+                        ))}
                     </div>
                 </div>
             )}

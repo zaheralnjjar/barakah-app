@@ -30,6 +30,8 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
     const [showCreateNote, setShowCreateNote] = useState(false);
+    const [autoStartRecording, setAutoStartRecording] = useState(false);
+    const [createNoteInitialFolderId, setCreateNoteInitialFolderId] = useState<string | null>(null);
     const [showReportGenerator, setShowReportGenerator] = useState(false);
     const [isFloatingSearchOpen, setIsFloatingSearchOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -360,8 +362,13 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
             />
             <CreateNoteDialog
                 isOpen={showCreateNote}
-                onClose={() => setShowCreateNote(false)}
-                initialFolderId={activeFolderId === 'trash' ? null : activeFolderId}
+                onClose={() => {
+                    setShowCreateNote(false);
+                    setAutoStartRecording(false);
+                    setCreateNoteInitialFolderId(null);
+                }}
+                initialFolderId={createNoteInitialFolderId || (activeFolderId === 'trash' ? null : activeFolderId)}
+                autoStartRecording={autoStartRecording}
             />
             <div dir="rtl">
                 <ReportGenerator
@@ -377,11 +384,11 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                             setShowCreateNote(true);
                         }}
                         onLongPress={() => {
-                            // Trigger voice recording for new note
-                            window.dispatchEvent(new CustomEvent('start-voice-note', {
-                                detail: { folderId: activeFolderId === 'trash' ? null : activeFolderId }
-                            }));
-                            toast({ title: '🎤 ابدأ التحدث...', description: 'سيتم إنشاء ملاحظة صوتية جديدة' });
+                            // Open dialog and auto-start recording
+                            setCreateNoteInitialFolderId(activeFolderId === 'trash' ? null : activeFolderId);
+                            setAutoStartRecording(true);
+                            setShowCreateNote(true);
+                            toast({ title: '🎤 الوضع الصوتي', description: 'تحدث الآن وسنكتب لك...' });
                         }}
                     />
                 )}
