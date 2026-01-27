@@ -14,6 +14,7 @@ import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
 import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder } from 'lucide-react';
 import { ProductivityTicker } from './ProductivityTicker';
+import { DailyReportDialog, WeeklyReportDialog } from './ProductivityReportsDialogs';
 import * as Icons from 'lucide-react';
 
 interface QuickActionsGridV2Props {
@@ -44,6 +45,8 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
+    const [showDailyReport, setShowDailyReport] = useState(false);
+    const [showWeeklyReport, setShowWeeklyReport] = useState(false);
 
     // Shortcut Execution
     const { executeShortcut } = useShortcutExecution({
@@ -76,7 +79,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'open_academic', 'note'];
 
     // Unified Button Component
-    const ActionButton = ({ shortcutId, isFixed = false, customData }: { shortcutId: string, isFixed?: boolean, customData?: any }) => {
+    const ActionButton = ({ shortcutId, isFixed = false, customData, className }: { shortcutId: string, isFixed?: boolean, customData?: any, className?: string }) => {
         let displayName = '';
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let DisplayIcon: any = FileText;
@@ -168,9 +171,12 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 {...bind}
                 className={cn(
                     "flex flex-col items-center justify-center p-2",
-                    "aspect-square w-full active:scale-90 transition-transform",
+                    // Only apply aspect-square if no specific height class is provided
+                    !className?.includes('h-') && "aspect-square",
+                    "w-full active:scale-90 transition-transform",
                     "rounded-2xl border shadow-sm",
-                    colorClass
+                    colorClass,
+                    className
                 )}
             >
                 {DisplayIcon && <DisplayIcon className="w-6 h-6 stroke-[2]" />}
@@ -199,23 +205,31 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
                 {/* 2. Row 2: Note | Productivity Ticker (3) | Customize */}
                 <div className="px-1" dir="rtl">
-                    <div className="grid grid-cols-5 gap-2" style={{ height: '70px' }}>
+                    <div className="grid grid-cols-5 gap-2" style={{ height: '72px' }}>
                         {/* Right: Add Note */}
                         <div className="col-span-1 h-full">
-                            <ActionButton shortcutId="note" isFixed={true} />
+                            <ActionButton
+                                shortcutId="note"
+                                isFixed={true}
+                                className="h-full !aspect-auto"
+                            />
                         </div>
 
                         {/* Center: Productivity Ticker (Span 3) */}
                         <div className="col-span-3 h-full">
                             <ProductivityTicker
-                                onClick={() => toast({ title: "التقرير اليومي", description: "قيد التطوير..." })}
-                                onLongPress={() => toast({ title: "التقرير الأسبوعي", description: "قيد التطوير..." })}
+                                onClick={() => setShowDailyReport(true)}
+                                onLongPress={() => setShowWeeklyReport(true)}
                             />
                         </div>
 
                         {/* Left: Customize/Tools */}
                         <div className="col-span-1 h-full">
-                            <ActionButton shortcutId="open_tools" isFixed={true} />
+                            <ActionButton
+                                shortcutId="open_tools"
+                                isFixed={true}
+                                className="h-full !aspect-auto"
+                            />
                         </div>
                     </div>
                 </div>
@@ -407,6 +421,10 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
+
+            {/* Productivity Reports */}
+            <DailyReportDialog open={showDailyReport} onOpenChange={setShowDailyReport} />
+            <WeeklyReportDialog open={showWeeklyReport} onOpenChange={setShowWeeklyReport} />
         </div>
     );
 };
