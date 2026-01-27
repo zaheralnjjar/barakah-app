@@ -98,7 +98,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             // Specific overrides
             if (shortcutId === 'open_settings') {
                 onClickHandler = () => {
-                    if (onToggleCleanMode) {
+                    if (isAndroid && onToggleCleanMode) {
                         onToggleCleanMode();
                         if (navigator.vibrate) navigator.vibrate(50);
                     } else {
