@@ -543,8 +543,8 @@ const SettingsPanel = () => {
                 <h1 className="text-2xl font-bold arabic-title text-gray-800">الإعدادات</h1>
             </div>
 
-            {/* Main Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Main Grid - Smaller Items as requested */}
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
                 {SETTINGS_SECTIONS.map((section) => {
                     const Icon = section.icon;
                     return (
@@ -557,14 +557,14 @@ const SettingsPanel = () => {
                                     setActiveSection(section.id);
                                 }
                             }}
-                            className={`cursor-pointer p-4 rounded-xl border-2 transition-all hover:scale-[1.02] active:scale-95 ${section.borderColor} ${section.bg} hover:shadow-md h-full flex flex-col items-center justify-center text-center gap-3`}
+                            className={`cursor-pointer p-2.5 rounded-xl border-2 transition-all hover:scale-[1.02] active:scale-95 ${section.borderColor} ${section.bg} hover:shadow-md h-full flex flex-col items-center justify-center text-center gap-1`}
                         >
-                            <div className={`p-3 rounded-full bg-white shadow-sm ${section.color}`}>
-                                <Icon className="w-8 h-8" />
+                            <div className={`p-1.5 rounded-full bg-white shadow-sm ${section.color}`}>
+                                <Icon className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
-                            <div>
-                                <h3 className="font-bold text-gray-800">{section.title}</h3>
-                                <p className="text-[10px] text-gray-500 mt-1">{section.description}</p>
+                            <div className="flex flex-col items-center">
+                                <h3 className="font-bold text-[11px] md:text-xs text-gray-800 leading-tight">{section.title}</h3>
+                                <p className="text-[8px] md:text-[9px] text-gray-400 mt-0.5 line-clamp-1">{section.description}</p>
                             </div>
                         </div>
                     );

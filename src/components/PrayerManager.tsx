@@ -20,7 +20,11 @@ interface DailyPrayer {
     asr: string;
     maghrib: string;
     isha: string;
-    [key: string]: string;
+    sunrise?: string;
+    hijriDate?: string;
+    hijriMonthName?: string;
+    hijriMonthNumber?: number;
+    [key: string]: any;
 }
 
 const PrayerManager = () => {
@@ -90,6 +94,19 @@ const PrayerManager = () => {
         const timer = setInterval(calculateNextPrayer, 30000);
         calculateNextPrayer();
         return () => clearInterval(timer);
+    }, [prayerData]);
+
+    // Auto-select Sha'ban or Ramadan if present in current data
+    useEffect(() => {
+        if (prayerData.length > 0) {
+            const specialDays = prayerData.filter(d => d.hijriMonthNumber === 9 || d.hijriMonthNumber === 8);
+            if (specialDays.length > 0) {
+                setExportFromDate(specialDays[0].date);
+                setExportToDate(specialDays[specialDays.length - 1].date);
+                const monthName = specialDays.some(d => d.hijriMonthNumber === 9) ? "شهر رمضان المبارك" : "شهر شعبان";
+                setExportTitle(`مواقيت الصلاة - ${monthName}`);
+            }
+        }
     }, [prayerData]);
 
     const scheduleNotifications = async (formattedData: DailyPrayer[]) => {
@@ -223,7 +240,10 @@ const PrayerManager = () => {
                     dhuhr: day.timings.Dhuhr.split(' ')[0],
                     asr: day.timings.Asr.split(' ')[0],
                     maghrib: day.timings.Maghrib.split(' ')[0],
-                    isha: day.timings.Isha.split(' ')[0]
+                    isha: day.timings.Isha.split(' ')[0],
+                    hijriDate: day.date.hijri.date,
+                    hijriMonthName: day.date.hijri.month.ar,
+                    hijriMonthNumber: day.date.hijri.month.number
                 }));
 
                 setPrayerData(formattedData);
@@ -323,11 +343,14 @@ const PrayerManager = () => {
                 const prayerNames: Record<string, string> = {
                     fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء'
                 };
+                const summary = day.hijriDate
+                    ? `صلاة ${prayerNames[p]} (${day.hijriDate})`
+                    : `صلاة ${prayerNames[p]}`;
                 const uid = `${dateStr}-${p}@barakah-app`;
 
                 icsContent += `BEGIN:VEVENT\n`;
                 icsContent += `UID:${uid}\n`;
-                icsContent += `SUMMARY:صلاة ${prayerNames[p]}\n`;
+                icsContent += `SUMMARY:${summary}\n`;
                 icsContent += `DTSTART:${dateStr}T${timeStr}\n`;
                 icsContent += `DTEND:${dateStr}T${timeStr}\n`;
                 icsContent += `DESCRIPTION:موعد صلاة ${prayerNames[p]}\n`;
@@ -411,11 +434,11 @@ const PrayerManager = () => {
         textContent += `من ${exportFromDate} إلى ${exportToDate}\n\n`;
 
         dataToExport.forEach(day => {
-            textContent += `📅 ${day.date}\n`;
+            const hijriTag = day.hijriDate ? ` [${day.hijriDate}]` : '';
+            textContent += `📅 ${day.date}${hijriTag}\n`;
             prayersToExport.forEach(p => {
                 textContent += `   ${prayerNames[p]}: ${day[p]}\n`;
             });
-            textContent += `\n`;
         });
 
         textContent += `\n✨ نظام بركة لإدارة الحياة`;

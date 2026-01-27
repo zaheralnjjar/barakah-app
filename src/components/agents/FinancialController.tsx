@@ -444,42 +444,6 @@ const FinancialController = () => {
             )}
           </div>
 
-          {/* 2. Savings Goals Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-emerald-100/60 overflow-hidden transition-all duration-300">
-            <button
-              onClick={() => toggleSection('goals')}
-              className={`w-full p-4 flex items-center justify-between transition-colors ${expandedSection === 'goals' ? 'bg-blue-50 text-blue-800' : 'hover:bg-gray-50'}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full transition-colors ${expandedSection === 'goals' ? 'bg-blue-200 text-blue-700' : 'bg-blue-100 text-blue-600'}`}>
-                  <Target className="w-5 h-5" />
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold">أهداف الادخار</div>
-                  {!expandedSection && <div className="text-[10px] text-gray-400">تابع تقدمك المالي</div>}
-                </div>
-              </div>
-              {expandedSection === 'goals' ? <ChevronDown className="w-5 h-5 text-blue-600" /> : <ChevronLeft className="w-5 h-5 text-gray-300" />}
-            </button>
-
-            {expandedSection === 'goals' && (
-              <div className="p-4 border-t border-blue-100 bg-white animate-in slide-in-from-top-2 duration-200">
-                <div className="space-y-3">
-                  {savingsGoals.map(goal => (
-                    <div key={goal.id} className="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                      <div className="flex justify-between text-sm font-bold"><span>{goal.name}</span><span>{Math.round((goal.current / goal.target) * 100)}%</span></div>
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (goal.current / goal.target) * 100)}%` }} /></div>
-                      <div className="flex justify-between text-[10px] items-center mt-1">
-                        <span className="font-bold text-gray-700">{goal.current.toLocaleString()} / {goal.target.toLocaleString()} ARS</span>
-                        <span className="text-gray-400">≈ ${(goal.current / currentRate).toFixed(0)}</span>
-                      </div>
-                    </div>
-                  ))}
-                  {savingsGoals.length === 0 && <p className="text-center text-gray-400 text-sm py-2">لا توجد أهداف حالياً</p>}
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* 3. Recent Transactions Section */}
           <div className="bg-white rounded-xl shadow-sm border border-emerald-100/60 overflow-hidden transition-all duration-300">

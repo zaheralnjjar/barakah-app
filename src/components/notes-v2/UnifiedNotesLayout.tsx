@@ -22,7 +22,7 @@ export interface UnifiedNotesLayoutProps {
 
 export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStandalone = false }) => {
     // UI State
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
     const [activeNote, setActiveNote] = useState<NoteV2 | null>(null);

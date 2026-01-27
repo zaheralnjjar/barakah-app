@@ -117,7 +117,7 @@ export const useProductivityTicker = () => {
         const interval = setInterval(() => {
             index = (index + 1) % allItems.length;
             setCurrentItem(allItems[index]);
-        }, 5000);
+        }, 3000);
 
         return () => clearInterval(interval);
     }, [allItems]);

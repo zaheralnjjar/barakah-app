@@ -12,15 +12,19 @@
 DROP POLICY IF EXISTS "Users manage own folders" ON note_folders;
 
 -- Create separate policies for each operation
+DROP POLICY IF EXISTS "Users can view own folders" ON note_folders;
 CREATE POLICY "Users can view own folders" ON note_folders
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own folders" ON note_folders;
 CREATE POLICY "Users can insert own folders" ON note_folders
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own folders" ON note_folders;
 CREATE POLICY "Users can update own folders" ON note_folders
     FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete own folders" ON note_folders;
 CREATE POLICY "Users can delete own folders" ON note_folders
     FOR DELETE USING (auth.uid() = user_id);
 

@@ -74,26 +74,31 @@ ALTER TABLE medication_logs ENABLE ROW LEVEL SECURITY;
 -- Creating Policies (Assuming simple user isolation)
 
 -- Shopping Items
+DROP POLICY IF EXISTS "Users can manage their own shopping items" ON shopping_items;
 CREATE POLICY "Users can manage their own shopping items" ON shopping_items
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Habits
+DROP POLICY IF EXISTS "Users can manage their own habits" ON habits;
 CREATE POLICY "Users can manage their own habits" ON habits
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Habit Logs
+DROP POLICY IF EXISTS "Users can manage their own habit logs" ON habit_logs;
 CREATE POLICY "Users can manage their own habit logs" ON habit_logs
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Medications
+DROP POLICY IF EXISTS "Users can manage their own medications" ON medications;
 CREATE POLICY "Users can manage their own medications" ON medications
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
 -- Medication Logs
+DROP POLICY IF EXISTS "Users can manage their own medication logs" ON medication_logs;
 CREATE POLICY "Users can manage their own medication logs" ON medication_logs
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);

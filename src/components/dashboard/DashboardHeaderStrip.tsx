@@ -206,27 +206,6 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                             })}
                         </div>
 
-                        {/* 4. Bottom Quick Actions (The user's requested buttons below prayer times) */}
-                        <div className="flex items-center justify-around py-2 px-1 border-t border-gray-50 bg-[#0F8A74]/5 overflow-x-auto no-scrollbar gap-2">
-                            {[
-                                { id: 'open_mushaf', name: 'المصحف', icon: FileText, color: 'text-emerald-700', bg: 'bg-emerald-100/50' },
-                                { id: 'open_adhkar', name: 'الأذكار', icon: Heart, color: 'text-rose-700', bg: 'bg-rose-100/50' },
-                                { id: 'open_tasbih', name: 'مسبحة', icon: RefreshCw, color: 'text-amber-700', bg: 'bg-amber-100/50' },
-                                { id: 'open_qibla', name: 'القبلة', icon: Navigation, color: 'text-blue-700', bg: 'bg-blue-100/50' },
-                            ].map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => window.dispatchEvent(new CustomEvent('execute-shortcut', { detail: item.id }))}
-                                    className={cn(
-                                        "flex flex-row items-center gap-1.5 px-3 py-1.5 rounded-full shadow-sm border border-transparent transition-all active:scale-95",
-                                        item.bg, item.color
-                                    )}
-                                >
-                                    <item.icon className="w-3.5 h-3.5" />
-                                    <span className="text-[11px] font-bold whitespace-nowrap">{item.name}</span>
-                                </button>
-                            ))}
-                        </div>
                     </div>
                 </CardContent>
             </Card>

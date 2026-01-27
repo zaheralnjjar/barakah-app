@@ -93,12 +93,25 @@ ALTER TABLE exam_results ENABLE ROW LEVEL SECURITY;
 ALTER TABLE study_protocol ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can manage their own financial goals" ON financial_goals;
 CREATE POLICY "Users can manage their own financial goals" ON financial_goals USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own templates" ON message_templates;
 CREATE POLICY "Users can manage their own templates" ON message_templates USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own resources" ON educational_resources;
 CREATE POLICY "Users can manage their own resources" ON educational_resources USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own student materials" ON student_materials;
 CREATE POLICY "Users can manage their own student materials" ON student_materials USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own exams" ON exams;
 CREATE POLICY "Users can manage their own exams" ON exams USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own exam results" ON exam_results;
 CREATE POLICY "Users can manage their own exam results" ON exam_results USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage their own protocol" ON study_protocol;
 CREATE POLICY "Users can manage their own protocol" ON study_protocol USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Realtime

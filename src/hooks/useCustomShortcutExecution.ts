@@ -93,56 +93,28 @@ export const useCustomShortcutExecution = ({ executeAction }: UseCustomShortcutE
 
                 if (actionId) {
                     await executeAction(actionId);
-                } else if (!isLongPress) {
-                    // If click action is empty, try long press action
-                    if (shortcut.long_press_action_id) {
-                        await executeAction(shortcut.long_press_action_id);
-                    } else {
-                        toast({ title: '⚠️ لم يتم تحديد وظيفة' });
-                    }
-                }
-                break;
-
-            case 'macro':
-                const macro = isLongPress
-                    ? shortcut.long_press_macro
-                    : shortcut.click_macro;
-
-                if (macro && macro.length > 0) {
-                    toast({ title: '⚡ جاري تنفيذ السلسلة...' });
-                    await executeMacro(macro);
-                    toast({ title: '✅ اكتملت السلسلة' });
+                } else if (!isLongPress && shortcut.long_press_action_id) {
+                    await executeAction(shortcut.long_press_action_id);
                 } else {
-                    toast({ title: '⚠️ السلسلة فارغة' });
+                    toast({ title: '⚠️ لم يتم تحديد وظيفة' });
                 }
                 break;
 
             case 'url':
-                if (shortcut.url) {
+                if (isLongPress && shortcut.long_press_action_id) {
+                    await executeAction(shortcut.long_press_action_id);
+                } else if (shortcut.url) {
                     executeUrl(shortcut.url);
-                }
-                break;
-
-            case 'contact':
-                if (isLongPress) {
-                    // Long press = WhatsApp
-                    executeWhatsApp(shortcut.contact_phone || '', shortcut.contact_name);
-                } else {
-                    // Click = Phone call
-                    executeCall(shortcut.contact_phone || '', shortcut.contact_name);
                 }
                 break;
 
             default:
                 toast({ title: '⚠️ نوع اختصار غير معروف' });
         }
-    }, [executeAction, executeMacro, executeUrl, executeCall, executeWhatsApp, toast]);
+    }, [executeAction, executeUrl, toast]);
 
     return {
         executeCustomShortcut,
-        executeMacro,
         executeUrl,
-        executeCall,
-        executeWhatsApp
     };
 };

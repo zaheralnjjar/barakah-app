@@ -91,11 +91,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
     const [iconColor, setIconColor] = useState(editingShortcut?.icon_color || 'emerald');
     const [clickActionId, setClickActionId] = useState(editingShortcut?.click_action_id || '');
     const [longPressActionId, setLongPressActionId] = useState(editingShortcut?.long_press_action_id || '');
-    const [clickMacro, setClickMacro] = useState<string[]>(editingShortcut?.click_macro || []);
-    const [longPressMacro, setLongPressMacro] = useState<string[]>(editingShortcut?.long_press_macro || []);
     const [url, setUrl] = useState(editingShortcut?.url || '');
-    const [contactPhone, setContactPhone] = useState(editingShortcut?.contact_phone || '');
-    const [contactName, setContactName] = useState(editingShortcut?.contact_name || '');
     const [placement, setPlacement] = useState<ActionPlacement>(editingShortcut?.placement || 'shortcuts_grid');
 
     const [showIconPicker, setShowIconPicker] = useState(false);
@@ -131,11 +127,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
         setIconColor('emerald');
         setClickActionId('');
         setLongPressActionId('');
-        setClickMacro([]);
-        setLongPressMacro([]);
         setUrl('');
-        setContactPhone('');
-        setContactName('');
         setPlacement('shortcuts_grid');
     };
 
@@ -152,13 +144,10 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
             icon_color: iconColor,
             shortcut_type: shortcutType,
             placement,
-            click_action_id: shortcutType === 'action' || shortcutType === 'macro' ? clickActionId : undefined,
-            long_press_action_id: shortcutType === 'action' || shortcutType === 'macro' ? longPressActionId : undefined,
-            click_macro: shortcutType === 'macro' ? clickMacro : undefined,
-            long_press_macro: shortcutType === 'macro' ? longPressMacro : undefined,
+            click_action_id: clickActionId || undefined,
+            long_press_action_id: longPressActionId || undefined,
             url: shortcutType === 'url' ? url : undefined,
-            contact_phone: shortcutType === 'contact' ? contactPhone : undefined,
-            contact_name: shortcutType === 'contact' ? contactName : undefined,
+            order_index: editingShortcut?.order_index ?? shortcuts.length
         };
 
         if (editingShortcut) {
@@ -171,23 +160,6 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
         onOpenChange(false);
     };
 
-    // Add action to macro
-    const addToMacro = (actionId: string, isLongPress: boolean) => {
-        if (isLongPress) {
-            setLongPressMacro(prev => [...prev, actionId]);
-        } else {
-            setClickMacro(prev => [...prev, actionId]);
-        }
-    };
-
-    // Remove action from macro
-    const removeFromMacro = (index: number, isLongPress: boolean) => {
-        if (isLongPress) {
-            setLongPressMacro(prev => prev.filter((_, i) => i !== index));
-        } else {
-            setClickMacro(prev => prev.filter((_, i) => i !== index));
-        }
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,9 +210,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                         <div className="grid grid-cols-4 gap-2">
                             {[
                                 { type: 'action' as ShortcutType, icon: Zap, label: 'وظيفة' },
-                                { type: 'macro' as ShortcutType, icon: Layers, label: 'ماكرو' },
                                 { type: 'url' as ShortcutType, icon: Link, label: 'رابط' },
-                                { type: 'contact' as ShortcutType, icon: Phone, label: 'جهة اتصال' },
                             ].map(({ type, icon: Icon, label }) => (
                                 <button
                                     key={type}
@@ -419,104 +389,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                         </div>
                     )}
 
-                    {/* Macro Builder */}
-                    {shortcutType === 'macro' && (
-                        <div className="space-y-4">
-                            {/* Click Macro */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold flex items-center gap-1">
-                                    <MousePointer className="w-3 h-3" />
-                                    سلسلة عند الضغط
-                                </Label>
-                                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] border border-dashed border-gray-200">
-                                    {clickMacro.length === 0 && (
-                                        <span className="text-xs text-gray-400">أضف وظائف لتنفيذها بالتتابع</span>
-                                    )}
-                                    {clickMacro.map((actionId, idx) => {
-                                        const action = getActionById(actionId);
-                                        if (!action) return null;
-                                        const Icon = action.icon;
-                                        return (
-                                            <div key={idx} className="flex items-center gap-1 bg-white rounded-full px-2 py-1 border shadow-sm">
-                                                <Icon className="w-3 h-3 text-emerald-600" />
-                                                <span className="text-xs">{action.name}</span>
-                                                <button onClick={() => removeFromMacro(idx, false)} className="text-red-400 hover:text-red-600">
-                                                    <XCircle className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <Select onValueChange={id => addToMacro(id, false)}>
-                                    <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="أضف وظيفة..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <ScrollArea className="h-40">
-                                            {AVAILABLE_ACTIONS.map(action => {
-                                                const Icon = action.icon;
-                                                return (
-                                                    <SelectItem key={action.id} value={action.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Icon className="w-4 h-4" />
-                                                            <span>{action.name}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </ScrollArea>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Long Press Macro */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold flex items-center gap-1">
-                                    <Hand className="w-3 h-3" />
-                                    سلسلة عند الضغط المطول
-                                </Label>
-                                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] border border-dashed border-gray-200">
-                                    {longPressMacro.length === 0 && (
-                                        <span className="text-xs text-gray-400">أضف وظائف للضغط المطول</span>
-                                    )}
-                                    {longPressMacro.map((actionId, idx) => {
-                                        const action = getActionById(actionId);
-                                        if (!action) return null;
-                                        const Icon = action.icon;
-                                        return (
-                                            <div key={idx} className="flex items-center gap-1 bg-white rounded-full px-2 py-1 border shadow-sm">
-                                                <Icon className="w-3 h-3 text-purple-600" />
-                                                <span className="text-xs">{action.name}</span>
-                                                <button onClick={() => removeFromMacro(idx, true)} className="text-red-400 hover:text-red-600">
-                                                    <XCircle className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <Select onValueChange={id => addToMacro(id, true)}>
-                                    <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="أضف وظيفة..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <ScrollArea className="h-40">
-                                            {AVAILABLE_ACTIONS.map(action => {
-                                                const Icon = action.icon;
-                                                return (
-                                                    <SelectItem key={action.id} value={action.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Icon className="w-4 h-4" />
-                                                            <span>{action.name}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </ScrollArea>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    )}
+                    {/* Task and URL forms are handled below */}
 
                     {/* URL Form */}
                     {shortcutType === 'url' && (
@@ -532,37 +405,36 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                                 className="text-left"
                                 dir="ltr"
                             />
-                            <p className="text-xs text-gray-400">سيتم فتح الرابط في نافذة جديدة عند الضغط</p>
+                            <div className="space-y-2 mt-4">
+                                <Label className="text-sm font-bold flex items-center gap-1">
+                                    <Hand className="w-3 h-3" />
+                                    وظيفة الضغط المطول
+                                </Label>
+                                <Select value={longPressActionId} onValueChange={setLongPressActionId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر وظيفة..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <ScrollArea className="h-40">
+                                            {AVAILABLE_ACTIONS.map(action => {
+                                                const Icon = action.icon;
+                                                return (
+                                                    <SelectItem key={action.id} value={action.id}>
+                                                        <div className="flex items-center gap-2">
+                                                            <Icon className="w-4 h-4" />
+                                                            <span>{action.name}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </ScrollArea>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <p className="text-xs text-gray-400">الضغط العادي يفتح الرابط، والمطول ينفذ الوظيفة المحددة</p>
                         </div>
                     )}
 
-                    {/* Contact Form */}
-                    {shortcutType === 'contact' && (
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold">اسم جهة الاتصال</Label>
-                                <Input
-                                    placeholder="مثال: أحمد"
-                                    value={contactName}
-                                    onChange={e => setContactName(e.target.value)}
-                                    className="text-right"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold">رقم الهاتف</Label>
-                                <Input
-                                    placeholder="+966..."
-                                    value={contactPhone}
-                                    onChange={e => setContactPhone(e.target.value)}
-                                    className="text-left"
-                                    dir="ltr"
-                                />
-                            </div>
-                            <p className="text-xs text-gray-400 col-span-2">
-                                الضغط العادي: اتصال | الضغط المطول: واتساب
-                            </p>
-                        </div>
-                    )}
 
                     {/* Placement */}
                     <div className="space-y-2">

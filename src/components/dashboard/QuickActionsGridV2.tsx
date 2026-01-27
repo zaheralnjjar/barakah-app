@@ -14,6 +14,7 @@ import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
 import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder } from 'lucide-react';
 import { ProductivityTicker } from './ProductivityTicker';
+import { SmartGridTicker } from './SmartGridTicker';
 import { DailyReportDialog, WeeklyReportDialog } from './ProductivityReportsDialogs';
 import * as Icons from 'lucide-react';
 
@@ -114,9 +115,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                         if (navigator.vibrate) navigator.vibrate(50);
                     }
                 };
-                onLongPressHandler = () => { }; // Disable long press for settings
             } else if (shortcutId === 'timer') {
-                onClickHandler = () => executeShortcut('start_pomodoro');
                 onLongPressHandler = () => executeShortcut('quick_timer_5');
             } else if (shortcutId === 'event') {
                 onClickHandler = () => setShowEventMenu(true);
@@ -153,15 +152,29 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             if (customData.is_folder) {
                 onClickHandler = () => {
                     toast({ title: customData.custom_name, description: 'فتح المجلد...' });
-                    // TODO: Implement folder opening logic
                 };
+                onLongPressHandler = () => setShowShortcutsDialog(true);
             } else if (customData.shortcut_type === 'action') {
-                onClickHandler = () => executeShortcut(customData.action_id);
+                onClickHandler = () => {
+                    if (customData.click_action_id) executeShortcut(customData.click_action_id);
+                };
+                onLongPressHandler = () => {
+                    if (customData.long_press_action_id) {
+                        executeShortcut(customData.long_press_action_id);
+                    } else {
+                        setShowShortcutsDialog(true); // Default to edit if no long press action
+                    }
+                };
             } else if (customData.shortcut_type === 'url') {
-                onClickHandler = () => window.open(customData.action_payload, '_blank');
+                onClickHandler = () => {
+                    let targetUrl = customData.url || '';
+                    if (targetUrl && !targetUrl.startsWith('http')) {
+                        targetUrl = 'https://' + targetUrl;
+                    }
+                    if (targetUrl) window.open(targetUrl, '_blank');
+                };
+                onLongPressHandler = () => setShowShortcutsDialog(true);
             }
-
-            onLongPressHandler = () => setShowShortcutsDialog(true); // Edit on long press
         }
 
         const bind = useLongPress({ onClick: onClickHandler, onLongPress: onLongPressHandler });
@@ -215,9 +228,9 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                             />
                         </div>
 
-                        {/* Center: Productivity Ticker (Span 3) */}
+                        {/* Center: Smart Grid Widget (Span 3) */}
                         <div className="col-span-3 h-full">
-                            <ProductivityTicker
+                            <SmartGridTicker
                                 onClick={() => setShowDailyReport(true)}
                                 onLongPress={() => setShowWeeklyReport(true)}
                             />
