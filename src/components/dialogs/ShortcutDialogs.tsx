@@ -30,6 +30,7 @@ export const ShortcutDialogs = () => {
     const [distractionLogs, setDistractionLogs] = useState<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [distractionReason, setDistractionReason] = useState('');
+    const [distractionDuration, setDistractionDuration] = useState(0); // Added State
     const [showExportConfirm, setShowExportConfirm] = useState(false);
 
     // Medical Profile State
@@ -76,13 +77,15 @@ export const ShortcutDialogs = () => {
 
         const { error } = await supabase.from('distraction_logs').insert({
             user_id: (await supabase.auth.getUser()).data.user?.id,
-            reason: distractionReason
+            reason: distractionReason,
+            duration_minutes: distractionDuration, // Added Duration
         });
 
         if (!error) {
             toast({ title: 'تم التسجيل', description: 'تم تسجيل سبب التشتت بنجاح' });
             setShowDistraction(false);
             setDistractionReason('');
+            setDistractionDuration(0); // Reset
         } else {
             toast({ title: 'خطأ', description: 'فشل التسجيل', variant: 'destructive' });
         }
@@ -102,6 +105,7 @@ export const ShortcutDialogs = () => {
         // 1. Prepare Data for Excel
         const dataToExport = distractionLogs.map(log => ({
             'السبب': log.reason,
+            'المدة (دقيقة)': log.duration_minutes || 0, // Added Column
             'التاريخ': new Date(log.created_at).toLocaleDateString('ar-SA'),
             'الوقت': new Date(log.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
             'التاريخ الميلادي': new Date(log.created_at).toLocaleDateString('en-GB'),
@@ -218,12 +222,22 @@ export const ShortcutDialogs = () => {
                     </DialogHeader>
 
                     {!showHistory ? (
-                        <div className="py-4">
+                        <div className="py-4 space-y-3">
                             <Input
                                 value={distractionReason}
                                 onChange={(e) => setDistractionReason(e.target.value)}
                                 placeholder="مثال: تصفح فيسبوك، ضجيج، مكالمة هاتفية..."
                             />
+                            <div className="flex items-center gap-2">
+                                <Label className="text-xs text-yellow-600 whitespace-nowrap">المدة (دقيقة):</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={distractionDuration}
+                                    onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
+                                    className="w-24 text-center"
+                                />
+                            </div>
                         </div>
                     ) : (
                         <div className="py-2 max-h-[300px] overflow-y-auto space-y-2">
@@ -232,7 +246,14 @@ export const ShortcutDialogs = () => {
                             ) : (
                                 distractionLogs.map((log) => (
                                     <div key={log.id} className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center group">
-                                        <span className="font-medium text-gray-700">{log.reason}</span>
+                                        <div className="flex flex-col gap-1 text-right">
+                                            <span className="font-medium text-gray-700">{log.reason}</span>
+                                            {log.duration_minutes > 0 && (
+                                                <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-1.5 py-0.5 rounded w-fit">
+                                                    {log.duration_minutes} دقيقة
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <div className="text-xs text-gray-400 text-left dir-ltr">
                                                 <div>{new Date(log.created_at).toLocaleDateString('en-GB')}</div>
