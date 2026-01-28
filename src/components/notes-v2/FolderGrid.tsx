@@ -33,7 +33,7 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
     onToggleSelection
 }) => {
     const { folders, deleteFolder } = useFolders();
-    const { notes, isLoading, updateNote } = useNotesV2(null); // Fetch all notes
+    const { notes, isLoading, updateNote, deleteNote } = useNotesV2(null); // Fetch all notes
     const { toast } = useToast();
     const [editingFolderId, setEditingFolderId] = React.useState<string | null>(null);
 
@@ -121,6 +121,13 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                         onDeleteFolder={() => deleteFolder(folder.id)}
                                         onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
                                         onClickHeader={onOpenFolder}
+                                        onEditNote={onOpenNote}
+                                        onDeleteNote={async (noteId) => {
+                                            if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
+                                                await deleteNote(noteId);
+                                                toast({ title: 'تم حذف الملاحظة' });
+                                            }
+                                        }}
                                     />
                                 </div>
                             ))}
@@ -152,6 +159,13 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                             onDeleteFolder={() => deleteFolder(folder.id)}
                                             onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
                                             onClickHeader={onOpenFolder}
+                                            onEditNote={onOpenNote}
+                                            onDeleteNote={async (noteId) => {
+                                                if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
+                                                    await deleteNote(noteId);
+                                                    toast({ title: 'تم حذف الملاحظة' });
+                                                }
+                                            }}
                                         />
                                     </div>
                                 ))}
@@ -182,6 +196,13 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                                             onDeleteFolder={() => deleteFolder(folder.id)}
                                             onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
                                             onClickHeader={onOpenFolder}
+                                            onEditNote={onOpenNote}
+                                            onDeleteNote={async (noteId) => {
+                                                if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
+                                                    await deleteNote(noteId);
+                                                    toast({ title: 'تم حذف الملاحظة' });
+                                                }
+                                            }}
                                         />
                                     </div>
                                 ))}

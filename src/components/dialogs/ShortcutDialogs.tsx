@@ -13,6 +13,8 @@ export const ShortcutDialogs = () => {
 
     // Distraction Dialog State
     const [showDistraction, setShowDistraction] = useState(false);
+    const [distractionLogs, setDistractionLogs] = useState<any[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
     const [distractionReason, setDistractionReason] = useState('');
 
     // Medical Profile State
@@ -44,6 +46,16 @@ export const ShortcutDialogs = () => {
         };
     }, []);
 
+    const fetchDistractionLogs = async () => {
+        const { data } = await supabase
+            .from('distraction_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (data) setDistractionLogs(data);
+    };
+
     const handleSaveDistraction = async () => {
         if (!distractionReason.trim()) return;
 
@@ -65,32 +77,65 @@ export const ShortcutDialogs = () => {
         <>
             {/* Distraction Dialog */}
             <Dialog open={showDistraction} onOpenChange={setShowDistraction}>
-                <DialogContent>
+                <DialogContent className="max-w-md" dir="rtl">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-orange-500" />
-                            تسجيل تشتت
+                        <DialogTitle className="flex items-center gap-2 justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                                تسجيل تشتت
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => {
+                                if (!showHistory) fetchDistractionLogs();
+                                setShowHistory(!showHistory);
+                            }}>
+                                {showHistory ? 'إخفاء السجل' : 'سجل التشتت'}
+                            </Button>
                         </DialogTitle>
                         <DialogDescription>
-                            ما الذي يشتت انتباهك الآن؟ الاعتراف بالمشكلة هو أول خطوة للحل.
+                            {showHistory ? 'سجل التشتت السابق' : 'ما الذي يشتت انتباهك الآن؟ الاعتراف بالمشكلة هو أول خطوة للحل.'}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            value={distractionReason}
-                            onChange={(e) => setDistractionReason(e.target.value)}
-                            placeholder="مثال: تصفح فيسبوك، ضجيج، مكالمة هاتفية..."
-                        />
-                    </div>
+
+                    {!showHistory ? (
+                        <div className="py-4">
+                            <Input
+                                value={distractionReason}
+                                onChange={(e) => setDistractionReason(e.target.value)}
+                                placeholder="مثال: تصفح فيسبوك، ضجيج، مكالمة هاتفية..."
+                            />
+                        </div>
+                    ) : (
+                        <div className="py-2 max-h-[300px] overflow-y-auto space-y-2">
+                            {distractionLogs.length === 0 ? (
+                                <p className="text-center text-gray-500 py-4">لا يوجد سجلات سابقة</p>
+                            ) : (
+                                distractionLogs.map((log) => (
+                                    <div key={log.id} className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center">
+                                        <span className="font-medium text-gray-700">{log.reason}</span>
+                                        <div className="text-xs text-gray-400 text-left dir-ltr">
+                                            <div>{new Date(log.created_at).toLocaleDateString('en-GB')}</div>
+                                            <div>{new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowDistraction(false)}>إلغاء</Button>
-                        <Button onClick={handleSaveDistraction}>حفظ</Button>
+                        {!showHistory && (
+                            <>
+                                <Button variant="outline" onClick={() => setShowDistraction(false)}>إلغاء</Button>
+                                <Button onClick={handleSaveDistraction}>حفظ</Button>
+                            </>
+                        )}
+                        {showHistory && <Button onClick={() => setShowHistory(false)}>عودة</Button>}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
             {/* Medical / Emergency Dialog */}
-            <Dialog open={showMedical} onOpenChange={setShowMedical}>
+            < Dialog open={showMedical} onOpenChange={setShowMedical} >
                 <DialogContent className="border-red-500 border-2 bg-red-50/10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -143,7 +188,7 @@ export const ShortcutDialogs = () => {
                         <Button variant="ghost" onClick={() => setShowMedical(false)}>إغلاق</Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
         </>
     );
 };

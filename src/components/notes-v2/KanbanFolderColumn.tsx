@@ -23,6 +23,8 @@ interface KanbanFolderColumnProps {
     onDeleteFolder: (folderId: string) => void;
     onNoteClick: (note: NoteV2) => void;
     onClickHeader?: (folderId: string) => void;
+    onEditNote?: (note: NoteV2) => void;
+    onDeleteNote?: (noteId: string) => void;
 }
 
 export const KanbanFolderColumn: React.FC<KanbanFolderColumnProps> = ({
@@ -32,7 +34,9 @@ export const KanbanFolderColumn: React.FC<KanbanFolderColumnProps> = ({
     onEditFolder,
     onDeleteFolder,
     onNoteClick,
-    onClickHeader
+    onClickHeader,
+    onEditNote,
+    onDeleteNote
 }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: folder.id,
@@ -121,6 +125,8 @@ export const KanbanFolderColumn: React.FC<KanbanFolderColumnProps> = ({
                         key={note.id}
                         note={note}
                         onClick={() => onNoteClick(note)}
+                        onEdit={onEditNote}
+                        onDelete={onDeleteNote}
                     />
                 ))}
 
