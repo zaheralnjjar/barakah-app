@@ -2,7 +2,17 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { NoteV2 } from '@/hooks/useNotesV2';
-import { GripVertical, Clock, Edit2, Trash2 } from 'lucide-react';
+import { GripVertical, Clock, Edit2, Trash2, FolderInput } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useFolders } from '@/hooks/useFolders';
+import { useNotesV2 } from '@/hooks/useNotesV2';
 
 interface KanbanNoteCardProps {
     note: NoteV2;
@@ -12,6 +22,7 @@ interface KanbanNoteCardProps {
 }
 
 export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick, onEdit, onDelete }) => {
+    const { updateNote } = useNotesV2();
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: note.id,
         data: { type: 'note', noteId: note.id, currentFolderId: note.folder_id }
@@ -73,16 +84,34 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick, o
                         </button>
                     </div>
 
-                    {/* Drag Handle */}
-                    <div
-                        {...attributes}
-                        {...listeners}
-                        className="p-1 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing text-gray-300 hover:text-indigo-500"
-                        onClick={(e) => e.stopPropagation()}
-                        title="سحب للإفلات"
-                    >
-                        <GripVertical className="w-3.5 h-3.5" />
-                    </div>
+                    {/* Drag Handle with Click-to-Move Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <div
+                                {...attributes}
+                                {...listeners}
+                                className="p-1 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing text-gray-300 hover:text-indigo-500"
+                                onClick={(e) => {
+                                    // Prevent drag start if just clicking
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
+                                title="سحب للإفلات أو النقر للنقل"
+                            >
+                                <GripVertical className="w-3.5 h-3.5" />
+                            </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto">
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                                <FolderInput className="w-4 h-4" />
+                                نقل إلى...
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <FolderListItems onSelect={(folderId) => {
+                                updateNote({ id: note.id, updates: { folder_id: folderId } });
+                            }} currentFolderId={note.folder_id} />
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
 
@@ -90,5 +119,28 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick, o
                 {previewText}
             </p>
         </div>
+    );
+};
+
+const FolderListItems = ({ onSelect, currentFolderId }: { onSelect: (id: string | null) => void, currentFolderId: string | null }) => {
+    const { folders } = useFolders();
+
+    return (
+        <>
+            <DropdownMenuItem onClick={() => onSelect(null)} disabled={!currentFolderId}>
+                بدون مجلد (رئيسي)
+            </DropdownMenuItem>
+            {folders.map(folder => (
+                <DropdownMenuItem
+                    key={folder.id}
+                    onClick={() => onSelect(folder.id)}
+                    disabled={currentFolderId === folder.id}
+                    className="flex items-center gap-2"
+                >
+                    <span>{folder.icon}</span>
+                    <span>{folder.name}</span>
+                </DropdownMenuItem>
+            ))}
+        </>
     );
 };

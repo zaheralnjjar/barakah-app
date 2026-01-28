@@ -40,6 +40,10 @@ const fontFamilies = [
     { name: 'Cairo', value: 'Cairo' },
     { name: 'Tajawal', value: 'Tajawal' },
     { name: 'Amiri', value: 'Amiri' },
+    { name: 'Almarai', value: 'Almarai' },
+    { name: 'Harmattan', value: 'Harmattan' },
+    { name: 'Aref Ruqaa', value: 'Aref Ruqaa' },
+    { name: 'Reem Kufi', value: 'Reem Kufi' },
     { name: 'Calibri', value: 'Calibri' },
 ];
 

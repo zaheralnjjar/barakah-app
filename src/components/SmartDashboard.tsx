@@ -46,7 +46,7 @@ import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
 import FlashlightOverlay from './FlashlightOverlay';
-import { ShortcutDialogs } from './dialogs/ShortcutDialogs';
+
 
 interface SmartDashboardProps {
     onNavigateToTab: (tabId: string) => void;
@@ -637,8 +637,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 <DashboardParking />
             </div>
 
-            {/* Shortcut Dialogs */}
-            <ShortcutDialogs />
+
 
             <QuickNoteDialog
                 isOpen={showAddDialog === 'note'}

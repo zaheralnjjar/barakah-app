@@ -116,6 +116,13 @@ export const useShortcutExecution = (props: {
             case 'open_settings': props.onNavigateToTab?.('settings'); break;
             case 'open_academic': navigate('/thesis'); break;
 
+            // New Navigation Actions
+            case 'nav_finance': props.onNavigateToTab?.('finance'); break;
+            case 'nav_productivity': props.onNavigateToTab?.('productivity'); break;
+            case 'nav_notes': navigate('/notes-v2'); break;
+            case 'nav_map': props.onNavigateToTab?.('map'); break;
+            case 'nav_map_settings': window.dispatchEvent(new Event('open-map-settings')); break;
+
             case 'timer': executeShortcut('start_pomodoro'); break;
             case 'event': executeShortcut('add_event'); break;
             case 'expense': executeShortcut('add_expense'); break;

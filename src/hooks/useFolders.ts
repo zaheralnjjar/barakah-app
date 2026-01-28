@@ -10,6 +10,7 @@ export interface Folder {
     color?: string;
     order_index?: number;
     is_system?: boolean;
+    parent_id?: string | null;
     created_at: string;
 }
 

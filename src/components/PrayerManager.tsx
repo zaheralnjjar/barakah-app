@@ -42,13 +42,20 @@ const PrayerManager = () => {
         fajr: true, sunrise: true, dhuhr: true, asr: true, maghrib: true, isha: true
     });
     const [exportLang, setExportLang] = useState<'ar' | 'es'>('es');
-    const [exportFromDate, setExportFromDate] = useState(
-        new Date().toISOString().split('T')[0]
-    );
+    // Updated to Default to Previous Month Start
+    const [exportFromDate, setExportFromDate] = useState(() => {
+        const prev = new Date();
+        prev.setMonth(prev.getMonth() - 1);
+        prev.setDate(1); // Start of previous month
+        return prev.toISOString().split('T')[0];
+    });
+
+    // Updated to Default to Next Month End
     const [exportToDate, setExportToDate] = useState(() => {
-        const nextMonth = new Date();
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        return nextMonth.toISOString().split('T')[0];
+        const next = new Date();
+        next.setMonth(next.getMonth() + 2); // Jump to month after next
+        next.setDate(0); // Last day of next month
+        return next.toISOString().split('T')[0];
     });
     const [exportHijriMonth, setExportHijriMonth] = useState<string>('all');
     const [exportTitle, setExportTitle] = useState('');
@@ -105,10 +112,10 @@ const PrayerManager = () => {
         if (prayerData.length > 0) {
             const specialDays = prayerData.filter(d => d.hijriMonthNumber === 9 || d.hijriMonthNumber === 8);
             if (specialDays.length > 0) {
-                setExportFromDate(specialDays[0].date);
-                setExportToDate(specialDays[specialDays.length - 1].date);
+                // If user wants Hijri export customization, this hook can preload it. 
+                // But we keep manual range as primary now.
                 const monthName = specialDays.some(d => d.hijriMonthNumber === 9) ? "شهر رمضان المبارك" : "شهر شعبان";
-                setExportTitle(`مواقيت الصلاة - ${monthName}`);
+                // setExportTitle(`مواقيت الصلاة - ${monthName}`);
             }
         }
     }, [prayerData]);
@@ -227,36 +234,55 @@ const PrayerManager = () => {
         }
 
         try {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            // Method 2: ISNA (usually good for generic), or Method 3 (Muslim World League) as seen in previous code.
-            // Let's stick to Method 2 or 3. Validated previous code used Method 3.
-            const response = await fetch(
-                `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=3&adjustment=1`
-            );
-            const data = await response.json();
+            // Fetch 3 months: Previous, Current, Next
+            const monthsToFetch = [-1, 0, 1];
+            const promises = monthsToFetch.map(async (offset) => {
+                const d = new Date(currentDate);
+                d.setMonth(d.getMonth() + offset);
+                const year = d.getFullYear();
+                const month = d.getMonth() + 1;
 
-            if (data.code === 200 && data.data) {
-                const formattedData: DailyPrayer[] = data.data.map((day: any) => ({
-                    date: day.date.gregorian.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
-                    fajr: day.timings.Fajr.split(' ')[0],
-                    sunrise: day.timings.Sunrise.split(' ')[0],
-                    dhuhr: day.timings.Dhuhr.split(' ')[0],
-                    asr: day.timings.Asr.split(' ')[0],
-                    maghrib: day.timings.Maghrib.split(' ')[0],
-                    isha: day.timings.Isha.split(' ')[0],
-                    hijriDate: day.date.hijri.date,
-                    hijriMonthName: day.date.hijri.month.ar,
-                    hijriMonthNumber: day.date.hijri.month.number
-                }));
+                const response = await fetch(
+                    `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=3&adjustment=1`
+                );
+                return response.json();
+            });
 
-                setPrayerData(formattedData);
-                scheduleNotifications(formattedData);
+            const results = await Promise.all(promises);
+            let combinedData: DailyPrayer[] = [];
 
-                // Save to localStorage for TaskSection printing usage
-                // Use full date (YYYY-MM-DD) as key to avoid month confusion
+            results.forEach(data => {
+                if (data.code === 200 && data.data) {
+                    const formattedData = data.data.map((day: any) => ({
+                        date: day.date.gregorian.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
+                        fajr: day.timings.Fajr.split(' ')[0],
+                        sunrise: day.timings.Sunrise.split(' ')[0],
+                        dhuhr: day.timings.Dhuhr.split(' ')[0],
+                        asr: day.timings.Asr.split(' ')[0],
+                        maghrib: day.timings.Maghrib.split(' ')[0],
+                        isha: day.timings.Isha.split(' ')[0],
+                        hijriDate: day.date.hijri.date,
+                        hijriMonthName: day.date.hijri.month.ar,
+                        hijriMonthNumber: day.date.hijri.month.number
+                    }));
+                    combinedData = [...combinedData, ...formattedData];
+                }
+            });
+
+            // Remove duplicates and sort by date
+            combinedData = combinedData.filter((thing, index, self) =>
+                index === self.findIndex((t) => (
+                    t.date === thing.date
+                ))
+            ).sort((a, b) => a.date.localeCompare(b.date));
+
+            if (combinedData.length > 0) {
+                setPrayerData(combinedData);
+                scheduleNotifications(combinedData);
+
+                // Save to localStorage
                 const scheduleMap: Record<string, any> = {};
-                formattedData.forEach(day => {
+                combinedData.forEach(day => {
                     scheduleMap[day.date] = day;
                 });
                 localStorage.setItem('baraka_prayer_schedule', JSON.stringify(scheduleMap));
@@ -268,13 +294,14 @@ const PrayerManager = () => {
                     await supabase.from('prayer_settings').upsert({
                         user_id: userId,
                         source: 'aladhan_auto',
-                        schedule: formattedData,
+                        schedule: combinedData,
                         updated_at: nowStr
                     });
                 }
             } else {
-                throw new Error("Invalid API response");
+                throw new Error("No data fetched");
             }
+
         } catch (error) {
             console.error("Failed to fetch online prayer times", error);
         }

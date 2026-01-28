@@ -6,7 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Heart, AlertTriangle, Phone, Save } from 'lucide-react';
+import { Heart, AlertTriangle, Phone, Save, Trash2, Share2, Copy, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { isAndroid } from '@/utils/platformDetection';
 
 export const ShortcutDialogs = () => {
     const { toast } = useToast();
@@ -73,6 +77,84 @@ export const ShortcutDialogs = () => {
         }
     };
 
+    const handleDeleteLog = async (id: string) => {
+        const { error } = await supabase.from('distraction_logs').delete().eq('id', id);
+        if (!error) {
+            setDistractionLogs(prev => prev.filter(log => log.id !== id));
+            toast({ title: 'تم الحذف', description: 'تم حذف السجل بنجاح' });
+        } else {
+            toast({ title: 'خطأ', description: 'فشل الحذف', variant: 'destructive' });
+        }
+    };
+
+    const handleShareLogs = async () => {
+        if (distractionLogs.length === 0) {
+            toast({ title: 'تنبيه', description: 'لا توجد سجلات للمشاركة' });
+            return;
+        }
+
+        // 1. Prepare Data for Excel
+        const dataToExport = distractionLogs.map(log => ({
+            'السبب': log.reason,
+            'التاريخ': new Date(log.created_at).toLocaleDateString('ar-SA'),
+            'الوقت': new Date(log.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+            'التاريخ الميلادي': new Date(log.created_at).toLocaleDateString('en-GB'),
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(dataToExport, { rtl: true });
+
+        // Adjust column widths
+        ws['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+
+        XLSX.utils.book_append_sheet(wb, ws, "سجل التشتت");
+
+        const fileName = `Distraction_Log_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        // 2. Handle Export based on Platform
+        try {
+            if (isAndroid()) {
+                // Mobile: Write to file and share
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+
+                try {
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: wbout,
+                        directory: Directory.Cache,
+                    });
+
+                    const uriResult = await Filesystem.getUri({
+                        directory: Directory.Cache,
+                        path: fileName,
+                    });
+
+                    await Share.share({
+                        title: 'سجل التشتت',
+                        url: uriResult.uri,
+                        dialogTitle: 'مشاركة ملف Excel'
+                    });
+                } catch (e) {
+                    console.error('File share error:', e);
+                    // Fallback to Documents folder if Cache fails
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: wbout,
+                        directory: Directory.Documents,
+                    });
+                    toast({ title: 'تم الحفظ', description: 'تم حفظ الملف في المستندات' });
+                }
+            } else {
+                // Web: Browser Download
+                XLSX.writeFile(wb, fileName);
+                toast({ title: 'تم التحميل', description: 'جارٍ تحميل ملف Excel...' });
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            toast({ title: 'خطأ', description: 'حدث خطأ أثناء تصدير الملف', variant: 'destructive' });
+        }
+    };
+
     return (
         <>
             {/* Distraction Dialog */}
@@ -84,12 +166,19 @@ export const ShortcutDialogs = () => {
                                 <AlertTriangle className="w-5 h-5 text-orange-500" />
                                 تسجيل تشتت
                             </div>
-                            <Button variant="ghost" size="sm" onClick={() => {
-                                if (!showHistory) fetchDistractionLogs();
-                                setShowHistory(!showHistory);
-                            }}>
-                                {showHistory ? 'إخفاء السجل' : 'سجل التشتت'}
-                            </Button>
+                            <div className="flex gap-1">
+                                {showHistory && distractionLogs.length > 0 && (
+                                    <Button variant="ghost" size="icon" onClick={handleShareLogs} className="h-8 w-8 text-blue-600">
+                                        <Share2 className="w-4 h-4" />
+                                    </Button>
+                                )}
+                                <Button variant="ghost" size="sm" onClick={() => {
+                                    if (!showHistory) fetchDistractionLogs();
+                                    setShowHistory(!showHistory);
+                                }}>
+                                    {showHistory ? 'إخفاء السجل' : 'سجل التشتت'}
+                                </Button>
+                            </div>
                         </DialogTitle>
                         <DialogDescription>
                             {showHistory ? 'سجل التشتت السابق' : 'ما الذي يشتت انتباهك الآن؟ الاعتراف بالمشكلة هو أول خطوة للحل.'}
@@ -110,11 +199,21 @@ export const ShortcutDialogs = () => {
                                 <p className="text-center text-gray-500 py-4">لا يوجد سجلات سابقة</p>
                             ) : (
                                 distractionLogs.map((log) => (
-                                    <div key={log.id} className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center">
+                                    <div key={log.id} className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center group">
                                         <span className="font-medium text-gray-700">{log.reason}</span>
-                                        <div className="text-xs text-gray-400 text-left dir-ltr">
-                                            <div>{new Date(log.created_at).toLocaleDateString('en-GB')}</div>
-                                            <div>{new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-xs text-gray-400 text-left dir-ltr">
+                                                <div>{new Date(log.created_at).toLocaleDateString('en-GB')}</div>
+                                                <div>{new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleDeleteLog(log.id)}
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
                                         </div>
                                     </div>
                                 ))

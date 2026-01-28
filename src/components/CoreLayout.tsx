@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNavBar from '@/components/SideNavBar';
 import { useSwipeBack } from '@/hooks/useSwipeBack';
+import { ShortcutDialogs } from '@/components/dialogs/ShortcutDialogs';
 
 const CoreLayout = () => {
     const location = useLocation();
@@ -36,6 +37,25 @@ const CoreLayout = () => {
 
     // Handler for navigation from SideNavBar
     const handleNavigate = (tabId: string) => {
+        // Handle "Reset/Jump to Root" Logic
+        if (activeTab === tabId) {
+            if (tabId === 'notes-v2') {
+                // If deep inside notes (e.g. /notes-v2/folder/123), navigate to root /notes-v2
+                if (location.pathname !== '/notes-v2') {
+                    navigate('/notes-v2');
+                } else {
+                    // Already at root, maybe trigger a refresh event if needed?
+                    window.dispatchEvent(new Event('refresh-notes-v2'));
+                }
+                return;
+            } else {
+                // For Dashboard Tabs: Force re-mount to reset view state
+                setActiveTab('loading-reset'); // Temporary state
+                setTimeout(() => setActiveTab(tabId), 10);
+                return;
+            }
+        }
+
         setActiveTab(tabId);
         // Dispatch global event to close any overlays (like Hidayah manager)
         window.dispatchEvent(new CustomEvent('global-nav-change', { detail: { tabId } }));
@@ -77,6 +97,9 @@ const CoreLayout = () => {
             <div className={`flex-1 h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16' : 'pb-14'}`}>
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
+
+            {/* Global Dialogs */}
+            <ShortcutDialogs />
         </div>
     );
 };

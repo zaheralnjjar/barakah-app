@@ -16,7 +16,13 @@ export const AVAILABLE_ACTIONS = [
     { id: 'open_settings', name: 'الإعدادات', icon: Settings, category: 'navigation', description: 'إعدادات التطبيق' },
     { id: 'toggle_clean_mode', name: 'إخفاء/إظهار', icon: LayoutGrid, category: 'navigation', description: 'تبديل وضع العرض' },
     { id: 'open_tools', name: 'تخصيص', icon: Sparkles, category: 'navigation', description: 'تخصيص الاختصارات والأدوات' },
+    { id: 'open_tools', name: 'تخصيص', icon: Sparkles, category: 'navigation', description: 'تخصيص الاختصارات والأدوات' },
     { id: 'search', name: 'بحث', icon: Search, category: 'navigation', description: 'البحث في التطبيق' },
+    { id: 'nav_finance', name: 'المالية', icon: DollarSign, category: 'navigation', description: 'الانتقال للقسم المالي' },
+    { id: 'nav_productivity', name: 'الإنتاجية', icon: Target, category: 'navigation', description: 'الانتقال لقسم الإنتاجية' },
+    { id: 'nav_notes', name: 'الملاحظات', icon: StickyNote, category: 'navigation', description: 'الانتقال للملاحظات' },
+    { id: 'nav_map', name: 'الخريطة', icon: MapPin, category: 'navigation', description: 'فتح الخريطة التفاعلية' },
+    { id: 'nav_map_settings', name: 'إعدادات الخريطة', icon: Settings, category: 'navigation', description: 'فتح إعدادات الخريطة' },
 
     // ===== ملخصات ومعلومات =====
     { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'info', description: 'ملخص ذكي لنشاطات اليوم' },

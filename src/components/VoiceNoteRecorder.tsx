@@ -367,25 +367,15 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         }
                     });
                     toast({ title: 'تم إنشاء ملاحظة جديدة في مجلد عام ✓' });
-                } else {
-                    const note = notes.find(n => n.id === selectedNoteIndex);
-                    if (note) {
-                        await updateNote({
-                            id: note.id,
-                            updates: {
-                                content: (note.content || '') + `<p>${finalText}</p>`
-                            }
-                        });
-                        toast({ title: 'تم الحفظ في الملاحظة المختارة ✓' });
-                    }
                 }
-                setTranscript('');
-                setInterimTranscript('');
-                onClose();
-            } finally {
-                setIsProcessing(false);
             }
-        }, [transcript, interimTranscript, selectedNoteIndex, notes, createNote, updateNote, onClose, toast]);
+            setTranscript('');
+            setInterimTranscript('');
+            onClose();
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [transcript, interimTranscript, selectedNoteIndex, notes, createNote, updateNote, onClose, toast]);
 
     const handleClose = useCallback(() => {
         if (isRecording) stopRecording();
