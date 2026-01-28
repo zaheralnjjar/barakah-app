@@ -52,14 +52,19 @@ const DataBackup: React.FC = () => {
 
             const { data: appointments } = await supabase.from('appointments').select('*').eq('user_id', user.id);
 
+            const { data: user_settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
+            const { data: custom_shortcuts } = await supabase.from('custom_shortcuts').select('*').eq('user_id', user.id);
+
             const backupData = {
-                version: '2.0',
+                version: '2.1',
                 exportDate: new Date().toISOString(),
                 userId: user.id,
                 data: {
                     finance: finance.data,
                     logistics: logistics.data,
                     appointments: appointments || [],
+                    user_settings: user_settings || null,
+                    custom_shortcuts: custom_shortcuts || [],
                     localStorage: {
                         baraka_medications_v2: localStorage.getItem('baraka_medications_v2'),
                         baraka_habits: localStorage.getItem('baraka_habits'),
@@ -68,6 +73,9 @@ const DataBackup: React.FC = () => {
                         baraka_savings: localStorage.getItem('baraka_savings'),
                         baraka_quick_notes: localStorage.getItem('baraka_quick_notes'),
                         baraka_reminders_settings: localStorage.getItem('baraka_reminders_settings'),
+                        baraka_custom_shortcuts: localStorage.getItem('baraka_custom_shortcuts'),
+                        baraka_custom_locations: localStorage.getItem('baraka_custom_locations'),
+                        baraka_shortcuts_version: localStorage.getItem('baraka_shortcuts_version'),
                     }
                 }
             };
@@ -106,6 +114,14 @@ const DataBackup: React.FC = () => {
             }
             if (importedData.data.logistics) {
                 updates.push(supabase.from(TABLES.logistics).upsert({ ...importedData.data.logistics, user_id: user.id, updated_at: new Date().toISOString() }));
+            }
+            if (importedData.data.user_settings) {
+                updates.push(supabase.from('user_settings').upsert({ ...importedData.data.user_settings, user_id: user.id, updated_at: new Date().toISOString() }));
+            }
+            if (importedData.data.custom_shortcuts && Array.isArray(importedData.data.custom_shortcuts)) {
+                // Delete existing ones first to avoid duplicates if ID logic is different, 
+                // but since they have IDs, upsert should work.
+                updates.push(supabase.from('custom_shortcuts').upsert(importedData.data.custom_shortcuts.map((s: any) => ({ ...s, user_id: user.id }))));
             }
             if (importedData.data.localStorage) {
                 Object.entries(importedData.data.localStorage).forEach(([key, value]) => {
@@ -150,14 +166,19 @@ const DataBackup: React.FC = () => {
 
             const { data: appointments } = await supabase.from('appointments').select('*').eq('user_id', user.id);
 
+            const { data: user_settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
+            const { data: custom_shortcuts } = await supabase.from('custom_shortcuts').select('*').eq('user_id', user.id);
+
             const backupData = {
-                version: '2.0',
+                version: '2.1',
                 exportDate: new Date().toISOString(),
                 userId: user.id,
                 data: {
                     finance: finance.data,
                     logistics: logistics.data,
                     appointments: appointments || [],
+                    user_settings: user_settings || null,
+                    custom_shortcuts: custom_shortcuts || [],
                     localStorage: {
                         baraka_medications_v2: localStorage.getItem('baraka_medications_v2'),
                         baraka_habits: localStorage.getItem('baraka_habits'),
@@ -166,6 +187,9 @@ const DataBackup: React.FC = () => {
                         baraka_savings: localStorage.getItem('baraka_savings'),
                         baraka_quick_notes: localStorage.getItem('baraka_quick_notes'),
                         baraka_reminders_settings: localStorage.getItem('baraka_reminders_settings'),
+                        baraka_custom_shortcuts: localStorage.getItem('baraka_custom_shortcuts'),
+                        baraka_custom_locations: localStorage.getItem('baraka_custom_locations'),
+                        baraka_shortcuts_version: localStorage.getItem('baraka_shortcuts_version'),
                     }
                 }
             };
@@ -204,14 +228,19 @@ const DataBackup: React.FC = () => {
 
             const { data: appointments } = await supabase.from('appointments').select('*').eq('user_id', user.id);
 
+            const { data: user_settings } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
+            const { data: custom_shortcuts } = await supabase.from('custom_shortcuts').select('*').eq('user_id', user.id);
+
             const backupData = {
-                version: '2.0',
+                version: '2.1',
                 exportDate: new Date().toISOString(),
                 userId: user.id,
                 data: {
                     finance: finance.data,
                     logistics: logistics.data,
                     appointments: appointments || [],
+                    user_settings: user_settings || null,
+                    custom_shortcuts: custom_shortcuts || [],
                     localStorage: {
                         baraka_medications_v2: localStorage.getItem('baraka_medications_v2'),
                         baraka_habits: localStorage.getItem('baraka_habits'),
@@ -220,6 +249,9 @@ const DataBackup: React.FC = () => {
                         baraka_savings: localStorage.getItem('baraka_savings'),
                         baraka_quick_notes: localStorage.getItem('baraka_quick_notes'),
                         baraka_reminders_settings: localStorage.getItem('baraka_reminders_settings'),
+                        baraka_custom_shortcuts: localStorage.getItem('baraka_custom_shortcuts'),
+                        baraka_custom_locations: localStorage.getItem('baraka_custom_locations'),
+                        baraka_shortcuts_version: localStorage.getItem('baraka_shortcuts_version'),
                     }
                 }
             };
@@ -272,6 +304,12 @@ const DataBackup: React.FC = () => {
                 updates.push(supabase.from(TABLES.logistics).upsert({ ...importedData.data.logistics, user_id: user.id, updated_at: new Date().toISOString() }));
             }
 
+            if (importedData.data.user_settings) {
+                updates.push(supabase.from('user_settings').upsert({ ...importedData.data.user_settings, user_id: user.id, updated_at: new Date().toISOString() }));
+            }
+            if (importedData.data.custom_shortcuts && Array.isArray(importedData.data.custom_shortcuts)) {
+                updates.push(supabase.from('custom_shortcuts').upsert(importedData.data.custom_shortcuts.map((s: any) => ({ ...s, user_id: user.id }))));
+            }
             if (importedData.data.localStorage) {
                 Object.entries(importedData.data.localStorage).forEach(([key, value]) => {
                     if (value) localStorage.setItem(key, value as string);
@@ -365,9 +403,9 @@ const DataBackup: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200 mt-2">
-                    <FileJson className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                    <p className="arabic-body text-xs text-yellow-700">النسخ الاحتياطي يشمل البيانات المالية، العادات، الأدوية، والمهام.</p>
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200 mt-2">
+                    <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <p className="arabic-body text-xs text-blue-700">النسخ الاحتياطي يشمل الآن كافة الإعدادات، الاختصارات، البيانات المالية، والمهام.</p>
                 </div>
 
             </CardContent>
