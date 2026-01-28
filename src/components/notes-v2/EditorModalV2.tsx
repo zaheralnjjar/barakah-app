@@ -26,27 +26,40 @@ export const EditorModalV2: React.FC<EditorModalV2Props> = ({ isOpen, onClose })
     const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        if (!title.trim()) {
-            toast({ title: 'يرجى كتابة عنوان للملاحظة', variant: 'destructive' });
-            return;
-        }
-
         try {
             setIsSaving(true);
+
+            let finalTitle = title.trim();
+            if (!finalTitle) {
+                // Default title: Current Date and Time
+                finalTitle = new Date().toLocaleString('ar-EG', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
             await createNote({
-                title,
-                folder_id: selectedFolderId,
+                title: finalTitle,
+                folder_id: (selectedFolderId === 'none' || !selectedFolderId) ? null : selectedFolderId,
                 content
             });
+
             toast({ title: 'تم حفظ الملاحظة بنجاح ✅' });
             onClose();
             // Reset fields
             setTitle('');
             setContent('');
             setSelectedFolderId(null);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast({ title: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+            toast({
+                title: 'حدث خطأ أثناء الحفظ',
+                description: `السبب: ${error.message || 'غير معروف'}`,
+                variant: 'destructive'
+            });
         } finally {
             setIsSaving(false);
         }

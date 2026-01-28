@@ -168,7 +168,7 @@ export const usePrayerTimes = (): UsePrayerTimesReturn => {
 
             // Using Aladhan API with user's location
             const response = await fetch(
-                `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${coords.latitude}&longitude=${coords.longitude}&method=3`
+                `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${coords.latitude}&longitude=${coords.longitude}&method=3&adjustment=1`
             );
 
             if (!response.ok) {

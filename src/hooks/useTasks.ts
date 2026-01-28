@@ -157,7 +157,11 @@ export const useTasks = () => {
 
         if (error) {
             console.error(error);
-            toast({ title: 'خطأ في الحفظ', variant: 'destructive' });
+            toast({
+                title: 'خطأ في الحفظ',
+                description: `السبب: ${error.message}`,
+                variant: 'destructive'
+            });
             loadTasks(); // Revert
         } else {
             toast({ title: taskData.type === 'task' ? "تم إضافة المهمة" : "تم إنشاء المشروع" });

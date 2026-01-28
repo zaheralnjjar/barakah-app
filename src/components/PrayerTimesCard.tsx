@@ -16,7 +16,9 @@ const PrayerTimesCard: React.FC = () => {
     };
 
     const today = new Date();
-    const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { day: 'numeric', month: 'long' }).format(today);
+    const hijriAdjustment = new Date(today);
+    hijriAdjustment.setDate(today.getDate() + 1); // Advance Hijri by 1 day as requested
+    const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', { day: 'numeric', month: 'long' }).format(hijriAdjustment);
     const gregorianDate = new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long' }).format(today);
     const dayName = new Intl.DateTimeFormat('ar-EG', { weekday: 'long' }).format(today);
 

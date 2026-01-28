@@ -50,6 +50,7 @@ const PrayerManager = () => {
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         return nextMonth.toISOString().split('T')[0];
     });
+    const [exportHijriMonth, setExportHijriMonth] = useState<string>('all');
     const [exportTitle, setExportTitle] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
     const [showConfirmation, setShowConfirmation] = useState(false);
@@ -231,7 +232,7 @@ const PrayerManager = () => {
             // Method 2: ISNA (usually good for generic), or Method 3 (Muslim World League) as seen in previous code.
             // Let's stick to Method 2 or 3. Validated previous code used Method 3.
             const response = await fetch(
-                `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=3`
+                `https://api.aladhan.com/v1/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=3&adjustment=1`
             );
             const data = await response.json();
 
@@ -519,10 +520,24 @@ const PrayerManager = () => {
     };
 
     const getExportData = () => {
-        return prayerData.filter(d =>
-            d.date >= exportFromDate && d.date <= exportToDate
-        );
+        let data = prayerData;
+
+        if (exportHijriMonth !== 'all') {
+            data = data.filter(d => d.hijriMonthName === exportHijriMonth);
+        } else {
+            data = data.filter(d => d.date >= exportFromDate && d.date <= exportToDate);
+        }
+
+        return data;
     };
+
+    const hijriMonths = React.useMemo(() => {
+        const months = new Set<string>();
+        prayerData.forEach(d => {
+            if (d.hijriMonthName) months.add(d.hijriMonthName);
+        });
+        return Array.from(months);
+    }, [prayerData]);
 
     const openShareDialog = () => {
         setShowShareModal(true);
@@ -708,26 +723,60 @@ const PrayerManager = () => {
                                     </DialogHeader>
 
                                     <div className="space-y-5 py-4">
-                                        {/* Date Range */}
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label className="text-xs text-gray-500 mb-1 block">من تاريخ</Label>
-                                                <Input
-                                                    type="date"
-                                                    value={exportFromDate}
-                                                    onChange={(e) => setExportFromDate(e.target.value)}
-                                                    className="text-center border-2 border-primary/30 focus:border-primary"
-                                                />
+                                        {/* Date Range or Hijri Month */}
+                                        <div className="space-y-4">
+                                            <div className="flex gap-2 p-1 bg-gray-100 rounded-lg mb-2">
+                                                <button
+                                                    onClick={() => setExportHijriMonth('all')}
+                                                    className={`flex-1 py-1 px-3 rounded-md text-sm transition-all ${exportHijriMonth === 'all' ? 'bg-white shadow-sm text-emerald-700 font-bold' : 'text-gray-500'}`}
+                                                >
+                                                    تاريخ ميلادي
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (hijriMonths.length > 0) setExportHijriMonth(hijriMonths[0]);
+                                                    }}
+                                                    className={`flex-1 py-1 px-3 rounded-md text-sm transition-all ${exportHijriMonth !== 'all' ? 'bg-white shadow-sm text-emerald-700 font-bold' : 'text-gray-500'}`}
+                                                >
+                                                    شهر هجري
+                                                </button>
                                             </div>
-                                            <div>
-                                                <Label className="text-xs text-gray-500 mb-1 block">إلى تاريخ</Label>
-                                                <Input
-                                                    type="date"
-                                                    value={exportToDate}
-                                                    onChange={(e) => setExportToDate(e.target.value)}
-                                                    className="text-center border-2 border-primary/30 focus:border-primary"
-                                                />
-                                            </div>
+
+                                            {exportHijriMonth === 'all' ? (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Label className="text-xs text-gray-500 mb-1 block">من تاريخ</Label>
+                                                        <Input
+                                                            type="date"
+                                                            value={exportFromDate}
+                                                            onChange={(e) => setExportFromDate(e.target.value)}
+                                                            className="text-center border-2 border-primary/30 focus:border-primary"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs text-gray-500 mb-1 block">إلى تاريخ</Label>
+                                                        <Input
+                                                            type="date"
+                                                            value={exportToDate}
+                                                            onChange={(e) => setExportToDate(e.target.value)}
+                                                            className="text-center border-2 border-primary/30 focus:border-primary"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <Label className="text-xs text-gray-500 mb-1 block">اختر الشهر الهجري</Label>
+                                                    <select
+                                                        value={exportHijriMonth}
+                                                        onChange={(e) => setExportHijriMonth(e.target.value)}
+                                                        className="w-full p-2 border-2 border-primary/30 rounded-lg text-right arabic-body"
+                                                    >
+                                                        {hijriMonths.map(m => (
+                                                            <option key={m} value={m}>{m}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
                                         </div>
 
 

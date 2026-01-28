@@ -33,6 +33,7 @@ import {
     ChevronUp,
     ChevronDown,
     LayoutDashboard,
+    Moon,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
@@ -58,6 +59,7 @@ import { PWAInstallButton } from '@/components/PWAInstallButton';
 // import { AutomationBuilder } from '@/components/automation/AutomationBuilder';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 const NewMuslimsManager = React.lazy(() => import('@/components/NewMuslims/NewMuslimsManager'));
+const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
 
 
 import { DateRange } from 'react-day-picker';
@@ -528,6 +530,15 @@ const SettingsPanel = () => {
             bg: 'bg-gray-50',
             borderColor: 'border-gray-100',
             description: 'معلومات الإصدار'
+        },
+        {
+            id: 'prayer',
+            title: 'مواقيت الصلاة',
+            icon: Moon,
+            color: 'text-emerald-700',
+            bg: 'bg-emerald-50',
+            borderColor: 'border-emerald-100',
+            description: 'تعديل وتصدير مواقيت الصلاة'
         }
     ];
 
@@ -1648,6 +1659,31 @@ const SettingsPanel = () => {
                 open={showShortcutsSettings}
                 onOpenChange={setShowShortcutsSettings}
             />
+
+            {/* Prayer Management Dialog */}
+            <Dialog open={activeSection === 'prayer'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent className="w-[98vw] sm:max-w-4xl max-h-[95vh] overflow-y-auto p-0">
+                    <DialogHeader className="sticky top-0 z-50 bg-white border-b p-3 flex flex-row items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <Moon className="w-5 h-5" />
+                            مواقيت الصلاة
+                        </DialogTitle>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setActiveSection(null)}
+                            className="h-8 w-8 rounded-full hover:bg-red-100 text-red-500"
+                        >
+                            <X className="w-5 h-5" />
+                        </Button>
+                    </DialogHeader>
+                    <div className="p-2 sm:p-4">
+                        <React.Suspense fallback={<div className="p-10 text-center">جاري تحميل مواقيت الصلاة...</div>}>
+                            <PrayerManager />
+                        </React.Suspense>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
         </div >
     );

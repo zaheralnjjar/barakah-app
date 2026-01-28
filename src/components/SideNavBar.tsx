@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap, StickyNote } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditorModalV2 } from './notes-v2/EditorModalV2';
@@ -29,8 +29,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true, color: 'text-blue-600', activeBg: 'bg-blue-50' },
         { id: 'finance', label: 'المالية', icon: Calculator, color: 'text-green-600', activeBg: 'bg-green-50' },
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
-        { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-600', activeBg: 'bg-emerald-50' },
-        { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2', color: 'text-amber-600', activeBg: 'bg-amber-50' },
+        { id: 'notes-v2', label: 'الملاحظات', icon: StickyNote, isRoute: true, route: '/notes-v2', color: 'text-amber-600', activeBg: 'bg-amber-50' },
         { id: 'map', label: 'الخريطة', icon: MapPin, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
         { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
     ];
@@ -85,7 +84,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
                         onTouchEnd={() => handleEnd(item)}
                         onContextMenu={(e) => e.preventDefault()}
                         className={`
-                            ${isMobile ? 'flex-1 h-14' : 'w-12 h-12 rounded-xl'} 
+                            ${isMobile ? 'flex-1 h-16' : 'w-12 h-12 rounded-xl'} 
                             flex flex-col items-center justify-center transition-all duration-300
                             ${isActive
                                 ? `${item.activeBg} ${item.color} shadow-sm scale-110` // Active state with color
@@ -94,7 +93,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
                             active:scale-95
                         `}
                     >
-                        <Icon className={`${isMobile ? 'w-7 h-7' : 'w-6 h-6'} transition-colors`} />
+                        <Icon className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} transition-colors`} />
                         {/* Labels Removed for Mobile as requested */}
                     </button>
                 </TooltipTrigger>
@@ -108,7 +107,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
     if (isMobile) {
         return (
             <TooltipProvider delayDuration={200}>
-                <nav className="fixed bottom-0 left-0 w-full h-14 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center justify-between px-2">
+                <nav className="fixed bottom-0 left-0 w-full h-20 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center justify-between px-2 pb-6">
                     <div className="flex-1 flex items-center justify-around">
                         {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                     </div>

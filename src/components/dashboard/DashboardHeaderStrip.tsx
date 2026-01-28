@@ -126,7 +126,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
             <Card className="w-full border-0 shadow-sm bg-white overflow-hidden rounded-xl">
                 <CardContent className="p-0">
                     {/* Top Status Bar */}
-                    <div className="bg-white px-3 py-2 flex justify-between items-center border-b border-gray-100">
+                    <div className="bg-white px-2 py-1 flex justify-between items-center border-b border-gray-100">
                         <div className="flex items-center gap-2">
                             <Clock className="w-4 h-4 text-emerald-600" />
                             <span className="text-xs font-bold text-emerald-800">
@@ -151,7 +151,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                             {PRAYER_ORDER.map((key) => (
                                 <div key={key} className={cn(
                                     "text-center border-l border-emerald-600/30 last:border-l-0",
-                                    !isAndroid() ? "py-1.5 md:py-3" : "py-2"
+                                    !isAndroid() ? "py-1" : "py-1"
                                 )}>
                                     <span className="text-[10px] md:text-xs font-bold">{PRAYER_NAMES[key as keyof typeof PRAYER_NAMES]}</span>
                                 </div>
@@ -168,7 +168,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                         key={key}
                                         className={cn(
                                             "flex items-center justify-center border-l border-gray-100 last:border-l-0 relative",
-                                            !isAndroid() ? "py-1.5" : "py-3",
+                                            !isAndroid() ? "py-1" : "py-1.5",
                                             isNext && "bg-emerald-100/50"
                                         )}
                                     >
@@ -194,7 +194,7 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                                         key={key}
                                         className={cn(
                                             "flex items-center justify-center border-l border-gray-100 last:border-l-0",
-                                            !isAndroid() ? "py-1" : "py-2",
+                                            !isAndroid() ? "py-0.5" : "py-1",
                                             isNext && "bg-emerald-50/30"
                                         )}
                                     >
