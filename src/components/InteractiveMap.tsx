@@ -40,12 +40,16 @@ import { Share } from '@capacitor/share';
 // Fix Leaflet icons
 const fixLeafletIcons = () => {
     if (typeof window === 'undefined') return;
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    });
+    try {
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+    } catch (e) {
+        console.warn('Leaflet icon fix failed', e);
+    }
 };
 
 // Stable selected icon
@@ -58,20 +62,30 @@ const selectedIcon = typeof window !== 'undefined' ? new L.Icon({
     shadowSize: [41, 41]
 }) : null;
 
+// Map click handler - strictly defined
+const MapClickHandler = ({ onMapClick }: { onMapClick: (e: any) => void }) => {
+    useMapEvents({
+        click: (e) => {
+            onMapClick(e.latlng);
+        },
+    });
+    return null;
+};
+
+
+
 interface LocationMarkerProps {
     position: { lat: number; lng: number } | null;
-    setPosition: (pos: L.LatLng) => void;
     onSave: (addressName: string, addressDetails: string | undefined, position: { lat: number; lng: number }) => void;
     onShare: (pos: { lat: number; lng: number }) => void;
     onQuickPark: (addressName: string, addressDetails: string | undefined, position: { lat: number; lng: number }) => void;
 }
 
-function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }: LocationMarkerProps) {
+function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMarkerProps) {
     const [addressName, setAddressName] = useState('');
     const [addressDetails, setAddressDetails] = useState('');
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
     const [locationImage, setLocationImage] = useState<string | null>(null);
-    const map = useMap();
 
     useEffect(() => {
         if (!position) return;
@@ -102,17 +116,7 @@ function LocationMarker({ position, setPosition, onSave, onShare, onQuickPark }:
         }
     };
 
-    useMapEvents({
-        click(e) {
-            console.log('Map Clicked:', e.latlng); // Debug log
-            if (!e.latlng) return;
-            // Force separate state update to ensure re-render
-            const newPos = L.latLng(e.latlng.lat, e.latlng.lng);
-            setPosition(newPos);
-            // Optionally remove flyTo if it causes jitter, but keep for now
-            // map.flyTo([e.latlng.lat, e.latlng.lng], map.getZoom()); 
-        },
-    });
+    // DO NOT use useMapEvents here - it causes _leaflet_events crash when this component unmounts/remounts
 
     if (!position) return null;
 
@@ -250,10 +254,14 @@ const InteractiveMap = () => {
     const [newItem, setNewItem] = useState({ name: '', location: '' });
     const [searchQuery, setSearchQuery] = useState('');
     const [isLocating, setIsLocating] = useState(false);
-    const [savedLocations, setSavedLocations] = useState<any[]>([]);
+
+    // Unified Locations Hook
+    const { locations: savedLocations, saveLocation: hookSaveLocation, saveParking, updateLocation, deleteLocation } = useLocations();
+
     const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('other');
+    const [mapKey, setMapKey] = useState(Date.now()); // FORCE RE-MOUNT ON LOAD
 
     // Location Categories with icons
     const LOCATION_CATEGORIES = [
@@ -279,19 +287,32 @@ const InteractiveMap = () => {
 
 
     const { toast } = useToast();
-    const { saveParking } = useLocations(); // Added hook usage
+    // Removed duplicate hook usage
 
     // Move Leaflet setup to useEffect
     useEffect(() => {
         fixLeafletIcons();
     }, []);
 
-    // Get user location for sorting
+    // Auto-locate user on map open and place pin at their location
     useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => { }
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    if (!isNaN(latitude) && !isNaN(longitude)) {
+                        const userPos = { lat: latitude, lng: longitude };
+                        setUserLocation(userPos);
+                        // Center map on user location
+                        setMapCenter([userPos.lat, userPos.lng]);
+                        // Place marker/pin at user location automatically
+                        setCurrentMarkerPosition(userPos);
+                    }
+                },
+                (err) => {
+                    console.log('Geolocation error:', err);
+                    // Fallback: don't change default center
+                }
             );
         }
     }, []);
@@ -342,28 +363,13 @@ const InteractiveMap = () => {
         return () => clearTimeout(timer);
     }, [searchQuery, userLocation]);
 
-    // Load saved locations
-    useEffect(() => {
-        loadLocations();
-    }, []);
-
-    const loadLocations = () => {
-        // Try new key first, then fallback to old keys
-        let data = JSON.parse(localStorage.getItem('baraka_locations') || '[]');
-        if (data.length === 0) {
-            data = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
-        }
-        if (data.length === 0) {
-            data = JSON.parse(localStorage.getItem('baraka_saved_locations') || '[]');
-        }
-        setSavedLocations(data);
-    };
+    // Removed local loadLocations as hook handles it
 
     const getCategoryIcon = (category: string) => {
         return LOCATION_CATEGORIES.find(c => c.id === category)?.icon || '📍';
     };
 
-    const saveLocation = async (addressName: string, addressDetails?: string, positionArg?: { lat: number; lng: number }) => {
+    const handleSaveLocation = async (addressName: string, addressDetails?: string, positionArg?: { lat: number; lng: number }) => {
         const position = positionArg || currentMarkerPosition;
 
         if (!position || !addressName.trim()) {
@@ -371,71 +377,20 @@ const InteractiveMap = () => {
             return;
         }
 
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
+        // Add timestamp to title if needed, or just save
+        const now = new Date();
+        const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const finalTitle = `${addressName} ${dateTimeStr}`;
 
-            // Add timestamp to title
-            const now = new Date();
-            const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            const titleWithTime = `${addressName} ${dateTimeStr}`;
+        await hookSaveLocation(finalTitle, position.lat, position.lng, {
+            address: addressDetails,
+            category: selectedCategory as any
+        });
 
-            const newLocation = {
-                id: Date.now().toString(),
-                title: titleWithTime,
-                address: addressDetails ? addressDetails : `${(position?.lat || 0).toFixed(6)}, ${(position?.lng || 0).toFixed(6)}`,
-                category: selectedCategory,
-                lat: position.lat,
-                lng: position.lng,
-                url: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
-                user_id: user?.id,
-                createdAt: now.toISOString()
-            };
-
-            if (user) {
-                const { error } = await supabase.from('saved_locations').insert({
-                    user_id: user.id,
-                    title: newLocation.title,
-                    address: newLocation.address,
-                    category: newLocation.category,
-                    lat: newLocation.lat,
-                    lng: newLocation.lng,
-                    url: newLocation.url
-                });
-
-                if (error) throw error;
-            }
-
-            const updatedLocations = [...savedLocations, newLocation];
-            setSavedLocations(updatedLocations);
-            // Save to all keys for compatibility
-            localStorage.setItem('baraka_locations', JSON.stringify(updatedLocations));
-            localStorage.setItem('baraka_resources', JSON.stringify(updatedLocations));
-            window.dispatchEvent(new Event('locations-updated'));
-
-            toast({ title: "تم حفظ الموقع بنجاح" });
-            setNewItem({ name: '', location: '' });
-            setSearchQuery('');
-            setSelectedCategory('other');
-        } catch (error: any) {
-            console.error('Error saving location:', error);
-            const newLocation = {
-                id: Date.now().toString(),
-                title: addressName,
-                address: addressDetails ? addressDetails : `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
-                category: selectedCategory,
-                lat: position.lat,
-                lng: position.lng,
-                url: `https://www.google.com/maps?q=${position.lat},${position.lng}`,
-                user_id: 'guest'
-            };
-            const updatedLocations = [...savedLocations, newLocation];
-            setSavedLocations(updatedLocations);
-            // Save to all keys for compatibility
-            localStorage.setItem('baraka_locations', JSON.stringify(updatedLocations));
-            localStorage.setItem('baraka_resources', JSON.stringify(updatedLocations));
-            window.dispatchEvent(new Event('locations-updated'));
-            toast({ title: "تم حفظ الموقع محلياً" });
-        }
+        // Reset UI
+        setNewItem({ name: '', location: '' });
+        setSearchQuery('');
+        setSelectedCategory('other');
     };
 
     const performSearch = async () => {
@@ -499,72 +454,29 @@ const InteractiveMap = () => {
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const { latitude, longitude } = pos.coords;
 
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
-                const data = await res.json();
-                const addr = data.address || {};
-                const road = addr.road || addr.suburb || addr.city || 'موقعي';
-                const number = addr.house_number || '';
-                const addressName = number ? `${road} ${number}` : road;
+            // Generate basic name
+            const now = new Date();
+            const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const title = `موقعي ${dateTimeStr}`;
 
-                // Add timestamp to title
-                const now = new Date();
-                const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                const titleWithTime = `${addressName} ${dateTimeStr}`;
+            await hookSaveLocation(title, latitude, longitude, { category: 'other' });
 
-                const newLocation = {
-                    id: Date.now().toString(),
-                    title: titleWithTime,
-                    address: addressName,
-                    lat: latitude,
-                    lng: longitude,
-                    url: `https://www.google.com/maps?q=${latitude},${longitude}`,
-                    category: 'other',
-                    createdAt: now.toISOString()
-                };
-                const updated = [...savedLocations, newLocation];
-                // Save to all keys for compatibility
-                localStorage.setItem('baraka_locations', JSON.stringify(updated));
-                localStorage.setItem('baraka_resources', JSON.stringify(updated));
-                setSavedLocations(updated);
-                window.dispatchEvent(new Event('locations-updated'));
-
-                toast({ title: "تم الحفظ السريع!", description: titleWithTime });
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setIsLocating(false);
-            }
+            setIsLocating(false);
         }, (err) => {
             setIsLocating(false);
             toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" });
         }, { enableHighAccuracy: true });
     };
 
-    const saveEditResource = () => {
-        if (!editingResource || !editingResource.title.trim()) return;
-        const updated = savedLocations.map((r: any) => r.id === editingResource.id ? editingResource : r);
-        // Save to all keys for compatibility
-        localStorage.setItem('baraka_locations', JSON.stringify(updated));
-        localStorage.setItem('baraka_resources', JSON.stringify(updated));
-        setSavedLocations(updated);
-        window.dispatchEvent(new Event('locations-updated'));
-        toast({ title: "تم تحديث الاسم" });
-        setIsEditOpen(false);
-        setEditingResource(null);
+    const handleUpdateLocation = () => {
+        if (editingResource) {
+            updateLocation(editingResource.id, editingResource);
+            setIsEditOpen(false);
+            setEditingResource(null);
+        }
     };
 
-    const deleteLocation = (id: string) => {
-        const updated = savedLocations.filter((i: any) => i.id !== id);
-        // Save to all keys for compatibility
-        localStorage.setItem('baraka_locations', JSON.stringify(updated));
-        localStorage.setItem('baraka_resources', JSON.stringify(updated));
-        setSavedLocations(updated);
-        selectedLocations.delete(id);
-        setSelectedLocations(new Set(selectedLocations));
-        window.dispatchEvent(new Event('locations-updated'));
-        toast({ title: "تم الحذف" });
-    };
+    // deleted local deleteLocation to use hook's one
 
 
 
@@ -666,28 +578,31 @@ const InteractiveMap = () => {
             </CardHeader>
             <CardContent className="p-0">
                 {/* 70/30 Split Layout - Desktop: Horizontal | Mobile: Vertical */}
-                <div className="flex flex-col lg:flex-row h-auto lg:h-[80vh] min-h-[400px]">
+                <div className="flex flex-col lg:flex-row h-auto lg:h-[80vh] min-h-[500px]">
                     {/* Map Section - 70% on Desktop */}
-                    <div className="h-[400px] lg:h-full lg:w-[70%] w-full relative z-0 order-1">
+                    <div className="h-[50vh] min-h-[400px] lg:h-full lg:w-[70%] w-full relative z-0 order-1 border-b lg:border-b-0 lg:border-l border-gray-200 isolate">
                         <MapContainer
+                            key={mapKey}
                             center={mapCenter}
                             zoom={13}
                             zoomControl={false}
-                            style={{ height: '100%', width: '100%' }}
+                            style={{ height: '100%', width: '100%', minHeight: '400px' }}
                         >
                             <ChangeView center={mapCenter} zoom={15} />
                             <TileLayer
                                 attribution='&copy; OpenStreetMap contributors'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
+                            {/* Map click handler */}
+                            <MapClickHandler onMapClick={(latlng) => {
+                                setCurrentMarkerPosition({ lat: latlng.lat, lng: latlng.lng });
+                                setMapCenter([latlng.lat, latlng.lng]);
+                            }} />
+
                             {/* Current selection marker */}
                             <LocationMarker
                                 position={currentMarkerPosition}
-                                setPosition={(pos) => {
-                                    setCurrentMarkerPosition(pos);
-                                    setMapCenter([pos.lat, pos.lng]);
-                                }}
-                                onSave={saveLocation}
+                                onSave={handleSaveLocation}
                                 onShare={(pos) => {
                                     const url = `https://www.google.com/maps/search/?api=1&query=${pos.lat},${pos.lng}`;
                                     Share.share({ title: 'موقع', text: url, dialogTitle: 'مشاركة الموقع' }).catch(() => {
@@ -828,108 +743,65 @@ const InteractiveMap = () => {
                             )}
                         </div>
                     </div>
-                </div>
-            </CardContent>
 
-            {/* Locations Table */}
-            {
-                savedLocations.length > 0 && (
-                    <div className="border-t bg-white order-2">
-                        <div className="p-3 bg-gray-50 border-b">
-                            <h3 className="font-bold text-sm flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-blue-600" />
-                                المواقع المحفوظة ({savedLocations.length})
-                            </h3>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-100">
-                                    <tr>
-                                        <th className="text-right p-3 font-bold">الاسم</th>
-                                        <th className="text-center p-3 font-bold w-40">الإجراءات</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {savedLocations.map((loc: any) => {
-                                        return (
-                                            <tr key={loc.id} className="border-b transition-colors text-right">
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="bg-blue-100 p-1.5 rounded-full">
-                                                            <MapPin className="w-3 h-3 text-blue-600" />
-                                                        </div>
-                                                        <span className="font-medium">{loc.title}</span>
+
+                    {/* Locations Table */}
+                    {savedLocations.length > 0 && (
+                        <div className="border-t bg-white order-2">
+                            <div className="p-3 bg-gray-50 border-b">
+                                <h3 className="font-bold text-sm flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-blue-600" />
+                                    المواقع المحفوظة ({savedLocations.length})
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100">
+                                        <tr>
+                                            <th className="p-2 text-right">الموقع</th>
+                                            <th className="p-2 text-right">التصنيف</th>
+                                            <th className="p-2 text-center">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {savedLocations.map((loc) => (
+                                            <tr key={loc.id} className="border-b last:border-0 hover:bg-gray-50">
+                                                <td className="p-2">
+                                                    <div className="font-medium text-blue-700 cursor-pointer hover:underline" onClick={() => setMapCenter([loc.lat, loc.lng])}>
+                                                        {loc.title}
                                                     </div>
+                                                    <div className="text-xs text-gray-500 truncate max-w-[200px]">{loc.address}</div>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {/* Navigate */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-green-600"
-                                                            onClick={() => {
-                                                                const url = `https://www.google.com/maps/dir/?api=1&destination=${loc.url.replace('geo:', '')}`;
-                                                                window.open(url, '_blank');
-                                                            }}
-                                                            title="الملاحة"
-                                                        >
-                                                            <Navigation className="w-4 h-4" />
-                                                        </Button>
-
-
-                                                        {/* Share */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-blue-600"
-                                                            onClick={() => {
-                                                                const url = `https://www.google.com/maps/search/?api=1&query=${loc.url.replace('geo:', '')}`;
-                                                                if (navigator.share) {
-                                                                    navigator.share({ title: loc.title, url }).catch(() => { });
-                                                                } else {
-                                                                    navigator.clipboard.writeText(url);
-                                                                    toast({ title: "تم نسخ الرابط" });
-                                                                }
-                                                            }}
-                                                            title="مشاركة"
-                                                        >
-                                                            <Share2 className="w-4 h-4" />
-                                                        </Button>
-                                                        {/* Edit */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-orange-600"
-                                                            onClick={() => {
-                                                                setEditingResource(loc);
-                                                                setIsEditOpen(true);
-                                                            }}
-                                                            title="تعديل"
-                                                        >
-                                                            <Edit2 className="w-4 h-4" />
-                                                        </Button>
-                                                        {/* Delete */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-red-600"
-                                                            onClick={() => deleteLocation(loc.id)}
-                                                            title="حذف"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
+                                                <td className="p-2">
+                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{getCategoryIcon(loc.category)} {LOCATION_CATEGORIES.find(c => c.id === loc.category)?.label}</span>
+                                                </td>
+                                                <td className="p-2 flex justify-center gap-1">
+                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                                        setEditingResource(loc);
+                                                        setIsEditOpen(true);
+                                                    }}>
+                                                        <Edit2 className="w-3 h-3 text-gray-500" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => deleteLocation(loc.id)}>
+                                                        <Trash2 className="w-3 h-3 text-red-500" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
+                                                        const url = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+                                                        Share.share({ title: loc.title, text: url }).catch(() => navigator.clipboard.writeText(url));
+                                                    }}>
+                                                        <Share2 className="w-3 h-3 text-blue-500" />
+                                                    </Button>
                                                 </td>
                                             </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-                )
-            }
+
+                    )}
+                </div>
+            </CardContent>
 
             {/* Edit Dialog */}
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
@@ -989,7 +861,7 @@ const InteractiveMap = () => {
 
                             <DialogFooter className="gap-2">
                                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>إلغاء</Button>
-                                <Button onClick={saveEditResource}>حفظ التعديلات</Button>
+                                <Button onClick={handleUpdateLocation}>حفظ التعديلات</Button>
                             </DialogFooter>
                         </div>
                     )}

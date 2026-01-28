@@ -937,13 +937,13 @@ const PrayerManager = () => {
                         <table className="w-full text-sm text-right border-collapse">
                             <thead className="bg-gray-50 text-gray-600">
                                 <tr>
-                                    <th className="p-4 font-semibold whitespace-nowrap w-32">التاريخ</th>
-                                    <th className="p-4 font-semibold text-emerald-700 whitespace-nowrap">الفجر</th>
-                                    <th className="p-4 font-semibold text-amber-500 whitespace-nowrap">الشروق</th>
-                                    <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">الظهر</th>
-                                    <th className="p-4 font-semibold text-gray-600 whitespace-nowrap">العصر</th>
-                                    <th className="p-4 font-semibold text-amber-600 whitespace-nowrap">المغرب</th>
-                                    <th className="p-4 font-semibold text-indigo-700 whitespace-nowrap">العشاء</th>
+                                    <th className="p-2 font-semibold whitespace-nowrap w-32">التاريخ</th>
+                                    <th className="p-2 font-semibold text-emerald-700 whitespace-nowrap">الفجر</th>
+                                    <th className="p-2 font-semibold text-amber-500 whitespace-nowrap">الشروق</th>
+                                    <th className="p-2 font-semibold text-gray-600 whitespace-nowrap">الظهر</th>
+                                    <th className="p-2 font-semibold text-gray-600 whitespace-nowrap">العصر</th>
+                                    <th className="p-2 font-semibold text-amber-600 whitespace-nowrap">المغرب</th>
+                                    <th className="p-2 font-semibold text-indigo-700 whitespace-nowrap">العشاء</th>
                                 </tr>
                             </thead>
                             {weeks.map((week, weekIdx) => {
@@ -982,18 +982,18 @@ const PrayerManager = () => {
                                                     const isToday = day.date === new Date().toISOString().split('T')[0];
                                                     return (
                                                         <tr key={index} className={`hover:bg-gray-50 transition-colors ${isToday ? 'bg-emerald-50/60' : ''}`}>
-                                                            <td className="p-4 font-medium whitespace-nowrap text-right">
+                                                            <td className="p-2 font-medium whitespace-nowrap text-right">
                                                                 <div className="font-english dir-ltr">{day.date}</div>
                                                                 <div className="text-[10px] text-gray-400 mt-0.5">
                                                                     {new Date(day.date).toLocaleDateString('ar-SA-u-ca-islamic-nu-latn', { day: 'numeric', month: 'short' })}
                                                                 </div>
                                                             </td>
-                                                            <td className="p-4 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
-                                                            <td className="p-4 text-amber-500 font-medium">{formatNumberToLocale(day.sunrise || '--:--')}</td>
-                                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>
-                                                            <td className="p-4 text-gray-600">{formatNumberToLocale(day.asr)}</td>
-                                                            <td className="p-4 text-amber-600 font-bold">{formatNumberToLocale(day.maghrib)}</td>
-                                                            <td className="p-4 text-indigo-700">{formatNumberToLocale(day.isha)}</td>
+                                                            <td className="p-2 text-emerald-600 font-bold">{formatNumberToLocale(day.fajr)}</td>
+                                                            <td className="p-2 text-amber-500 font-medium">{formatNumberToLocale(day.sunrise || '--:--')}</td>
+                                                            <td className="p-2 text-gray-600">{formatNumberToLocale(day.dhuhr)}</td>
+                                                            <td className="p-2 text-gray-600">{formatNumberToLocale(day.asr)}</td>
+                                                            <td className="p-2 text-amber-600 font-bold">{formatNumberToLocale(day.maghrib)}</td>
+                                                            <td className="p-2 text-indigo-700">{formatNumberToLocale(day.isha)}</td>
                                                         </tr>
                                                     );
                                                 })}

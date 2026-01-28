@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useFinance } from '@/hooks/useFinance';
+import { useSystemModes } from '@/hooks/useSystemModes';
 import {
     Sparkles, X, Plus, Settings, Trash2,
     Clock, Calendar, DollarSign, Wallet, ListTodo, Bell, MapPin, ShoppingCart,
@@ -91,10 +92,21 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
         } catch { return []; }
     });
 
-    // Save to localStorage
+    // System Modes Integration
+    const { modes } = useSystemModes();
+    const activeMode = modes.find(m => m.is_active);
+    const modeFabSettings = activeMode?.fab_settings;
+
+    // Determine visibility
+    const isVisible = modeFabSettings?.visible !== false; // Default to true if undefined
+
+    // Save to localStorage (only if not in a mode that overrides this temporarily)
     useEffect(() => {
-        localStorage.setItem('baraka_smart_buttons', JSON.stringify(customButtons));
-    }, [customButtons]);
+        if (!activeMode) {
+            localStorage.setItem('baraka_smart_buttons', JSON.stringify(customButtons));
+        }
+    }, [customButtons, activeMode]);
+
 
     // Execute Action
     const executeAction = (actionId: string) => {
@@ -227,6 +239,8 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
 
     const getActionById = (actionId: string) => AVAILABLE_ACTIONS.find(a => a.id === actionId);
 
+    if (!isVisible) return null;
+
     return (
         <>
             {/* Floating Button - Fixed at Bottom Center */}
@@ -245,10 +259,10 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
                                     onClick={() => executeAction(btn.actionId)}
                                     title={action.name}
                                     className={`p-2.5 rounded-full transition-all hover:scale-110 ${action.category === 'info' ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' :
-                                            action.category === 'action' ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' :
-                                                action.category === 'calc' ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' :
-                                                    action.category === 'remind' ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' :
-                                                        'bg-pink-100 text-pink-600 hover:bg-pink-200'
+                                        action.category === 'action' ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' :
+                                            action.category === 'calc' ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' :
+                                                action.category === 'remind' ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' :
+                                                    'bg-pink-100 text-pink-600 hover:bg-pink-200'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />
@@ -271,8 +285,8 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className={`p-4 rounded-full shadow-xl transition-all duration-300 ${isExpanded
-                            ? 'bg-gray-800 text-white rotate-45'
-                            : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:scale-110 hover:shadow-2xl'
+                        ? 'bg-gray-800 text-white rotate-45'
+                        : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:scale-110 hover:shadow-2xl'
                         }`}
                 >
                     {isExpanded ? <X className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}

@@ -4,7 +4,7 @@
  */
 
 export type ActionPlacement = 'quick_access' | 'shortcuts_grid';
-export type ShortcutType = 'action' | 'url' | 'contact' | 'macro' | 'location' | 'folder';
+export type ShortcutType = 'action' | 'url' | 'contact' | 'macro' | 'location' | 'folder' | 'navigation' | 'save_location' | 'save_parking';
 
 export interface CustomShortcut {
     id: string;

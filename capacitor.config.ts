@@ -5,10 +5,19 @@ const config: CapacitorConfig = {
     appName: 'البركة',
     webDir: 'dist',
     android: {
-        path: 'android'
+        path: 'android',
+        // Fix for touch events and map rendering in Android WebView
+        webContentsDebuggingEnabled: true,
     },
-
-    plugins: {},
+    server: {
+        // Improves performance for local assets
+        androidScheme: 'https',
+    },
+    plugins: {
+        SpeechRecognition: {
+            // Android-specific settings
+        }
+    },
 };
 
 export default config;

@@ -35,7 +35,9 @@ import {
     ChevronDown,
     LayoutDashboard,
     Moon,
+    Map, // New Icon
 } from 'lucide-react';
+import { useLocations } from '@/hooks/useLocations'; // Added hook import
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 
@@ -63,6 +65,7 @@ const NewMuslimsManager = React.lazy(() => import('@/components/NewMuslims/NewMu
 const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { SystemModeEditorDialog } from '@/components/dialogs/SystemModeEditorDialog';
+import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
 
 
 import { DateRange } from 'react-day-picker';
@@ -556,6 +559,15 @@ const SettingsPanel = () => {
             bg: 'bg-emerald-50',
             borderColor: 'border-emerald-100',
             description: 'تعديل وتصدير مواقيت الصلاة'
+        },
+        {
+            id: 'maps',
+            title: 'إدارة المواقع',
+            icon: Map,
+            color: 'text-blue-600',
+            bg: 'bg-blue-50',
+            borderColor: 'border-blue-100',
+            description: 'عرض ومشاركة المواقع المحفوظة'
         }
     ];
 
@@ -751,6 +763,12 @@ const SettingsPanel = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Maps Dialog */}
+            <MapsSettingsDialog
+                open={activeSection === 'maps'}
+                onOpenChange={(open) => !open && setActiveSection(null)}
+            />
 
             {/* 2. Sync Dialog */}
             <Dialog open={activeSection === 'sync'} onOpenChange={(open) => !open && setActiveSection(null)}>

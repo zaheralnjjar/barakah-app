@@ -21,6 +21,7 @@ export const useMedications = () => {
     const [medications, setMedications] = useState<Medication[]>([]);
     const { toast } = useToast();
 
+
     // Fetch from Supabase
     const fetchMedications = async () => {
         try {
@@ -53,7 +54,7 @@ export const useMedications = () => {
                             time: m.time || '08:00',
                             frequency: m.frequency as any,
                             customDays: m.custom_days || [],
-                            customTimes: {}, // Not in schema yet, ignore or add later
+                            customTimes: m.custom_times || {},
                             startDate: m.start_date || new Date().toISOString().split('T')[0],
                             endDate: m.end_date || '',
                             isPermanent: m.is_permanent || false,
@@ -77,7 +78,7 @@ export const useMedications = () => {
         fetchMedications();
     }, []);
 
-    // Notification Logic (same as before, relies on 'medications' state)
+    // Notification Logic
     useEffect(() => {
         if ('Notification' in window && Notification.permission !== 'granted') {
             Notification.requestPermission();
@@ -99,17 +100,27 @@ export const useMedications = () => {
                 const isTodayDue = med.frequency === 'daily' ||
                     (med.frequency === 'specific_days' && med.customDays?.includes(todayDayName));
 
-                if (isTodayDue && med.time === currentTime) {
-                    // Check if already taken today
-                    if (!med.takenHistory[todayStr]) {
-                        // Send Notification
-                        if (Notification.permission === 'granted') {
-                            new Notification(`موعد الدواء: ${med.name}`, {
-                                body: `حان وقت تناول ${med.name}`,
-                                icon: '/icon-192.png' // Adjust if available
-                            });
-                        } else {
-                            toast({ title: `🔔 تذكير: ${med.name}`, description: `حان وقت تناول ${med.name}` });
+                if (isTodayDue) {
+                    // Determine the time to check against
+                    // If specific_days AND we have a custom time for this day, use it.
+                    // Otherwise use default time.
+                    let targetTime = med.time;
+                    if (med.frequency === 'specific_days' && med.customTimes && med.customTimes[todayDayName]) {
+                        targetTime = med.customTimes[todayDayName];
+                    }
+
+                    if (targetTime === currentTime) {
+                        // Check if already taken today
+                        if (!med.takenHistory[todayStr]) {
+                            // Send Notification
+                            if (Notification.permission === 'granted') {
+                                new Notification(`موعد الدواء: ${med.name}`, {
+                                    body: `حان وقت تناول ${med.name} (${targetTime})`,
+                                    icon: '/icon-192.png'
+                                });
+                            } else {
+                                toast({ title: `🔔 تذكير: ${med.name}`, description: `حان وقت تناول ${med.name}` });
+                            }
                         }
                     }
                 }
@@ -133,7 +144,7 @@ export const useMedications = () => {
         // Sync
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            // Clean up dates: empty strings are not valid for DATE columns in Postgres
+            // Clean up dates
             const startDate = newMed.startDate && newMed.startDate.trim() !== '' ? newMed.startDate : new Date().toISOString().split('T')[0];
             const endDate = newMed.endDate && newMed.endDate.trim() !== '' ? newMed.endDate : null;
 
@@ -144,19 +155,18 @@ export const useMedications = () => {
                 time: newMed.time,
                 frequency: newMed.frequency,
                 custom_days: newMed.customDays,
+                custom_times: newMed.customTimes,
                 start_date: startDate,
                 end_date: endDate,
                 is_permanent: newMed.isPermanent,
                 reminder: newMed.reminder,
-                // Store additional dose times in a generic way if schema permits or just ignore for now
-                // metadata: { customTimes: newMed.customTimes } 
             });
 
             if (error) {
                 console.error("Supabase Error adding medication:", error);
                 toast({
                     title: "فشل حفظ الدواء في السحابة",
-                    description: `السبب: ${error.message}. تأكد من تحديث قاعدة البيانات.`,
+                    description: `السبب: ${error.message}`,
                     variant: "destructive"
                 });
             } else {

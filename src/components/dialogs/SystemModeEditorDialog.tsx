@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSystemModes, SystemMode, ModeItem, CustomAction } from '@/hooks/useSystemModes';
 import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { useLocations } from '@/hooks/useLocations';
-import { Zap, Plus, Trash2, Clock, MapPin, Layers, Bell, Smartphone, Send, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Zap, Plus, Trash2, Clock, MapPin, Layers, Bell, Smartphone, Send, Calendar as CalendarIcon, X, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -50,6 +50,7 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
     const [selectedShortcutIds, setSelectedShortcutIds] = useState<string[]>([]);
     const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
     const [customActions, setCustomActions] = useState<CustomAction[]>([]);
+    const [fabVisible, setFabVisible] = useState(true);
 
     // Form for adding individual items
     const [newItemText, setNewItemText] = useState('');
@@ -71,6 +72,7 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
                 setSelectedShortcutIds(mode.shortcut_ids);
                 setSelectedLocationIds(mode.location_ids);
                 setCustomActions(mode.custom_actions || []);
+                setFabVisible(mode.fab_settings?.visible !== false);
             }
         } else {
             // Reset for new
@@ -85,6 +87,7 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
             setSelectedShortcutIds([]);
             setSelectedLocationIds([]);
             setCustomActions([]);
+            setFabVisible(true);
         }
     }, [modeId, modes, open]);
 
@@ -124,7 +127,10 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
             mode_items: modeItems,
             shortcut_ids: selectedShortcutIds,
             location_ids: selectedLocationIds,
-            custom_actions: customActions
+            custom_actions: customActions,
+            fab_settings: {
+                visible: fabVisible
+            }
         };
 
         try {
@@ -134,9 +140,13 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
                 await createMode(modeData);
             }
             onOpenChange(false);
-        } catch (error) {
-            console.error(error);
-            toast({ title: 'فشل الحفظ', variant: 'destructive' });
+        } catch (error: any) {
+            console.error('Error saving system mode:', error);
+            toast({
+                title: 'فشل الحفظ',
+                description: error?.message || 'تأكد من اتصالك بالإنترنت وصلاحيات الحساب',
+                variant: 'destructive'
+            });
         }
     };
 
@@ -329,6 +339,20 @@ export const SystemModeEditorDialog: React.FC<SystemModeEditorDialogProps> = ({ 
                                 <Plus className="w-3 h-3 ml-1" /> إضافة إجراء جديد
                             </Button>
                         </div>
+                    </div>
+
+                    {/* FAB Settings */}
+                    <div className="bg-slate-50 p-4 rounded-xl flex items-center justify-between border border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                                <Sparkles className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                                <Label className="font-bold block">الزر العائم الذكي</Label>
+                                <span className="text-[10px] text-gray-500">عرض زر المساعدة الذكي في هذا الوضع</span>
+                            </div>
+                        </div>
+                        <Checkbox checked={fabVisible} onCheckedChange={(c) => setFabVisible(!!c)} />
                     </div>
                 </div>
 

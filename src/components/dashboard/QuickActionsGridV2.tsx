@@ -192,6 +192,23 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                     if (targetUrl) window.open(targetUrl, '_blank');
                 };
                 onLongPressHandler = () => setShowShortcutsDialog(true);
+            } else if (customData.shortcut_type === 'navigation') {
+                onClickHandler = () => {
+                    if (customData.location_lat && customData.location_lng) {
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${customData.location_lat},${customData.location_lng}`, '_blank');
+                    } else if (customData.location_address) {
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(customData.location_address)}`, '_blank');
+                    } else {
+                        toast({ title: 'خطأ', description: 'لا توجد إحداثيات محفوظة لهذا الاختصار', variant: 'destructive' });
+                    }
+                };
+                onLongPressHandler = () => setShowShortcutsDialog(true);
+            } else if (customData.shortcut_type === 'save_location') {
+                onClickHandler = () => executeShortcut('save_location_current');
+                onLongPressHandler = () => setShowShortcutsDialog(true);
+            } else if (customData.shortcut_type === 'save_parking') {
+                onClickHandler = () => executeShortcut('save_parking');
+                onLongPressHandler = () => setShowShortcutsDialog(true);
             }
         }
 

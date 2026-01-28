@@ -218,24 +218,55 @@ export const MedicationManager = () => {
 
                             {newMedication.frequency === 'specific_days' && (
                                 <div className="grid gap-2">
-                                    <label className="text-sm font-bold">حدد الأيام</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {DAYS_AR.map(day => (
-                                            <button
-                                                key={day}
-                                                className={`px-3 py-1 rounded-full text-xs border ${newMedication.customDays.includes(day) ? 'bg-primary text-white border-primary' : 'bg-gray-100 text-gray-600'}`}
-                                                onClick={() => {
-                                                    const current = newMedication.customDays;
-                                                    if (current.includes(day)) {
-                                                        setNewMedication({ ...newMedication, customDays: current.filter(d => d !== day) });
-                                                    } else {
-                                                        setNewMedication({ ...newMedication, customDays: [...current, day] });
-                                                    }
-                                                }}
-                                            >
-                                                {day}
-                                            </button>
-                                        ))}
+                                    <label className="text-sm font-bold">جدول الأيام والأوقات</label>
+                                    <div className="space-y-2 border rounded-lg p-2 max-h-[200px] overflow-y-auto">
+                                        {DAYS_AR.map(day => {
+                                            const isSelected = newMedication.customDays.includes(day);
+                                            return (
+                                                <div key={day} className={`flex items-center justify-between p-2 rounded ${isSelected ? 'bg-indigo-50 border border-indigo-100' : 'bg-gray-50'}`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                let newDays = [...newMedication.customDays];
+                                                                let newTimes = { ...(newMedication.customTimes || {}) };
+
+                                                                if (checked) {
+                                                                    newDays.push(day);
+                                                                    // Default time for this day is the main time
+                                                                    newTimes[day] = newMedication.time;
+                                                                } else {
+                                                                    newDays = newDays.filter(d => d !== day);
+                                                                    delete newTimes[day];
+                                                                }
+                                                                setNewMedication({ ...newMedication, customDays: newDays, customTimes: newTimes });
+                                                            }}
+                                                            className="w-4 h-4 accent-indigo-600"
+                                                        />
+                                                        <span className="text-sm font-medium">{day}</span>
+                                                    </div>
+
+                                                    {isSelected && (
+                                                        <Input
+                                                            type="time"
+                                                            value={newMedication.customTimes?.[day] || newMedication.time}
+                                                            onChange={(e) => {
+                                                                setNewMedication({
+                                                                    ...newMedication,
+                                                                    customTimes: {
+                                                                        ...newMedication.customTimes,
+                                                                        [day]: e.target.value
+                                                                    }
+                                                                });
+                                                            }}
+                                                            className="w-32 h-8 text-xs"
+                                                        />
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

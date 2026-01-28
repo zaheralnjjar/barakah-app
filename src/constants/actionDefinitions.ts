@@ -49,6 +49,8 @@ export const AVAILABLE_ACTIONS = [
     { id: 'share_location', name: 'مشاركة موقعي', icon: Copy, category: 'location', description: 'نسخ رابط الموقع الحالي' },
     { id: 'copy_coords', name: 'نسخ الإحداثيات', icon: Copy, category: 'location', description: 'نسخ إحداثيات الموقع الحالي' },
     { id: 'open_map', name: 'فتح الخريطة', icon: MapPin, category: 'location', description: 'فتح خرائط جوجل في موقعي' },
+    { id: 'navigate_to_location', name: 'الملاحة إلى...', icon: Navigation, category: 'location', description: 'اختيار موقع محفوظ للملاحة إليه' },
+    { id: 'show_all_locations', name: 'المواقع المحفوظة', icon: MapPin, category: 'location', description: 'عرض قائمة المواقع المحفوظة' },
 
     // ===== أدوات النظام =====
     { id: 'sync_now', name: 'مزامنة', icon: RefreshCw, category: 'system', description: 'تحديث البيانات يدوياً' },

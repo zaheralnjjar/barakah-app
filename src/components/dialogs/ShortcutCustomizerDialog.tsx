@@ -21,10 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
+import { useLocations } from '@/hooks/useLocations';
 import { AVAILABLE_ACTIONS, getActionById } from '@/constants/actionDefinitions';
 import type { NewCustomShortcut, ShortcutType, ActionPlacement, CustomShortcut } from '@/types/shortcuts';
 import {
-    Plus, Trash2, GripVertical, Sparkles, Link, Phone, Zap, MousePointer, Hand,
+    Plus, Trash2, GripVertical, Sparkles, Link, Phone, Zap, MousePointer, Hand, Map,
     // Common icons for picker
     Home, Star, Heart, Settings, Calendar, Bell, Mail, Search, User, Camera,
     Clock, MapPin, Music, Globe, Bookmark, AlertCircle, CheckCircle, XCircle,
@@ -56,7 +57,7 @@ const ICON_LIBRARY: Record<string, any> = {
     'Maximize': Maximize, 'Minimize': Minimize, 'ZoomIn': ZoomIn, 'ZoomOut': ZoomOut,
     'Filter': Filter, 'List': List, 'Grid': Grid, 'Layers': Layers, 'Box': Box,
     'Package': Package, 'Target': Target, 'Zap': Zap, 'Sparkles': Sparkles,
-    'Link': Link, 'Phone': Phone
+    'Link': Link, 'Phone': Phone, 'Map': Map
 };
 
 // Color palette for icons
@@ -83,6 +84,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
 }) => {
     const { toast } = useToast();
     const { shortcuts, addShortcut, updateShortcut, deleteShortcut, reorderShortcuts } = useCustomShortcuts();
+    const { locations } = useLocations();
 
     // Form State
     const [shortcutType, setShortcutType] = useState<ShortcutType>(editingShortcut?.shortcut_type || 'action');
@@ -93,6 +95,11 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
     const [longPressActionId, setLongPressActionId] = useState(editingShortcut?.long_press_action_id || '');
     const [url, setUrl] = useState(editingShortcut?.url || '');
     const [placement, setPlacement] = useState<ActionPlacement>(editingShortcut?.placement || 'shortcuts_grid');
+
+    // Navigation specific state
+    const [navLat, setNavLat] = useState<string>(editingShortcut?.location_lat?.toString() || '');
+    const [navLng, setNavLng] = useState<string>(editingShortcut?.location_lng?.toString() || '');
+    const [selectedLocationId, setSelectedLocationId] = useState<string>(''); // For dropdown selection
 
     const [showIconPicker, setShowIconPicker] = useState(false);
     const [iconSearch, setIconSearch] = useState('');
@@ -142,11 +149,18 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
             custom_name: customName.trim(),
             custom_icon: customIcon,
             icon_color: iconColor,
-            shortcut_type: shortcutType,
+            // Map specific actions to legacy types for execution compatibility
+            shortcut_type:
+                (shortcutType === 'action' && clickActionId === 'navigate_to_location') ? 'navigation' :
+                    (shortcutType === 'action' && clickActionId === 'save_parking') ? 'save_parking' :
+                        (shortcutType === 'action' && clickActionId === 'save_location_current') ? 'save_location' :
+                            shortcutType,
             placement,
             click_action_id: clickActionId || undefined,
             long_press_action_id: longPressActionId || undefined,
             url: shortcutType === 'url' ? url : undefined,
+            location_lat: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLat ? parseFloat(navLat) : undefined,
+            location_lng: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLng ? parseFloat(navLng) : undefined,
             order_index: editingShortcut?.order_index ?? shortcuts.length
         };
 
@@ -322,70 +336,111 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
 
                     {/* Action Type Forms */}
                     {shortcutType === 'action' && (
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Click Action */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold flex items-center gap-1">
-                                    <MousePointer className="w-3 h-3" />
-                                    عند الضغط
-                                </Label>
-                                <Select value={clickActionId} onValueChange={setClickActionId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر وظيفة..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <div className="p-2">
-                                            <Input
-                                                placeholder="بحث..."
-                                                value={actionSearch}
-                                                onChange={e => setActionSearch(e.target.value)}
-                                                className="h-8 mb-2"
-                                            />
-                                        </div>
-                                        <ScrollArea className="h-48">
-                                            {filteredActions.map(action => {
-                                                const Icon = action.icon;
-                                                return (
-                                                    <SelectItem key={action.id} value={action.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Icon className="w-4 h-4" />
-                                                            <span>{action.name}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </ScrollArea>
-                                    </SelectContent>
-                                </Select>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Click Action */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-bold flex items-center gap-1">
+                                        <MousePointer className="w-3 h-3" />
+                                        عند الضغط
+                                    </Label>
+                                    <Select value={clickActionId} onValueChange={setClickActionId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="اختر وظيفة..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <div className="p-2">
+                                                <Input
+                                                    placeholder="بحث..."
+                                                    value={actionSearch}
+                                                    onChange={e => setActionSearch(e.target.value)}
+                                                    className="h-8 mb-2"
+                                                />
+                                            </div>
+                                            <ScrollArea className="h-48">
+                                                {filteredActions.map(action => {
+                                                    const Icon = action.icon;
+                                                    return (
+                                                        <SelectItem key={action.id} value={action.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Icon className="w-4 h-4" />
+                                                                <span>{action.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    );
+                                                })}
+                                            </ScrollArea>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Long Press Action */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-bold flex items-center gap-1">
+                                        <Hand className="w-3 h-3" />
+                                        عند الضغط المطول
+                                    </Label>
+                                    <Select value={longPressActionId} onValueChange={setLongPressActionId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="اختر وظيفة..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <ScrollArea className="h-48">
+                                                {AVAILABLE_ACTIONS.map(action => {
+                                                    const Icon = action.icon;
+                                                    return (
+                                                        <SelectItem key={action.id} value={action.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <Icon className="w-4 h-4" />
+                                                                <span>{action.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    );
+                                                })}
+                                            </ScrollArea>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
-                            {/* Long Press Action */}
-                            <div className="space-y-2">
-                                <Label className="text-sm font-bold flex items-center gap-1">
-                                    <Hand className="w-3 h-3" />
-                                    عند الضغط المطول
-                                </Label>
-                                <Select value={longPressActionId} onValueChange={setLongPressActionId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر وظيفة..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <ScrollArea className="h-48">
-                                            {AVAILABLE_ACTIONS.map(action => {
-                                                const Icon = action.icon;
-                                                return (
-                                                    <SelectItem key={action.id} value={action.id}>
-                                                        <div className="flex items-center gap-2">
-                                                            <Icon className="w-4 h-4" />
-                                                            <span>{action.name}</span>
-                                                        </div>
+                            {/* Location Picker for Navigation Action */}
+                            {clickActionId === 'navigate_to_location' && (
+                                <div className="space-y-4 pt-4 border-t mt-4 border-emerald-100">
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-bold text-emerald-700">اختر الوجهة (الموقع المحفوظ)</Label>
+                                        <Select onValueChange={(val) => {
+                                            const loc = locations.find(l => l.id === val);
+                                            if (loc) {
+                                                setNavLat(loc.lat.toString());
+                                                setNavLng(loc.lng.toString());
+                                                setCustomName(`ملاحة إلى: ${loc.title}`);
+                                                setCustomIcon('Car');
+                                            }
+                                        }}>
+                                            <SelectTrigger className="border-emerald-300 bg-emerald-50">
+                                                <SelectValue placeholder="اختر موقعاً..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {locations.map(loc => (
+                                                    <SelectItem key={loc.id} value={loc.id}>
+                                                        {loc.title}
                                                     </SelectItem>
-                                                );
-                                            })}
-                                        </ScrollArea>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-gray-400">خط العرض</Label>
+                                            <Input value={navLat} onChange={e => setNavLat(e.target.value)} className="h-8 text-xs font-mono" dir="ltr" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-gray-400">خط الطول</Label>
+                                            <Input value={navLng} onChange={e => setNavLng(e.target.value)} className="h-8 text-xs font-mono" dir="ltr" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -434,6 +489,8 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                             <p className="text-xs text-gray-400">الضغط العادي يفتح الرابط، والمطول ينفذ الوظيفة المحددة</p>
                         </div>
                     )}
+
+
 
 
                     {/* Placement */}
@@ -495,7 +552,7 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                     </Button>
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };
 

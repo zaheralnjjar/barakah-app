@@ -42,6 +42,7 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const processedResultsRef = useRef<Set<number>>(new Set());
     const previousTranscriptRef = useRef<string>('');
     const manualStopRef = useRef<boolean>(false);
+    const lastProcessedTextRef = useRef<string>('');
 
     // Robust merge function to prevent duplicate captures
     const mergeTranscripts = useCallback((existing: string, addition: string) => {
@@ -51,23 +52,27 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         if (!a) return e;
 
         const eLower = e.toLowerCase();
-        const aLower = a.toLowerCase();
+        const aLower = a.toLowerCase().trim();
 
         // If the addition is already exactly at the end, ignore it
         if (eLower.endsWith(aLower)) return e;
 
-        // If the addition is a substring of the last 30 characters, ignore it
-        if (eLower.slice(-30).includes(aLower)) return e;
+        // If the addition is a substring of the last portion, ignore it
+        const lastPortion = eLower.slice(-Math.max(30, aLower.length + 10));
+        if (lastPortion.includes(aLower)) return e;
 
+        // Check word-level overlap
         const wordsE = e.split(/\s+/);
         const wordsA = a.split(/\s+/);
 
-        const maxCheck = Math.min(wordsE.length, wordsA.length, 10);
+        const maxCheck = Math.min(wordsE.length, wordsA.length, 15);
         for (let i = maxCheck; i > 0; i--) {
             const suffix = wordsE.slice(-i).join(' ').toLowerCase();
             const prefix = wordsA.slice(0, i).join(' ').toLowerCase();
             if (suffix === prefix) {
-                return e + ' ' + wordsA.slice(i).join(' ');
+                // Only add the non-overlapping part
+                const newPart = wordsA.slice(i).join(' ');
+                return newPart ? e + ' ' + newPart : e;
             }
         }
 
@@ -76,48 +81,21 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
     useEffect(() => {
         const checkSpeechSupport = async () => {
-            // Check if running in Electron (Desktop)
-            const isElectron = navigator.userAgent.includes('Electron');
-
-            // Check if running in Capacitor (Mobile App) - but NOT Electron
-            const isCapacitor = (window as any).Capacitor !== undefined && !isElectron;
-            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-            // Desktop (Electron or Browser): Use Web Speech API
-            if (isElectron || !isMobileDevice) {
-                const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                if (WebSpeechRecognition) {
-                    setSpeechSupported(true);
-                    setManualMode(false);
-                    setUseNativeSpeech(false);
-                    console.log('Using Web Speech API for desktop/browser');
-                    return;
-                }
+            // FORCE WEB SPEECH API for everyone (including Android)
+            // User requested to use the Web implementation even on Android because Native one repeats text.
+            const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (WebSpeechRecognition) {
+                setSpeechSupported(true);
+                setManualMode(false);
+                setUseNativeSpeech(false);
+                console.log('Forcing Web Speech API for all platforms');
+                return;
             }
 
-            // Mobile with Capacitor: Try native speech recognition
-            if (isCapacitor && isMobileDevice) {
-                try {
-                    const available = await SpeechRecognition.available();
-                    if (available.available) {
-                        const permission = await SpeechRecognition.requestPermissions();
-                        if (permission.speechRecognition === 'granted') {
-                            setUseNativeSpeech(true);
-                            setSpeechSupported(true);
-                            setManualMode(false);
-                            console.log('Using native Capacitor speech recognition');
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Native speech recognition not available:', e);
-                }
-            }
-
-            // Fallback to manual mode
+            // Fallback to manual mode if Web Speech API is not strictly supported
             setSpeechSupported(false);
             setManualMode(true);
-            console.log('Speech recognition not available, using manual mode');
+            console.log('Web Speech API not available, using manual mode');
         };
 
         checkSpeechSupport();
@@ -149,49 +127,65 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         if (useNativeSpeech) {
             // Use Native Capacitor Speech Recognition (Android/iOS)
+            // IMPORTANT: Android sends CUMULATIVE text in partialResults, not incremental!
             try {
                 setIsRecording(true);
                 setInterimTranscript('');
-                // Don't clear finalTranscriptRef - keep accumulated text
+                // Clear the last processed text for this session
+                lastProcessedTextRef.current = '';
+
+                // clean up any previous listeners to prevent duplicates
+                await SpeechRecognition.removeAllListeners();
 
                 // Start listening with native plugin
                 await SpeechRecognition.start({
                     language: 'ar-SA',
-                    maxResults: 5,
-                    popup: false, // Use our own UI
+                    maxResults: 1, // Only get best match to reduce duplication
+                    popup: false,
                     partialResults: true,
                 });
 
                 // Listen for partial results
+                // Android sends CUMULATIVE text, not incremental!!
                 SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
                     if (data.matches && data.matches.length > 0) {
-                        const newText = data.matches[0];
-                        setInterimTranscript(newText);
+                        const incomingText = data.matches[0].trim();
 
-                        setTranscript(prev => {
-                            // Only update if the new text actually adds something or changes the interim
-                            return mergeTranscripts(previousTranscriptRef.current, newText);
-                        });
+                        // SKIP if identical to what we just processed (basic dedup)
+                        if (incomingText === lastProcessedTextRef.current) return;
+
+                        // SKIP if incoming is shorter than what we already have for this session (jitter)
+                        if (incomingText.length < lastProcessedTextRef.current.length) return;
+
+                        lastProcessedTextRef.current = incomingText;
+                        setInterimTranscript(incomingText);
+
+                        // DO NOT update main transcript yet. Only show interim.
+                        // We will "commit" this interim text to the main transcript ONLY when we stop.
                     }
                 });
 
                 // Listen for listening state changes - auto-restart if not manually stopped
                 SpeechRecognition.addListener('listeningState', async (state: { status: string }) => {
                     if (state.status === 'stopped') {
-                        if (!manualStopRef.current) {
-                            // IMPORTANT: Update base transcript before restarting
-                            // This ensures the next session starts from where this one left off
+                        // COMMIT logic: When stopped, take the last interim and add to main.
+                        if (lastProcessedTextRef.current) {
                             setTranscript(prev => {
-                                previousTranscriptRef.current = prev;
-                                return prev;
+                                const newVal = prev ? prev.trim() + ' ' + lastProcessedTextRef.current : lastProcessedTextRef.current;
+                                previousTranscriptRef.current = newVal;
+                                return newVal;
                             });
+                            // Reset for next session
                             setInterimTranscript('');
+                            lastProcessedTextRef.current = '';
+                        }
 
+                        if (!manualStopRef.current) {
                             console.log('Native speech stopped, auto-restarting...');
                             try {
                                 await SpeechRecognition.start({
                                     language: 'ar-SA',
-                                    maxResults: 5,
+                                    maxResults: 1,
                                     popup: false,
                                     partialResults: true,
                                 });

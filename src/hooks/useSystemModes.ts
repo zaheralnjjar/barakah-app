@@ -38,6 +38,10 @@ export interface SystemMode {
     shortcut_ids: string[];
     location_ids: string[];
     custom_actions: CustomAction[];
+    fab_settings?: {
+        visible: boolean;
+        custom_actions?: { id: string; actionId: string; order: number }[];
+    };
     created_at: string;
     updated_at: string;
 }
@@ -106,7 +110,10 @@ export const useSystemModes = () => {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase create error in useSystemModes:', error);
+                throw error;
+            }
             return data;
         },
         onSuccess: () => {

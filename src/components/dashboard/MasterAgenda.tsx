@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CollapsibleSection } from './CollapsibleSection';
 import {
     CheckSquare,
     FileText,
@@ -20,7 +20,7 @@ import { useUnifiedTaskEngine, UnifiedTask } from '@/hooks/useUnifiedTaskEngine'
 import { cn } from '@/lib/utils';
 
 export const MasterAgenda: React.FC = () => {
-    const { unifiedTasks, loading } = useUnifiedTaskEngine();
+    const { unifiedTasks, loading, toggleComplete } = useUnifiedTaskEngine();
     const [filter, setFilter] = useState<UnifiedTask['source'] | 'all'>('all');
 
     const filteredTasks = filter === 'all'
@@ -50,32 +50,26 @@ export const MasterAgenda: React.FC = () => {
     };
 
     return (
-        <Card className="rounded-[2.5rem] border-none shadow-xl bg-gradient-to-br from-white to-slate-50/50 overflow-hidden">
-            <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-black flex items-center gap-2">
-                        <Clock className="w-6 h-6 text-indigo-600" />
-                        محرك المهام الموحد
-                    </CardTitle>
-                    <div className="flex gap-1 overflow-x-auto pb-1 max-w-[200px] no-scrollbar">
-                        {(['all', 'general', 'thesis', 'appointment', 'medication'] as const).map(f => (
-                            <Button
-                                key={f}
-                                variant={filter === f ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter(f)}
-                                className={cn(
-                                    "h-7 px-3 text-[10px] rounded-full",
-                                    filter === f ? "bg-indigo-600 shadow-md" : "text-gray-500"
-                                )}
-                            >
-                                {f === 'all' ? 'الكل' : getSourceLabel(f as any)}
-                            </Button>
-                        ))}
-                    </div>
+        <CollapsibleSection title="محرك المهام الموحد" icon={Clock} defaultOpen={true}>
+            <div className="p-4 pt-2 space-y-3">
+                {/* Filters */}
+                <div className="flex gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar mb-2">
+                    {(['all', 'general', 'thesis', 'appointment', 'medication'] as const).map(f => (
+                        <Button
+                            key={f}
+                            variant={filter === f ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setFilter(f)}
+                            className={cn(
+                                "h-7 px-3 text-[10px] rounded-full",
+                                filter === f ? "bg-indigo-600 shadow-md" : "text-gray-500"
+                            )}
+                        >
+                            {f === 'all' ? 'الكل' : getSourceLabel(f as any)}
+                        </Button>
+                    ))}
                 </div>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4 pt-2">
+
                 {loading ? (
                     <div className="py-10 text-center text-gray-400 animate-pulse">جاري تجميع المهام...</div>
                 ) : filteredTasks.length === 0 ? (
@@ -125,11 +119,16 @@ export const MasterAgenda: React.FC = () => {
                                     {task.priority === 'high' && !task.isCompleted && (
                                         <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
                                     )}
-                                    {task.isCompleted ? (
-                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                    ) : (
-                                        <Circle className="w-5 h-5 text-gray-200 group-hover:text-indigo-400 transition-colors cursor-pointer" />
-                                    )}
+                                    <button
+                                        onClick={() => toggleComplete(task)}
+                                        className="focus:outline-none focus:ring-2 focus:ring-indigo-300 rounded-full p-0.5 transition-transform hover:scale-110 active:scale-95"
+                                    >
+                                        {task.isCompleted ? (
+                                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                        ) : (
+                                            <Circle className="w-5 h-5 text-gray-200 group-hover:text-indigo-400 transition-colors cursor-pointer" />
+                                        )}
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -141,7 +140,7 @@ export const MasterAgenda: React.FC = () => {
                         )}
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </CollapsibleSection>
     );
 };

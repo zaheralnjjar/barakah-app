@@ -1,5 +1,5 @@
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { useTasks, MainTask } from './useTasks';
 import { ThesisService } from '@/services/thesis/ThesisService';
 import { useAppStore, Appointment } from '@/stores/useAppStore';
@@ -21,14 +21,15 @@ export interface UnifiedTask {
 }
 
 export const useUnifiedTaskEngine = () => {
-    const { tasks: generalTasks, refreshTasks } = useTasks();
-    const { appointments } = useAppStore();
-    const { medications } = useMedications();
+    const { tasks: generalTasks, refreshTasks, updateTask } = useTasks();
+    const { appointments, updateAppointment } = useAppStore();
+    const { medications, toggleMedTaken } = useMedications();
     const { modes } = useSystemModes();
     const activeMode = useMemo(() => modes.find(m => m.is_active), [modes]);
 
     const [thesisTasks, setThesisTasks] = useState<ThesisTask[]>([]);
     const [loading, setLoading] = useState(true);
+    const [completedModeItems, setCompletedModeItems] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         const loadThesisTasks = async () => {
@@ -49,6 +50,63 @@ export const useUnifiedTaskEngine = () => {
 
         loadThesisTasks();
     }, []);
+
+    // Toggle completion for any task type
+    const toggleComplete = useCallback(async (task: UnifiedTask) => {
+        try {
+            switch (task.source) {
+                case 'general':
+                    // Toggle general task progress between 0 and 100
+                    const originalTask = generalTasks.find(t => t.id === task.id);
+                    if (originalTask) {
+                        await updateTask({ ...originalTask, progress: task.isCompleted ? 0 : 100 });
+                        refreshTasks();
+                    }
+                    break;
+
+                case 'thesis':
+                    // Toggle thesis task status
+                    const newStatus = task.isCompleted ? 'pending' : 'completed';
+                    await ThesisService.saveTask({ id: task.id, status: newStatus });
+                    // Reload thesis tasks
+                    const projects = await ThesisService.getProjects();
+                    const allTasks: ThesisTask[] = [];
+                    for (const project of projects) {
+                        const tasks = await ThesisService.getTasks(project.id);
+                        allTasks.push(...tasks);
+                    }
+                    setThesisTasks(allTasks);
+                    break;
+
+                case 'appointment':
+                    // Toggle appointment completion
+                    updateAppointment(task.id, { isCompleted: !task.isCompleted });
+                    break;
+
+                case 'medication':
+                    const parts = task.id.split('-');
+                    const dateStr = parts.pop()!;
+                    const medId = parts.slice(1).join('-');
+                    await toggleMedTaken(medId, dateStr);
+                    break;
+
+                case 'mode':
+                    // Toggle mode item locally (no persistence)
+                    setCompletedModeItems(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(task.id)) {
+                            newSet.delete(task.id);
+                        } else {
+                            newSet.add(task.id);
+                        }
+                        return newSet;
+                    });
+                    break;
+            }
+        } catch (error) {
+            console.error('Failed to toggle task completion:', error);
+        }
+    }, [updateTask, refreshTasks, updateAppointment, toggleMedTaken]);
 
     const unifiedTasks = useMemo(() => {
         const results: UnifiedTask[] = [];
@@ -115,21 +173,43 @@ export const useUnifiedTaskEngine = () => {
         if (activeMode) {
             const todayStr = new Date().toISOString().split('T')[0];
             activeMode.mode_items.forEach(item => {
+                const itemId = `mode-${activeMode.id}-${item.id}`;
                 results.push({
-                    id: `mode-${activeMode.id}-${item.id}`,
+                    id: itemId,
                     source: 'mode',
                     title: item.text,
                     description: `من وضع: ${activeMode.name}`,
                     dueDate: todayStr,
                     priority: 'medium',
-                    isCompleted: false,
+                    isCompleted: completedModeItems.has(itemId),
                     rawDate: item.time ? new Date(`${todayStr}T${item.time}`) : new Date(`${todayStr}T00:00`)
                 });
             });
         }
 
+        // FILTERING: Remove completed tasks from previous days
+        // We keep: 
+        // 1. All incomplete tasks (regardless of date)
+        // 2. Completed tasks that are from TODAY or FUTURE
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const filteredResults = results.filter(task => {
+            if (!task.isCompleted) return true; // Keep all pending
+
+            if (task.rawDate) {
+                const taskDate = new Date(task.rawDate);
+                taskDate.setHours(0, 0, 0, 0);
+                // Keep if task date is today or future
+                return taskDate.getTime() >= todayStart.getTime();
+            }
+
+            // If no date, keep it
+            return true;
+        });
+
         // Combined Sorting: Incomplete first, then by priority, then by date
-        return results.sort((a, b) => {
+        return filteredResults.sort((a, b) => {
             if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
 
             const priorityWeight = { high: 3, medium: 2, low: 1 };
@@ -141,11 +221,12 @@ export const useUnifiedTaskEngine = () => {
             if (!b.rawDate) return -1;
             return a.rawDate.getTime() - b.rawDate.getTime();
         });
-    }, [generalTasks, thesisTasks, appointments, medications, activeMode]);
+    }, [generalTasks, thesisTasks, appointments, medications, activeMode, completedModeItems]);
 
     return {
         unifiedTasks,
         loading,
+        toggleComplete,
         refreshAll: () => {
             refreshTasks();
         }
