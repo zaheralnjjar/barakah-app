@@ -50,7 +50,7 @@ export const MasterAgenda: React.FC = () => {
     };
 
     return (
-        <CollapsibleSection title="محرك المهام الموحد" icon={Clock} defaultOpen={true}>
+        <CollapsibleSection title="محرك المهام الموحد" icon={Clock} defaultOpen={false}>
             <div className="p-4 pt-2 space-y-3">
                 {/* Filters */}
                 <div className="flex gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar mb-2">
