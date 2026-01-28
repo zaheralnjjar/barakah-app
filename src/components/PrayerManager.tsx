@@ -12,6 +12,8 @@ import { formatNumberToLocale } from '@/lib/utils';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface DailyPrayer {
     date: string;
@@ -36,9 +38,10 @@ const PrayerManager = () => {
 
     // Export Modal State
     const [showExportModal, setShowExportModal] = useState(false);
-    const [exportPrayers, setExportPrayers] = useState({
-        fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true
+    const [exportPrayers, setExportPrayers] = useState<Record<string, boolean>>({
+        fajr: true, sunrise: true, dhuhr: true, asr: true, maghrib: true, isha: true
     });
+    const [exportLang, setExportLang] = useState<'ar' | 'es'>('es');
     const [exportFromDate, setExportFromDate] = useState(
         new Date().toISOString().split('T')[0]
     );
@@ -423,44 +426,96 @@ const PrayerManager = () => {
             .filter(([_, enabled]) => enabled)
             .map(([key]) => key);
 
-        const prayerNames: Record<string, string> = {
-            fajr: 'الفجر', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء'
+        if (dataToExport.length === 0) {
+            toast({ title: "خطأ", description: "لا توجد بيانات للتصدير في هذه الفترة", variant: "destructive" });
+            return;
+        }
+
+        const isSpanish = exportLang === 'es';
+        const doc = new jsPDF();
+
+        // Translations
+        const trans: Record<string, any> = {
+            ar: {
+                title: exportTitle || 'مواقيت الصلاة',
+                system: 'نظام بركة لإدارة الحياة',
+                date: 'التاريخ',
+                hijri: 'الهجري',
+                fajr: 'الفجر', sunrise: 'الشروق', dhuhr: 'الظهر', asr: 'العصر', maghrib: 'المغرب', isha: 'العشاء',
+                footer: 'تم التوليد بواسطة تطبيق بركة'
+            },
+            es: {
+                title: isSpanish ? 'Horarios de Oración' : (exportTitle || 'Horarios de Oración'),
+                system: 'Sistema Barakah de Gestión de Vida',
+                date: 'Fecha',
+                hijri: 'Hijri',
+                fajr: 'Fajr', sunrise: 'Salida del Sol', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha',
+                footer: 'Generado por la aplicación Barakah'
+            }
         };
 
-        // Create text content for sharing
-        let textContent = ``;
-        if (exportTitle) textContent += `🌟 ${exportTitle}\n\n`;
-        textContent += `📿 مواقيت الصلاة - نظام بركة\n`;
-        textContent += `من ${exportFromDate} إلى ${exportToDate}\n\n`;
+        const t = trans[exportLang];
 
-        dataToExport.forEach(day => {
-            const hijriTag = day.hijriDate ? ` [${day.hijriDate}]` : '';
-            textContent += `📅 ${day.date}${hijriTag}\n`;
-            prayersToExport.forEach(p => {
-                textContent += `   ${prayerNames[p]}: ${day[p]}\n`;
-            });
+        // Header
+        doc.setFontSize(20);
+        // Note: Arabic support in jsPDF requires custom font. 
+        // For now we use the selected language. 
+        // If Arabic, we try to use any loaded font or just fallback to basic text.
+        doc.text(t.title, 105, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`${t.system} | ${exportFromDate} - ${exportToDate}`, 105, 30, { align: 'center' });
+
+        // Table Header
+        const head = [
+            [t.date, t.hijri, ...prayersToExport.map(p => t[p])]
+        ];
+
+        // Table Body
+        const body = dataToExport.map(day => [
+            day.date,
+            day.hijriDate || '',
+            ...prayersToExport.map(p => day[p])
+        ]);
+
+        autoTable(doc, {
+            head: head,
+            body: body,
+            startY: 40,
+            theme: 'grid',
+            styles: { fontSize: 9, halign: 'center', font: 'helvetica' },
+            headStyles: { fillColor: [16, 185, 129] }, // Emerald-600
         });
 
-        textContent += `\n✨ نظام بركة لإدارة الحياة`;
+        // Footer
+        doc.setFontSize(8);
+        doc.text(t.footer, 105, doc.internal.pageSize.height - 10, { align: 'center' });
 
-        // Use Capacitor Share for mobile
-        try {
-            await Share.share({
-                title: 'مواقيت الصلاة',
-                text: textContent,
-                dialogTitle: 'مشاركة أوقات الصلاة'
-            });
-            toast({ title: 'تم التصدير!', description: 'اختر التطبيق للمشاركة' });
-        } catch (e) {
-            // Fallback: copy to clipboard
+        const fileName = `Barakah_Prayer_Times_${exportFromDate}.pdf`;
+
+        // Mobile handling
+        if (isAndroid()) {
             try {
-                await navigator.clipboard.writeText(textContent);
-                toast({ title: 'تم النسخ!', description: 'تم نسخ الجدول للحافظة' });
-            } catch (err) {
-                toast({ title: 'خطأ', description: 'تعذر المشاركة', variant: 'destructive' });
+                const pdfBase64 = doc.output('datauristring').split(',')[1];
+                await Filesystem.writeFile({
+                    path: fileName,
+                    data: pdfBase64,
+                    directory: Directory.Documents,
+                    encoding: Encoding.UTF8
+                });
+                toast({ title: "تم الحفظ!", description: `تم حفظ الملف في المستندات باسم ${fileName}` });
+            } catch (e) {
+                doc.save(fileName);
             }
+        } else {
+            doc.save(fileName);
+            toast({ title: "تم التحميل!", description: "تم تحميل ملف PDF بنجاح" });
         }
+
         setShowExportModal(false);
+    };
+
+    const isAndroid = () => {
+        return /Android/i.test(navigator.userAgent);
     };
 
     const getExportData = () => {
@@ -676,24 +731,42 @@ const PrayerManager = () => {
                                         </div>
 
 
-                                        {/* Motivational Title */}
-                                        <div>
-                                            <Label className="text-sm font-bold mb-2 block">عنوان تحفيزي (اختياري)</Label>
-                                            <Input
-                                                placeholder="مثال: اجعل صلاتك نبض حياتك..."
-                                                value={exportTitle}
-                                                onChange={(e) => setExportTitle(e.target.value)}
-                                                maxLength={100}
-                                            />
-                                            <p className="text-[10px] text-gray-400 mt-1">سيظهر هذا العنوان في بداية النص المصدر</p>
+                                        {/* Language and Title */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <Label className="text-sm font-bold mb-2 block">لغة التقرير / Idioma</Label>
+                                                <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                                                    <button
+                                                        onClick={() => setExportLang('ar')}
+                                                        className={`flex-1 py-1 px-3 rounded-md text-sm transition-all ${exportLang === 'ar' ? 'bg-white shadow-sm text-emerald-700 font-bold' : 'text-gray-500'}`}
+                                                    >
+                                                        العربية
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setExportLang('es')}
+                                                        className={`flex-1 py-1 px-3 rounded-md text-sm transition-all ${exportLang === 'es' ? 'bg-white shadow-sm text-emerald-700 font-bold' : 'text-gray-500'}`}
+                                                    >
+                                                        Español
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <Label className="text-sm font-bold mb-2 block">عنوان تحفيزي (اختياري)</Label>
+                                                <Input
+                                                    placeholder="مثال: اجعل صلاتك نبض حياتك..."
+                                                    value={exportTitle}
+                                                    onChange={(e) => setExportTitle(e.target.value)}
+                                                    maxLength={100}
+                                                />
+                                            </div>
                                         </div>
 
-                                        {/* Prayers Selection */}
                                         <div>
-                                            <Label className="text-sm font-bold mb-3 block text-center">الصلوات</Label>
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <Label className="text-sm font-bold mb-3 block text-center">الصلوات المشمولة</Label>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                                 {[
                                                     { id: 'fajr', label: 'الفجر' },
+                                                    { id: 'sunrise', label: 'الشروق' },
                                                     { id: 'dhuhr', label: 'الظهر' },
                                                     { id: 'asr', label: 'العصر' },
                                                     { id: 'maghrib', label: 'المغرب' },
@@ -701,21 +774,21 @@ const PrayerManager = () => {
                                                 ].map(p => (
                                                     <div
                                                         key={p.id}
-                                                        className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${exportPrayers[p.id as keyof typeof exportPrayers]
-                                                            ? 'border-primary bg-primary/5'
-                                                            : 'border-gray-200 bg-white'
+                                                        className={`flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${exportPrayers[p.id]
+                                                            ? 'border-emerald-500 bg-emerald-50'
+                                                            : 'border-gray-100 bg-white'
                                                             }`}
-                                                        onClick={() => setExportPrayers(prev => ({ ...prev, [p.id]: !prev[p.id as keyof typeof prev] }))}
+                                                        onClick={() => setExportPrayers(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
                                                     >
                                                         <Checkbox
                                                             id={`prayer-${p.id}`}
-                                                            checked={exportPrayers[p.id as keyof typeof exportPrayers]}
+                                                            checked={exportPrayers[p.id]}
                                                             onCheckedChange={(checked) =>
-                                                                setExportPrayers(prev => ({ ...prev, [p.id]: checked }))
+                                                                setExportPrayers(prev => ({ ...prev, [p.id]: !!checked }))
                                                             }
-                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                            className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
                                                         />
-                                                        <Label htmlFor={`prayer-${p.id}`} className="text-sm font-medium cursor-pointer">{p.label}</Label>
+                                                        <Label htmlFor={`prayer-${p.id}`} className="text-xs font-medium cursor-pointer">{p.label}</Label>
                                                     </div>
                                                 ))}
                                             </div>
