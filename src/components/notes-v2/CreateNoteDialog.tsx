@@ -80,22 +80,20 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            let newText = '';
+            let finalForThisEvent = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                // Only process final results that we haven't seen before
-                if (event.results[i].isFinal && !processedIndicesRef.current.has(i)) {
-                    newText += event.results[i][0].transcript;
-                    processedIndicesRef.current.add(i);
+                if (event.results[i].isFinal) {
+                    finalForThisEvent += event.results[i][0].transcript;
                 }
             }
 
-            if (newText) {
+            if (finalForThisEvent) {
                 setContent(prev => {
-                    const currentText = prev.trim();
-                    const addition = newText.trim();
-                    // Avoid adding the exact same string if it somehow bypassed the index check
-                    if (currentText.endsWith(addition)) return prev;
-                    return currentText + (currentText ? ' ' : '') + addition;
+                    const current = prev.trim();
+                    const addition = finalForThisEvent.trim();
+                    // Basic duplicate check: if addition is already at the end, skip
+                    if (current.toLowerCase().endsWith(addition.toLowerCase())) return prev;
+                    return current + (current ? ' ' : '') + addition;
                 });
             }
         };

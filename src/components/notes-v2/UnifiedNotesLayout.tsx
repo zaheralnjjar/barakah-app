@@ -9,7 +9,7 @@ import { NotesSettingsDialog } from '@/components/notes-v2/NotesSettingsDialog';
 import { CreateFolderDialog } from '@/components/notes-v2/CreateFolderDialog';
 import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { Button } from '@/components/ui/button';
-import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid, Library, Search, Cloud } from 'lucide-react';
+import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid, Library, Search, Cloud, Trash2, Share2, CheckSquare } from 'lucide-react';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +44,60 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
         autoInsertSeparator: true,
         showFolderGridInitial: true,
     });
+
+    // Selection State
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    // 'note' for notes, 'folder' for folders. null if mixed or empty (though we usually restrict to one type or handle both)
+    // For simplicity, we assume generic IDs. But deleting requires knowing type.
+    // Let's assume current view dictates type. 
+    // If viewMode is 'grid' (folders) -> folders
+    // If viewMode is 'list' (notes) -> notes
+    const selectionType = viewMode === 'grid' ? 'folder' : 'note';
+
+    const { deleteNote } = useNotesV2(activeFolderId);
+    const { deleteFolder } = useFolders();
+
+    const handleToggleSelection = (id: string) => {
+        const newSet = new Set(selectedItems);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedItems(newSet);
+    };
+
+    const handleSelectAll = (ids: string[]) => {
+        if (selectedItems.size === ids.length) {
+            setSelectedItems(new Set());
+        } else {
+            setSelectedItems(new Set(ids));
+        }
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedItems.size === 0) return;
+
+        try {
+            const promises = Array.from(selectedItems).map(id => {
+                if (selectionType === 'folder') return deleteFolder(id);
+                return deleteNote(id);
+            });
+            await Promise.all(promises);
+            toast({ title: "تم الحذف بنجاح" });
+            setSelectedItems(new Set());
+            setIsSelectionMode(false);
+        } catch (e) {
+            toast({ title: "حدث خطأ أثناء الحذف", variant: "destructive" });
+        }
+    };
+
+    const handleShareSelected = async () => {
+        // Placeholder for sharing interaction
+        // Since we can't easily share multiple objects via native share except as text
+        // We can merge their content
+        if (selectedItems.size === 0) return;
+        toast({ title: "مشاركة العناصر المحددة (قريباً)" });
+    };
+
 
     // Hooks
     const { folders } = useFolders();
@@ -170,90 +224,136 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                         <Menu className="w-5 h-5 text-gray-500" />
                     </Button>
 
-                    <div className="flex items-center gap-2 text-sm text-gray-600 overflow-hidden">
-                        {isSaving && (
-                            <div className="flex items-center gap-1 text-[10px] text-emerald-500 animate-pulse ml-2" dir="rtl">
-                                <Cloud className="w-3 h-3" />
-                                <span>جاري الحفظ...</span>
-                            </div>
-                        )}
-                        <span
-                            className="hover:text-emerald-600 cursor-pointer text-lg font-bold flex items-center gap-1"
-                            onClick={() => {
-                                setViewMode('grid');
-                                setActiveFolderId(null);
-                                setSearchQuery('');
-                            }}
-                        >
-                            المكتبة
-                        </span>
-
-                        {searchQuery && (
-                            <>
-                                <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
-                                <span className="font-medium text-amber-600 truncate">بحث: "{searchQuery}"</span>
-                            </>
-                        )}
-
-                        {!searchQuery && activeFolderId && (
-                            <>
-                                <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
-                                <span className="font-medium text-gray-900 truncate">
-                                    {activeFolderId === 'trash' ? 'سلة المحذوفات' :
-                                        activeFolderId === 'bookmarked' ? 'إشارات مرجعية' :
-                                            (folders.find(f => f.id === activeFolderId)?.name || 'مجلد')}
-                                </span>
-                            </>
-                        )}
-                        {activeNote && (
-                            <>
-                                <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
-                                <span className="font-bold text-indigo-600 truncate max-w-[100px] sm:max-w-[200px]">{activeNote.title}</span>
-                            </>
-                        )}
-                    </div>
-
-                    {!activeNote && (
-                        <div className="mr-auto flex items-center gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => setIsFloatingSearchOpen(true)} className="text-gray-400">
-                                <Search className="w-5 h-5" />
+                    {/* Selection Actions Bar */}
+                    {isSelectionMode ? (
+                        <div className="flex items-center gap-2 flex-1 animate-in fade-in slide-in-from-top-2">
+                            <Button variant="ghost" size="sm" onClick={() => {
+                                setIsSelectionMode(false);
+                                setSelectedItems(new Set());
+                            }}>إلغاء</Button>
+                            <span className="text-sm font-bold text-gray-600">{selectedItems.size} محدد</span>
+                            <div className="flex-1" />
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="h-8 gap-1"
+                                onClick={handleDeleteSelected}
+                                disabled={selectedItems.size === 0}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">حذف</span>
                             </Button>
-
-                            <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
-                                <Settings className="w-5 h-5 text-gray-400" />
-                            </Button>
-
-                            <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200 ml-1">
-                                <Button
-                                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setViewMode('grid')}
-                                    className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
-                                >
-                                    <LayoutGrid className="w-3 h-3 sm:hidden" />
-                                    <span className="hidden sm:inline">مجلدات</span>
-                                </Button>
-                                <Button
-                                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setViewMode('kanban')}
-                                    className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
-                                >
-                                    <Menu className="w-3 h-3 sm:ml-1" />
-                                    <span className="hidden sm:inline">كنبان</span>
-                                </Button>
-                            </div>
-
-                            <Button onClick={() => setShowCreateFolder(true)} size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs">
-                                <FolderPlus className="w-4 h-4" />
-                                <span className="hidden sm:inline">مجلد</span>
-                            </Button>
-                            <Button onClick={() => { setActiveFolderId(activeFolderId || null); setShowCreateNote(true); }} size="sm" variant="outline" className="gap-2 h-8 text-xs text-emerald-700 border-emerald-100">
-                                <FilePlus className="w-4 h-4" />
-                                <span className="hidden sm:inline">ملاحظة</span>
+                            {/* Share button temporarily disabled or simplified */}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1"
+                                onClick={handleShareSelected}
+                                disabled={selectedItems.size === 0}
+                            >
+                                <Share2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">مشاركة</span>
                             </Button>
                         </div>
-                    )}
+                    ) : (
+                        <>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 overflow-hidden">
+                                {isSaving && (
+                                    <div className="flex items-center gap-1 text-[10px] text-emerald-500 animate-pulse ml-2" dir="rtl">
+                                        <Cloud className="w-3 h-3" />
+                                        <span>جاري الحفظ...</span>
+                                    </div>
+                                )}
+                                <span
+                                    className="hover:text-emerald-600 cursor-pointer text-lg font-bold flex items-center gap-1"
+                                    onClick={() => {
+                                        setViewMode('grid');
+                                        setActiveFolderId(null);
+                                        setSearchQuery('');
+                                    }}
+                                >
+                                    المكتبة
+                                </span>
+
+                                {searchQuery && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
+                                        <span className="font-medium text-amber-600 truncate">بحث: "{searchQuery}"</span>
+                                    </>
+                                )}
+
+                                {!searchQuery && activeFolderId && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
+                                        <span className="font-medium text-gray-900 truncate">
+                                            {activeFolderId === 'trash' ? 'سلة المحذوفات' :
+                                                activeFolderId === 'bookmarked' ? 'إشارات مرجعية' :
+                                                    (folders.find(f => f.id === activeFolderId)?.name || 'مجلد')}
+                                        </span>
+                                    </>
+                                )}
+                                {activeNote && (
+                                    <>
+                                        <ChevronRight className="w-4 h-4 rtl:rotate-180 text-gray-300 flex-shrink-0" />
+                                        <span className="font-bold text-indigo-600 truncate max-w-[100px] sm:max-w-[200px]">{activeNote.title}</span>
+                                    </>
+                                )}
+                            </div>
+
+                            {!activeNote && (
+                                <div className="mr-auto flex items-center gap-2">
+                                    {(viewMode === 'grid' || viewMode === 'list') && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-gray-400 hover:text-emerald-600"
+                                            onClick={() => setIsSelectionMode(true)}
+                                            title="تحديد متعدد"
+                                        >
+                                            <CheckSquare className="w-5 h-5" />
+                                        </Button>
+                                    )}
+
+                                    <Button variant="ghost" size="icon" onClick={() => setIsFloatingSearchOpen(true)} className="text-gray-400">
+                                        <Search className="w-5 h-5" />
+                                    </Button>
+
+                                    <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)}>
+                                        <Settings className="w-5 h-5 text-gray-400" />
+                                    </Button>
+
+                                    <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200 ml-1">
+                                        <Button
+                                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                                            size="sm"
+                                            onClick={() => setViewMode('grid')}
+                                            className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                                        >
+                                            <LayoutGrid className="w-3 h-3 sm:hidden" />
+                                            <span className="hidden sm:inline">مجلدات</span>
+                                        </Button>
+                                        <Button
+                                            variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                                            size="sm"
+                                            onClick={() => setViewMode('kanban')}
+                                            className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
+                                        >
+                                            <Menu className="w-3 h-3 sm:ml-1" />
+                                            <span className="hidden sm:inline">كنبان</span>
+                                        </Button>
+                                    </div>
+
+                                    <Button onClick={() => setShowCreateFolder(true)} size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 h-8 text-xs">
+                                        <FolderPlus className="w-4 h-4" />
+                                        <span className="hidden sm:inline">مجلد</span>
+                                    </Button>
+                                    <Button onClick={() => { setActiveFolderId(activeFolderId || null); setShowCreateNote(true); }} size="sm" variant="outline" className="gap-2 h-8 text-xs text-emerald-700 border-emerald-100">
+                                        <FilePlus className="w-4 h-4" />
+                                        <span className="hidden sm:inline">ملاحظة</span>
+                                    </Button>
+                                </div>
+                            )}
+                        </>)}
                 </div>
 
                 {/* Floating Search Overlay */}
@@ -304,6 +404,9 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                 }}
                                 onRequestCreateFolder={() => setShowCreateFolder(true)}
                                 isMobile={isMobile}
+                                isSelectionMode={isSelectionMode}
+                                selectedIds={selectedItems}
+                                onToggleSelection={handleToggleSelection}
                             />
                         </div>
                     )}
@@ -317,6 +420,9 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                     searchQuery={searchQuery}
                                     onSelectNote={handleSelectNote}
                                     activeNoteId={activeNote?.id}
+                                    isSelectionMode={isSelectionMode}
+                                    selectedIds={selectedItems}
+                                    onToggleSelection={handleToggleSelection}
                                 />
                             </div>
                             <div className="hidden md:flex flex-1 bg-white/50 rounded-3xl border border-dashed border-gray-200 items-center justify-center text-gray-400">

@@ -17,9 +17,20 @@ interface NoteListProps {
     searchQuery?: string;
     onSelectNote: (note: NoteV2) => void;
     activeNoteId?: string;
+    isSelectionMode?: boolean;
+    selectedIds?: Set<string>;
+    onToggleSelection?: (id: string) => void;
 }
 
-export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSelectNote, activeNoteId }) => {
+export const NoteList: React.FC<NoteListProps> = ({
+    folderId,
+    searchQuery,
+    onSelectNote,
+    activeNoteId,
+    isSelectionMode = false,
+    selectedIds = new Set(),
+    onToggleSelection
+}) => {
     const { notes, isLoading, deleteNote, restoreNote, permanentDelete } = useNotesV2(folderId, searchQuery);
     const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'soft' | 'permanent' } | null>(null);
 
@@ -39,14 +50,28 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSel
             {notes.map(note => (
                 <div
                     key={note.id}
-                    onClick={() => onSelectNote(note)}
+                    onClick={() => {
+                        if (isSelectionMode && onToggleSelection) {
+                            onToggleSelection(note.id);
+                        } else {
+                            onSelectNote(note);
+                        }
+                    }}
                     className={`
                         group relative p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md
                         ${activeNoteId === note.id
                             ? 'bg-indigo-50 border-indigo-200 shadow-sm'
-                            : 'bg-white border-gray-100 hover:border-indigo-100'}
+                            : (isSelectionMode && selectedIds.has(note.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm' : 'bg-white border-gray-100 hover:border-indigo-100')}
                     `}
                 >
+                    {isSelectionMode && (
+                        <div className="absolute top-3 left-3 z-10">
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${selectedIds.has(note.id) ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-gray-300'}`}>
+                                {selectedIds.has(note.id) && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-1">
                         <h3 className={`font-bold text-gray-800 line-clamp-1 ${activeNoteId === note.id ? 'text-indigo-700' : ''}`}>
                             {note.title || 'بدون عنوان'}
@@ -67,44 +92,46 @@ export const NoteList: React.FC<NoteListProps> = ({ folderId, searchQuery, onSel
                         </span>
                     </div>
 
-                    {/* Actions */}
-                    <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {folderId === 'trash' ? (
-                            <>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        restoreNote(note.id);
-                                    }}
-                                    className="text-green-600 hover:bg-green-50 p-1.5 rounded-full"
-                                    title="استعادة"
-                                >
-                                    <RotateCcw className="w-4 h-4" />
-                                </button>
+                    {/* Actions - Hide in selection mode */}
+                    {!isSelectionMode && (
+                        <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {folderId === 'trash' ? (
+                                <>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            restoreNote(note.id);
+                                        }}
+                                        className="text-green-600 hover:bg-green-50 p-1.5 rounded-full"
+                                        title="استعادة"
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setConfirmDelete({ id: note.id, type: 'permanent' });
+                                        }}
+                                        className="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
+                                        title="حذف نهائي"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </>
+                            ) : (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setConfirmDelete({ id: note.id, type: 'permanent' });
                                     }}
-                                    className="text-red-600 hover:bg-red-50 p-1.5 rounded-full"
+                                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full"
                                     title="حذف نهائي"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
-                            </>
-                        ) : (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setConfirmDelete({ id: note.id, type: 'permanent' });
-                                }}
-                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full"
-                                title="حذف نهائي"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             ))}
 

@@ -17,6 +17,9 @@ interface FolderGridProps {
     onRequestCreateNote?: (folderId?: string) => void;
     onRequestCreateFolder?: () => void;
     isMobile?: boolean;
+    isSelectionMode?: boolean;
+    selectedIds?: Set<string>;
+    onToggleSelection?: (id: string) => void;
 }
 
 export const FolderGrid: React.FC<FolderGridProps> = ({
@@ -24,7 +27,10 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
     onOpenNote,
     onRequestCreateNote,
     onRequestCreateFolder,
-    isMobile
+    isMobile,
+    isSelectionMode = false,
+    selectedIds = new Set(),
+    onToggleSelection
 }) => {
     const { folders, deleteFolder } = useFolders();
     const { notes, isLoading, updateNote } = useNotesV2(null); // Fetch all notes
@@ -93,7 +99,20 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                         */
                         <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-4">
                             {folders.map(folder => (
-                                <div key={folder.id} className="w-full h-[250px]">
+                                <div key={folder.id} className={`w-full h-[250px] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
+                                    {isSelectionMode && (
+                                        <div
+                                            className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onToggleSelection?.(folder.id);
+                                            }}
+                                        >
+                                            <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                                                {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                            </div>
+                                        </div>
+                                    )}
                                     <KanbanFolderColumn
                                         folder={folder}
                                         notes={notesByFolder[folder.id] || []}
@@ -111,7 +130,20 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                             {/* Row 1 */}
                             <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
                                 {folders.filter((_, i) => i % 2 === 0).map(folder => (
-                                    <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
+                                    <div key={folder.id} className={`snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
+                                        {isSelectionMode && (
+                                            <div
+                                                className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onToggleSelection?.(folder.id);
+                                                }}
+                                            >
+                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                                                    {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                </div>
+                                            </div>
+                                        )}
                                         <KanbanFolderColumn
                                             folder={folder}
                                             notes={notesByFolder[folder.id] || []}
@@ -128,7 +160,20 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                             {/* Row 2 */}
                             <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
                                 {folders.filter((_, i) => i % 2 !== 0).map(folder => (
-                                    <div key={folder.id} className="snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)]">
+                                    <div key={folder.id} className={`snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
+                                        {isSelectionMode && (
+                                            <div
+                                                className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onToggleSelection?.(folder.id);
+                                                }}
+                                            >
+                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                                                    {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                                                </div>
+                                            </div>
+                                        )}
                                         <KanbanFolderColumn
                                             folder={folder}
                                             notes={notesByFolder[folder.id] || []}

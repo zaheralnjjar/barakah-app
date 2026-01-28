@@ -43,6 +43,37 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const previousTranscriptRef = useRef<string>('');
     const manualStopRef = useRef<boolean>(false);
 
+    // Robust merge function to prevent duplicate captures
+    const mergeTranscripts = useCallback((existing: string, addition: string) => {
+        const e = existing.trim();
+        const a = addition.trim();
+        if (!e) return a;
+        if (!a) return e;
+
+        const eLower = e.toLowerCase();
+        const aLower = a.toLowerCase();
+
+        // If the addition is already exactly at the end, ignore it
+        if (eLower.endsWith(aLower)) return e;
+
+        // If the addition is a substring of the last 30 characters, ignore it
+        if (eLower.slice(-30).includes(aLower)) return e;
+
+        const wordsE = e.split(/\s+/);
+        const wordsA = a.split(/\s+/);
+
+        const maxCheck = Math.min(wordsE.length, wordsA.length, 10);
+        for (let i = maxCheck; i > 0; i--) {
+            const suffix = wordsE.slice(-i).join(' ').toLowerCase();
+            const prefix = wordsA.slice(0, i).join(' ').toLowerCase();
+            if (suffix === prefix) {
+                return e + ' ' + wordsA.slice(i).join(' ');
+            }
+        }
+
+        return e + ' ' + a;
+    }, []);
+
     useEffect(() => {
         const checkSpeechSupport = async () => {
             // Check if running in Electron (Desktop)
@@ -137,10 +168,10 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                         const newText = data.matches[0];
                         setInterimTranscript(newText);
 
-                        // Use a cleaner way to assemble the transcript without double-stretching
-                        const baseContent = previousTranscriptRef.current.trim();
-                        const separator = baseContent ? ' ' : '';
-                        setTranscript(baseContent + separator + newText);
+                        setTranscript(prev => {
+                            // Only update if the new text actually adds something or changes the interim
+                            return mergeTranscripts(previousTranscriptRef.current, newText);
+                        });
                     }
                 });
 
@@ -217,26 +248,17 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 const text = result[0].transcript;
 
                 if (result.isFinal) {
-                    if (!processedResultsRef.current.has(i)) {
-                        const currentTotal = finalTranscriptRef.current.trim();
-                        const textTrimmed = text.trim();
-
-                        if (!currentTotal.endsWith(textTrimmed)) {
-                            processedResultsRef.current.add(i);
-                            newFinalSegment += text + ' ';
-                        }
-                    }
+                    newFinalSegment += text + ' ';
                 } else {
                     interimContent += text;
                 }
             }
 
             if (newFinalSegment) {
-                finalTranscriptRef.current += newFinalSegment;
+                finalTranscriptRef.current = mergeTranscripts(finalTranscriptRef.current, newFinalSegment);
             }
 
-            const separator = previousTranscriptRef.current && finalTranscriptRef.current ? ' ' : '';
-            setTranscript(previousTranscriptRef.current + separator + finalTranscriptRef.current);
+            setTranscript(mergeTranscripts(previousTranscriptRef.current, finalTranscriptRef.current));
             setInterimTranscript(interimContent);
         };
 
