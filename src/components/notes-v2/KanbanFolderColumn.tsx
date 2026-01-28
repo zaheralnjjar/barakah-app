@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface KanbanFolderColumnProps {
-    folder: { id: string; name: string; color?: string; icon?: string };
+    folder: { id: string; name: string; color?: string; icon?: string; is_system?: boolean };
     notes: NoteV2[];
     onAddNote: (folderId: string) => void;
     onEditFolder: (folderId: string) => void;
@@ -90,31 +90,33 @@ export const KanbanFolderColumn: React.FC<KanbanFolderColumnProps> = ({
                         <Settings className="w-3.5 h-3.5" />
                     </button>
 
-                    <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-                        <AlertDialogTrigger asChild>
-                            <button
-                                className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
-                                title="حذف"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>هل أنت متأكد من حذف المجلد؟</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    سيتم نقل المجلد "{folder.name}" وجميع الملاحظات بداخله إلى سلة المهملات.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => onDeleteFolder(folder.id)} className="bg-red-500 hover:bg-red-600">
-                                    حذف
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    {!folder.is_system && (
+                        <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                            <AlertDialogTrigger asChild>
+                                <button
+                                    className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 transition-colors"
+                                    title="حذف"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent dir="rtl">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>هل أنت متأكد من حذف المجلد؟</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        سيتم نقل المجلد "{folder.name}" وجميع الملاحظات بداخله إلى سلة المهملات.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onDeleteFolder(folder.id)} className="bg-red-500 hover:bg-red-600">
+                                        حذف
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                 </div>
             </div>
 

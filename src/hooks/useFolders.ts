@@ -9,6 +9,7 @@ export interface Folder {
     icon: string;
     color?: string;
     order_index?: number;
+    is_system?: boolean;
     created_at: string;
 }
 
@@ -82,6 +83,12 @@ export const useFolders = () => {
     // 4. Delete Folder
     const deleteFolderMut = useMutation({
         mutationFn: async (id: string) => {
+            // Check if system folder first
+            const { data: folder } = await supabase.from('note_folders').select('is_system').eq('id', id).single();
+            if (folder?.is_system) {
+                throw new Error('لا يمكن حذف المجلد الافتراضي للنظام');
+            }
+
             // Hard delete folder for now if no is_deleted column
             const { error: folderError } = await supabase
                 .from('note_folders')

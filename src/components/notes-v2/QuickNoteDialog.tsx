@@ -29,10 +29,17 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         }
 
         try {
+            // Determine folder: User selected > System/General > None
+            let targetFolder = folderId;
+            if (!targetFolder) {
+                const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
+                if (generalFolder) targetFolder = generalFolder.id;
+            }
+
             await createNote({
                 title,
                 content,
-                folder_id: folderId,
+                folder_id: targetFolder,
                 tags: defaultTag ? [defaultTag] : [] // Simplest implementation for now
             });
             toast({ title: 'تم حفظ الملاحظة بنجاح ✅' });

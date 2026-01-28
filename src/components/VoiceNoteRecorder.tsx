@@ -332,14 +332,17 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         setIsProcessing(true);
         try {
             if (selectedNoteIndex === 'new') {
-                // Find or create "General" (عام) folder
+                // Find or create "General" (عام) folder - Prioritize System Folder
                 let folderId = null;
-                const generalFolder = folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
+                const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
 
                 if (generalFolder) {
                     folderId = generalFolder.id;
                 } else {
                     try {
+                        // Create as is_system=true if possible (requires DB trigger or just rely on name for now and migration handles existing)
+                        // Client-side insert usually doesn't set is_system unless RLS allows.
+                        // We will rely on name 'عام' being picked up by backend or next migration.
                         const newFolder = await createFolder({ name: 'عام', parent_id: null, icon: '📁' });
                         folderId = newFolder.id;
                     } catch (e) {
@@ -363,16 +366,26 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                             content: (note.content || '') + `<p>${finalText}</p>`
                         }
                     });
-                    toast({ title: 'تم الحفظ في الملاحظة المختارة ✓' });
+                    toast({ title: 'تم إنشاء ملاحظة جديدة في مجلد عام ✓' });
+                } else {
+                    const note = notes.find(n => n.id === selectedNoteIndex);
+                    if (note) {
+                        await updateNote({
+                            id: note.id,
+                            updates: {
+                                content: (note.content || '') + `<p>${finalText}</p>`
+                            }
+                        });
+                        toast({ title: 'تم الحفظ في الملاحظة المختارة ✓' });
+                    }
                 }
+                setTranscript('');
+                setInterimTranscript('');
+                onClose();
+            } finally {
+                setIsProcessing(false);
             }
-            setTranscript('');
-            setInterimTranscript('');
-            onClose();
-        } finally {
-            setIsProcessing(false);
-        }
-    }, [transcript, interimTranscript, selectedNoteIndex, notes, createNote, updateNote, onClose, toast]);
+        }, [transcript, interimTranscript, selectedNoteIndex, notes, createNote, updateNote, onClose, toast]);
 
     const handleClose = useCallback(() => {
         if (isRecording) stopRecording();

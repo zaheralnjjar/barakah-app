@@ -146,9 +146,16 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         setIsLoading(true);
         try {
+            // Determine folder: User selected > System/General > None
+            let targetFolder = folderId === 'none' ? null : folderId;
+            if (!targetFolder) {
+                const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
+                if (generalFolder) targetFolder = generalFolder.id;
+            }
+
             await createNote({
                 title: finalTitle,
-                folder_id: folderId === 'none' ? null : folderId,
+                folder_id: targetFolder,
                 content: content,
                 color: color
             });
