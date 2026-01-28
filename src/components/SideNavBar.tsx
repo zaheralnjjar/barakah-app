@@ -29,11 +29,10 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true, color: 'text-blue-600', activeBg: 'bg-blue-50' },
         { id: 'finance', label: 'المالية', icon: Calculator, color: 'text-green-600', activeBg: 'bg-green-50' },
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
-        { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-rose-600', activeBg: 'bg-rose-50' },
         { id: 'prayer', label: 'الصلاة', icon: Moon, color: 'text-emerald-600', activeBg: 'bg-emerald-50' },
         { id: 'notes-v2', label: 'الملاحظات', icon: LayoutGrid, isRoute: true, route: '/notes-v2', color: 'text-amber-600', activeBg: 'bg-amber-50' },
-        { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
         { id: 'map', label: 'الخريطة', icon: MapPin, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
+        { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
     ];
 
     // Refs for long press
@@ -60,8 +59,8 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
             } else if (item.id === 'settings') {
                 // Force sync when long pressing settings
                 window.dispatchEvent(new Event('trigger-cloud-sync'));
-            } else if (item.id === 'calendar' && onLongPress) {
-                onLongPress('calendar_weekly');
+            } else if (item.id === 'productivity' && onLongPress) {
+                onLongPress('calendar');
             }
         }
         setTimeout(() => {

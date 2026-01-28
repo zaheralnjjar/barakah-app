@@ -25,6 +25,23 @@ const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 const CalendarSection: React.FC = () => {
     const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'grid3x3'>('daily');
     const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    // Listen for custom change-tab events
+    useEffect(() => {
+        const handleTabChange = (e: any) => {
+            if (e.detail === 'calendar' || e.detail === 'calendar-monthly') {
+                setViewMode('monthly');
+            } else if (e.detail === 'calendar-weekly') {
+                setViewMode('weekly');
+            } else if (e.detail === 'calendar-daily') {
+                setViewMode('daily');
+            }
+        };
+
+        window.addEventListener('change-tab', handleTabChange);
+        return () => window.removeEventListener('change-tab', handleTabChange);
+    }, []);
+
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [showPrintDialog, setShowPrintDialog] = useState(false);
 

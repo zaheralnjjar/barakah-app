@@ -65,6 +65,7 @@ const CoreLayout = () => {
             <SideNavBar
                 activeTab={activeTab}
                 onNavigate={handleNavigate}
+                onLongPress={handleNavigate}
                 onSync={() => {
                     window.dispatchEvent(new Event('trigger-cloud-sync'));
                 }}
