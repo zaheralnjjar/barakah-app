@@ -525,6 +525,18 @@ const InteractiveMap = () => {
                             size="sm"
                             variant="outline"
                             className="h-7 text-xs gap-1 bg-white"
+                            onClick={() => {
+                                setEditingResource({ title: '', category: 'other', lat: mapCenter[0], lng: mapCenter[1] });
+                                setIsEditOpen(true);
+                            }}
+                        >
+                            <MapPin className="w-3 h-3 text-green-600" />
+                            إضافة موقع
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1 bg-white"
                             onClick={shareAllLocations}
                         >
                             <Share2 className="w-3 h-3" />
@@ -808,62 +820,92 @@ const InteractiveMap = () => {
                             <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                 <p className="text-xs font-bold text-gray-500 mb-2">أدوات تحديد الموقع</p>
 
-                                {/* Address Search */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs text-gray-500 block text-right">بحث بالعنوان (اسم الشارع، رقم المبنى)</label>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            size="icon"
-                                            variant="secondary"
-                                            className="shrink-0 bg-white border"
-                                            onClick={async () => {
-                                                const query = editingResource.address_search || '';
-                                                if (!query.trim()) return;
+                                {/* Locate Me Button */}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        if (!navigator.geolocation) {
+                                            toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+                                            return;
+                                        }
+                                        navigator.geolocation.getCurrentPosition((pos) => {
+                                            setEditingResource({
+                                                ...editingResource,
+                                                lat: pos.coords.latitude,
+                                                lng: pos.coords.longitude
+                                            });
+                                            toast({ title: "تم تحديد موقعك الحالي" });
+                                        });
+                                    }}
+                                    className="w-full gap-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 h-9 mb-2"
+                                >
+                                    <Locate className="w-4 h-4" />
+                                    تحديد موقعي الحالي
+                                </Button>
 
-                                                try {
-                                                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&accept-language=ar`);
-                                                    const data = await res.json();
-                                                    if (data && data[0]) {
-                                                        const lat = parseFloat(data[0].lat);
-                                                        const lon = parseFloat(data[0].lon);
-                                                        setEditingResource({
-                                                            ...editingResource,
-                                                            title: editingResource.title || query,
-                                                            url: `geo:${lat},${lon}`,
-                                                            lat: lat,
-                                                            lng: lon,
-                                                            address: data[0].display_name
-                                                        });
-                                                        toast({ title: "تم تحديد الموقع", description: data[0].display_name });
-                                                    } else {
-                                                        toast({ title: "لم يتم العثور على نتائج", variant: "destructive" });
-                                                    }
-                                                } catch (e) {
-                                                    toast({ title: "خطأ في البحث", variant: "destructive" });
-                                                }
-                                            }}
-                                            title="بحث"
-                                        >
-                                            <Search className="w-4 h-4 text-blue-600" />
-                                        </Button>
+                                {/* Address Search (Auto) */}
+                                <div className="space-y-1.5 relative">
+                                    <label className="text-xs text-gray-500 block text-right">بحث بالعنوان (اسم الشارع، رقم المبنى)</label>
+                                    <div className="flex items-center gap-2 border rounded-md px-2 focus-within:ring-2 ring-blue-100 bg-white h-9">
+                                        <Search className="w-4 h-4 text-gray-400 shrink-0" />
                                         <Input
+                                            className="border-0 bg-transparent focus-visible:ring-0 text-right px-0 h-full text-xs"
+                                            placeholder="اكتب 3 أحرف للبحث..."
                                             value={editingResource.address_search || ''}
-                                            onChange={(e) => setEditingResource({ ...editingResource, address_search: e.target.value })}
-                                            className="text-right text-sm bg-white"
-                                            placeholder="ادخل اسم الشارع ورقم البناء..."
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    // Trigger search click logic manually or reuse function
-                                                    // For simplicity, user clicks button
+                                            onChange={(e) => {
+                                                const query = e.target.value;
+                                                setEditingResource({ ...editingResource, address_search: query });
+
+                                                // Trigger search after 3 chars
+                                                if (query.length >= 3) {
+                                                    const debounceTimer = setTimeout(async () => {
+                                                        const resultsDiv = document.getElementById('dialog-search-results-list');
+                                                        if (resultsDiv) resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">جاري البحث...</div>';
+
+                                                        try {
+                                                            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&accept-language=ar`);
+                                                            const data = await res.json();
+
+                                                            if (resultsDiv) {
+                                                                if (data.length === 0) {
+                                                                    resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">لا توجد نتائج</div>';
+                                                                } else {
+                                                                    resultsDiv.innerHTML = '';
+                                                                    data.forEach((item: any) => {
+                                                                        const div = document.createElement('div');
+                                                                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b last:border-0 text-right text-xs';
+                                                                        div.innerHTML = `<div class="font-bold text-gray-700">${(item.display_name || '').split(',').slice(0, 2).join(',')}</div><div class="text-[10px] text-gray-400 truncate">${item.display_name}</div>`;
+                                                                        div.onclick = () => {
+                                                                            setEditingResource(prev => ({
+                                                                                ...prev,
+                                                                                lat: parseFloat(item.lat),
+                                                                                lng: parseFloat(item.lon),
+                                                                                title: prev.title || item.display_name.split(',')[0],
+                                                                                address: item.display_name,
+                                                                                address_search: item.display_name.split(',')[0]
+                                                                            }));
+                                                                            resultsDiv.innerHTML = '';
+                                                                        };
+                                                                        resultsDiv.appendChild(div);
+                                                                    });
+                                                                }
+                                                            }
+                                                        } catch (e) { console.error(e); }
+                                                    }, 500);
+                                                } else {
+                                                    const resultsDiv = document.getElementById('dialog-search-results-list');
+                                                    if (resultsDiv) resultsDiv.innerHTML = '';
                                                 }
                                             }}
                                         />
                                     </div>
+                                    <div id="dialog-search-results-list" className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto mt-1 empty:hidden"></div>
                                 </div>
 
-                                {/* Google Maps Link Parsing */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs text-gray-500 block text-right">أو استخراج من رابط Google Maps</label>
+                                {/* Link Parsing - Restored & Professional */}
+                                <div className="space-y-1.5 pt-2 border-t border-gray-100 mt-2">
+                                    <label className="text-xs text-gray-500 block text-right">أو الصق رابط خرائط جوجل (Google Maps Link)</label>
                                     <div className="flex gap-2">
                                         <Button
                                             size="icon"
@@ -871,9 +913,11 @@ const InteractiveMap = () => {
                                             className="shrink-0 bg-white border"
                                             onClick={() => {
                                                 const link = editingResource.gmaps_link || '';
-                                                // Minimal regex for @lat,lng or q=lat,lng
-                                                const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-                                                const match = link.match(regex);
+                                                // Robust regex for @lat,lng or q=lat,lng
+                                                const atRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+                                                const qRegex = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
+
+                                                const match = link.match(atRegex) || link.match(qRegex);
 
                                                 if (match) {
                                                     const lat = parseFloat(match[1]);
@@ -886,35 +930,21 @@ const InteractiveMap = () => {
                                                     });
                                                     toast({ title: "تم استخراج الإحداثيات بنجاح" });
                                                 } else {
-                                                    // Try searching query param
-                                                    const qRegex = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
-                                                    const qMatch = link.match(qRegex);
-                                                    if (qMatch) {
-                                                        const lat = parseFloat(qMatch[1]);
-                                                        const lng = parseFloat(qMatch[2]);
-                                                        setEditingResource({
-                                                            ...editingResource,
-                                                            url: `geo:${lat},${lng}`,
-                                                            lat: lat,
-                                                            lng: lng
-                                                        });
-                                                        toast({ title: "تم استخراج الإحداثيات بنجاح" });
-                                                    } else {
-                                                        toast({ title: "لم يتم العثور على إحداثيات في الرابط", variant: "destructive" });
-                                                    }
+                                                    toast({ title: "رابط غير صالح", description: "لم يتم العثور على إحداثيات في الرابط", variant: "destructive" });
                                                 }
                                             }}
-                                            title="استخراج"
+                                            title="استخراج الموقع"
                                         >
-                                            <Share2 className="w-4 h-4 text-green-600" />
+                                            <Search className="w-4 h-4 text-green-600" />
                                         </Button>
                                         <Input
                                             value={editingResource.gmaps_link || ''}
                                             onChange={(e) => setEditingResource({ ...editingResource, gmaps_link: e.target.value })}
-                                            className="text-right text-xs bg-white"
-                                            placeholder="الصق الرابط هنا..."
+                                            className="text-right text-sm bg-white h-9"
+                                            placeholder="https://maps.google.com/..."
                                         />
                                     </div>
+                                    <p className="text-[10px] text-gray-400 text-right mr-1">سيقوم النظام باستخراج الإحداثيات تلقائياً من الرابط.</p>
                                 </div>
 
                                 {/* Locate Me Button */}
@@ -953,7 +983,8 @@ const InteractiveMap = () => {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )
+                    }
 
                     <DialogFooter className="gap-2 sm:gap-0 flex-col sm:flex-row">
                         <Button variant="outline" onClick={() => setIsEditOpen(false)}>إلغاء</Button>
@@ -961,8 +992,8 @@ const InteractiveMap = () => {
                             {editingResource?.id ? 'حفظ التعديلات' : 'إضافة الموقع'}
                         </Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                </DialogContent >
+            </Dialog >
         </Card >
     );
 };

@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useFinance } from '@/hooks/useFinance';
 import { useSystemModes } from '@/hooks/useSystemModes';
+import { isAndroid } from '@/utils/platformDetection';
 import {
     Sparkles, X, Plus, Settings, Trash2,
     Clock, Calendar, DollarSign, Wallet, ListTodo, Bell, MapPin, ShoppingCart,
@@ -244,7 +245,10 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
     return (
         <>
             {/* Floating Button - Fixed at Bottom Center */}
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
+            <div className={`fixed left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 transition-all duration-300 ${isAndroid()
+                ? 'bottom-32 opacity-90 scale-75' // Raised higher, smaller, slightly transparent container
+                : 'bottom-20'
+                }`}>
 
                 {/* Expanded Shortcuts - Horizontal Bar */}
                 {isExpanded && (
@@ -284,10 +288,10 @@ const SmartAssistantFAB: React.FC<SmartAssistantFABProps> = ({
                 {/* Main FAB Button */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className={`p-4 rounded-full shadow-xl transition-all duration-300 ${isExpanded
-                        ? 'bg-gray-800 text-white rotate-45'
-                        : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:scale-110 hover:shadow-2xl'
-                        }`}
+                    className={`rounded-full shadow-xl transition-all duration-300 flex items-center justify-center ${isAndroid()
+                        ? 'p-3 bg-black/40 text-white backdrop-blur-sm border border-white/20' // Transparent & Smaller for Android
+                        : 'p-4 bg-gradient-to-br from-emerald-500 to-teal-600 text-white hover:scale-110 hover:shadow-2xl'
+                        } ${isExpanded ? 'rotate-45 bg-gray-800' : ''}`}
                 >
                     {isExpanded ? <X className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
                 </button>

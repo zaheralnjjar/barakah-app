@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS favorite_contacts (
 
 -- RLS for favorite_contacts
 ALTER TABLE favorite_contacts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own favorite contacts" ON favorite_contacts;
 CREATE POLICY "Users can manage their own favorite contacts" ON favorite_contacts
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS medical_profile (
 
 -- RLS for medical_profile
 ALTER TABLE medical_profile ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own medical profile" ON medical_profile;
 CREATE POLICY "Users can manage their own medical profile" ON medical_profile
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS distraction_logs (
 
 -- RLS for distraction_logs
 ALTER TABLE distraction_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage their own distraction logs" ON distraction_logs;
 CREATE POLICY "Users can manage their own distraction logs" ON distraction_logs
     FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 

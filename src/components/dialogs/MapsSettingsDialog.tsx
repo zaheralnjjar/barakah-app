@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Navigation, Share2, Edit2, Trash2, CheckSquare, Plus, Globe, Search, X } from 'lucide-react';
+import { MapPin, Navigation, Share2, Edit2, Trash2, CheckSquare, Plus, Globe, Search, X, Locate, Loader2 } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -269,30 +269,119 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
                                     </div>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold block text-right">استخراج من رابط جوجل مابس</label>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => {
-                                                const coords = parseGoogleMapsUrl(editingResource.url || '');
-                                                if (coords) {
-                                                    setEditingResource({ ...editingResource, lat: coords.lat, lng: coords.lng });
-                                                    toast({ title: '✅ تم استخراج الإحداثيات' });
-                                                } else {
-                                                    toast({ title: '❌ فشل الاستخراج', description: 'تأكد من الرابط', variant: 'destructive' });
-                                                }
-                                            }}
-                                        >
-                                            <Search className="w-4 h-4" />
-                                        </Button>
-                                        <Input
-                                            value={editingResource.url || ''}
-                                            onChange={(e) => setEditingResource({ ...editingResource, url: e.target.value })}
-                                            className="text-left"
-                                            placeholder="https://maps.google.com/..."
-                                            dir="ltr"
-                                        />
+                                <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                    <p className="text-xs font-bold text-gray-500 mb-2">أدوات تحديد الموقع</p>
+
+                                    {/* Locate Me Button */}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                            if (!navigator.geolocation) {
+                                                toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+                                                return;
+                                            }
+                                            navigator.geolocation.getCurrentPosition((pos) => {
+                                                setEditingResource({
+                                                    ...editingResource,
+                                                    lat: pos.coords.latitude,
+                                                    lng: pos.coords.longitude
+                                                });
+                                                toast({ title: "تم تحديد موقعك الحالي" });
+                                            });
+                                        }}
+                                        className="w-full gap-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 h-9 mb-2"
+                                    >
+                                        <Locate className="w-4 h-4" />
+                                        تحديد موقعي الحالي
+                                    </Button>
+
+                                    {/* Address Search (Auto) */}
+                                    <div className="space-y-1.5 relative">
+                                        <label className="text-xs text-gray-500 block text-right">بحث بالعنوان (اسم الشارع، رقم المبنى)</label>
+                                        <div className="flex items-center gap-2 border rounded-md px-2 focus-within:ring-2 ring-blue-100 bg-white h-9">
+                                            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                                            <Input
+                                                className="border-0 bg-transparent focus-visible:ring-0 text-right px-0 h-full text-xs"
+                                                placeholder="اكتب 3 أحرف للبحث..."
+                                                value={editingResource.address_search || ''}
+                                                onChange={(e) => {
+                                                    const query = e.target.value;
+                                                    setEditingResource({ ...editingResource, address_search: query });
+
+                                                    // Trigger search after 3 chars
+                                                    if (query.length >= 3) {
+                                                        const debounceTimer = setTimeout(async () => {
+                                                            const resultsDiv = document.getElementById('dialog-search-results-list-settings');
+                                                            if (resultsDiv) resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">جاري البحث...</div>';
+
+                                                            try {
+                                                                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&accept-language=ar`);
+                                                                const data = await res.json();
+
+                                                                if (resultsDiv) {
+                                                                    if (data.length === 0) {
+                                                                        resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">لا توجد نتائج</div>';
+                                                                    } else {
+                                                                        resultsDiv.innerHTML = '';
+                                                                        data.forEach((item: any) => {
+                                                                            const div = document.createElement('div');
+                                                                            div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b last:border-0 text-right text-xs';
+                                                                            div.innerHTML = `<div class="font-bold text-gray-700">${(item.display_name || '').split(',').slice(0, 2).join(',')}</div><div class="text-[10px] text-gray-400 truncate">${item.display_name}</div>`;
+                                                                            div.onclick = () => {
+                                                                                setEditingResource(prev => ({
+                                                                                    ...prev,
+                                                                                    lat: parseFloat(item.lat),
+                                                                                    lng: parseFloat(item.lon),
+                                                                                    title: prev.title || item.display_name.split(',')[0],
+                                                                                    address: item.display_name,
+                                                                                    address_search: item.display_name.split(',')[0]
+                                                                                }));
+                                                                                resultsDiv.innerHTML = '';
+                                                                            };
+                                                                            resultsDiv.appendChild(div);
+                                                                        });
+                                                                    }
+                                                                }
+                                                            } catch (e) { console.error(e); }
+                                                        }, 500);
+                                                    } else {
+                                                        const resultsDiv = document.getElementById('dialog-search-results-list-settings');
+                                                        if (resultsDiv) resultsDiv.innerHTML = '';
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <div id="dialog-search-results-list-settings" className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto mt-1 empty:hidden"></div>
+                                    </div>
+
+                                    {/* Link Parsing */}
+                                    <div className="space-y-1.5 pt-2 border-t border-gray-100 mt-2">
+                                        <label className="text-xs text-gray-500 block text-right">أو الصق رابط خرائط جوجل</label>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() => {
+                                                    const coords = parseGoogleMapsUrl(editingResource.url || '');
+                                                    if (coords) {
+                                                        setEditingResource({ ...editingResource, lat: coords.lat, lng: coords.lng });
+                                                        toast({ title: '✅ تم استخراج الإحداثيات' });
+                                                    } else {
+                                                        toast({ title: '❌ فشل الاستخراج', description: 'تأكد من الرابط', variant: 'destructive' });
+                                                    }
+                                                }}
+                                                className="bg-gray-200 hover:bg-gray-300 relative top-[1px]"
+                                            >
+                                                <Search className="w-4 h-4" />
+                                            </Button>
+                                            <Input
+                                                value={editingResource.url || ''}
+                                                onChange={(e) => setEditingResource({ ...editingResource, url: e.target.value })}
+                                                className="text-left text-xs h-9 bg-white"
+                                                placeholder="https://maps.google.com/..."
+                                                dir="ltr"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

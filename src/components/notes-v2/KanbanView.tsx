@@ -76,7 +76,7 @@ export const KanbanView: React.FC<KanbanViewProps> = ({ onOpenNote, onOpenFolder
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-2 min-h-[200px] bg-gray-50/50 p-2 rounded-xl border border-gray-100">
+                            <div className="flex flex-col gap-2 min-h-[200px] max-h-[calc(100vh-180px)] overflow-y-auto bg-gray-50/50 p-2 rounded-xl border border-gray-100 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
                                 {columnNotes.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-lg opacity-40">
                                         <StickyNote className="w-6 h-6 mb-1" />

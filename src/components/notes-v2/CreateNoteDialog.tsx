@@ -20,6 +20,7 @@ interface CreateNoteDialogProps {
 }
 
 const NOTE_COLORS = [
+    { name: 'أسود', value: '#000000' },
     { name: 'افتراضي', value: '#FFFFFF' },
     { name: 'أحمر فاتح', value: '#FEF2F2' },
     { name: 'أصفر فاتح', value: '#FFFBEB' },
@@ -45,6 +46,7 @@ const FONT_SIZES = [
 ];
 
 const TEXT_COLORS = [
+    { name: 'أبيض', value: '#FFFFFF' },
     { name: 'أسود', value: '#000000' },
     { name: 'رمادي', value: '#4B5563' },
     { name: 'أحمر', value: '#DC2626' },
@@ -79,6 +81,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
     const recognitionRef = useRef<any>(null);
 
     const [isDistraction, setIsDistraction] = useState(false);
+    const [distractionDuration, setDistractionDuration] = useState(0);
 
     // Initialize Dialog State
     useEffect(() => {
@@ -180,24 +183,16 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         setIsLoading(true);
         try {
-            // Determine folder: User selected > System/General > Any Folder > None
+            // Determine folder: User selected > System/General > None
             let targetFolder = folderId === 'none' ? null : folderId;
-
             if (!targetFolder) {
-                // 1. Try to find a default "General" folder
-                const generalFolder = folders.find(f => f.is_system) ||
-                    folders.find(f => f.name === 'عام') ||
-                    folders.find(f => f.name.toLowerCase() === 'general');
-
-                if (generalFolder) {
-                    targetFolder = generalFolder.id;
-                } else if (folders.length > 0) {
-                    // 2. Fallback: If no General folder, use the first available folder to ensure visibility
-                    targetFolder = folders[0].id;
-                }
+                // Try to find a default "General" folder if user didn't pick one
+                const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
+                if (generalFolder) targetFolder = generalFolder.id;
             }
 
             // 1. Create Note
+            const noteTags = isDistraction ? ['distraction'] : [];
             await createNote({
                 title: finalTitle,
                 folder_id: targetFolder,
@@ -207,6 +202,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                 font_size: fontSize,
                 text_color: textColor,
                 background_color: color,
+                tags: noteTags
             } as any);
 
             // 2. Distraction Logging Integration
@@ -218,6 +214,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                             user_id: userId,
                             reason: content || finalTitle,
                             task_id: null,
+                            duration_minutes: distractionDuration,
                             created_at: new Date().toISOString()
                         }]);
                     }
@@ -228,7 +225,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
             }
 
             onClose();
-            toast({ title: "تم الحفظ ✅", description: isDistraction ? "تم حفظ الملاحظة في المجلد وتسجيل التشتت" : "تم إنشاء الملاحظة بنجاح" });
+            toast({ title: "تم الحفظ ✅", description: isDistraction ? "تم حفظ الملاحظة وتسجيل التشتت" : "تم إنشاء الملاحظة بنجاح" });
 
         } catch (error: any) {
             console.error('Failed to create note:', error);
@@ -402,6 +399,20 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                             </div>
                         </div>
                     </div>
+
+                    {/* Distraction Duration Input */}
+                    {isDistraction && (
+                        <div className="flex items-center gap-2 bg-red-50 p-2 rounded-md border border-red-100 animate-in fade-in slide-in-from-top-1">
+                            <Label className="text-xs text-red-600 whitespace-nowrap">مدة التشتت (دقيقة):</Label>
+                            <Input
+                                type="number"
+                                min="0"
+                                value={distractionDuration}
+                                onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
+                                className="h-7 w-20 text-center bg-white border-red-200 focus:border-red-400"
+                            />
+                        </div>
+                    )}
 
                     {/* Content Area */}
                     <div className="space-y-2 relative">
