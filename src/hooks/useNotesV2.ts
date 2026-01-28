@@ -10,10 +10,14 @@ export interface NoteV2 {
     folder_id: string | null;
     is_pinned: boolean;
     tags: string[] | null;
-    color: string;
+    color: string; // Background color (legacy/primary)
+    font_family?: string;
+    font_size?: string;
+    text_color?: string;
+    background_color?: string; // Explicit background color
+    is_bold?: boolean;
     created_at: string;
     updated_at: string;
-    // Removed fields not in quick_notes: is_deleted, is_bookmarked
 }
 
 export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
@@ -34,25 +38,21 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                 query = query.or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
             } else if (folderId) {
                 if (folderId !== 'all' && folderId !== 'trash') {
-                    // 'trash' is not supported in quick_notes schema yet (no is_deleted), so we just ignore it or return empty
                     query = query.eq('folder_id', folderId);
                 } else if (folderId === 'trash') {
-                    // No soft delete support yet, return empty for now
                     return [] as NoteV2[];
                 }
             }
 
             const { data, error } = await query;
             if (error) throw error;
-
-            // Map quick_notes response to NoteV2 interface if needed, or just return as is
             return data as unknown as NoteV2[];
         },
     });
 
     // 2. Create Note
     const createNoteMut = useMutation({
-        mutationFn: async ({ title, folder_id, content = '', color, tags = [] }: { title: string; folder_id: string | null, content?: string, color?: string, tags?: string[] }) => {
+        mutationFn: async ({ title, folder_id, content = '', color, tags = [], font_family, font_size, text_color, is_bold }: Partial<NoteV2>) => {
             const userId = (await supabase.auth.getUser()).data.user?.id;
             if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
 
@@ -62,7 +62,11 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                     title,
                     folder_id: (folder_id === 'trash' || folder_id === 'all') ? null : folder_id,
                     content,
-                    // color: color || '#ffffff', // Suspended until DB migration
+                    color: color || '#ffffff',
+                    font_family: font_family || 'Inherit',
+                    font_size: font_size || 'normal',
+                    text_color: text_color || '#000000',
+                    is_bold: is_bold || false,
                     tags: tags,
                     user_id: userId,
                     is_pinned: false

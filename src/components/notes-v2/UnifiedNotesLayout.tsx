@@ -482,22 +482,8 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     onClose={() => setShowReportGenerator(false)}
                 />
 
-                {/* Floating Add Button - Green & Circular with Long Press for Voice */}
-                {!activeNote && (
-                    <FloatingAddButton
-                        onTap={() => {
-                            setActiveFolderId(activeFolderId === 'trash' ? null : activeFolderId);
-                            setShowCreateNote(true);
-                        }}
-                        onLongPress={() => {
-                            // Open dialog and auto-start recording
-                            setCreateNoteInitialFolderId(activeFolderId === 'trash' ? null : activeFolderId);
-                            setAutoStartRecording(true);
-                            setShowCreateNote(true);
-                            toast({ title: '🎤 الوضع الصوتي', description: 'تحدث الآن وسنكتب لك...' });
-                        }}
-                    />
-                )}
+                {/* Floating Add Button Removed - Moved to CoreLayout */}
+
             </div>
         </div>
     );

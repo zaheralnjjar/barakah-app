@@ -60,6 +60,9 @@ const PrayerManager = () => {
     const [exportHijriMonth, setExportHijriMonth] = useState<string>('all');
     const [exportTitle, setExportTitle] = useState('');
     const [reminderMinutes, setReminderMinutes] = useState(15);
+    const [calcDuration, setCalcDuration] = useState(false);
+    const [durationFrom, setDurationFrom] = useState('fajr');
+    const [durationTo, setDurationTo] = useState('maghrib');
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [expandedWeeks, setExpandedWeeks] = useState<number[]>([]); // Array of week indices
 
@@ -234,8 +237,8 @@ const PrayerManager = () => {
         }
 
         try {
-            // Fetch 3 months: Previous, Current, Next
-            const monthsToFetch = [-1, 0, 1];
+            // Fetch 5 months: 2 Previous, Current, 2 Next to ensure full Hijri month coverage
+            const monthsToFetch = [-2, -1, 0, 1, 2];
             const promises = monthsToFetch.map(async (offset) => {
                 const d = new Date(currentDate);
                 d.setMonth(d.getMonth() + offset);
@@ -448,6 +451,21 @@ const PrayerManager = () => {
         setShowExportModal(false);
     };
 
+
+
+    const calculateTimeDiff = (start: string, end: string) => {
+        if (!start || !end) return '--';
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+
+        let minDiff = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (minDiff < 0) minDiff += 24 * 60;
+
+        const h = Math.floor(minDiff / 60);
+        const m = minDiff % 60;
+        return `${h}:${m.toString().padStart(2, '0')}`;
+    };
+
     const downloadPDF = async () => {
         const dataToExport = getExportData();
         const prayersToExport = Object.entries(exportPrayers)
@@ -494,16 +512,26 @@ const PrayerManager = () => {
         doc.text(`${t.system} | ${exportFromDate} - ${exportToDate}`, 105, 30, { align: 'center' });
 
         // Table Header
-        const head = [
-            [t.date, t.hijri, ...prayersToExport.map(p => t[p])]
-        ];
+        const headerRow = [t.date, t.hijri, ...prayersToExport.map(p => t[p])];
+        if (calcDuration) {
+            headerRow.push(isSpanish ? 'Duración' : 'المدة');
+        }
+        const head = [headerRow];
 
         // Table Body
-        const body = dataToExport.map(day => [
-            day.date,
-            day.hijriDate || '',
-            ...prayersToExport.map(p => day[p])
-        ]);
+        const body = dataToExport.map(day => {
+            const row = [
+                day.date,
+                day.hijriDate || '',
+                ...prayersToExport.map(p => day[p])
+            ];
+
+            if (calcDuration) {
+                const diff = calculateTimeDiff(day[durationFrom], day[durationTo]);
+                row.push(diff);
+            }
+            return row;
+        });
 
         autoTable(doc, {
             head: head,
@@ -868,6 +896,45 @@ const PrayerManager = () => {
                                                     </div>
                                                 ))}
                                             </div>
+                                        </div>
+
+                                        {/* Duration Calculation Section */}
+                                        <div className="bg-emerald-50/50 rounded-xl p-3 border border-emerald-100">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Checkbox id="calc-duration" checked={calcDuration} onCheckedChange={(c) => setCalcDuration(!!c)} className="data-[state=checked]:bg-emerald-600" />
+                                                <Label htmlFor="calc-duration" className="text-sm font-bold cursor-pointer">حساب وقت الصيام (المدة)</Label>
+                                            </div>
+
+                                            {calcDuration && (
+                                                <div className="grid grid-cols-2 gap-3 mt-2 animate-in fade-in slide-in-from-top-1">
+                                                    <div>
+                                                        <Label className="text-xs text-gray-500 mb-1 block">من صلاة</Label>
+                                                        <select value={durationFrom} onChange={(e) => setDurationFrom(e.target.value)} className="w-full p-2 border rounded-md text-sm bg-white">
+                                                            {[
+                                                                { id: 'fajr', label: 'الفجر' },
+                                                                { id: 'sunrise', label: 'الشروق' },
+                                                                { id: 'dhuhr', label: 'الظهر' },
+                                                                { id: 'asr', label: 'العصر' },
+                                                                { id: 'maghrib', label: 'المغرب' },
+                                                                { id: 'isha', label: 'العشاء' }
+                                                            ].map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-xs text-gray-500 mb-1 block">إلى صلاة</Label>
+                                                        <select value={durationTo} onChange={(e) => setDurationTo(e.target.value)} className="w-full p-2 border rounded-md text-sm bg-white">
+                                                            {[
+                                                                { id: 'fajr', label: 'الفجر' },
+                                                                { id: 'sunrise', label: 'الشروق' },
+                                                                { id: 'dhuhr', label: 'الظهر' },
+                                                                { id: 'asr', label: 'العصر' },
+                                                                { id: 'maghrib', label: 'المغرب' },
+                                                                { id: 'isha', label: 'العشاء' }
+                                                            ].map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Reminder Section */}

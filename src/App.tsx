@@ -135,6 +135,8 @@ const PermissionRequester = () => {
 };
 
 
+
+
 const App = () => {
   // Watch sync removed - watch app deleted
   // Initialize keyboard shortcuts
@@ -145,11 +147,13 @@ const App = () => {
       <TooltipProvider>
         <PermissionRequester />
         <DeepLinkHandler />
+
         <Toaster />
         <Sonner />
         <ErrorBoundary>
           <HashRouter>
             <GlobalSearchDialog />
+
             <Routes>
               <Route path="/notes-only" element={<NotesOnlyView />} />
               {/* Core Layout Routes */}

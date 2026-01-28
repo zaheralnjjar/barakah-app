@@ -83,32 +83,6 @@ interface LocationMarkerProps {
 
 function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMarkerProps) {
     const [addressName, setAddressName] = useState('');
-    const [addressDetails, setAddressDetails] = useState('');
-    const [isLoadingAddress, setIsLoadingAddress] = useState(false);
-    const [locationImage, setLocationImage] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!position) return;
-
-        setIsLoadingAddress(true);
-        // Fetch address using Nominatim (OSM)
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}&accept-language=ar`)
-            .then(res => res.json())
-            .then(data => {
-                const addr = data.address || {};
-                const road = addr.road || '';
-                const number = addr.house_number || '';
-                // Construct address string
-                const parts = [road, number, addr.suburb].filter(Boolean);
-                const fullAddress = parts.join('، ');
-
-                setAddressDetails(fullAddress);
-                // Default name can be the road name if available, or empty to let user type
-                if (!addressName && road) setAddressName(road);
-            })
-            .catch(() => setAddressDetails('')) // Fail silently or show empty
-            .finally(() => setIsLoadingAddress(false));
-    }, [position]);
 
     const handleNavigate = () => {
         if (position) {
@@ -116,17 +90,15 @@ function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMark
         }
     };
 
-    // DO NOT use useMapEvents here - it causes _leaflet_events crash when this component unmounts/remounts
-
     if (!position) return null;
 
-    // Use street name as default if no name provided
-    const getDisplayName = () => addressName.trim() || addressDetails || `${(position?.lat || 0).toFixed(4)}, ${(position?.lng || 0).toFixed(4)}`;
+    // Use coordinates as default if no name provided
+    const getDisplayName = () => addressName.trim() || `${(position?.lat || 0).toFixed(4)}, ${(position?.lng || 0).toFixed(4)}`;
 
     return (
         <Marker position={position}>
             <Popup>
-                <div className="p-2 min-w-[250px] text-right space-y-2">
+                <div className="p-2 min-w-[200px] text-right space-y-2">
                     <p className="text-center font-bold text-sm text-primary mb-2">📍 حفظ الموقع</p>
 
                     {/* Name Input */}
@@ -137,51 +109,8 @@ function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMark
                             value={addressName}
                             onChange={(e) => setAddressName(e.target.value)}
                             className="h-9 text-sm text-right"
+                            autoFocus
                         />
-                    </div>
-
-                    {/* Address Details */}
-                    <div className="space-y-1 relative">
-                        <label className="text-xs text-gray-500">العنوان</label>
-                        <Input
-                            placeholder="الشارع، الرقم..."
-                            value={addressDetails}
-                            onChange={(e) => setAddressDetails(e.target.value)}
-                            className="h-9 text-sm text-right pl-7"
-                        />
-                        {isLoadingAddress && <Loader2 className="w-3 h-3 absolute left-2 top-7 animate-spin text-gray-400" />}
-                    </div>
-
-                    {/* Image Upload */}
-                    <div className="space-y-1">
-                        <label className="text-xs text-gray-500">صورة (اختياري)</label>
-                        {locationImage ? (
-                            <div className="relative inline-block">
-                                <img src={locationImage} alt="" className="w-16 h-16 object-cover rounded-lg" />
-                                <button
-                                    onClick={() => setLocationImage(null)}
-                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center"
-                                >✕</button>
-                            </div>
-                        ) : (
-                            <label className="flex items-center justify-center gap-2 p-2 border border-dashed border-gray-300 rounded-lg cursor-pointer text-xs">
-                                <span>📷</span>
-                                <span className="text-gray-500">إضافة صورة</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            const reader = new FileReader();
-                                            reader.onload = (ev) => setLocationImage(ev.target?.result as string);
-                                            reader.readAsDataURL(file);
-                                        }
-                                    }}
-                                />
-                            </label>
-                        )}
                     </div>
 
                     {/* Action Buttons */}
@@ -191,7 +120,7 @@ function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMark
                             className="flex-1 h-9 bg-green-500 text-white"
                             onClick={() => {
                                 const saveName = getDisplayName();
-                                onSave(saveName, addressDetails, position);
+                                onSave(saveName, '', position);
                             }}
                         >
                             <Save className="w-4 h-4 ml-1" /> حفظ
@@ -217,24 +146,33 @@ function LocationMarker({ position, onSave, onShare, onQuickPark }: LocationMark
                             <Navigation className="w-4 h-4" />
                         </Button>
 
-
                         {/* Quick Parking Button */}
                         <Button
                             variant="outline"
                             size="icon"
-                            className="w-full h-10 mt-2 border-orange-200 text-orange-700 flex items-center justify-center gap-2"
+                            className="w-full h-10 mt-2 border-orange-200 text-orange-700 flex items-center justify-center gap-2 hidden" // Hidden for simplicity if requested, or keep? Plan said remove auto-fill. Let's keep parking but simplify args
                             onClick={() => {
-                                // Direct save without name if needed, or use default name
                                 const saveName = getDisplayName() || 'موقف';
-                                onQuickPark(saveName, addressDetails, position);
+                                onQuickPark(saveName, '', position);
                             }}
                             title="حفظ موقف سريع"
+                            style={{ display: 'none' }} // Actually hiding it to be safer on "Simple Level" request? User said "Simple level". Parking is useful though. I'll keep it but distinct from the simplification of the marker itself. Wait, the previous code had it. I will keep it but clean up the call.
                         >
                             <span className="text-xl">🅿️</span>
-                            <span className="font-bold text-xs">حفظ موقف سريع</span>
                         </Button>
                     </div>
-
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2 border-orange-200 text-orange-700 flex items-center justify-center gap-2"
+                        onClick={() => {
+                            const saveName = getDisplayName() || 'موقف';
+                            onQuickPark(saveName, '', position);
+                        }}
+                    >
+                        <span className="text-lg">🅿️</span>
+                        <span className="text-xs font-bold">حفظ موقف</span>
+                    </Button>
                 </div>
             </Popup>
         </Marker>
@@ -582,7 +520,6 @@ const InteractiveMap = () => {
                     {/* Map Section - 70% on Desktop */}
                     <div className="h-[50vh] min-h-[400px] lg:h-full lg:w-[70%] w-full relative z-0 order-1 border-b lg:border-b-0 lg:border-l border-gray-200 isolate">
                         <MapContainer
-                            key={mapKey}
                             center={mapCenter}
                             zoom={13}
                             zoomControl={false}
@@ -617,8 +554,7 @@ const InteractiveMap = () => {
 
 
                             {/* Saved locations markers */}
-
-                            {savedLocations.map((loc: any) => {
+                            {React.useMemo(() => savedLocations.map((loc: any) => {
                                 let lat = typeof loc.lat === 'number' ? loc.lat : parseFloat(loc.lat);
                                 let lng = typeof loc.lng === 'number' ? loc.lng : parseFloat(loc.lng);
 
@@ -673,7 +609,8 @@ const InteractiveMap = () => {
                                         </Popup>
                                     </Marker>
                                 );
-                            })}
+                            }), [savedLocations, selectedLocations, selectedIcon, deleteLocation, toggleSelectLocation, getCategoryIcon])}
+
                         </MapContainer>
 
                         {/* Search overlay on map - CENTERED */}

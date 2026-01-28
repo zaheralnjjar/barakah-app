@@ -127,13 +127,22 @@ const FolderListItems = ({ onSelect, currentFolderId }: { onSelect: (id: string 
 
     return (
         <>
-            <DropdownMenuItem onClick={() => onSelect(null)} disabled={!currentFolderId}>
+            <DropdownMenuItem
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(null);
+                }}
+                disabled={!currentFolderId}
+            >
                 بدون مجلد (رئيسي)
             </DropdownMenuItem>
             {folders.map(folder => (
                 <DropdownMenuItem
                     key={folder.id}
-                    onClick={() => onSelect(folder.id)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(folder.id);
+                    }}
                     disabled={currentFolderId === folder.id}
                     className="flex items-center gap-2"
                 >
