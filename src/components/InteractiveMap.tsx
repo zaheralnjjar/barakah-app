@@ -37,7 +37,7 @@ import { Share } from '@capacitor/share';
 
 
 
-// Fix Leaflet icons - Move to a function that can be called inside useEffect
+// Fix Leaflet icons
 const fixLeafletIcons = () => {
     if (typeof window === 'undefined') return;
     delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -47,6 +47,16 @@ const fixLeafletIcons = () => {
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     });
 };
+
+// Stable selected icon
+const selectedIcon = typeof window !== 'undefined' ? new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+}) : null;
 
 interface LocationMarkerProps {
     position: { lat: number; lng: number } | null;
@@ -709,21 +719,11 @@ const InteractiveMap = () => {
                                 // Check if this location is selected
                                 const isSelected = selectedLocations.has(loc.id);
 
-                                // Custom icon for selected locations (green)
-                                const selectedIcon = new L.Icon({
-                                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-                                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                                    iconSize: [25, 41],
-                                    iconAnchor: [12, 41],
-                                    popupAnchor: [1, -34],
-                                    shadowSize: [41, 41]
-                                });
-
                                 return (
                                     <Marker
-                                        key={loc.id}
+                                        key={`saved-loc-${loc.id}`}
                                         position={[lat, lng]}
-                                        icon={isSelected ? selectedIcon : undefined}
+                                        icon={(isSelected && selectedIcon) ? selectedIcon : undefined}
                                     >
                                         <Popup>
                                             <div className="text-center min-w-[180px]">
