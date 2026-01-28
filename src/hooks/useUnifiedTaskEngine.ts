@@ -4,11 +4,12 @@ import { useTasks, MainTask } from './useTasks';
 import { ThesisService } from '@/services/thesis/ThesisService';
 import { useAppStore, Appointment } from '@/stores/useAppStore';
 import { useMedications, Medication } from './useMedications';
+import { useSystemModes } from './useSystemModes';
 import { ThesisTask } from '@/types/thesis';
 
 export interface UnifiedTask {
     id: string;
-    source: 'general' | 'thesis' | 'appointment' | 'medication' | 'shopping';
+    source: 'general' | 'thesis' | 'appointment' | 'medication' | 'shopping' | 'mode';
     title: string;
     description?: string;
     dueDate: string | null;
@@ -23,6 +24,9 @@ export const useUnifiedTaskEngine = () => {
     const { tasks: generalTasks, refreshTasks } = useTasks();
     const { appointments } = useAppStore();
     const { medications } = useMedications();
+    const { modes } = useSystemModes();
+    const activeMode = useMemo(() => modes.find(m => m.is_active), [modes]);
+
     const [thesisTasks, setThesisTasks] = useState<ThesisTask[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -107,6 +111,23 @@ export const useUnifiedTaskEngine = () => {
             });
         });
 
+        // 5. Active Mode Items
+        if (activeMode) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            activeMode.mode_items.forEach(item => {
+                results.push({
+                    id: `mode-${activeMode.id}-${item.id}`,
+                    source: 'mode',
+                    title: item.text,
+                    description: `من وضع: ${activeMode.name}`,
+                    dueDate: todayStr,
+                    priority: 'medium',
+                    isCompleted: false,
+                    rawDate: item.time ? new Date(`${todayStr}T${item.time}`) : new Date(`${todayStr}T00:00`)
+                });
+            });
+        }
+
         // Combined Sorting: Incomplete first, then by priority, then by date
         return results.sort((a, b) => {
             if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
@@ -120,14 +141,13 @@ export const useUnifiedTaskEngine = () => {
             if (!b.rawDate) return -1;
             return a.rawDate.getTime() - b.rawDate.getTime();
         });
-    }, [generalTasks, thesisTasks, appointments, medications]);
+    }, [generalTasks, thesisTasks, appointments, medications, activeMode]);
 
     return {
         unifiedTasks,
         loading,
         refreshAll: () => {
             refreshTasks();
-            // Trigger thesis tasks reload manually if needed or via a shared event
         }
     };
 };

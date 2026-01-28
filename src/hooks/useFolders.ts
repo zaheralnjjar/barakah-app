@@ -6,10 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 export interface Folder {
     id: string;
     name: string;
-    parent_id: string | null;
     icon: string;
     color?: string;
-    is_deleted?: boolean;
+    order_index?: number;
     created_at: string;
 }
 
@@ -22,9 +21,8 @@ export const useFolders = () => {
         queryKey: ['folders'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('folders')
+                .from('note_folders')
                 .select('*')
-                .eq('is_deleted', false)
                 .order('name');
 
             if (error) {
@@ -38,12 +36,11 @@ export const useFolders = () => {
     const createFolderMut = useMutation({
         mutationFn: async ({ name, parent_id, icon, color }: { name: string; parent_id: string | null; icon?: string; color?: string }) => {
             const { data, error } = await supabase
-                .from('folders')
+                .from('note_folders')
                 .insert([{
                     name,
-                    parent_id,
-                    icon: icon || '📁',
-                    color: color || '#E5E7EB', // Default gray
+                    icon: icon || 'folder',
+                    color: color || '#4ade80',
                     user_id: (await supabase.auth.getUser()).data.user?.id
                 }])
                 .select()
@@ -71,7 +68,7 @@ export const useFolders = () => {
     const updateFolderMut = useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<Folder> }) => {
             const { error } = await supabase
-                .from('folders')
+                .from('note_folders')
                 .update(updates)
                 .eq('id', id);
 
@@ -85,24 +82,16 @@ export const useFolders = () => {
     // 4. Delete Folder
     const deleteFolderMut = useMutation({
         mutationFn: async (id: string) => {
-            // Soft delete folder
+            // Hard delete folder for now if no is_deleted column
             const { error: folderError } = await supabase
-                .from('folders')
-                .update({ is_deleted: true })
+                .from('note_folders')
+                .delete()
                 .eq('id', id);
 
             if (folderError) throw folderError;
 
-            // Cascade to notes
-            const { error: notesError } = await supabase
-                .from('notes_v2')
-                .update({ is_deleted: true })
-                .eq('folder_id', id);
-
-            if (notesError) {
-                console.warn('Cascade to notes failed (column may be missing):', notesError);
-                // We proceed since the folder itself was marked deleted if folderError was null
-            }
+            // Cascade to notes - and since we use ON DELETE SET NULL in DB, 
+            // the notes will automatically have folder_id = null.
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['folders'] });

@@ -60,7 +60,24 @@ export const DiagnosticPage: React.FC = () => {
                 addResult('✅ جدول quick_notes موجود ويمكن الوصول إليه');
             }
 
-            // 4. محاولة إنشاء مجلد تجريبي
+            // 4. فحص جداول الأدوية
+            addResult('🔍 فحص جداول الأدوية...');
+            const { error: medsError } = await supabase.from('medications').select('id').limit(1);
+            if (medsError) {
+                addResult(`❌ خطأ في جدول medications: ${medsError.message}`);
+                addResult('💡 قد تحتاج لتشغيل كود SQL الخاص بالأدوية.');
+            } else {
+                addResult('✅ جدول medications موجود');
+            }
+
+            const { error: medLogsError } = await supabase.from('medication_logs').select('id').limit(1);
+            if (medLogsError) {
+                addResult(`❌ خطأ في جدول medication_logs: ${medLogsError.message}`);
+            } else {
+                addResult('✅ جدول medication_logs موجود');
+            }
+
+            // 5. محاولة إنشاء مجلد تجريبي
             if (user) {
                 addResult('🔍 محاولة إنشاء مجلد تجريبي...');
                 const { data: newFolder, error: createError } = await supabase

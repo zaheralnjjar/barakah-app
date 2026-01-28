@@ -7,6 +7,7 @@ import {
 import { isAndroid } from '@/utils/platformDetection';
 import { useFinance } from '@/hooks/useFinance';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { useSystemModes } from '@/hooks/useSystemModes';
 import { cn } from '@/lib/utils';
 
 interface DashboardHeaderStripProps {
@@ -17,6 +18,10 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
     // 1. Fetch Finance Data
     const { financeData, dailyLimit } = useFinance();
     const [dollarRates, setDollarRates] = useState<{ official: number; blue: number } | null>(null);
+
+    // 1.5 Fetch System Modes
+    const { modes, toggleMode } = useSystemModes();
+    const activeMode = modes.find(m => m.is_active);
 
     // Fetch Rates Logic
     useEffect(() => {
@@ -143,6 +148,33 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                             {showElapsedHeader ? elapsedSincePrev : (timeUntilNext || '--:--')}
                         </div>
                     </div>
+
+                    {/* Active System Mode Strip */}
+                    {activeMode && (
+                        <div
+                            className="px-3 py-1.5 flex items-center justify-between border-b animate-in fade-in slide-in-from-top-1 duration-500"
+                            style={{ backgroundColor: `${activeMode.color}15`, borderBottomColor: `${activeMode.color}30` }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <div
+                                    className="p-1 rounded-md text-white"
+                                    style={{ backgroundColor: activeMode.color }}
+                                >
+                                    <RefreshCw className="w-3 h-3" />
+                                </div>
+                                <span className="text-xs font-black" style={{ color: activeMode.color }}>
+                                    الوضع النشط: {activeMode.name}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => toggleMode({ id: activeMode.id, active: false })}
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-white/50 hover:bg-white transition-colors"
+                                style={{ color: activeMode.color, borderColor: `${activeMode.color}40` }}
+                            >
+                                إيقاف
+                            </button>
+                        </div>
+                    )}
 
                     {/* Table-like Grid */}
                     <div className="w-full">

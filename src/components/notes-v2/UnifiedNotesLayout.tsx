@@ -96,8 +96,8 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
     const handleExportBackup = async () => {
         try {
             toast({ title: 'جاري تحضير النسخة الاحتياطية...' });
-            const { data: notes } = await supabase.from('notes_v2').select('*');
-            const { data: folders } = await supabase.from('folders').select('*');
+            const { data: notes } = await supabase.from('quick_notes').select('*');
+            const { data: folders } = await supabase.from('note_folders').select('*');
             const backupData = {
                 version: "1.0",
                 date: new Date().toISOString(),

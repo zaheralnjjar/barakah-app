@@ -30,6 +30,7 @@ import {
     Share2, // Added icon
     Smartphone, // Added icon
     Users, // Added icon
+    Trash2, // Added icon
     ChevronUp,
     ChevronDown,
     LayoutDashboard,
@@ -60,6 +61,8 @@ import { PWAInstallButton } from '@/components/PWAInstallButton';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 const NewMuslimsManager = React.lazy(() => import('@/components/NewMuslims/NewMuslimsManager'));
 const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
+import { useSystemModes } from '@/hooks/useSystemModes';
+import { SystemModeEditorDialog } from '@/components/dialogs/SystemModeEditorDialog';
 
 
 import { DateRange } from 'react-day-picker';
@@ -107,6 +110,11 @@ const SettingsPanel = () => {
     // Routine Activation State
     const [activatingRoutine, setActivatingRoutine] = useState<any>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+    // Advanced System Modes State
+    const { modes, toggleMode, deleteMode } = useSystemModes();
+    const [showModeEditor, setShowModeEditor] = useState(false);
+    const [editingModeId, setEditingModeId] = useState<string | null>(null);
 
     const handleActivateRoutine = async () => {
         if (!activatingRoutine || !dateRange?.from || !dateRange?.to) {
@@ -327,7 +335,7 @@ const SettingsPanel = () => {
 
     // --- Layout Customization State ---
     const DEFAULT_SECTIONS_ORDER = [
-        'notifications', 'new_muslims', 'sync', 'finance',
+        'notifications', 'system_profiles', 'new_muslims', 'sync', 'finance',
         'storage', 'security', 'routines', 'about'
     ];
 
@@ -448,6 +456,15 @@ const SettingsPanel = () => {
             color: 'text-orange-500',
             borderColor: 'border-orange-100',
             description: 'تخصيص تنبيهات الصلاة والمهام'
+        },
+        {
+            id: 'system_profiles',
+            title: 'أوضاع النظام',
+            icon: Zap,
+            color: 'text-purple-600',
+            bg: 'bg-purple-50',
+            borderColor: 'border-purple-100',
+            description: 'إدارة ملفات التشغيل والملفات الشخصية'
         },
         // ADDED SHORTCUTS SECTION
         {
@@ -972,6 +989,81 @@ const SettingsPanel = () => {
                             <LogOut className="w-5 h-5" />
                             تسجيل الخروج
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* 5.5 Advanced System Profiles Dialog */}
+            <Dialog open={activeSection === 'system_profiles'} onOpenChange={(open) => !open && setActiveSection(null)}>
+                <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-purple-600">
+                            <Zap className="w-5 h-5" />
+                            أوضاع النظام والملفات الشخصية
+                        </DialogTitle>
+                        <DialogDescription>
+                            إدارة أوضاع التشغيل المخصصة (مثل وضع العمل، الدراسة، السفر)
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="flex justify-between items-center bg-purple-50 p-4 rounded-xl border border-purple-100">
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-purple-900">الملفات الحالية ({modes.length})</p>
+                                <p className="text-[10px] text-purple-600">قم بتفعيل الوضع المناسب لنشاطك الحالي</p>
+                            </div>
+                            <Button size="sm" className="bg-purple-600" onClick={() => { setEditingModeId(null); setShowModeEditor(true); }}>
+                                <Plus className="w-4 h-4 ml-1" />
+                                جديد
+                            </Button>
+                        </div>
+
+                        {modes.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">
+                                <Zap className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                                <p className="text-sm font-medium">لا توجد أوضاع مخصصة للتشغيل</p>
+                                <p className="text-[10px] mt-1">أنشئ أول ملف شخصي لك الآن</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-2">
+                                {modes.map(mode => (
+                                    <div key={mode.id} className={`p-3 rounded-xl border transition-all ${mode.is_active ? 'border-purple-500 bg-purple-50 shadow-sm' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                                                    style={{ backgroundColor: mode.color }}
+                                                >
+                                                    <Zap className="w-5 h-5" />
+                                                </div>
+                                                <div className="text-right">
+                                                    <h4 className="text-sm font-bold text-gray-800">{mode.name}</h4>
+                                                    <p className="text-[10px] text-gray-500">
+                                                        {mode.mode_items.length} مهام • {mode.shortcut_ids.length} اختصارات
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    size="sm"
+                                                    variant={mode.is_active ? "default" : "outline"}
+                                                    className={mode.is_active ? "bg-purple-600 h-8" : "h-8"}
+                                                    onClick={() => toggleMode({ id: mode.id, active: !mode.is_active })}
+                                                >
+                                                    {mode.is_active ? 'مفعل' : 'تفعيل'}
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400" onClick={() => { setEditingModeId(mode.id); setShowModeEditor(true); }}>
+                                                    <Settings className="w-4 h-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-300 hover:text-red-500" onClick={() => { if (confirm('حذف هذا الوضع؟')) deleteMode(mode.id); }}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1684,6 +1776,13 @@ const SettingsPanel = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* System Modes Editor Dialog */}
+            <SystemModeEditorDialog
+                open={showModeEditor}
+                onOpenChange={setShowModeEditor}
+                modeId={editingModeId}
+            />
 
         </div >
     );

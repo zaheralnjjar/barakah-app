@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { useLocations } from '@/hooks/useLocations';
 import { useShortcutExecution } from '@/hooks/useShortcutExecution';
+import { useSystemModes } from '@/hooks/useSystemModes';
 import { getActionById } from '@/constants/actionDefinitions';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
@@ -39,7 +40,24 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const { toast } = useToast();
     const { gridShortcuts } = useCustomShortcuts();
     const { locations } = useLocations();
-    const pinnedLocationsList = locations.filter(l => l.category === 'pinned' || l.type === 'location');
+    const { modes } = useSystemModes();
+    const activeMode = modes.find(m => m.is_active);
+
+    const pinnedLocationsList = locations.filter(l => {
+        // If mode is active and has specific locations, only show those or prioritize them
+        if (activeMode && activeMode.location_ids.length > 0) {
+            return activeMode.location_ids.includes(l.id);
+        }
+        return l.category === 'pinned' || l.type === 'location';
+    });
+
+    // Filter shortcuts based on mode
+    const filteredGridShortcuts = React.useMemo(() => {
+        if (activeMode && activeMode.shortcut_ids.length > 0) {
+            return gridShortcuts.filter(s => activeMode.shortcut_ids.includes(s.id));
+        }
+        return gridShortcuts;
+    }, [gridShortcuts, activeMode]);
 
     // States
     const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
@@ -251,7 +269,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 {!isCleanMode && gridShortcuts.length > 0 && (
                     <div className="px-1 animate-in slide-in-from-top-2 fade-in duration-300" dir="rtl">
                         <div className="grid grid-cols-5 gap-2">
-                            {gridShortcuts.map(shortcut => (
+                            {filteredGridShortcuts.map(shortcut => (
                                 <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
                             ))}
                         </div>
@@ -372,7 +390,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                         اختصاراتي اضافية
                     </h3>
                     <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
-                        {gridShortcuts.map(shortcut => (
+                        {filteredGridShortcuts.map(shortcut => (
                             <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
                         ))}
                     </div>

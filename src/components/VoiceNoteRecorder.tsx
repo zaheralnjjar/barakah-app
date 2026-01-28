@@ -136,9 +136,11 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                     if (data.matches && data.matches.length > 0) {
                         const newText = data.matches[0];
                         setInterimTranscript(newText);
-                        // Accumulate final text
-                        const separator = previousTranscriptRef.current ? ' ' : '';
-                        setTranscript(previousTranscriptRef.current + separator + newText);
+
+                        // Use a cleaner way to assemble the transcript without double-stretching
+                        const baseContent = previousTranscriptRef.current.trim();
+                        const separator = baseContent ? ' ' : '';
+                        setTranscript(baseContent + separator + newText);
                     }
                 });
 
@@ -146,7 +148,14 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
                 SpeechRecognition.addListener('listeningState', async (state: { status: string }) => {
                     if (state.status === 'stopped') {
                         if (!manualStopRef.current) {
-                            // Auto-restart for continuous recording
+                            // IMPORTANT: Update base transcript before restarting
+                            // This ensures the next session starts from where this one left off
+                            setTranscript(prev => {
+                                previousTranscriptRef.current = prev;
+                                return prev;
+                            });
+                            setInterimTranscript('');
+
                             console.log('Native speech stopped, auto-restarting...');
                             try {
                                 await SpeechRecognition.start({

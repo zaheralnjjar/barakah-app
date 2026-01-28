@@ -58,6 +58,9 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         }
     }, [isOpen, initialFolderId, autoStartRecording]);
 
+    // Track processed result indices to prevent duplicates
+    const processedIndicesRef = useRef<Set<number>>(new Set());
+
     const startRecording = () => {
         if (!('webkitSpeechRecognition' in window)) {
             toast({ title: "خطأ", description: "المتصفح لا يدعم تحويل الصوت لنص", variant: "destructive" });
@@ -68,7 +71,8 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
-        recognitionRef.current.lang = 'ar-SA'; // Default to Arabic
+        recognitionRef.current.lang = 'ar-SA';
+        processedIndicesRef.current = new Set(); // Reset for new session
 
         recognitionRef.current.onstart = () => {
             setIsRecording(true);
@@ -76,14 +80,23 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            let finalTranscript = '';
+            let newText = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+                // Only process final results that we haven't seen before
+                if (event.results[i].isFinal && !processedIndicesRef.current.has(i)) {
+                    newText += event.results[i][0].transcript;
+                    processedIndicesRef.current.add(i);
                 }
             }
-            if (finalTranscript) {
-                setContent(prev => prev + (prev ? ' ' : '') + finalTranscript);
+
+            if (newText) {
+                setContent(prev => {
+                    const currentText = prev.trim();
+                    const addition = newText.trim();
+                    // Avoid adding the exact same string if it somehow bypassed the index check
+                    if (currentText.endsWith(addition)) return prev;
+                    return currentText + (currentText ? ' ' : '') + addition;
+                });
             }
         };
 

@@ -133,6 +133,10 @@ export const useMedications = () => {
         // Sync
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+            // Clean up dates: empty strings are not valid for DATE columns in Postgres
+            const startDate = newMed.startDate && newMed.startDate.trim() !== '' ? newMed.startDate : new Date().toISOString().split('T')[0];
+            const endDate = newMed.endDate && newMed.endDate.trim() !== '' ? newMed.endDate : null;
+
             const { error } = await supabase.from('medications').insert({
                 id: newMed.id,
                 user_id: user.id,
@@ -140,16 +144,23 @@ export const useMedications = () => {
                 time: newMed.time,
                 frequency: newMed.frequency,
                 custom_days: newMed.customDays,
-                start_date: newMed.startDate,
-                end_date: newMed.endDate,
+                start_date: startDate,
+                end_date: endDate,
                 is_permanent: newMed.isPermanent,
-                reminder: newMed.reminder
+                reminder: newMed.reminder,
+                // Store additional dose times in a generic way if schema permits or just ignore for now
+                // metadata: { customTimes: newMed.customTimes } 
             });
 
             if (error) {
-                toast({ title: "خطأ", description: "فشل حفظ الدواء", variant: "destructive" });
+                console.error("Supabase Error adding medication:", error);
+                toast({
+                    title: "فشل حفظ الدواء في السحابة",
+                    description: `السبب: ${error.message}. تأكد من تحديث قاعدة البيانات.`,
+                    variant: "destructive"
+                });
             } else {
-                toast({ title: 'تم إضافة الدواء' });
+                toast({ title: 'تم إضافة الدواء بنجاح ✅' });
             }
         }
     };
