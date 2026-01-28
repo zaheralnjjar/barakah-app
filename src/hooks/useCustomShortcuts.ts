@@ -1,20 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { CustomShortcut, NewCustomShortcut, ActionPlacement, ShortcutPreset } from '@/types/shortcuts';
 
 export const useCustomShortcuts = () => {
-    const [shortcuts, setShortcuts] = useState<CustomShortcut[]>([]);
-    const [presets, setPresets] = useState<ShortcutPreset[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
+    const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    // Fetch all shortcuts for current user
-    const fetchShortcuts = useCallback(async () => {
-        try {
+    // 1. Fetch Shortcuts with Caching
+    const { data: shortcuts = [], isLoading, refetch: refetchShortcuts, isRefetching: isSyncingShortcuts } = useQuery({
+        queryKey: ['custom_shortcuts'],
+        queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) return [];
 
             const { data, error } = await supabase
                 .from('custom_shortcuts')
@@ -24,19 +22,19 @@ export const useCustomShortcuts = () => {
                 .order('order_index', { ascending: true });
 
             if (error) throw error;
-            setShortcuts(data || []);
-        } catch (error) {
-            console.error('Error fetching shortcuts:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+            return data as CustomShortcut[];
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 30, // 30 minutes
+        refetchOnWindowFocus: false,
+    });
 
-    // Fetch user presets
-    const fetchPresets = useCallback(async () => {
-        try {
+    // 2. Fetch Presets with Caching
+    const { data: presets = [], refetch: refetchPresets, isRefetching: isSyncingPresets } = useQuery({
+        queryKey: ['shortcut_presets'],
+        queryFn: async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) return [];
 
             const { data, error } = await supabase
                 .from('user_shortcut_presets')
@@ -45,42 +43,29 @@ export const useCustomShortcuts = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setPresets(data || []);
-        } catch (error) {
-            console.error('Error fetching presets:', error);
-        }
-    }, []);
+            return data as ShortcutPreset[];
+        },
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 30,
+        refetchOnWindowFocus: false,
+    });
 
-    // Force Sync (Manual Refresh)
-    const forceSync = useCallback(async () => {
-        setIsSyncing(true);
+    const isSyncing = isSyncingShortcuts || isSyncingPresets;
+
+    const forceSync = async () => {
         try {
-            await Promise.all([fetchShortcuts(), fetchPresets()]);
+            await Promise.all([refetchShortcuts(), refetchPresets()]);
             toast({ title: '🔄 تم المزامنة', description: 'تم تحديث البيانات بنجاح' });
         } catch (error) {
             toast({ title: '❌ فشل المزامنة', variant: 'destructive' });
-        } finally {
-            setIsSyncing(false);
         }
-    }, [fetchShortcuts, fetchPresets, toast]);
+    };
 
-    useEffect(() => {
-        fetchShortcuts();
-        fetchPresets();
+    // 3. Mutations
 
-        // Listen for realtime changes
-        const channel = supabase
-            .channel('custom_shortcuts_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'custom_shortcuts' }, fetchShortcuts)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'user_shortcut_presets' }, fetchPresets)
-            .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-    }, [fetchShortcuts, fetchPresets]);
-
-    // Add new shortcut
-    const addShortcut = async (shortcut: NewCustomShortcut) => {
-        try {
+    // Add Shortcut
+    const addShortcutMut = useMutation({
+        mutationFn: async (shortcut: NewCustomShortcut) => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
@@ -91,113 +76,74 @@ export const useCustomShortcuts = () => {
                 .single();
 
             if (error) throw error;
-
-            setShortcuts(prev => [...prev, data]);
-            toast({ title: '✅ تم الحفظ', description: `تم إنشاء "${shortcut.custom_name}"` });
             return data;
-        } catch (error) {
-            console.error('Error adding shortcut:', error);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['custom_shortcuts'] });
+            toast({ title: '✅ تم الحفظ', description: 'تم إنشاء الاختصار بنجاح' });
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', description: 'فشل في حفظ الاختصار', variant: 'destructive' });
-            return null;
         }
-    };
+    });
 
-    // Update existing shortcut
-    const updateShortcut = async (id: string, updates: Partial<CustomShortcut>) => {
-        try {
+    // Update Shortcut
+    const updateShortcutMut = useMutation({
+        mutationFn: async ({ id, updates }: { id: string; updates: Partial<CustomShortcut> }) => {
             const { error } = await supabase
                 .from('custom_shortcuts')
                 .update(updates)
                 .eq('id', id);
 
             if (error) throw error;
-
-            setShortcuts(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['custom_shortcuts'] });
             toast({ title: '✅ تم التحديث' });
-        } catch (error) {
-            console.error('Error updating shortcut:', error);
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', description: 'فشل في التحديث', variant: 'destructive' });
         }
-    };
+    });
 
-    // Delete shortcut with confirmation
-    const deleteShortcut = async (id: string, skipConfirm = false) => {
-        if (!skipConfirm && !confirm('هل أنت متأكد من حذف هذا الاختصار؟')) return;
-
-        try {
+    // Delete Shortcut
+    const deleteShortcutMut = useMutation({
+        mutationFn: async (id: string) => {
             const { error } = await supabase
                 .from('custom_shortcuts')
                 .delete()
                 .eq('id', id);
 
             if (error) throw error;
-
-            setShortcuts(prev => prev.filter(s => s.id !== id));
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['custom_shortcuts'] });
             toast({ title: '🗑️ تم الحذف' });
-        } catch (error) {
-            console.error('Error deleting shortcut:', error);
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', description: 'فشل في الحذف', variant: 'destructive' });
         }
-    };
+    });
 
-    // Reorder shortcuts (drag & drop support)
+    // Reorder Shortcuts
     const reorderShortcuts = async (reorderedIds: string[]) => {
+        // Optimistic update setup could be complex, for now we just invalidate after
+        // To implement true optimistic UI, we'd use onMutate.
+        // For now, simpler implementation:
         try {
-            // Optimistic update
-            const reordered = reorderedIds.map((id, index) => {
-                const shortcut = shortcuts.find(s => s.id === id);
-                return shortcut ? { ...shortcut, order_index: index } : null;
-            }).filter(Boolean) as CustomShortcut[];
-
-            setShortcuts(reordered);
-
-            // Batch update in database
             const updates = reorderedIds.map((id, index) =>
                 supabase.from('custom_shortcuts').update({ order_index: index }).eq('id', id)
             );
             await Promise.all(updates);
+            queryClient.invalidateQueries({ queryKey: ['custom_shortcuts'] });
         } catch (error) {
             console.error('Error reordering:', error);
-            fetchShortcuts(); // Rollback on error
         }
     };
 
-    // === FOLDER SUPPORT ===
-
-    // Get root shortcuts (no parent folder)
-    const getRootShortcuts = () => shortcuts.filter(s => !s.parent_folder_id && !s.is_folder);
-
-    // Get folders only
-    const getFolders = () => shortcuts.filter(s => s.is_folder);
-
-    // Get shortcuts inside a folder
-    const getShortcutsInFolder = (folderId: string) =>
-        shortcuts.filter(s => s.parent_folder_id === folderId);
-
-    // Create a folder
-    const createFolder = async (name: string, color: string = 'gray') => {
-        return addShortcut({
-            custom_name: name,
-            custom_icon: 'Folder',
-            icon_color: color,
-            shortcut_type: 'folder',
-            is_folder: true,
-            folder_color: color,
-            placement: 'shortcuts_grid',
-            order_index: shortcuts.length
-        });
-    };
-
-    // Move shortcut to folder
-    const moveToFolder = async (shortcutId: string, folderId: string | null) => {
-        return updateShortcut(shortcutId, { parent_folder_id: folderId });
-    };
-
-    // === PRESETS (SAVED CONFIGURATIONS) ===
-
-    // Save current configuration as preset
-    const savePreset = async (name: string, description?: string) => {
-        try {
+    // Save Preset
+    const savePresetMut = useMutation({
+        mutationFn: async ({ name, description }: { name: string; description?: string }) => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
@@ -207,82 +153,80 @@ export const useCustomShortcuts = () => {
                     user_id: user.id,
                     preset_name: name,
                     preset_description: description,
-                    shortcuts_config: shortcuts
+                    shortcuts_config: shortcuts // Use current shortcuts from closure? No, explicitly pass or use from data
                 })
                 .select()
                 .single();
 
             if (error) throw error;
-
-            setPresets(prev => [data, ...prev]);
-            toast({ title: '💾 تم الحفظ', description: `تم حفظ الوضع "${name}"` });
             return data;
-        } catch (error) {
-            console.error('Error saving preset:', error);
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['shortcut_presets'] });
+            toast({ title: '💾 تم الحفظ', description: `تم حفظ الوضع "${data.preset_name}"` });
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', description: 'فشل في حفظ الوضع', variant: 'destructive' });
-            return null;
         }
-    };
+    });
 
-    // Restore a preset
-    const restorePreset = async (presetId: string) => {
-        if (!confirm('سيتم استبدال الاختصارات الحالية بالوضع المحفوظ. هل تريد المتابعة؟')) return;
-
-        try {
+    // Restore Preset
+    const restorePresetMut = useMutation({
+        mutationFn: async (presetId: string) => {
             const preset = presets.find(p => p.id === presetId);
             if (!preset) throw new Error('Preset not found');
 
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 
-            // Delete all current shortcuts
-            await supabase
-                .from('custom_shortcuts')
-                .delete()
-                .eq('user_id', user.id);
+            // Delete current
+            await supabase.from('custom_shortcuts').delete().eq('user_id', user.id);
 
-            // Insert preset shortcuts
+            // Insert new
             const newShortcuts = preset.shortcuts_config.map(s => ({
                 ...s,
-                id: undefined, // Let DB generate new IDs
+                id: undefined,
                 user_id: user.id
             }));
 
-            const { error } = await supabase
-                .from('custom_shortcuts')
-                .insert(newShortcuts);
-
+            const { error } = await supabase.from('custom_shortcuts').insert(newShortcuts);
             if (error) throw error;
 
-            await fetchShortcuts();
-            toast({ title: '✅ تم الاستعادة', description: `تم تطبيق الوضع "${preset.preset_name}"` });
-        } catch (error) {
-            console.error('Error restoring preset:', error);
+            return preset.preset_name;
+        },
+        onSuccess: (name) => {
+            queryClient.invalidateQueries({ queryKey: ['custom_shortcuts'] });
+            toast({ title: '✅ تم الاستعادة', description: `تم تطبيق الوضع "${name}"` });
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', description: 'فشل في استعادة الوضع', variant: 'destructive' });
         }
-    };
+    });
 
-    // Delete a preset
-    const deletePreset = async (presetId: string) => {
-        if (!confirm('هل أنت متأكد من حذف هذا الوضع المحفوظ؟')) return;
-
-        try {
+    // Delete Preset
+    const deletePresetMut = useMutation({
+        mutationFn: async (presetId: string) => {
             const { error } = await supabase
                 .from('user_shortcut_presets')
                 .delete()
                 .eq('id', presetId);
-
             if (error) throw error;
-
-            setPresets(prev => prev.filter(p => p.id !== presetId));
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['shortcut_presets'] });
             toast({ title: '🗑️ تم الحذف' });
-        } catch (error) {
-            console.error('Error deleting preset:', error);
+        },
+        onError: () => {
             toast({ title: '❌ خطأ', variant: 'destructive' });
         }
-    };
+    });
 
-    // Get shortcuts by placement
+
+    // === FOLDER HELPERS (Derived from data) ===
+    const getRootShortcuts = () => shortcuts.filter(s => !s.parent_folder_id && !s.is_folder);
+    const getFolders = () => shortcuts.filter(s => s.is_folder);
+    const getShortcutsInFolder = (folderId: string) => shortcuts.filter(s => s.parent_folder_id === folderId);
+
     const getByPlacement = (placement: ActionPlacement) =>
         shortcuts.filter(s => s.placement === placement && !s.parent_folder_id);
 
@@ -291,9 +235,12 @@ export const useCustomShortcuts = () => {
         shortcuts,
         isLoading,
         isSyncing,
-        addShortcut,
-        updateShortcut,
-        deleteShortcut,
+        addShortcut: addShortcutMut.mutateAsync,
+        updateShortcut: (id: string, updates: Partial<CustomShortcut>) => updateShortcutMut.mutateAsync({ id, updates }),
+        deleteShortcut: (id: string, skipConfirm = false) => {
+            if (!skipConfirm && !confirm('هل أنت متأكد من حذف هذا الاختصار؟')) return Promise.resolve();
+            return deleteShortcutMut.mutateAsync(id);
+        },
         reorderShortcuts,
         getByPlacement,
         quickAccessShortcuts: getByPlacement('quick_access'),
@@ -303,17 +250,34 @@ export const useCustomShortcuts = () => {
         folders: getFolders(),
         rootShortcuts: getRootShortcuts(),
         getShortcutsInFolder,
-        createFolder,
-        moveToFolder,
+        createFolder: async (name: string, color: string = 'gray') => {
+            return addShortcutMut.mutateAsync({
+                custom_name: name,
+                custom_icon: 'Folder',
+                icon_color: color,
+                shortcut_type: 'folder',
+                is_folder: true,
+                folder_color: color,
+                placement: 'shortcuts_grid',
+                order_index: shortcuts.length
+            });
+        },
+        moveToFolder: (shortcutId: string, folderId: string | null) => updateShortcutMut.mutateAsync({ id: shortcutId, updates: { parent_folder_id: folderId } }),
 
         // Presets
         presets,
-        savePreset,
-        restorePreset,
-        deletePreset,
+        savePreset: (name: string, description?: string) => savePresetMut.mutateAsync({ name, description }),
+        restorePreset: (presetId: string) => {
+            if (!confirm('سيتم استبدال الاختصارات الحالية بالوضع المحفوظ. هل تريد المتابعة؟')) return Promise.resolve();
+            return restorePresetMut.mutateAsync(presetId);
+        },
+        deletePreset: (presetId: string) => {
+            if (!confirm('هل أنت متأكد من حذف هذا الوضع المحفوظ؟')) return Promise.resolve();
+            return deletePresetMut.mutateAsync(presetId);
+        },
 
         // Sync
-        refresh: fetchShortcuts,
+        refresh: forceSync,
         forceSync
     };
 };

@@ -65,6 +65,10 @@ export const useSystemModes = () => {
             }
             return data as SystemMode[];
         },
+        staleTime: 1000 * 60 * 5, // 5 minutes caching
+        gcTime: 1000 * 60 * 30, // Keep in memory for 30 minutes
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     });
 
     const executeCustomAction = async (action: CustomAction) => {
