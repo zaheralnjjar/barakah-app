@@ -9,6 +9,8 @@ import { useNotesV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
 import { Mic, MicOff, Loader2, Type, Palette } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface CreateNoteDialogProps {
     isOpen: boolean;
@@ -76,6 +78,8 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
     const [isRecording, setIsRecording] = useState(false);
     const recognitionRef = useRef<any>(null);
 
+    const [isDistraction, setIsDistraction] = useState(false);
+
     // Initialize Dialog State
     useEffect(() => {
         if (isOpen) {
@@ -86,6 +90,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
             setFontFamily('Inherit');
             setFontSize('16px');
             setTextColor('#000000');
+            setIsDistraction(false); // Reset distraction flag
 
             if (autoStartRecording) {
                 startRecording();
@@ -175,30 +180,56 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         setIsLoading(true);
         try {
-            // Determine folder: User selected > System/General > None
+            // Determine folder: User selected > System/General > Any Folder > None
             let targetFolder = folderId === 'none' ? null : folderId;
+
             if (!targetFolder) {
-                const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
-                if (generalFolder) targetFolder = generalFolder.id;
+                // 1. Try to find a default "General" folder
+                const generalFolder = folders.find(f => f.is_system) ||
+                    folders.find(f => f.name === 'عام') ||
+                    folders.find(f => f.name.toLowerCase() === 'general');
+
+                if (generalFolder) {
+                    targetFolder = generalFolder.id;
+                } else if (folders.length > 0) {
+                    // 2. Fallback: If no General folder, use the first available folder to ensure visibility
+                    targetFolder = folders[0].id;
+                }
             }
 
+            // 1. Create Note
             await createNote({
                 title: finalTitle,
                 folder_id: targetFolder,
-                content: content, // This is raw text for now, but Editor will wrap it if needed or we can wrap here
-                // Note: The EditorV2 stores HTML. Here we are just saving raw text. 
-                // However, basic formatting properties are stored separately in the NoteV2 object now.
-                // The Rich Text Editor, when loading this note, should ideally wrap the content if it's plain text, 
-                // OR we can wrap it in a <p> here if we want to be safe, but let's keep it clean.
+                content: content,
                 color: color,
                 font_family: fontFamily,
                 font_size: fontSize,
                 text_color: textColor,
-                background_color: color, // Sync both for compatibility
-            } as any); // Type assertion if needed pending interface updates in other files
+                background_color: color,
+            } as any);
+
+            // 2. Distraction Logging Integration
+            if (isDistraction) {
+                try {
+                    const userId = (await supabase.auth.getUser()).data.user?.id;
+                    if (userId) {
+                        await supabase.from('distraction_logs').insert([{
+                            user_id: userId,
+                            reason: content || finalTitle,
+                            task_id: null,
+                            created_at: new Date().toISOString()
+                        }]);
+                    }
+                } catch (distractionError) {
+                    console.error("Failed to log distraction:", distractionError);
+                    toast({ title: "تنبيه", description: "تم حفظ الملاحظة ولكن فشل تسجيل التشتت", variant: "default" });
+                }
+            }
 
             onClose();
-            toast({ title: "تم الحفظ ✅", description: "تم إنشاء الملاحظة بخصائص مخصصة" });
+            toast({ title: "تم الحفظ ✅", description: isDistraction ? "تم حفظ الملاحظة في المجلد وتسجيل التشتت" : "تم إنشاء الملاحظة بنجاح" });
+
         } catch (error: any) {
             console.error('Failed to create note:', error);
             toast({
@@ -327,30 +358,49 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                         </div>
                     </div>
 
-                    {/* Folder Selection with Color Visualization */}
-                    <div className="space-y-1.5">
-                        <Label className="text-gray-600">المجلد</Label>
-                        <Select value={folderId} onValueChange={setFolderId}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="اختر مجلد" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">-- عام (بدون مجلد) --</SelectItem>
-                                {folders.map(f => (
-                                    <SelectItem key={f.id} value={f.id}>
-                                        <span className="flex items-center gap-2">
-                                            {/* Folder Color Indicator */}
-                                            {f.color ? (
-                                                <span className="w-3 h-3 rounded-full border shadow-sm" style={{ backgroundColor: f.color }}></span>
-                                            ) : (
-                                                <span>📂</span>
-                                            )}
-                                            {f.name}
-                                        </span>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+
+                    {/* Folder Selection & Distraction Toggle */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-1 space-y-1.5">
+                            <Label className="text-gray-600">المجلد</Label>
+                            <Select value={folderId} onValueChange={setFolderId}>
+                                <SelectTrigger className="w-full h-9">
+                                    <SelectValue placeholder="اختر مجلد" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">-- عام (بدون مجلد) --</SelectItem>
+                                    {folders.map(f => (
+                                        <SelectItem key={f.id} value={f.id}>
+                                            <span className="flex items-center gap-2">
+                                                {f.color ? (
+                                                    <span className="w-3 h-3 rounded-full border shadow-sm" style={{ backgroundColor: f.color }}></span>
+                                                ) : (
+                                                    <span>📂</span>
+                                                )}
+                                                {f.name}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex items-end pb-1">
+                            <div className="flex items-center space-x-2 space-x-reverse bg-red-50 px-3 py-2 rounded-md border border-red-100 hover:bg-red-100 transition-colors cursor-pointer" onClick={() => setIsDistraction(!isDistraction)}>
+                                <Checkbox
+                                    id="distraction-mode"
+                                    checked={isDistraction}
+                                    onCheckedChange={(checked) => setIsDistraction(checked as boolean)}
+                                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                                />
+                                <Label
+                                    htmlFor="distraction-mode"
+                                    className="text-sm font-medium leading-none text-red-700 cursor-pointer pointer-events-none"
+                                >
+                                    تسجيل كتشتت
+                                </Label>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Content Area */}
@@ -407,6 +457,6 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                     </Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };

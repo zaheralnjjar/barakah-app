@@ -3,9 +3,10 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import SideNavBar from '@/components/SideNavBar';
 import { useSwipeBack } from '@/hooks/useSwipeBack';
 import { ShortcutDialogs } from '@/components/dialogs/ShortcutDialogs';
-import VoiceNoteRecorder from '@/components/VoiceNoteRecorder';
-import { Mic } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useNotesV2 } from '@/hooks/useNotesV2';
+import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
+import { useLongPress } from '@/hooks/useLongPress';
 import { useSystemModes } from '@/hooks/useSystemModes';
 const CoreLayout = () => {
     const location = useLocation();
@@ -91,6 +92,7 @@ const CoreLayout = () => {
     };
 
     const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+    const [isVoiceMode, setIsVoiceMode] = useState(false);
     const { notes, createNote, updateNote } = useNotesV2();
     const activeMode = useSystemModes().modes.find(m => m.is_active);
 
@@ -132,17 +134,12 @@ const CoreLayout = () => {
             {/* Global Unified Add Button - Bottom Left */}
             <UnifiedFloatingButton
                 onTap={() => {
-                    setShowVoiceRecorder(true); // Re-using this state for the dialog
-                    // Ideally we should rename showVoiceRecorder to showCreateNote to be clearer, 
-                    // but for now let's use the existing dialog logic or better yet, use CreateNoteDialog directly here.
+                    setIsVoiceMode(false);
+                    setShowVoiceRecorder(true);
                 }}
                 onLongPress={() => {
+                    setIsVoiceMode(true);
                     setShowVoiceRecorder(true);
-                    // We need to pass a flag to auto-start recording. 
-                    // Since we are reusing VoiceNoteRecorder (which is now likely CreateNoteDialog wrapper?), 
-                    // wait, I need to check if VoiceNoteRecorder is still the old one or if I should replace it with CreateNoteDialog.
-                    // The previous tool usage showed VoiceNoteRecorder in CoreLayout. 
-                    // I should replace VoiceNoteRecorder with CreateNoteDialog in this file first.
                 }}
             />
 

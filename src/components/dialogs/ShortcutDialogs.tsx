@@ -11,6 +11,16 @@ import * as XLSX from 'xlsx';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { isAndroid } from '@/utils/platformDetection';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const ShortcutDialogs = () => {
     const { toast } = useToast();
@@ -20,6 +30,7 @@ export const ShortcutDialogs = () => {
     const [distractionLogs, setDistractionLogs] = useState<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [distractionReason, setDistractionReason] = useState('');
+    const [showExportConfirm, setShowExportConfirm] = useState(false);
 
     // Medical Profile State
     const [showMedical, setShowMedical] = useState(false);
@@ -87,12 +98,7 @@ export const ShortcutDialogs = () => {
         }
     };
 
-    const handleShareLogs = async () => {
-        if (distractionLogs.length === 0) {
-            toast({ title: 'تنبيه', description: 'لا توجد سجلات للمشاركة' });
-            return;
-        }
-
+    const performExport = async () => {
         // 1. Prepare Data for Excel
         const dataToExport = distractionLogs.map(log => ({
             'السبب': log.reason,
@@ -102,7 +108,8 @@ export const ShortcutDialogs = () => {
         }));
 
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(dataToExport, { rtl: true });
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        ws['!views'] = [{ rightToLeft: true }];
 
         // Adjust column widths
         ws['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
@@ -118,14 +125,18 @@ export const ShortcutDialogs = () => {
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
                 try {
+                    // Try saving to Documents first (User accessible)
                     await Filesystem.writeFile({
                         path: fileName,
                         data: wbout,
-                        directory: Directory.Cache,
+                        directory: Directory.Documents,
                     });
 
+                    toast({ title: 'تم الحفظ ✅', description: `تم حفظ الملف في مجلد المستندات باسم: ${fileName}` });
+
+                    // Optional: Share immediately
                     const uriResult = await Filesystem.getUri({
-                        directory: Directory.Cache,
+                        directory: Directory.Documents,
                         path: fileName,
                     });
 
@@ -134,15 +145,28 @@ export const ShortcutDialogs = () => {
                         url: uriResult.uri,
                         dialogTitle: 'مشاركة ملف Excel'
                     });
+
                 } catch (e) {
-                    console.error('File share error:', e);
-                    // Fallback to Documents folder if Cache fails
-                    await Filesystem.writeFile({
-                        path: fileName,
-                        data: wbout,
-                        directory: Directory.Documents,
-                    });
-                    toast({ title: 'تم الحفظ', description: 'تم حفظ الملف في المستندات' });
+                    console.error('Documents save error:', e);
+                    // Fallback to Cache if Documents fails (Android 10- scoped storage issues)
+                    try {
+                        await Filesystem.writeFile({
+                            path: fileName,
+                            data: wbout,
+                            directory: Directory.Cache,
+                        });
+                        const uriResult = await Filesystem.getUri({
+                            directory: Directory.Cache,
+                            path: fileName,
+                        });
+                        await Share.share({
+                            title: 'سجل التشتت',
+                            url: uriResult.uri,
+                            dialogTitle: 'مشاركة ملف Excel'
+                        });
+                    } catch (innerE) {
+                        toast({ title: 'خطأ', description: 'فشل حفظ الملف. تحقق من الصلاحيات.', variant: 'destructive' });
+                    }
                 }
             } else {
                 // Web: Browser Download
@@ -151,8 +175,16 @@ export const ShortcutDialogs = () => {
             }
         } catch (error) {
             console.error('Export error:', error);
-            toast({ title: 'خطأ', description: 'حدث خطأ أثناء تصدير الملف', variant: 'destructive' });
+            toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع أثناء التصدير', variant: 'destructive' });
         }
+    };
+
+    const handleShareLogs = async () => {
+        if (distractionLogs.length === 0) {
+            toast({ title: 'تنبيه', description: 'لا توجد سجلات للمشاركة' });
+            return;
+        }
+        setShowExportConfirm(true);
     };
 
     return (
@@ -288,6 +320,24 @@ export const ShortcutDialogs = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog >
+
+            <AlertDialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
+                <AlertDialogContent dir="rtl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>تصدير سجل التشتت</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            هل تريد تصدير جميع سجلات التشتت إلى ملف Excel وحفظه على جهازك؟
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                            performExport();
+                            setShowExportConfirm(false);
+                        }}>تأكيد وتصدير</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 };
