@@ -41,6 +41,7 @@ import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
+import { MasterAgenda } from './dashboard/MasterAgenda';
 import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
@@ -280,6 +281,13 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 </div>
                             </div>
                         </div>
+
+                        {/* Master Agenda - NEW Unified Intelligence */}
+                        {!isCleanMode && (
+                            <div className="mb-2">
+                                <MasterAgenda />
+                            </div>
+                        )}
 
                         {/* DashboardLocations - Conditionally Hidden in Clean Mode */}
                         {!isCleanMode && <DashboardLocations />}

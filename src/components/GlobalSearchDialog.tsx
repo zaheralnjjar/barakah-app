@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, FileText, CheckSquare, StickyNote, ArrowRight, Loader2 } from 'lucide-react';
 import { ThesisService } from '@/services/thesis/ThesisService';
-import { debounce } from 'lodash'; // You might need to install lodash or write a simple debounce
+import { GlobalSearchService } from '@/services/GlobalSearchService';
+import { debounce } from 'lodash';
 
 // Simple debounce implementation if lodash is not available or desired to keep minimal
 function useDebounce<T>(value: T, delay: number): T {
@@ -77,40 +78,22 @@ export function GlobalSearchDialog({
     const performSearch = async (searchTerm: string) => {
         setLoading(true);
         try {
-            // Needed: A unified search API or multiple parallel queries
-            // Since we don't have a backend "search" endpoint yet, we'll fetch and filter
-            // Ideally, this should be an RPC call to Supabase
+            const searchResults = await GlobalSearchService.search(searchTerm);
 
-            // Temporary Strategy: Fetch current project structure and tasks (if project context exists)
-            // Or fetch ALL projects? Let's assume global context for now or limit to active?
-            // "Global Search" implies everything.
+            // Map GlobalSearchResult to SearchResult interface for UI compatibility
+            const mappedResults: SearchResult[] = searchResults.map(r => ({
+                id: r.id,
+                type: r.type === 'thesis' ? 'node' : r.type === 'note' ? 'note' : 'task', // fallback mapping
+                title: r.title,
+                subtitle: r.subtitle,
+                icon: r.icon,
+                link: r.link
+            }));
 
-            const results: SearchResult[] = [];
-            const termLower = searchTerm.toLowerCase();
-
-            // 1. Search Projects
-            const projects = await ThesisService.getProjects();
-            projects.forEach(p => {
-                if (p.name.toLowerCase().includes(termLower)) {
-                    results.push({
-                        id: p.id,
-                        type: 'node', // Using node icon for project for now
-                        title: p.name,
-                        subtitle: 'مشروع',
-                        icon: FileText,
-                        link: `/thesis/structure?project=${p.id}`
-                    });
-                }
-            });
-
-            // If we are inside a project (can we know?), search its content.
-            // For now, let's just search the projects list as a start + maybe RPC later.
-            // But User wants "Global Search". 
-            // We need an RPC function in Supabase for efficient full-text search.
-
-            setResults(results);
+            setResults(mappedResults);
         } catch (error) {
-            console.error(error);
+            console.error('Search performance error:', error);
+            setResults([]);
         } finally {
             setLoading(false);
         }
