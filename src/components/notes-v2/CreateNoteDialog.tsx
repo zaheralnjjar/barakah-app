@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Mic, MicOff, Loader2, Type, Palette } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 interface CreateNoteDialogProps {
     isOpen: boolean;
@@ -73,12 +74,14 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
     const [fontFamily, setFontFamily] = useState('Inherit');
     const [fontSize, setFontSize] = useState('16px');
     const [textColor, setTextColor] = useState('#000000');
+    const [isBold, setIsBold] = useState(false);
 
     const [isLoading, setIsLoading] = useState(false);
 
     // Recording State
     const [isRecording, setIsRecording] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const originalContentRef = useRef('');
 
     const [isDistraction, setIsDistraction] = useState(false);
     const [distractionDuration, setDistractionDuration] = useState(0);
@@ -93,6 +96,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
             setFontFamily('Inherit');
             setFontSize('16px');
             setTextColor('#000000');
+            setIsBold(false);
             setIsDistraction(false); // Reset distraction flag
 
             if (autoStartRecording) {
@@ -118,9 +122,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'ar-SA';
 
-        // Reset processed index
-        processedIndicesRef.current = new Set();
-        let lastContentLength = content.length;
+        originalContentRef.current = content; // Store content at start
 
         recognitionRef.current.onstart = () => {
             setIsRecording(true);
@@ -128,8 +130,8 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            let finalTranscript = '';
             let interimTranscript = '';
+            let finalTranscript = '';
 
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
@@ -139,12 +141,13 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                 }
             }
 
+            // Append to original content instead of current state to avoid duplication loop
+            const prefix = originalContentRef.current ? (originalContentRef.current + ' ') : '';
+            setContent(prefix + finalTranscript + interimTranscript);
+
+            // If final, update original so next accumulation includes it
             if (finalTranscript) {
-                setContent(prev => {
-                    const current = prev.trim();
-                    if (!current) return finalTranscript;
-                    return current + ' ' + finalTranscript;
-                });
+                originalContentRef.current = prefix + finalTranscript;
             }
         };
 
@@ -199,21 +202,7 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                 if (generalFolder) targetFolder = generalFolder.id;
             }
 
-            // 1. Create Note
-            const noteTags = isDistraction ? ['distraction'] : [];
-            await createNote({
-                title: finalTitle,
-                folder_id: targetFolder,
-                content: content,
-                color: color,
-                font_family: fontFamily,
-                font_size: fontSize,
-                text_color: textColor,
-                background_color: color,
-                tags: noteTags
-            } as any);
-
-            // 2. Distraction Logging Integration
+            // 1. Distraction Logic: If it's a distraction, save ONLY to distraction_logs and RETURN.
             if (isDistraction) {
                 try {
                     const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -225,15 +214,39 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                             duration_minutes: distractionDuration,
                             created_at: new Date().toISOString()
                         }]);
+                        toast({ title: "تم تسجيل التشتت", description: "تم الحفظ في سجل التشتت فقط." });
                     }
                 } catch (distractionError) {
                     console.error("Failed to log distraction:", distractionError);
-                    toast({ title: "تنبيه", description: "تم حفظ الملاحظة ولكن فشل تسجيل التشتت", variant: "default" });
+                    toast({ title: "خطأ", description: "فشل تسجيل التشتت", variant: "destructive" });
                 }
+
+                // Reset and Close - DO NOT save as note
+                setIsLoading(false);
+                setContent('');
+                setTitle('');
+                setIsDistraction(false);
+                onClose();
+                return;
             }
 
+            // 2. Create Note (Only if NOT a distraction)
+            const noteTags = [];
+            await createNote({
+                title: finalTitle,
+                folder_id: targetFolder,
+                content: content,
+                color: color,
+                font_family: fontFamily,
+                font_size: fontSize,
+                text_color: textColor,
+                background_color: color,
+                is_bold: isBold,
+                tags: noteTags
+            } as any);
+
             onClose();
-            toast({ title: "تم الحفظ ✅", description: isDistraction ? "تم حفظ الملاحظة وتسجيل التشتت" : "تم إنشاء الملاحظة بنجاح" });
+            toast({ title: "تم الحفظ ✅", description: "تم إنشاء الملاحظة بنجاح" });
 
         } catch (error: any) {
             console.error('Failed to create note:', error);
@@ -304,6 +317,21 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                     <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-100">
                         {/* Row 1: Formatting */}
                         <div className="flex flex-wrap items-center gap-2">
+                            {/* Bold Toggle */}
+                            <button
+                                type="button"
+                                onClick={() => setIsBold(!isBold)}
+                                className={cn(
+                                    "p-1.5 rounded-lg transition-all border shrink-0",
+                                    isBold ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
+                                )}
+                                title="عرض عريض"
+                            >
+                                <span className="font-bold">B</span>
+                            </button>
+
+                            <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+
                             {/* Font Family */}
                             <Select value={fontFamily} onValueChange={setFontFamily}>
                                 <SelectTrigger className="h-7 w-[110px] text-xs bg-white border-gray-200">
@@ -350,13 +378,16 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                             </Select>
 
                             {/* Background Color Shortcuts */}
-                            <div className="flex items-center gap-1 mr-auto pl-1 scale-90 origin-left">
-                                {NOTE_COLORS.slice(0, 5).map((c) => (
+                            <div className="flex items-center gap-1 mr-auto pl-1 scale-90 origin-left overflow-x-auto max-w-[150px] no-scrollbar">
+                                {NOTE_COLORS.map((c) => (
                                     <button
                                         key={c.value}
                                         type="button"
                                         onClick={() => setColor(c.value)}
-                                        className={`w-5 h-5 rounded-full border border-gray-200 transition-all ${color === c.value ? 'ring-2 ring-emerald-500 scale-110' : ''}`}
+                                        className={cn(
+                                            "w-5 h-5 rounded-full border border-gray-200 transition-all shrink-0",
+                                            color === c.value ? 'ring-2 ring-emerald-500 scale-110' : ''
+                                        )}
                                         style={{ backgroundColor: c.value }}
                                         title={c.name}
                                     />

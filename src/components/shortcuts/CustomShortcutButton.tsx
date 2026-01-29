@@ -58,12 +58,26 @@ const COLOR_CLASSES: Record<string, string> = {
     'pink': 'text-pink-600 bg-pink-100',
 };
 
+// Vivid colors for text-only Quick Action matching
+const VIVID_COLOR_CLASSES: Record<string, string> = {
+    'gray': 'bg-slate-500 text-white shadow-slate-200',
+    'red': 'bg-[#EF4444] text-white shadow-red-200',
+    'orange': 'bg-[#F97316] text-white shadow-orange-200',
+    'yellow': 'bg-amber-500 text-white shadow-amber-200',
+    'green': 'bg-[#10B981] text-white shadow-emerald-200',
+    'emerald': 'bg-[#10B981] text-white shadow-emerald-200',
+    'blue': 'bg-[#3B82F6] text-white shadow-blue-200',
+    'purple': 'bg-[#8B5CF6] text-white shadow-purple-200',
+    'pink': 'bg-[#EC4899] text-white shadow-pink-200',
+};
+
 interface CustomShortcutButtonProps {
     shortcut: CustomShortcut;
     onExecute: (shortcut: CustomShortcut, isLongPress: boolean) => void;
     onEdit?: (shortcut: CustomShortcut) => void;
     size?: 'sm' | 'md' | 'lg';
     showLabel?: boolean;
+    variant?: 'icon' | 'text-card'; // Added variant
 }
 
 export const CustomShortcutButton: React.FC<CustomShortcutButtonProps> = ({
@@ -71,19 +85,24 @@ export const CustomShortcutButton: React.FC<CustomShortcutButtonProps> = ({
     onExecute,
     onEdit,
     size = 'md',
-    showLabel = true
+    showLabel = true,
+    variant = 'icon'
 }) => {
     // Get icon - null means no icon (text-only)
     const Icon = useMemo(() => {
+        if (variant === 'text-card') return null; // Force no icon for text-card
         if (shortcut.custom_icon === 'none' || !shortcut.custom_icon) {
             return null;
         }
         return ICON_LIBRARY[shortcut.custom_icon] || null;
-    }, [shortcut.custom_icon]);
+    }, [shortcut.custom_icon, variant]);
 
     const colorClass = useMemo(() => {
+        if (variant === 'text-card') {
+            return VIVID_COLOR_CLASSES[shortcut.icon_color || 'emerald'] || VIVID_COLOR_CLASSES.emerald;
+        }
         return COLOR_CLASSES[shortcut.icon_color || 'emerald'] || COLOR_CLASSES.emerald;
-    }, [shortcut.icon_color]);
+    }, [shortcut.icon_color, variant]);
 
     const { isPressed, ...longPressHandlers } = useLongPress({
         onClick: () => onExecute(shortcut, false),
@@ -129,24 +148,31 @@ export const CustomShortcutButton: React.FC<CustomShortcutButtonProps> = ({
                 {...longPressHandlers}
                 onContextMenu={(e) => { e.preventDefault(); onEdit?.(shortcut); }}
                 className={cn(
-                    "relative flex items-center justify-center shadow-sm border transition-all duration-200",
-                    sizeClasses[size],
-                    Icon ? colorClass : "bg-white border-gray-200",
+                    "relative flex items-center justify-center shadow-md transition-all duration-200",
+                    variant === 'text-card'
+                        ? "w-full min-h-[50px] rounded-xl border-b-2 border-black/10 py-2.5"
+                        : cn("border", sizeClasses[size]),
+                    Icon ? colorClass : (variant === 'text-card' ? colorClass : "bg-white border-gray-200"),
                     isPressed && "scale-90 shadow-inner",
-                    !isPressed && "hover:shadow-md hover:scale-105"
+                    !isPressed && (variant === 'text-card' ? "active:scale-95" : "hover:shadow-md hover:scale-105")
                 )}
                 title={`${shortcut.custom_name}\nضغط: ${shortcut.click_action_id || 'لا يوجد'}\nضغط مطول: ${shortcut.long_press_action_id || 'لا يوجد'}`}
             >
                 {Icon ? (
                     <Icon className={cn(iconSizes[size], "stroke-[2.5]")} />
                 ) : (
-                    <span className={cn("font-bold text-gray-700 text-center", labelSizes[size])}>
-                        {shortcut.custom_name.slice(0, 3)}
+                    <span className={cn(
+                        "font-black tracking-wide text-center",
+                        variant === 'text-card'
+                            ? "text-[10px] md:text-xs"
+                            : cn("text-gray-700", labelSizes[size])
+                    )} style={variant === 'text-card' ? { fontFamily: 'Cairo, sans-serif' } : undefined}>
+                        {variant === 'text-card' ? shortcut.custom_name : shortcut.custom_name.slice(0, 3)}
                     </span>
                 )}
-                <TypeBadge />
+                {variant !== 'text-card' && <TypeBadge />}
             </button>
-            {showLabel && (
+            {(showLabel && variant !== 'text-card') && (
                 <span className={cn(
                     "font-bold text-gray-700 text-center leading-tight line-clamp-1 max-w-full px-0.5",
                     labelSizes[size]

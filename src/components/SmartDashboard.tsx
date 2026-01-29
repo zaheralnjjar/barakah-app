@@ -37,6 +37,7 @@ import PomodoroTimer from '@/components/PomodoroTimer';
 import DashboardHeader from './dashboard/DashboardHeader';
 import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
+import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 
 import { ActiveTimerCard } from './dashboard/ActiveTimerCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
@@ -252,7 +253,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', isAndroid() ? "space-y-1.5" : "space-y-1")}>
                         <DashboardHeaderStrip />
 
-                        {/* 1. Quick Access Grid (Text-Only) */}
+                        {/* 1. Quick Access Grid (Restored to Top) */}
                         <div className="mb-2">
                             <QuickActionsGridV2
                                 onOpenAddDialog={setShowAddDialog}
@@ -268,21 +269,30 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             />
                         </div>
 
-                        {/* 2. Active Timer / Event Card (CYCLING) */}
+                        {/* 2. Active Timer / Event Card (Moved between Quick Actions and Shortcuts) */}
                         <div className="mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
                             <ActiveTimerCard
-                                onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
                                 onOpenEvent={(evt) => {
                                     if ((evt as any).type === 'appointment') {
-                                        // Dispatch event to open appointment edit dialog (requires implementation in App or listening component)
-                                        // For now, we'll assume a custom event 'edit-appointment' 
                                         window.dispatchEvent(new CustomEvent('edit-appointment', { detail: evt }));
                                     } else {
-                                        // Dispatch event to open task details
                                         window.dispatchEvent(new CustomEvent('edit-task', { detail: evt }));
                                     }
                                 }}
                                 onOpenCalendar={() => onNavigateToTab('calendar')}
+                            />
+                        </div>
+
+                        {/* 1.5 Custom Shortcuts Grid (Now below Interactive Card) */}
+                        <div className="mb-2">
+                            <CustomShortcutsGrid
+                                placement="shortcuts_grid"
+                                onOpenAddDialog={setShowAddDialog}
+                                onNavigateToTab={onNavigateToTab}
+                                columns={6}
+                                size="sm"
+                                gridVariant="text-card"
+                                readonly={true} // Hide Add button as requested
                             />
                         </div>
 
@@ -720,10 +730,12 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 </div>
             )}
 
-            {/* Parking Section - Move to bottom */}
-            <div className="mx-[2%] mt-2 mb-20">
+            {/* Parking Section */}
+            <div className="mx-[2%] mt-2 mb-4">
                 <DashboardParking />
             </div>
+
+            {/* Quick Actions Grid (Bottom Section - REMOVED) */}
 
 
 

@@ -38,6 +38,10 @@ import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 import CoreLayout from "./components/CoreLayout";
 import PrayerTimes from "@/components/PrayerTimes";
 import LocationsPage from "@/pages/LocationsPage";
+import { MultiActionFAB } from '@/components/MultiActionFAB';
+import { isAndroid } from '@/utils/platformDetection';
+import { useState } from 'react';
+import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 
 const queryClient = new QueryClient();
 
@@ -144,6 +148,38 @@ const App = () => {
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
 
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+
+  // Global Handlers (lifted from CoreLayout if needed, or simply dispatch events)
+  const handleAddNote = () => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note' } }));
+  const handleVoiceNote = () => {
+    setIsVoiceMode(true);
+    setShowVoiceRecorder(true);
+  };
+  const handleAddAppointment = () => window.dispatchEvent(new Event('open-appointment-dialog'));
+  const handleAddDistraction = () => window.dispatchEvent(new Event('open-distraction-dialog'));
+
+  // Global Listeners for Notes/Voice
+  useEffect(() => {
+    const handleOpenQuickNote = (e: any) => {
+      setIsVoiceMode(false);
+      setShowVoiceRecorder(true);
+    };
+    const handleOpenVoice = () => {
+      setIsVoiceMode(true);
+      setShowVoiceRecorder(true);
+    };
+
+    window.addEventListener('open-quick-note', handleOpenQuickNote);
+    window.addEventListener('open-global-voice-recorder', handleOpenVoice);
+
+    return () => {
+      window.removeEventListener('open-quick-note', handleOpenQuickNote);
+      window.removeEventListener('open-global-voice-recorder', handleOpenVoice);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -184,6 +220,25 @@ const App = () => {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+
+            {/* Global FAB - Show everywhere on mobile */}
+            {(isAndroid() || window.innerWidth < 1024) && (
+              <MultiActionFAB
+                onAddNote={handleAddNote}
+                onVoiceNote={handleVoiceNote}
+                onAddAppointment={handleAddAppointment}
+                onAddDistraction={handleAddDistraction}
+                sizeMultiplier={0.65}
+                className="bottom-[80px] right-[4%]"
+              />
+            )}
+
+            {/* Global Note Dialog for Voice/Quick Notes */}
+            <CreateNoteDialog
+              isOpen={showVoiceRecorder}
+              onClose={() => setShowVoiceRecorder(false)}
+              autoStartRecording={isVoiceMode}
+            />
           </HashRouter>
         </ErrorBoundary>
       </TooltipProvider>

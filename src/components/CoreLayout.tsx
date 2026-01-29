@@ -32,7 +32,6 @@ const CoreLayout = () => {
 
         checkMobile();
         const handleResize = () => checkMobile();
-        const handleOpenVoiceRecorder = () => setShowVoiceRecorder(true);
 
         const handleCloudSync = () => syncNow();
         const handleNavigateTab = (e: any) => handleNavigate(e.detail);
@@ -62,7 +61,6 @@ const CoreLayout = () => {
         };
 
         window.addEventListener('resize', handleResize);
-        window.addEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
         window.addEventListener('trigger-cloud-sync', handleCloudSync);
         window.addEventListener('navigate-tab', handleNavigateTab);
         window.addEventListener('start-quick-timer', handleStartTimer);
@@ -73,7 +71,6 @@ const CoreLayout = () => {
 
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
             window.removeEventListener('trigger-cloud-sync', handleCloudSync);
             window.removeEventListener('navigate-tab', handleNavigateTab);
             window.removeEventListener('start-quick-timer', handleStartTimer);
@@ -143,7 +140,6 @@ const CoreLayout = () => {
         }
     };
 
-    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
     const [isVoiceMode, setIsVoiceMode] = useState(false);
     const { notes, createNote, updateNote } = useNotesV2();
     const activeMode = useSystemModes().modes.find(m => m.is_active);
@@ -188,23 +184,7 @@ const CoreLayout = () => {
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
 
-            {/* Multi-Action Floating Button - Show only on Mobile */}
-            {isMobile && (
-                <MultiActionFAB
-                    onAddNote={handleAddNote}
-                    onVoiceNote={handleVoiceNote}
-                    onAddAppointment={handleAddAppointment}
-                    onAddDistraction={handleAddDistraction}
-                    sizeMultiplier={0.65}
-                    className="bottom-[80px] right-[4%]"
-                />
-            )}
-
-            <CreateNoteDialog
-                isOpen={showVoiceRecorder}
-                onClose={() => setShowVoiceRecorder(false)}
-                autoStartRecording={isVoiceMode}
-            />
+            {/* Multi-Action Floating Button - Moved to App.tsx for global scope */}
 
             <ShortcutDialogs />
         </div>

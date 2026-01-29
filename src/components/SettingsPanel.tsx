@@ -67,7 +67,7 @@ const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { SystemModeEditorDialog } from '@/components/dialogs/SystemModeEditorDialog';
 import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
-import { FABSettingsDialog } from '@/components/dialogs/FABSettingsDialog';
+// FABSettingsDialog Removed
 
 
 import { DateRange } from 'react-day-picker';
@@ -452,7 +452,7 @@ const SettingsPanel = () => {
 
 
     const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
-    const [showFABSettings, setShowFABSettings] = useState(false);
+    // showFABSettings removed
 
     const SETTINGS_SECTIONS_DATA = [
         {
@@ -482,15 +482,7 @@ const SettingsPanel = () => {
             borderColor: 'border-indigo-100',
             description: 'تخصيص أيقونات الوصول السريع'
         },
-        {
-            id: 'fab_custom',
-            title: 'تخصيص الزر العائم',
-            icon: Sparkles,
-            color: 'text-amber-600',
-            bg: 'bg-amber-50',
-            borderColor: 'border-amber-100',
-            description: 'تغيير أيقونات ووظائف الزر الدائري'
-        },
+        // fab_custom section removed
         {
             id: 'new_muslims',
             title: 'هداية',
@@ -605,8 +597,6 @@ const SettingsPanel = () => {
                             onClick={() => {
                                 if (section.id === 'shortcuts') {
                                     setShowShortcutsSettings(true);
-                                } else if (section.id === 'fab_custom') {
-                                    setShowFABSettings(true);
                                 } else {
                                     setActiveSection(section.id);
                                 }
@@ -784,11 +774,7 @@ const SettingsPanel = () => {
                 onOpenChange={(open) => !open && setActiveSection(null)}
             />
 
-            {/* FAB Settings Dialog */}
-            <FABSettingsDialog
-                open={showFABSettings}
-                onOpenChange={setShowFABSettings}
-            />
+            {/* FAB Settings Dialog Removed */}
 
             {/* 2. Sync Dialog */}
             <Dialog open={activeSection === 'sync'} onOpenChange={(open) => !open && setActiveSection(null)}>

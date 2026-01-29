@@ -20,7 +20,7 @@ export const MultiActionFAB: React.FC<MultiActionFABProps> = ({
             <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onAddNote}
-                className="w-14 h-14 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center text-white"
+                className="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-green-600 rounded-full shadow-lg flex items-center justify-center text-white"
             >
                 <Plus className="w-7 h-7" />
             </motion.button>

@@ -2,7 +2,7 @@ import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
     CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
     Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings, GraduationCap, Users, Search,
-    RefreshCw, Link, Phone, AlertTriangle
+    RefreshCw, Link, Phone, AlertTriangle, Package
 } from 'lucide-react';
 
 /**
@@ -50,6 +50,7 @@ export const AVAILABLE_ACTIONS = [
     { id: 'loc_save_parking', name: 'حفظ الموقف', icon: Navigation, category: 'location', description: 'حفظ مكان ركن السيارة' },
     { id: 'loc_find_car', name: 'أين السيارة؟', icon: Navigation, category: 'location', description: 'الملاحة لموقع السيارة' },
     { id: 'loc_share', name: 'مشاركة موقعي', icon: Copy, category: 'location', description: 'نسخ رابط الموقع' },
+    { id: 'loc_shipping', name: 'موقع شحن', icon: Package, category: 'location', description: 'حفظ موقع شحن' },
 
     // ===== أدوات النظام =====
     { id: 'sys_sync', name: 'مزامنة سحابية', icon: RefreshCw, category: 'system', description: 'تحديث البيانات يدوياً' },

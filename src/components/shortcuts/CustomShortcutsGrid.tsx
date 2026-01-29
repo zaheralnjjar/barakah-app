@@ -22,14 +22,18 @@ interface CustomShortcutsGridProps {
     onNavigateToTab?: (tabId: string) => void;
     columns?: number;
     size?: 'sm' | 'md' | 'lg';
+    gridVariant?: 'icon' | 'text-card'; // New prop to control button style
+    readonly?: boolean; // If true, hides the Add button
 }
 
 export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
     placement,
     onOpenAddDialog,
     onNavigateToTab,
-    columns = 5,
-    size = 'md'
+    columns = 6, // Default to 6 to match Quick Actions
+    size = 'md',
+    gridVariant = 'icon',
+    readonly = false
 }) => {
     const { shortcuts, getByPlacement } = useCustomShortcuts();
     const [showCustomizer, setShowCustomizer] = useState(false);
@@ -64,6 +68,8 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
 
     // Empty state
     if (placementShortcuts.length === 0) {
+        if (readonly) return null;
+
         return (
             <>
                 <button
@@ -71,7 +77,7 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
                     className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 transition-all w-full justify-center"
                 >
                     <Plus className="w-5 h-5" />
-                    <span className="text-sm font-medium">إضافة اختصار مخصص</span>
+                    <span className="text-sm font-medium">إضافة اختصار</span>
                 </button>
                 <ShortcutCustomizerDialog
                     open={showCustomizer}
@@ -85,41 +91,51 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
     return (
         <>
             <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-black text-gray-400 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                        <Sparkles className="w-3 h-3" />
-                        اختصاراتي
-                    </h3>
-                    <button
-                        onClick={handleAddNew}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors text-xs font-medium"
-                    >
-                        <Plus className="w-3 h-3" />
-                        إضافة
-                    </button>
-                </div>
+                <div className="space-y-1">
+                    {/* Header hidden to make it look continuous, or make it subtle if needed. 
+                    User asked for "Display Custom Shortcuts Below Quick Actions". 
+                    If we want it valid, we can keep the header but make it small. 
+                    But "in the same row type style" implies continuity. 
+                    Let's Keep the header but minimalistic or remove if placement is 'shortcuts_grid' specifically for top dashboard.
+                */}
 
-                <div
-                    className={cn("grid gap-3", {
-                        'grid-cols-4': columns === 4,
-                        'grid-cols-5': columns === 5,
-                        'grid-cols-6': columns === 6,
-                        'md:grid-cols-10': columns >= 5,
-                    })}
-                >
-                    {placementShortcuts.map(shortcut => (
-                        <CustomShortcutButton
-                            key={shortcut.id}
-                            shortcut={shortcut}
-                            onExecute={handleExecute}
-                            onEdit={handleEdit}
-                            size={size}
-                        />
-                    ))}
+                    <div
+                        className={cn("grid gap-2 px-1", {
+                            'grid-cols-4': columns === 4,
+                            'grid-cols-5': columns === 5,
+                            'grid-cols-6': columns === 6,
+                        })}
+                        dir="rtl"
+                    >
+                        {placementShortcuts.map(shortcut => (
+                            <div key={shortcut.id} className="col-span-1">
+                                <CustomShortcutButton
+                                    shortcut={shortcut}
+                                    onExecute={handleExecute}
+                                    onEdit={handleEdit}
+                                    size={size}
+                                    variant={gridVariant}
+                                    showLabel={gridVariant === 'icon'} // Hide external label if text-card
+                                />
+                            </div>
+                        ))}
+
+                        {/* Add Button as the last item in the grid flow - Only if not readonly */}
+                        {!readonly && (
+                            <button
+                                onClick={handleAddNew}
+                                className={cn(
+                                    "flex items-center justify-center rounded-xl transition-all active:scale-95 shadow-sm border-2 border-dashed border-gray-200 text-gray-400 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50",
+                                    gridVariant === 'text-card' ? "w-full min-h-[50px] py-2.5" : "w-16 h-16"
+                                )}
+                                title="إضافة اختصار جديد"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
-
             <ShortcutCustomizerDialog
                 open={showCustomizer}
                 onOpenChange={setShowCustomizer}

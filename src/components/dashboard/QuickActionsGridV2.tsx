@@ -52,8 +52,9 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     });
 
     // Filter shortcuts based on mode
+    // Filter shortcuts based on mode, fallback to global if mode has no shortcuts
     const filteredGridShortcuts = React.useMemo(() => {
-        if (activeMode && activeMode.shortcut_ids.length > 0) {
+        if (activeMode && activeMode.shortcut_ids && activeMode.shortcut_ids.length > 0) {
             return gridShortcuts.filter(s => activeMode.shortcut_ids.includes(s.id));
         }
         return gridShortcuts;
@@ -96,106 +97,89 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             : 'bg-slate-100/80 text-slate-700 border-slate-200',
     };
 
-    const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'note'];
-
-    // Simplified Layout - Text Only Grid
-    const gridActions = [
-        { id: 'event', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200' }, // Violet
-        { id: 'timer', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200' }, // Orange
-        { id: 'expense', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200' }, // Red
-        { id: 'location', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200' }, // Emerald
-        { id: 'shopping', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200' }, // Pink
-        { id: 'settings', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200' }, // Blue (replaced prayer)
+    // Default actions fallback
+    const defaultActions = [
+        { id: 'event-default', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200', actionId: 'event' },
+        { id: 'timer-default', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200', actionId: 'timer' },
+        { id: 'expense-default', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200', actionId: 'expense' },
+        { id: 'location-default', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'location' },
+        { id: 'shopping-default', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200', actionId: 'shopping' },
+        { id: 'settings-default', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200', actionId: 'sys_settings' },
     ];
+
+    // Enforce static default actions - Ignore dynamic shortcuts
+    const displayActions = defaultActions;
 
     return (
         <div className="w-full relative">
-            <div className="grid grid-cols-6 gap-2 px-1" dir="rtl">
-                {gridActions.map((action) => {
-                    const isSettings = action.id === 'settings';
+            <div className={`grid grid-cols-${Math.min(displayActions.length, 6)} gap-2 px-1`} dir="rtl">
+                {displayActions.map((action) => {
+                    // Check for menu types
+                    const isSettings = action.actionId === 'sys_settings' || action.actionId === 'nav_settings' || action.actionId === 'open_settings' || action.actionId === 'settings';
+                    const isEvent = action.actionId === 'event' || action.actionId === 'add_event';
+                    const isLocation = action.actionId === 'location' || action.actionId === 'loc_save_current' || action.actionId === 'save_location_current';
+
+                    // Determine if any menu is open for this action
+                    const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu) || (isLocation && showLocationMenu);
+
                     return (
-                        <div key={action.id} className="relative">
+                        <div key={action.id} className="relative col-span-1">
                             <button
                                 onClick={() => {
-                                    if (action.id === 'event') setShowEventMenu(true);
-                                    else if (action.id === 'timer') window.dispatchEvent(new Event('openPomodoroDialog'));
-                                    else if (action.id === 'expense') onOpenAddDialog('expense');
-                                    else if (action.id === 'location') setShowLocationMenu(true);
-                                    else if (action.id === 'shopping') onOpenAddDialog('shopping');
-                                    else if (action.id === 'settings') onOpenShortcuts?.(); // Direct to Shortcuts
+                                    if (isSettings) setShowSettingsMenu(!showSettingsMenu);
+                                    else if (isEvent) setShowEventMenu(!showEventMenu);
+                                    else if (isLocation) setShowLocationMenu(!showLocationMenu);
+                                    else if (action.actionId) executeShortcut(action.actionId);
                                 }}
                                 className={cn(
-                                    "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full",
+                                    "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full h-full min-h-[50px]",
                                     action.color,
                                     "border-b-2 border-black/10"
                                 )}
                             >
-                                <span className="text-[10px] md:text-xs font-black tracking-wide" style={{ fontFamily: 'Cairo, sans-serif' }}>{action.label}</span>
+                                <span className={cn("text-[10px] md:text-xs font-black tracking-wide", displayActions.length > 5 && "text-[9px]")} style={{ fontFamily: 'Cairo, sans-serif' }}>
+                                    {action.label}
+                                </span>
                             </button>
+
+                            {/* Unified Floating Menu Logic */}
+                            {isOpen && (
+                                <div className="absolute top-14 left-0 z-50 flex flex-col gap-2 w-full min-w-[50px]">
+                                    {isSettings && [
+                                        { icon: Icons.Moon, action: () => { navigate('/prayer-times'); setShowSettingsMenu(false); }, color: 'bg-indigo-500 text-white shadow-indigo-200' },
+                                        { icon: Icons.Map, action: () => { navigate('/locations'); setShowSettingsMenu(false); }, color: 'bg-emerald-500 text-white shadow-emerald-200' },
+                                        { icon: Icons.Heart, action: () => { onOpenNewMuslims?.(); setShowSettingsMenu(false); }, color: 'bg-teal-500 text-white shadow-teal-200' },
+                                        { icon: Icons.GraduationCap, action: () => { navigate('/thesis'); setShowSettingsMenu(false); }, color: 'bg-blue-500 text-white shadow-blue-200' },
+                                        { icon: Icons.Command, action: () => { onOpenShortcuts?.(); setShowSettingsMenu(false); }, color: 'bg-purple-500 text-white shadow-purple-200' }
+                                    ].map((item, idx) => (
+                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
+                                            <item.icon className="w-5 h-5" />
+                                        </button>
+                                    ))}
+
+                                    {isEvent && [
+                                        { icon: CalendarPlus, action: () => { setShowEventMenu(false); onOpenAddDialog('appointment'); }, color: 'bg-orange-500 text-white shadow-orange-200' },
+                                        { icon: CheckSquare, action: () => { setShowEventMenu(false); onOpenAddDialog('task'); }, color: 'bg-blue-500 text-white shadow-blue-200' }
+                                    ].map((item, idx) => (
+                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
+                                            <item.icon className="w-5 h-5" />
+                                        </button>
+                                    ))}
+
+                                    {isLocation && [
+                                        { icon: MapPin, action: () => { setShowLocationMenu(false); setShowSavedLocations(true); }, color: 'bg-blue-500 text-white shadow-blue-200' },
+                                        { icon: Navigation, action: () => { setShowLocationMenu(false); onQuickParking?.(); }, color: 'bg-orange-500 text-white shadow-orange-200' }
+                                    ].map((item, idx) => (
+                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
+                                            <item.icon className="w-5 h-5" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     );
                 })}
             </div>
-
-            {/* Event Type Selection Menu */}
-            <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
-                <DialogContent className="max-w-[90vw] rounded-3xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-center text-lg">اختر نوع الحدث</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                        <button
-                            onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-600 active:scale-95"
-                        >
-                            <CalendarPlus className="w-10 h-10 mb-2" />
-                            <span className="text-sm font-bold">موعد</span>
-                        </button>
-                        <button
-                            onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
-                        >
-                            <CheckSquare className="w-10 h-10 mb-2" />
-                            <span className="text-sm font-bold">مهمة</span>
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Location Type Selection Menu */}
-            <Dialog open={showLocationMenu} onOpenChange={setShowLocationMenu}>
-                <DialogContent className="max-w-[90vw] rounded-3xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-center flex items-center justify-center gap-2">
-                            <MapPin className="w-5 h-5 text-green-500" />
-                            الموقع
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                        <button
-                            onClick={() => {
-                                setShowLocationMenu(false);
-                                setShowSavedLocations(true); // Open Saved Locations Dialog
-                            }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
-                        >
-                            <MapPin className="w-8 h-8 mb-2" />
-                            <span className="text-sm font-bold">مواقع محفوظة</span>
-                        </button>
-
-                        <button
-                            onClick={() => { setShowLocationMenu(false); onQuickParking?.(); }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-700 active:scale-95"
-                        >
-                            <div className="relative">
-                                <MapPin className="w-8 h-8 mb-2 text-orange-600" />
-                                <span className="text-2xl absolute -top-1 -right-1">🅿️</span>
-                            </div>
-                            <span className="text-sm font-bold">حفظ سريع (موقف)</span>
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
 
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />

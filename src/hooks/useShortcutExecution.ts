@@ -124,8 +124,12 @@ export const useShortcutExecution = (props: {
             case 'nav_map_settings': window.dispatchEvent(new Event('open-map-settings')); break;
 
             case 'timer': executeShortcut('start_pomodoro'); break;
-            case 'event': executeShortcut('add_event'); break;
+            case 'start_pomodoro': props.onOpenTimer?.(); break;
+
             case 'expense': executeShortcut('add_expense'); break;
+            case 'add_expense': props.onOpenAddDialog('expense'); break;
+
+            case 'shopping': props.onOpenAddDialog('shopping'); break;
             case 'location':
             case 'save_location':
                 // Open the full Location Manager Dialog instead of just saving current
@@ -159,6 +163,23 @@ export const useShortcutExecution = (props: {
                 } else {
                     // Fallback to triggering the global event which DashboardLocations listens to
                     window.dispatchEvent(new CustomEvent('save-parking'));
+                }
+                break;
+
+            case 'loc_shipping':
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        const name = prompt('اسم موقع الشحن:', 'موقع شحن');
+                        if (!name) return;
+                        await supabase.from('saved_locations').insert({
+                            user_id: (await supabase.auth.getUser()).data.user?.id,
+                            name,
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                            type: 'shipping' // Assuming 'shipping' is a valid type or generic enough
+                        });
+                        toast({ title: '📦 تم الحفظ', description: `تم حفظ ${name}` });
+                    });
                 }
                 break;
 

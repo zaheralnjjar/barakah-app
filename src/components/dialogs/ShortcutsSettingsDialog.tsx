@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
+import { getActionById, AVAILABLE_ACTIONS, ACTION_CATEGORIES } from '@/constants/actionDefinitions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { MapPin, Plus, Trash2, Sparkles, Navigation, Edit, Link, Phone, Zap, Lay
 import { useToast } from '@/hooks/use-toast';
 import { ShortcutCustomizerDialog } from './ShortcutCustomizerDialog';
 import type { CustomShortcut } from '@/types/shortcuts';
+import { cn } from '@/lib/utils'; // Import cn
 
 interface ShortcutsSettingsDialogProps {
     open: boolean;
@@ -57,8 +58,33 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                 const link = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
                 setNewLocUrl(link);
                 setTempCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                if (!newLocName) setNewLocName("موقعي الحالي");
-                setIsLoadingLocation(false);
+
+                // Reverse Geocoding
+                if (!newLocName) {
+                    setIsLoadingLocation(true);
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=ar`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.display_name) {
+                                // Extract street/building from address if possible, or use full name
+                                const road = data.address?.road || '';
+                                const houseNumber = data.address?.house_number || '';
+                                const city = data.address?.city || data.address?.town || '';
+                                const formatted = `${road} ${houseNumber} ${city}`.trim();
+                                setNewLocName(formatted || data.display_name.split(',')[0]);
+                            } else {
+                                setNewLocName("موقعي الحالي");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Reverse geocoding error:", err);
+                            setNewLocName("موقعي الحالي");
+                        })
+                        .finally(() => setIsLoadingLocation(false));
+                } else {
+                    setIsLoadingLocation(false);
+                }
+
                 toast({ title: 'تم تحديد الموقع' });
             },
             (err) => {
@@ -320,19 +346,14 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                         )}
 
                         <div className="space-y-6">
-                            {['smart', 'info', 'tool', 'action', 'contact', 'remind', 'calc'].map(category => {
+                            {Object.entries(ACTION_CATEGORIES).map(([category, label]) => {
                                 const actions = AVAILABLE_ACTIONS.filter(a => a.category === category);
                                 if (actions.length === 0) return null;
 
                                 return (
                                     <div key={category}>
                                         <Badge variant="outline" className="mb-3 text-xs px-2 py-0.5 bg-gray-50">
-                                            {category === 'smart' ? '🧠 ذكي' :
-                                                category === 'info' ? '📊 معلومات' :
-                                                    category === 'tool' ? '🛠️ أدوات' :
-                                                        category === 'action' ? '⚡ إجراءات' :
-                                                            category === 'contact' ? '📞 اتصال' :
-                                                                category === 'remind' ? '🔔 تذكير' : '🧮 حاسبة'}
+                                            {label}
                                         </Badge>
                                         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                                             {actions.map(action => {
@@ -341,15 +362,21 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                                                 return (
                                                     <button
                                                         key={action.id}
-                                                        onClick={() => !isAdded && addShortcut(action.id)}
+                                                        onClick={() => {
+                                                            if (!isAdded) {
+                                                                addShortcut(action.id);
+                                                                toast({ title: '✅ تم الإضافة', description: `تم إضافة ${action.name} للشاشة الرئيسية` });
+                                                            }
+                                                        }}
                                                         disabled={isAdded}
-                                                        className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all border aspect-square
-                                                            ${isAdded
-                                                                ? 'bg-gray-50 border-gray-100 opacity-60 grayscale'
+                                                        className={cn(
+                                                            "relative flex flex-col items-center justify-center p-2 rounded-xl transition-all border aspect-square",
+                                                            isAdded
+                                                                ? 'bg-gray-50 border-gray-100 opacity-60 grayscale cursor-not-allowed'
                                                                 : 'bg-white border-gray-200 hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5'
-                                                            }`}
+                                                        )}
                                                     >
-                                                        <Icon className={`w-6 h-6 mb-2 ${isAdded ? 'text-gray-400' : 'text-gray-700'}`} />
+                                                        <Icon className={cn("w-6 h-6 mb-2", isAdded ? 'text-gray-400' : 'text-gray-700')} />
                                                         <span className="text-[10px] font-bold text-center leading-tight line-clamp-2">{action.name}</span>
 
                                                         {!isAdded && (

@@ -101,6 +101,21 @@ export const DashboardParking: React.FC = () => {
                         <p className="text-2xl font-mono font-bold text-orange-600 dir-ltr leading-none mt-0.5">{parkingDuration}</p>
                     </div>
                 </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-orange-400 hover:text-orange-600 hover:bg-orange-100 rounded-full"
+                    onClick={async () => {
+                        if (confirm('هل أنت متأكد من إغلاق عداد الموقف؟')) {
+                            await deleteLocation(latestParking.id);
+                            setParkingDuration(null);
+                            setLatestParking(null);
+                            toast({ title: 'تم إغلاق العداد' });
+                        }
+                    }}
+                >
+                    <X className="w-5 h-5" />
+                </Button>
             </div>
 
             {/* Address Details */}
