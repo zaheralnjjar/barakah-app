@@ -219,8 +219,7 @@ export const ShortcutDialogs = () => {
                 title: apptTitle.trim(),
                 date: apptDate,
                 time: apptTime,
-                reminder_minutes: 15,
-                is_completed: false
+                status: 'scheduled'
             });
 
             if (error) throw error;

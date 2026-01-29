@@ -140,7 +140,8 @@ const CoreLayout = () => {
                     onVoiceNote={handleVoiceNote}
                     onAddAppointment={handleAddAppointment}
                     onAddDistraction={handleAddDistraction}
-                    className="fixed bottom-24 left-6"
+                    sizeMultiplier={0.65}
+                    className="fixed bottom-[72px] right-[4.5%]"
                 />
             )}
 

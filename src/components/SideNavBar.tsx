@@ -116,7 +116,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
     if (isMobile) {
         return (
             <TooltipProvider delayDuration={200}>
-                <nav className="fixed bottom-0 left-0 w-full h-20 bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center justify-between px-2 pb-6">
+                <nav className="fixed bottom-0 left-0 w-full h-[64px] bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-[9999] flex items-center justify-between px-2 pb-2">
                     <div className="flex-1 flex items-center justify-around">
                         {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                     </div>

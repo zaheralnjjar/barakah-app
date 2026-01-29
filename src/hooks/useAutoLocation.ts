@@ -6,7 +6,7 @@ export const useAutoLocation = () => {
     const { toast } = useToast();
     const [isLocating, setIsLocating] = useState(false);
 
-    const saveCurrentLocation = async () => {
+    const handleSaveLocation = async () => {
         if (!navigator.geolocation) {
             toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
             return;
@@ -14,7 +14,7 @@ export const useAutoLocation = () => {
 
         const options = {
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 30000,
             maximumAge: 0
         };
 
@@ -52,7 +52,7 @@ export const useAutoLocation = () => {
                 // Save to Supabase
                 const { error } = await supabase.from('saved_locations').insert({
                     user_id: user.id,
-                    name: addressName,
+                    title: addressName,
                     lat,
                     lng,
                     category: 'عام',
@@ -90,5 +90,5 @@ export const useAutoLocation = () => {
         }, options);
     };
 
-    return { saveCurrentLocation, isLocating };
+    return { handleSaveLocation, isLocating };
 };
