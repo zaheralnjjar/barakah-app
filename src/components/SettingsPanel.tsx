@@ -35,7 +35,8 @@ import {
     ChevronDown,
     LayoutDashboard,
     Moon,
-    Map, // New Icon
+    Map,
+    Sparkles,
 } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations'; // Added hook import
 import { Switch } from '@/components/ui/switch';
@@ -66,6 +67,7 @@ const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { SystemModeEditorDialog } from '@/components/dialogs/SystemModeEditorDialog';
 import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
+import { FABSettingsDialog } from '@/components/dialogs/FABSettingsDialog';
 
 
 import { DateRange } from 'react-day-picker';
@@ -450,6 +452,7 @@ const SettingsPanel = () => {
 
 
     const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
+    const [showFABSettings, setShowFABSettings] = useState(false);
 
     const SETTINGS_SECTIONS_DATA = [
         {
@@ -478,6 +481,15 @@ const SettingsPanel = () => {
             bg: 'bg-indigo-50',
             borderColor: 'border-indigo-100',
             description: 'تخصيص أيقونات الوصول السريع'
+        },
+        {
+            id: 'fab_custom',
+            title: 'تخصيص الزر العائم',
+            icon: Sparkles,
+            color: 'text-amber-600',
+            bg: 'bg-amber-50',
+            borderColor: 'border-amber-100',
+            description: 'تغيير أيقونات ووظائف الزر الدائري'
         },
         {
             id: 'new_muslims',
@@ -593,6 +605,8 @@ const SettingsPanel = () => {
                             onClick={() => {
                                 if (section.id === 'shortcuts') {
                                     setShowShortcutsSettings(true);
+                                } else if (section.id === 'fab_custom') {
+                                    setShowFABSettings(true);
                                 } else {
                                     setActiveSection(section.id);
                                 }
@@ -768,6 +782,12 @@ const SettingsPanel = () => {
             <MapsSettingsDialog
                 open={activeSection === 'maps'}
                 onOpenChange={(open) => !open && setActiveSection(null)}
+            />
+
+            {/* FAB Settings Dialog */}
+            <FABSettingsDialog
+                open={showFABSettings}
+                onOpenChange={setShowFABSettings}
             />
 
             {/* 2. Sync Dialog */}
