@@ -2,7 +2,7 @@ import {
     FileText, ShoppingCart, MapPin, DollarSign, Sparkles,
     CalendarPlus, CheckSquare, Target, Navigation, Timer, LayoutGrid, Wallet, Clock, ListChecks, Calendar, StickyNote, Heart, Pill,
     Bell, Mic, Copy, Coffee, Droplets, Brain, Zap, Moon, Calculator, ExternalLink, Trash2, Plus, Settings, GraduationCap, Users, Search,
-    RefreshCw, Link, Phone
+    RefreshCw, Link, Phone, AlertTriangle
 } from 'lucide-react';
 
 /**
@@ -10,70 +10,51 @@ import {
  * تم تنظيف الاختصارات المكررة وتصنيفها بشكل واضح
  */
 export const AVAILABLE_ACTIONS = [
-    // ===== التنقل والأقسام =====
-    { id: 'show_new_muslims', name: 'المهتدين', icon: Users, category: 'navigation', description: 'الانتقال إلى قسم هداية' },
-    { id: 'open_academic', name: 'الأكاديمية', icon: GraduationCap, category: 'navigation', description: 'الانتقال إلى الأكاديمية' },
-    { id: 'open_settings', name: 'الإعدادات', icon: Settings, category: 'navigation', description: 'إعدادات التطبيق' },
-    { id: 'toggle_clean_mode', name: 'إخفاء/إظهار', icon: LayoutGrid, category: 'navigation', description: 'تبديل وضع العرض' },
-    { id: 'open_tools', name: 'تخصيص', icon: Sparkles, category: 'navigation', description: 'تخصيص الاختصارات والأدوات' },
-    { id: 'open_tools', name: 'تخصيص', icon: Sparkles, category: 'navigation', description: 'تخصيص الاختصارات والأدوات' },
-    { id: 'search', name: 'بحث', icon: Search, category: 'navigation', description: 'البحث في التطبيق' },
+    // ===== التنقل والأقسام (فتح النوافذ) =====
+    { id: 'nav_dashboard', name: 'الرئيسية', icon: LayoutGrid, category: 'navigation', description: 'فتح شاشة التحكم الرئيسية' },
     { id: 'nav_finance', name: 'المالية', icon: DollarSign, category: 'navigation', description: 'الانتقال للقسم المالي' },
     { id: 'nav_productivity', name: 'الإنتاجية', icon: Target, category: 'navigation', description: 'الانتقال لقسم الإنتاجية' },
     { id: 'nav_notes', name: 'الملاحظات', icon: StickyNote, category: 'navigation', description: 'الانتقال للملاحظات' },
     { id: 'nav_map', name: 'الخريطة', icon: MapPin, category: 'navigation', description: 'فتح الخريطة التفاعلية' },
-    { id: 'nav_map_settings', name: 'إعدادات الخريطة', icon: Settings, category: 'navigation', description: 'فتح إعدادات الخريطة' },
+    { id: 'nav_academic', name: 'الأكاديمية', icon: GraduationCap, category: 'navigation', description: 'الانتقال للأكاديمية' },
+    { id: 'nav_islamic', name: 'الإسلاميات', icon: Heart, category: 'navigation', description: 'فتح القسم الإسلامي' },
+    { id: 'nav_new_muslims', name: 'هداية', icon: Users, category: 'navigation', description: 'قسم المهتدين الجدد' },
+    { id: 'nav_settings', name: 'الإعدادات', icon: Settings, category: 'navigation', description: 'إعدادات التطبيق' },
+    { id: 'nav_reports', name: 'التقارير', icon: FileText, category: 'navigation', description: 'فتح مركز التقارير' },
 
     // ===== ملخصات ومعلومات =====
-    { id: 'daily_summary', name: 'ملخص اليوم', icon: Brain, category: 'info', description: 'ملخص ذكي لنشاطات اليوم' },
-    { id: 'show_monthly_summary', name: 'ملخص الشهر', icon: ListChecks, category: 'info', description: 'تقرير إنجازات الشهر' },
-    { id: 'show_balance', name: 'الرصيد المالي', icon: Wallet, category: 'info', description: 'عرض الرصيد الحالي والمتبقي اليومي' },
-    { id: 'finance_summary', name: 'ملخص مالي', icon: Wallet, category: 'info', description: 'عرض ملخص المصاريف لليوم' },
-    { id: 'show_next_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'عرض الصلاة القادمة والوقت المتبقي' },
-    { id: 'show_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'عرض المهام المتبقية اليوم' },
-    { id: 'show_appointments', name: 'المواعيد', icon: Calendar, category: 'info', description: 'عرض المواعيد القادمة' },
-    { id: 'show_shopping', name: 'التسوق', icon: ShoppingCart, category: 'info', description: 'عرض نواقص قائمة التسوق' },
-    { id: 'show_medications', name: 'الأدوية', icon: Pill, category: 'info', description: 'عرض الأدوية المطلوبة اليوم' },
-    { id: 'show_habits', name: 'العادات', icon: Heart, category: 'info', description: 'عرض العادات المطلوب إنجازها' },
+    { id: 'info_daily', name: 'ملخص اليوم', icon: Brain, category: 'info', description: 'ملخص ذكي لنشاطات اليوم' },
+    { id: 'info_monthly', name: 'ملخص الشهر', icon: ListChecks, category: 'info', description: 'تقرير إنجازات الشهر' },
+    { id: 'info_balance', name: 'الرصيد', icon: Wallet, category: 'info', description: 'عرض الرصيد المالي الحالي' },
+    { id: 'info_prayer', name: 'الصلاة القادمة', icon: Moon, category: 'info', description: 'الوقت المتبقي للصلاة' },
+    { id: 'info_tasks', name: 'مهام اليوم', icon: ListChecks, category: 'info', description: 'المهام المتبقية' },
 
-    // ===== إضافة سريعة =====
-    { id: 'add_task', name: 'مهمة جديدة', icon: CheckSquare, category: 'action', description: 'إضافة مهمة جديدة بسرعة' },
-    { id: 'add_expense', name: 'مصروف جديد', icon: DollarSign, category: 'action', description: 'تسجيل عملية مالية' },
-    { id: 'add_note', name: 'ملاحظة جديدة', icon: StickyNote, category: 'action', description: 'إضافة ملاحظة' },
-    { id: 'add_event', name: 'موعد جديد', icon: Calendar, category: 'action', description: 'إضافة موعد أو حدث جديد' },
-    { id: 'add_shopping', name: 'صنف تسوق', icon: ShoppingCart, category: 'action', description: 'إضافة صنف للتسوق' },
-    { id: 'brain_dump', name: 'تفريغ ذهني', icon: Brain, category: 'action', description: 'كتابة ملاحظة سريعة لتفريغ الأفكار' },
+    // ===== إضافة سريعة (إجراءات ذكية) =====
+    { id: 'add_task_priority', name: 'مهمة عاجلة', icon: AlertTriangle, category: 'action', description: 'إضافة مهمة ذات أولوية عالية' },
+    { id: 'add_task_normal', name: 'مهمة عادية', icon: CheckSquare, category: 'action', description: 'إضافة مهمة جديدة' },
+    { id: 'add_expense_quick', name: 'مصروف سريع', icon: DollarSign, category: 'action', description: 'تسجيل عملية مالية سريعة' },
+    { id: 'add_note_quick', name: 'ملاحظة سريعة', icon: StickyNote, category: 'action', description: 'إضافة ملاحظة نصية' },
+    { id: 'add_voice_quick', name: 'تسجيل صبري', icon: Mic, category: 'action', description: 'إضافة ملاحظة صوتية فورية' },
+    { id: 'add_event_quick', name: 'موعد جديد', icon: Calendar, category: 'action', description: 'إضافة موعد أو حدث' },
+    { id: 'add_distraction_log', name: 'سجل تشتت', icon: Zap, category: 'action', description: 'تسجيل تشتت فوري' },
 
-    // ===== المؤقتات =====
-    { id: 'start_pomodoro', name: 'مؤقت التركيز', icon: Timer, category: 'timer', description: 'بدء جلسة بومودورو' },
-    { id: 'quick_timer_5', name: 'مؤقت 5 دقائق', icon: Timer, category: 'timer', description: 'بدء مؤقت سريع لـ 5 دقائق' },
+    // ===== المؤقتات (إجراءات ذكية) =====
+    { id: 'timer_focus', name: 'مؤقت تركيز', icon: Timer, category: 'timer', description: 'بدء جلسة بومودورو' },
+    { id: 'timer_5', name: 'مؤقت 5د', icon: Clock, category: 'timer', description: 'مؤقت لـ 5 دقائق' },
+    { id: 'timer_15', name: 'مؤقت 15د', icon: Clock, category: 'timer', description: 'مؤقت لـ 15 دقيقة' },
+    { id: 'timer_30', name: 'مؤقت 30د', icon: Clock, category: 'timer', description: 'مؤقت لـ 30 دقيقة' },
+    { id: 'timer_60', name: 'مؤقت ساعة', icon: Clock, category: 'timer', description: 'مؤقت لمدة ساعة' },
 
     // ===== الموقع والخرائط =====
-    { id: 'save_parking', name: 'حفظ موقف السيارة', icon: Navigation, category: 'location', description: 'حفظ موقع السيارة الحالي' },
-    { id: 'find_car', name: 'أين سيارتي؟', icon: Navigation, category: 'location', description: 'الملاحة لموقع السيارة المحفوظ' },
-    { id: 'save_location_current', name: 'حفظ موقعي', icon: MapPin, category: 'location', description: 'حفظ الموقع الحالي في القائمة' },
-    { id: 'share_location', name: 'مشاركة موقعي', icon: Copy, category: 'location', description: 'نسخ رابط الموقع الحالي' },
-    { id: 'copy_coords', name: 'نسخ الإحداثيات', icon: Copy, category: 'location', description: 'نسخ إحداثيات الموقع الحالي' },
-    { id: 'open_map', name: 'فتح الخريطة', icon: MapPin, category: 'location', description: 'فتح خرائط جوجل في موقعي' },
-    { id: 'navigate_to_location', name: 'الملاحة إلى...', icon: Navigation, category: 'location', description: 'اختيار موقع محفوظ للملاحة إليه' },
-    { id: 'show_all_locations', name: 'المواقع المحفوظة', icon: MapPin, category: 'location', description: 'عرض قائمة المواقع المحفوظة' },
+    { id: 'loc_save_current', name: 'حفظ موقعي', icon: MapPin, category: 'location', description: 'حفظ الموقع الحالي' },
+    { id: 'loc_save_parking', name: 'حفظ الموقف', icon: Navigation, category: 'location', description: 'حفظ مكان ركن السيارة' },
+    { id: 'loc_find_car', name: 'أين السيارة؟', icon: Navigation, category: 'location', description: 'الملاحة لموقع السيارة' },
+    { id: 'loc_share', name: 'مشاركة موقعي', icon: Copy, category: 'location', description: 'نسخ رابط الموقع' },
 
     // ===== أدوات النظام =====
-    { id: 'sync_now', name: 'مزامنة', icon: RefreshCw, category: 'system', description: 'تحديث البيانات يدوياً' },
-    { id: 'power_mode', name: 'توفير الطاقة', icon: Zap, category: 'system', description: 'تقليل المؤثرات البصرية' },
-    { id: 'clear_cache', name: 'تنظيف الذاكرة', icon: Trash2, category: 'system', description: 'إصلاح مشاكل العرض' },
-    { id: 'show_calculator', name: 'آلة حاسبة', icon: Calculator, category: 'system', description: 'فتح الآلة الحاسبة' },
-
-    // ===== الإنتاجية والإيمانيات =====
-    { id: 'log_distraction', name: 'سجل تشتت', icon: Zap, category: 'productivity', description: 'تسجيل سبب التشتت الحالي' },
-    { id: 'remind_water', name: 'تذكير الماء', icon: Droplets, category: 'productivity', description: 'تذكير لشرب الماء' },
-    { id: 'open_mushaf', name: 'المصحف', icon: FileText, category: 'islamic', description: 'فتح المصحف الإلكتروني' },
-    { id: 'open_adhkar', name: 'الأذكار', icon: Heart, category: 'islamic', description: 'أذكار اليوم' },
-    { id: 'open_tasbih', name: 'مسبحة', icon: RefreshCw, category: 'islamic', description: 'المسبحة الإلكترونية' },
-    { id: 'open_qibla', name: 'القبلة', icon: Navigation, category: 'islamic', description: 'تحديد القبلة' },
-
-    // ===== تذكيرات =====
-    { id: 'remind_5min', name: 'تذكير 5 دقائق', icon: Bell, category: 'reminder', description: 'تنبيه بعد 5 دقائق' },
+    { id: 'sys_sync', name: 'مزامنة', icon: RefreshCw, category: 'system', description: 'تحديث البيانات' },
+    { id: 'sys_calc', name: 'حاسبة', icon: Calculator, category: 'system', description: 'فتح الآلة الحاسبة' },
+    { id: 'sys_clean', name: 'وضع التنظيف', icon: LayoutGrid, category: 'system', description: 'تبديل وضع العرض الصافي' },
 
     // ===== للتوافق العكسي (Aliases) - ستُزال لاحقاً =====
     // These are kept for backward compatibility with existing user shortcuts

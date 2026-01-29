@@ -32,33 +32,74 @@ export const MultiActionFAB: React.FC<MultiActionFABProps> = ({
 
     // === ACTION MAPPER ===
     const executeAction = (actionId: string) => {
+        // Handle common prefixes
+        if (actionId.startsWith('nav_')) {
+            const tab = actionId.replace('nav_', '');
+            if (tab === 'reports') {
+                window.dispatchEvent(new Event('open-report-generator'));
+            } else if (tab === 'settings') {
+                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'settings' }));
+            } else {
+                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: tab }));
+            }
+            return;
+        }
+
+        if (actionId.startsWith('timer_')) {
+            const minutes = actionId === 'timer_focus' ? 25 : parseInt(actionId.replace('timer_', ''));
+            window.dispatchEvent(new CustomEvent('start-quick-timer', { detail: { minutes } }));
+            return;
+        }
+
+        if (actionId.startsWith('info_')) {
+            const type = actionId.replace('info_', '');
+            window.dispatchEvent(new CustomEvent('show-info-dialog', { detail: { type } }));
+            return;
+        }
+
+        if (actionId.startsWith('loc_')) {
+            const sub = actionId.replace('loc_', '');
+            if (sub === 'save_current') handleSaveLocation();
+            else if (sub === 'save_parking') executeAction('save_parking'); // fallback to old ID or handle here
+            else if (sub === 'find_car') window.dispatchEvent(new Event('find-car-location'));
+            else if (sub === 'share') handleSaveLocation(); // or copy link
+            return;
+        }
+
         switch (actionId) {
-            case 'save_location': case 'save_location_current':
+            case 'save_location': case 'save_location_current': case 'loc_save_current':
                 handleSaveLocation();
                 break;
-            case 'add_note': case 'new_note':
+            case 'save_parking': case 'loc_save_parking':
+                // Logic for saving parking
+                handleSaveLocation(); // For now, maybe mark as parking?
+                break;
+            case 'add_note': case 'new_note': case 'add_note_quick':
                 onAddNote();
                 break;
-            case 'voice_note':
+            case 'voice_note': case 'add_voice_quick':
                 if (onVoiceNote) onVoiceNote();
                 break;
-            case 'log_distraction':
+            case 'log_distraction': case 'add_distraction_log':
                 onAddDistraction();
                 break;
-            case 'add_event': case 'new_appointment':
+            case 'add_event': case 'new_appointment': case 'add_event_quick':
                 onAddAppointment();
                 break;
-            case 'open_map': case 'open_maps':
-                window.open('https://www.google.com/maps', '_blank');
+            case 'add_task_priority':
+                window.dispatchEvent(new CustomEvent('open-task-dialog', { detail: { priority: 'high' } }));
                 break;
-            case 'nav_map':
-                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'map' }));
+            case 'add_task_normal':
+                window.dispatchEvent(new Event('open-task-dialog'));
                 break;
-            case 'nav_finance':
-                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'finance' }));
+            case 'sys_sync': case 'sync_now':
+                window.dispatchEvent(new Event('trigger-cloud-sync'));
                 break;
-            case 'nav_productivity':
-                window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'productivity' }));
+            case 'sys_calc':
+                window.dispatchEvent(new Event('open-calculator'));
+                break;
+            case 'sys_clean':
+                window.dispatchEvent(new Event('toggle-clean-mode'));
                 break;
             default:
                 console.log('Action not implemented yet:', actionId);

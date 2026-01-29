@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUserSettings, FABButtonConfig } from '@/hooks/useUserSettings';
-import { AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
+import { AVAILABLE_ACTIONS, ACTION_CATEGORIES } from '@/constants/actionDefinitions';
 import * as LucideIcons from 'lucide-react';
 import { LucideIcon, Settings2, Sparkles, SlidersHorizontal, MousePointerClick, Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,8 @@ interface FABSettingsDialogProps {
 const AVAILABLE_ICONS = [
     'MapPin', 'StickyNote', 'AlertTriangle', 'Calendar', 'DollarSign', 'Target',
     'Users', 'GraduationCap', 'Search', 'Briefcase', 'Timer', 'Wallet',
-    'Heart', 'Pill', 'Bell', 'Mic', 'Navigation', 'Zap', 'Moon', 'Calculator', 'Plus'
+    'Heart', 'Pill', 'Bell', 'Mic', 'Navigation', 'Zap', 'Moon', 'Calculator',
+    'Plus', 'Trash2', 'Clock', 'Coffee', 'Droplets', 'Brain', 'Phone', 'Link', 'LayoutGrid'
 ];
 
 const COLORS = [
@@ -155,13 +156,23 @@ export const FABSettingsDialog: React.FC<FABSettingsDialogProps> = ({ open, onOp
                                         <SelectValue placeholder="اختر الوظيفة" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {AVAILABLE_ACTIONS.filter(a => a.category !== 'alias').map(action => (
-                                            <SelectItem key={action.id} value={action.id}>
-                                                <div className="flex items-center gap-2">
-                                                    <action.icon className="w-4 h-4" />
-                                                    <span>{action.name}</span>
-                                                </div>
-                                            </SelectItem>
+                                        {Object.entries(ACTION_CATEGORIES).filter(([id]) => id !== 'alias').map(([catId, catName]) => (
+                                            <SelectGroup key={catId}>
+                                                <SelectLabel className="text-primary font-bold bg-primary/5 py-1 px-2 rounded-md mb-1 text-[10px]">
+                                                    {catName}
+                                                </SelectLabel>
+                                                {AVAILABLE_ACTIONS
+                                                    .filter(a => a.category === catId)
+                                                    .map(action => (
+                                                        <SelectItem key={action.id} value={action.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <action.icon className="w-4 h-4 text-gray-400" />
+                                                                <span className="text-sm">{action.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))
+                                                }
+                                            </SelectGroup>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -180,19 +191,29 @@ export const FABSettingsDialog: React.FC<FABSettingsDialogProps> = ({ open, onOp
                                         <SelectValue placeholder="اختر الوظيفة" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="voice_note">
+                                        <SelectItem value="voice_note" className="font-bold border-b mb-1">
                                             <div className="flex items-center gap-2">
-                                                <LucideIcons.Mic className="w-4 h-4" />
-                                                <span>تسجيل صوتي</span>
+                                                <LucideIcons.Mic className="w-4 h-4 text-red-500" />
+                                                <span>تسجيل صوتي (افتراضي)</span>
                                             </div>
                                         </SelectItem>
-                                        {AVAILABLE_ACTIONS.filter(a => a.category !== 'alias').map(action => (
-                                            <SelectItem key={action.id} value={action.id}>
-                                                <div className="flex items-center gap-2">
-                                                    <action.icon className="w-4 h-4" />
-                                                    <span>{action.name}</span>
-                                                </div>
-                                            </SelectItem>
+                                        {Object.entries(ACTION_CATEGORIES).filter(([id]) => id !== 'alias').map(([catId, catName]) => (
+                                            <SelectGroup key={catId}>
+                                                <SelectLabel className="text-primary font-bold bg-primary/5 py-1 px-2 rounded-md mb-1 text-[10px]">
+                                                    {catName}
+                                                </SelectLabel>
+                                                {AVAILABLE_ACTIONS
+                                                    .filter(a => a.category === catId)
+                                                    .map(action => (
+                                                        <SelectItem key={action.id} value={action.id}>
+                                                            <div className="flex items-center gap-2">
+                                                                <action.icon className="w-4 h-4 text-gray-400" />
+                                                                <span className="text-sm">{action.name}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))
+                                                }
+                                            </SelectGroup>
                                         ))}
                                     </SelectContent>
                                 </Select>

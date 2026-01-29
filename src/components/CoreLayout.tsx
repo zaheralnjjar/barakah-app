@@ -34,18 +34,33 @@ const CoreLayout = () => {
         const handleResize = () => checkMobile();
         const handleOpenVoiceRecorder = () => setShowVoiceRecorder(true);
 
-        const handleCloudSync = () => {
-            syncNow();
+        const handleCloudSync = () => syncNow();
+        const handleNavigateTab = (e: any) => handleNavigate(e.detail);
+        const handleStartTimer = (e: any) => {
+            const { minutes } = e.detail;
+            toast({ title: 'بدء مؤقت', description: `تم بدء مؤقت لـ ${minutes} دقيقة` });
+            // Here you could trigger a real timer state if available
+        };
+        const handleOpenTask = (e: any) => {
+            const priority = e.detail?.priority || 'normal';
+            toast({ title: 'إضافة مهمة', description: `فتح حوار إضافة مهمة (${priority})` });
+            // window.dispatchEvent(new CustomEvent('show-add-task-dialog', { detail: { priority } }));
         };
 
         window.addEventListener('resize', handleResize);
         window.addEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
         window.addEventListener('trigger-cloud-sync', handleCloudSync);
+        window.addEventListener('navigate-tab', handleNavigateTab);
+        window.addEventListener('start-quick-timer', handleStartTimer);
+        window.addEventListener('open-task-dialog', handleOpenTask);
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
             window.removeEventListener('trigger-cloud-sync', handleCloudSync);
+            window.removeEventListener('navigate-tab', handleNavigateTab);
+            window.removeEventListener('start-quick-timer', handleStartTimer);
+            window.removeEventListener('open-task-dialog', handleOpenTask);
         };
     }, [toast]);
 
