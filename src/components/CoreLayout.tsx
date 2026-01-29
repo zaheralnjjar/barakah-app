@@ -94,6 +94,24 @@ const CoreLayout = () => {
     const { notes, createNote, updateNote } = useNotesV2();
     const activeMode = useSystemModes().modes.find(m => m.is_active);
 
+    const handleAddNote = () => {
+        setIsVoiceMode(false);
+        setShowVoiceRecorder(true);
+    };
+
+    const handleVoiceNote = () => {
+        setIsVoiceMode(true);
+        setShowVoiceRecorder(true);
+    };
+
+    const handleAddAppointment = () => {
+        window.dispatchEvent(new Event('open-appointment-dialog'));
+    };
+
+    const handleAddDistraction = () => {
+        window.dispatchEvent(new Event('open-distraction-dialog'));
+    };
+
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-white relative">
             <SideNavBar
@@ -106,30 +124,25 @@ const CoreLayout = () => {
                 onOpenReports={() => {
                     window.dispatchEvent(new Event('open-report-generator'));
                 }}
+                onAddNote={handleAddNote}
+                onVoiceNote={handleVoiceNote}
+                onAddAppointment={handleAddAppointment}
+                onAddDistraction={handleAddDistraction}
             />
             <div className={`flex-1 h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16' : 'pb-14'}`}>
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
 
-            {/* Multi-Action Floating Button */}
-            <MultiActionFAB
-                onAddNote={() => {
-                    setIsVoiceMode(false);
-                    setShowVoiceRecorder(true);
-                }}
-                onVoiceNote={() => {
-                    setIsVoiceMode(true);
-                    setShowVoiceRecorder(true);
-                }}
-                onAddAppointment={() => {
-                    window.dispatchEvent(new CustomEvent('change-tab', { detail: 'calendar-monthly' }));
-                    // Future: we could open a direct "Add Appointment" dialog here
-                    toast({ title: "يرجى اختيار يوم لإضافة موعد" });
-                }}
-                onAddDistraction={() => {
-                    window.dispatchEvent(new CustomEvent('open-distraction-dialog'));
-                }}
-            />
+            {/* Multi-Action Floating Button - Show only on Mobile */}
+            {isMobile && (
+                <MultiActionFAB
+                    onAddNote={handleAddNote}
+                    onVoiceNote={handleVoiceNote}
+                    onAddAppointment={handleAddAppointment}
+                    onAddDistraction={handleAddDistraction}
+                    className="fixed bottom-24 left-6"
+                />
+            )}
 
             <CreateNoteDialog
                 isOpen={showVoiceRecorder}

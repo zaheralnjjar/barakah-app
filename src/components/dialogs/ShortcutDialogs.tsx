@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Heart, AlertTriangle, Phone, Save, Trash2, Share2, Copy, FileSpreadsheet } from 'lucide-react';
+import { Heart, AlertTriangle, Phone, Save, Trash2, Share2, Copy, FileSpreadsheet, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -37,6 +37,12 @@ export const ShortcutDialogs = () => {
     const [showMedical, setShowMedical] = useState(false);
     const [medicalProfile, setMedicalProfile] = useState<any>(null);
 
+    // Appointment Dialog State
+    const [showAppointment, setShowAppointment] = useState(false);
+    const [apptTitle, setApptTitle] = useState('');
+    const [apptDate, setApptDate] = useState('');
+    const [apptTime, setApptTime] = useState('');
+
     // Initial load of medical profile
     useEffect(() => {
         if (showMedical) {
@@ -52,13 +58,20 @@ export const ShortcutDialogs = () => {
     useEffect(() => {
         const handleOpenDistraction = () => setShowDistraction(true);
         const handleOpenMedical = () => setShowMedical(true);
+        const handleOpenAppointment = () => {
+            setApptDate(new Date().toISOString().split('T')[0]);
+            setApptTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+            setShowAppointment(true);
+        };
 
         window.addEventListener('open-distraction-dialog', handleOpenDistraction);
         window.addEventListener('open-medical-profile', handleOpenMedical);
+        window.addEventListener('open-appointment-dialog', handleOpenAppointment);
 
         return () => {
             window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
             window.removeEventListener('open-medical-profile', handleOpenMedical);
+            window.removeEventListener('open-appointment-dialog', handleOpenAppointment);
         };
     }, []);
 
@@ -191,8 +204,86 @@ export const ShortcutDialogs = () => {
         setShowExportConfirm(true);
     };
 
+    const handleSaveAppointment = async () => {
+        if (!apptTitle.trim() || !apptDate || !apptTime) {
+            toast({ title: 'يرجى ملء جميع الحقول', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated");
+
+            const { error } = await supabase.from('appointments').insert({
+                user_id: user.id,
+                title: apptTitle.trim(),
+                date: apptDate,
+                time: apptTime,
+                reminder_minutes: 15,
+                is_completed: false
+            });
+
+            if (error) throw error;
+
+            toast({ title: '✅ تم إضافة الموعد بنجاح' });
+            setApptTitle('');
+            setShowAppointment(false);
+            window.dispatchEvent(new Event('refresh-appointments')); // Optional: trigger refresh in calendar
+        } catch (error) {
+            console.error(error);
+            toast({ title: '❌ فشل حفظ الموعد', variant: 'destructive' });
+        }
+    };
+
     return (
         <>
+            {/* Quick Appointment Dialog */}
+            <Dialog open={showAppointment} onOpenChange={setShowAppointment}>
+                <DialogContent className="max-w-md bg-white rounded-2xl" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-purple-700">
+                            <Calendar className="w-5 h-5" />
+                            إضافة موعد سريع
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>عنوان الموعد</Label>
+                            <Input
+                                value={apptTitle}
+                                onChange={(e) => setApptTitle(e.target.value)}
+                                placeholder="مثلاً: موعد طبيب، اجتماع عمل..."
+                                className="bg-gray-50 border-gray-200"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>التاريخ</Label>
+                                <Input
+                                    type="date"
+                                    value={apptDate}
+                                    onChange={(e) => setApptDate(e.target.value)}
+                                    className="bg-gray-50 border-gray-200"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>الوقت</Label>
+                                <Input
+                                    type="time"
+                                    value={apptTime}
+                                    onChange={(e) => setApptTime(e.target.value)}
+                                    className="bg-gray-50 border-gray-200"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setShowAppointment(false)}>إلغاء</Button>
+                        <Button onClick={handleSaveAppointment} className="bg-purple-600 hover:bg-purple-700 text-white">حفظ الموعد</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Distraction Dialog */}
             <Dialog open={showDistraction} onOpenChange={setShowDistraction}>
                 <DialogContent className="max-w-md" dir="rtl">

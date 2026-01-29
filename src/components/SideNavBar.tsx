@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap, StickyNote } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap, StickyNote, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditorModalV2 } from './notes-v2/EditorModalV2';
+import { MultiActionFAB } from './MultiActionFAB';
 
 interface SideNavBarProps {
     activeTab: string;
@@ -11,9 +12,17 @@ interface SideNavBarProps {
     onLongPress?: (tab: string) => void;
     onSync?: () => void;
     onOpenReports?: () => void;
+    // FAB Handlers
+    onAddNote: () => void;
+    onVoiceNote: () => void;
+    onAddAppointment: () => void;
+    onAddDistraction: () => void;
 }
 
-const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPress, onSync, onOpenReports }) => {
+const SideNavBar: React.FC<SideNavBarProps> = ({
+    activeTab, onNavigate, onLongPress, onSync, onOpenReports,
+    onAddNote, onVoiceNote, onAddAppointment, onAddDistraction
+}) => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [isNoteV2ModalOpen, setIsNoteV2ModalOpen] = useState(false);
@@ -138,6 +147,18 @@ const SideNavBar: React.FC<SideNavBarProps> = ({ activeTab, onNavigate, onLongPr
                 {/* Nav Items */}
                 <div className="flex-1 flex flex-col items-center gap-1">
                     {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
+                </div>
+
+                {/* Multi-Action FAB - Integrated in Sidebar for Desktop */}
+                <div className="mb-2">
+                    <MultiActionFAB
+                        onAddNote={onAddNote}
+                        onVoiceNote={onVoiceNote}
+                        onAddAppointment={onAddAppointment}
+                        onAddDistraction={onAddDistraction}
+                        direction="left"
+                        showLabel={false}
+                    />
                 </div>
 
                 {/* Send Report Button - Bottom */}
