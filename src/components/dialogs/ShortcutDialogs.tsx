@@ -215,6 +215,7 @@ export const ShortcutDialogs = () => {
             if (!user) throw new Error("User not authenticated");
 
             const { error } = await supabase.from('appointments').insert({
+                id: crypto.randomUUID(),
                 user_id: user.id,
                 title: apptTitle.trim(),
                 date: apptDate,

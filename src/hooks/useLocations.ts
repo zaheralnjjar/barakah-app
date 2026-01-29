@@ -203,6 +203,7 @@ export const useLocations = () => {
             if (user) {
                 newLocation.user_id = user.id;
                 const { error } = await supabase.from('saved_locations').insert({
+                    id: newLocation.id,
                     user_id: user.id,
                     title: newLocation.title,
                     address: newLocation.address,
@@ -335,7 +336,6 @@ export const useLocations = () => {
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
-            // Sync with Supabase
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 await supabase.from('saved_locations')
@@ -348,6 +348,29 @@ export const useLocations = () => {
             toast({ title: '🗑️ تم حذف الموقع' });
         } catch (error) {
             console.error('Error deleting location:', error);
+        }
+    }, [locations, toast]);
+
+    // Bulk Delete
+    const deleteLocations = useCallback(async (ids: string[]) => {
+        try {
+            const updated = locations.filter(loc => !ids.includes(loc.id));
+            setLocations(updated);
+            localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
+            localStorage.setItem('baraka_resources', JSON.stringify(updated));
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('saved_locations')
+                    .delete()
+                    .in('id', ids)
+                    .eq('user_id', user.id);
+            }
+
+            window.dispatchEvent(new Event('locations-updated'));
+            toast({ title: `🗑️ تم حذف ${ids.length} مواقع` });
+        } catch (error) {
+            console.error('Error deleting locations:', error);
         }
     }, [locations, toast]);
 
@@ -368,6 +391,7 @@ export const useLocations = () => {
         saveParking,
         updateLocation,
         deleteLocation,
+        deleteLocations,
         getLocationsOnly,
         getParkingOnly,
         refresh: loadLocations

@@ -14,7 +14,7 @@ interface MapsSettingsDialogProps {
 }
 
 export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogProps) {
-    const { locations, deleteLocation, updateLocation, saveLocation } = useLocations();
+    const { locations, deleteLocation, deleteLocations, updateLocation, saveLocation } = useLocations();
     const { toast } = useToast();
     const [editingResource, setEditingResource] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -96,12 +96,9 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
         if (selectedIds.length === 0) return;
 
         if (confirm(`هل أنت متأكد من حذف ${selectedIds.length} مواقع؟`)) {
-            for (const id of selectedIds) {
-                await deleteLocation(id);
-            }
+            await deleteLocations(selectedIds);
             setSelectedLocations(new Set());
             setIsSelectMode(false);
-            toast({ title: 'تم حذف المواقع المحددة' });
         }
     };
 

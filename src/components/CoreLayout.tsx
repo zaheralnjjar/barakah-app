@@ -7,28 +7,47 @@ import { useNotesV2 } from '@/hooks/useNotesV2';
 import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { MultiActionFAB } from '@/components/MultiActionFAB';
+import { useCloudSync } from '@/hooks/useCloudSync';
 
 import { useToast } from '@/hooks/use-toast';
+import { isAndroid } from '@/utils/platformDetection';
 
 const CoreLayout = () => {
     const { toast } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('dashboard');
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const [isMobile, setIsMobile] = useState(false);
+    const { syncNow } = useCloudSync();
 
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        const checkMobile = () => {
+            const width = window.innerWidth;
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+            const isDroid = isAndroid() || (userAgent.indexOf("android") > -1);
+
+            setIsMobile(width < 1024 || isMobileUA || isDroid);
+        };
+
+        checkMobile();
+        const handleResize = () => checkMobile();
         const handleOpenVoiceRecorder = () => setShowVoiceRecorder(true);
+
+        const handleCloudSync = () => {
+            syncNow();
+        };
 
         window.addEventListener('resize', handleResize);
         window.addEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
+        window.addEventListener('trigger-cloud-sync', handleCloudSync);
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('open-global-voice-recorder', handleOpenVoiceRecorder);
+            window.removeEventListener('trigger-cloud-sync', handleCloudSync);
         };
-    }, []);
+    }, [toast]);
 
     // Global Swipe Back
     useSwipeBack({
@@ -129,7 +148,7 @@ const CoreLayout = () => {
                 onAddAppointment={handleAddAppointment}
                 onAddDistraction={handleAddDistraction}
             />
-            <div className={`flex-1 h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16' : 'pb-14'}`}>
+            <div className={`flex-1 w-full h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16 pr-0' : 'pb-20'}`}>
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
 
@@ -141,7 +160,7 @@ const CoreLayout = () => {
                     onAddAppointment={handleAddAppointment}
                     onAddDistraction={handleAddDistraction}
                     sizeMultiplier={0.65}
-                    className="fixed bottom-[72px] right-[4.5%]"
+                    className="bottom-[80px] right-[4%]"
                 />
             )}
 

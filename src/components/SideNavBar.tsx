@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { EditorModalV2 } from './notes-v2/EditorModalV2';
 import { MultiActionFAB } from './MultiActionFAB';
+import { isAndroid } from '@/utils/platformDetection';
 
 interface SideNavBarProps {
     activeTab: string;
@@ -25,11 +26,20 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
 }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const [isMobile, setIsMobile] = useState(false);
     const [isNoteV2ModalOpen, setIsNoteV2ModalOpen] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024); // Threshold for mobile/tablet
 
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        const checkMobile = () => {
+            const width = window.innerWidth;
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+            const isDroid = isAndroid() || (userAgent.indexOf("android") > -1);
+            setIsMobile(width < 1024 || isMobileUA || isDroid);
+        };
+
+        checkMobile();
+        const handleResize = () => checkMobile();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -149,15 +159,14 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                     {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                 </div>
 
-                {/* Multi-Action FAB - Integrated in Sidebar for Desktop */}
+                {/* Multi-Action FAB - Desktop Only (Integrated in Sidebar) */}
                 <div className="mb-2">
                     <MultiActionFAB
                         onAddNote={onAddNote}
                         onVoiceNote={onVoiceNote}
                         onAddAppointment={onAddAppointment}
                         onAddDistraction={onAddDistraction}
-                        direction="left"
-                        showLabel={false}
+                        isFixed={false}
                     />
                 </div>
 

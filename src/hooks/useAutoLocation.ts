@@ -1,94 +1,113 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isAndroid } from '@/utils/platformDetection';
+import { Geolocation } from '@capacitor/geolocation';
 
 export const useAutoLocation = () => {
-    const { toast } = useToast();
     const [isLocating, setIsLocating] = useState(false);
+    const { toast } = useToast();
 
     const handleSaveLocation = async () => {
-        if (!navigator.geolocation) {
-            toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
-            return;
-        }
-
-        const options = {
-            enableHighAccuracy: true,
-            timeout: 30000,
-            maximumAge: 0
-        };
-
         setIsLocating(true);
+        try {
+            let lat: number, lng: number;
 
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-            const { latitude: lat, longitude: lng } = pos.coords;
+            if (isAndroid()) {
+                const coordinates = await Geolocation.getCurrentPosition({
+                    enableHighAccuracy: true,
+                    timeout: 15000
+                });
+                lat = coordinates.coords.latitude;
+                lng = coordinates.coords.longitude;
+            } else {
+                const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        return reject(new Error("المتصفح لا يدعم تحديد الموقع"));
+                    }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    });
+                });
+                lat = position.coords.latitude;
+                lng = position.coords.longitude;
+            }
+
             const now = new Date();
             const dateStr = now.toLocaleDateString('ar-SA');
             const timeStr = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
-            let addressName = `موقع_${dateStr}_${timeStr}`;
+            // Default fallback name
+            let addressName = `موقع (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
 
             try {
-                // Reverse Geocoding using Nominatim
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`, {
-                    signal: AbortSignal.timeout(5000)
-                });
+                // Fetch with zoom 18 and addressdetails to get street/number
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                    {
+                        headers: { 'Accept-Language': 'ar' },
+                        signal: AbortSignal.timeout(10000)
+                    }
+                );
                 const data = await res.json();
 
                 if (data && data.address) {
-                    const street = data.address.road || data.address.suburb || data.address.neighbourhood || '';
-                    const house = data.address.house_number || '';
-                    const city = data.address.city || data.address.town || data.address.village || '';
+                    const addr = data.address;
+                    const street = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+                    const houseNumber = addr.house_number || addr.building || '';
+                    const neighborhood = addr.neighbourhood || addr.residential || '';
 
-                    if (street || house || city) {
-                        addressName = [street, house, city].filter(Boolean).join(' ').trim();
+                    // Priority: House Number + Street, then Street, then Neighborhood
+                    if (street && houseNumber) {
+                        addressName = `${street} ${houseNumber}`;
+                    } else if (street) {
+                        addressName = street;
+                    } else if (neighborhood) {
+                        addressName = neighborhood;
+                    } else if (data.display_name) {
+                        // Truncate display name to first part if it's too long
+                        addressName = data.display_name.split(',')[0];
                     }
                 }
-
-                // Get User ID
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("User not authenticated");
-
-                // Save to Supabase
-                const { error } = await supabase.from('saved_locations').insert({
-                    user_id: user.id,
-                    title: addressName,
-                    lat,
-                    lng,
-                    category: 'عام',
-                    created_at: now.toISOString()
-                });
-
-                if (error) throw error;
-
-                toast({
-                    title: "تم حفظ الموقع ✅",
-                    description: `الموقع: ${addressName}`
-                });
-
-            } catch (error) {
-                console.error("Auto-location error:", error);
-                toast({
-                    title: "حدث خطأ أثناء الحفظ",
-                    description: "تم تحديد الإحداثيات ولكن فشل جلب العنوان أو التخزين",
-                    variant: "destructive"
-                });
-            } finally {
-                setIsLocating(false);
+            } catch (e) {
+                console.log("Reverse geocoding failed, using coordinates", e);
             }
-        }, (error) => {
-            setIsLocating(false);
-            let msg = "فشل تحديد الموقع";
-            if (error.code === 1) msg = "تم رفض صلاحية الوصول للموقع";
-            else if (error.code === 3) msg = "انتهت مهلة البحث عن الموقع (GPS)";
 
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { error: dbError } = await supabase
+                    .from('saved_locations')
+                    .insert([{
+                        id: crypto.randomUUID(),
+                        user_id: user.id,
+                        title: addressName,
+                        lat: lat,
+                        lng: lng,
+                        address: addressName,
+                        category: 'other',
+                        type: 'location'
+                    }]);
+
+                if (dbError) throw new Error(`Database error: ${dbError.message}`);
+
+                toast({ title: '✅ تم حفظ الموقع آلياً', description: addressName });
+            } else {
+                toast({ title: '⚠️ فشل الحفظ السحابي', description: 'المستخدم غير مسجل' });
+            }
+            window.dispatchEvent(new Event('locations-updated'));
+        } catch (error: any) {
+            console.error('Location error:', error);
             toast({
-                title: msg,
-                description: "تأكد من تفعيل الموقع الجغرافي في جهازك والمتصفح",
-                variant: "destructive"
+                title: '❌ فشل في العملية',
+                description: error.message || 'خطأ غير متوقع',
+                variant: 'destructive'
             });
-        }, options);
+        } finally {
+            setIsLocating(false);
+        }
     };
 
-    return { handleSaveLocation, isLocating };
+    return { isLocating, handleSaveLocation };
 };
