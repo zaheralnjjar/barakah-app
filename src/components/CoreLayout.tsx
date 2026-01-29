@@ -39,12 +39,26 @@ const CoreLayout = () => {
         const handleStartTimer = (e: any) => {
             const { minutes } = e.detail;
             toast({ title: 'بدء مؤقت', description: `تم بدء مؤقت لـ ${minutes} دقيقة` });
-            // Here you could trigger a real timer state if available
+        };
+        const handleSetReminder = (e: any) => {
+            const { minutes } = e.detail;
+            toast({ title: 'تذكير سريع', description: `سنقوم بتذكيرك بعد ${minutes} دقيقة` });
+        };
+        const handleRecordWater = () => {
+            // Logic to save water intake could go here
+            syncNow();
+        };
+        const handleOpenIslamic = (e: any) => {
+            const { tool } = e.detail;
+            navigate('/');
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('change-tab', { detail: 'islamic' }));
+                // Optional: dispatch another event to open specific tool like 'mushaf'
+            }, 50);
         };
         const handleOpenTask = (e: any) => {
             const priority = e.detail?.priority || 'normal';
             toast({ title: 'إضافة مهمة', description: `فتح حوار إضافة مهمة (${priority})` });
-            // window.dispatchEvent(new CustomEvent('show-add-task-dialog', { detail: { priority } }));
         };
 
         window.addEventListener('resize', handleResize);
@@ -52,6 +66,9 @@ const CoreLayout = () => {
         window.addEventListener('trigger-cloud-sync', handleCloudSync);
         window.addEventListener('navigate-tab', handleNavigateTab);
         window.addEventListener('start-quick-timer', handleStartTimer);
+        window.addEventListener('set-quick-reminder', handleSetReminder);
+        window.addEventListener('record-water-intake', handleRecordWater);
+        window.addEventListener('open-islamic-tool', handleOpenIslamic);
         window.addEventListener('open-task-dialog', handleOpenTask);
 
         return () => {
@@ -60,6 +77,9 @@ const CoreLayout = () => {
             window.removeEventListener('trigger-cloud-sync', handleCloudSync);
             window.removeEventListener('navigate-tab', handleNavigateTab);
             window.removeEventListener('start-quick-timer', handleStartTimer);
+            window.removeEventListener('set-quick-reminder', handleSetReminder);
+            window.removeEventListener('record-water-intake', handleRecordWater);
+            window.removeEventListener('open-islamic-tool', handleOpenIslamic);
             window.removeEventListener('open-task-dialog', handleOpenTask);
         };
     }, [toast]);

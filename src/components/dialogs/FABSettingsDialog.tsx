@@ -19,7 +19,8 @@ const AVAILABLE_ICONS = [
     'MapPin', 'StickyNote', 'AlertTriangle', 'Calendar', 'DollarSign', 'Target',
     'Users', 'GraduationCap', 'Search', 'Briefcase', 'Timer', 'Wallet',
     'Heart', 'Pill', 'Bell', 'Mic', 'Navigation', 'Zap', 'Moon', 'Calculator',
-    'Plus', 'Trash2', 'Clock', 'Coffee', 'Droplets', 'Brain', 'Phone', 'Link', 'LayoutGrid'
+    'Plus', 'Trash2', 'Clock', 'Coffee', 'Droplets', 'Brain', 'Phone', 'Link', 'LayoutGrid',
+    'Book', 'BookOpen', 'CheckCircle', 'Music', 'Cloud', 'Sun', 'Languages', 'FileText'
 ];
 
 const COLORS = [

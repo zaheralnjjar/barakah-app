@@ -4,6 +4,7 @@ import { Plus, X } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useAutoLocation } from '@/hooks/useAutoLocation';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useToast } from '@/hooks/use-toast';
 
 interface MultiActionFABProps {
     onAddNote: () => void;
@@ -24,6 +25,7 @@ export const MultiActionFAB: React.FC<MultiActionFABProps> = ({
     className = "",
     isFixed = true
 }) => {
+    const { toast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const { handleSaveLocation, isLocating } = useAutoLocation();
     const { fabConfig } = useUserSettings();
@@ -48,6 +50,38 @@ export const MultiActionFAB: React.FC<MultiActionFABProps> = ({
         if (actionId.startsWith('timer_')) {
             const minutes = actionId === 'timer_focus' ? 25 : parseInt(actionId.replace('timer_', ''));
             window.dispatchEvent(new CustomEvent('start-quick-timer', { detail: { minutes } }));
+            return;
+        }
+
+        if (actionId.startsWith('prod_')) {
+            const sub = actionId.replace('prod_', '');
+            if (sub === 'distraction') onAddDistraction();
+            else if (sub === 'water') {
+                toast({ title: '✅ تم تسجيل شرب الماء', description: 'بوركت، حافظ على رطوبة جسمك!' });
+                window.dispatchEvent(new Event('record-water-intake'));
+            } else if (sub === 'pomo') {
+                window.dispatchEvent(new CustomEvent('start-quick-timer', { detail: { minutes: 25 } }));
+            } else if (sub === 'reading') {
+                window.dispatchEvent(new CustomEvent('start-quick-timer', { detail: { minutes: 20 } }));
+            }
+            return;
+        }
+
+        if (actionId.startsWith('islam_')) {
+            const sub = actionId.replace('islam_', '');
+            window.dispatchEvent(new CustomEvent('open-islamic-tool', { detail: { tool: sub } }));
+            return;
+        }
+
+        if (actionId.startsWith('remind_')) {
+            const sub = actionId.replace('remind_', '');
+            if (sub === 'pill') {
+                window.dispatchEvent(new Event('open-medications-dialog'));
+            } else {
+                const mins = parseInt(sub) || 5;
+                toast({ title: '🔔 تم ضبط التذكير', description: `سنذكرك بعد ${mins} دقائق` });
+                window.dispatchEvent(new CustomEvent('set-quick-reminder', { detail: { minutes: mins } }));
+            }
             return;
         }
 

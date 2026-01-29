@@ -52,12 +52,29 @@ export const AVAILABLE_ACTIONS = [
     { id: 'loc_share', name: 'مشاركة موقعي', icon: Copy, category: 'location', description: 'نسخ رابط الموقع' },
 
     // ===== أدوات النظام =====
-    { id: 'sys_sync', name: 'مزامنة', icon: RefreshCw, category: 'system', description: 'تحديث البيانات' },
-    { id: 'sys_calc', name: 'حاسبة', icon: Calculator, category: 'system', description: 'فتح الآلة الحاسبة' },
-    { id: 'sys_clean', name: 'وضع التنظيف', icon: LayoutGrid, category: 'system', description: 'تبديل وضع العرض الصافي' },
+    { id: 'sys_sync', name: 'مزامنة سحابية', icon: RefreshCw, category: 'system', description: 'تحديث البيانات يدوياً' },
+    { id: 'sys_calc', name: 'الآلة الحاسبة', icon: Calculator, category: 'system', description: 'فتح الحاسبة السريعة' },
+    { id: 'sys_clean', name: 'وضع التركيز', icon: LayoutGrid, category: 'system', description: 'إخفاء العناصر المشتتة' },
+    { id: 'sys_settings', name: 'إعدادات النظام', icon: Settings, category: 'system', description: 'تخصيص التطبيق' },
 
-    // ===== للتوافق العكسي (Aliases) - ستُزال لاحقاً =====
-    // These are kept for backward compatibility with existing user shortcuts
+    // ===== الإنتاجية ( Productivity) =====
+    { id: 'prod_distraction', name: 'تسجيل تشتت', icon: Zap, category: 'productivity', description: 'سجل سبب تشتت انتباهك' },
+    { id: 'prod_water', name: 'شرب ماء', icon: Droplets, category: 'productivity', description: 'تسجيل كوب ماء' },
+    { id: 'prod_pomo', name: 'بدء بومودورو', icon: Timer, category: 'productivity', description: 'جلسة تركيز 25 دقيقة' },
+    { id: 'prod_reading', name: 'وقت قراءة', icon: FileText, category: 'productivity', description: 'بدء مؤقت قراءة' },
+
+    // ===== الإسلاميات (Islamic) =====
+    { id: 'islam_mushaf', name: 'المصحف', icon: FileText, category: 'islamic', description: 'فتح القرآن الكريم' },
+    { id: 'islam_adhkar', name: 'الأذكار', icon: Heart, category: 'islamic', description: 'أذكار الصباح والمساء' },
+    { id: 'islam_tasbih', name: 'المسبحة', icon: RefreshCw, category: 'islamic', description: 'التسبيح الإلكتروني' },
+    { id: 'islam_qibla', name: 'القبلة', icon: Navigation, category: 'islamic', description: 'تحديد اتجاه القبلة' },
+
+    // ===== التذكيرات (Reminders) =====
+    { id: 'remind_5', name: 'تنبيه 5 دقائق', icon: Bell, category: 'reminder', description: 'تذكير بعد 5 دقائق' },
+    { id: 'remind_15', name: 'تنبيه 15 دقيقة', icon: Bell, category: 'reminder', description: 'تذكير بعد 15 دقيقة' },
+    { id: 'remind_pill', name: 'موعد دواء', icon: Pill, category: 'reminder', description: 'تذكير بأخذ الدواء' },
+
+    // ===== للتوافق العكسي (Aliases) =====
     { id: 'timer', name: 'مؤقت', icon: Timer, category: 'alias', description: 'مؤقت التركيز', aliasFor: 'start_pomodoro' },
     { id: 'event', name: 'حدث', icon: Sparkles, category: 'alias', description: 'إضافة حدث', aliasFor: 'add_event' },
     { id: 'expense', name: 'مصروف', icon: DollarSign, category: 'alias', description: 'تسجيل مصروف', aliasFor: 'add_expense' },
@@ -78,13 +95,14 @@ export const getActionsByCategory = (category: string) =>
 
 // Categories with Arabic names
 export const ACTION_CATEGORIES = {
-    navigation: 'التنقل',
-    info: 'المعلومات',
-    action: 'الإضافة السريعة',
+    navigation: 'النوافذ والتنقل',
+    action: 'إجراءات ذكية',
+    info: 'ملخصات ومعلومات',
     timer: 'المؤقتات',
-    location: 'الموقع',
-    system: 'النظام',
-    productivity: 'الإنتاجية',
-    reminder: 'التذكيرات',
+    location: 'الموقع والخرائط',
+    system: 'النظام والأدوات',
+    productivity: 'الإنتاجية والتركيز',
+    islamic: 'القسم الإسلامي',
+    reminder: 'التنبيهات والتذكير',
     alias: 'مستعارات',
 };
