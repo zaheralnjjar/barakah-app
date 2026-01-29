@@ -13,6 +13,7 @@ export interface Appointment {
     preparatoryTaskIds?: string[];
     linkedTaskIds?: string[];
     convertedFromTaskId?: string;
+    is_completed?: boolean;
 }
 
 // Helper to convert string ID to integer ID for LocalNotifications

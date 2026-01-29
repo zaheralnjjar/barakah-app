@@ -149,13 +149,14 @@ const CoreLayout = () => {
     const activeMode = useSystemModes().modes.find(m => m.is_active);
 
     const handleAddNote = () => {
-        setIsVoiceMode(false);
-        setShowVoiceRecorder(true);
+        // Dispatch custom event which SmartDashboard listens to
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note' } }));
     };
 
     const handleVoiceNote = () => {
         setIsVoiceMode(true);
-        setShowVoiceRecorder(true);
+        // Dispatch event for specialized voice handling if needed, or re-use existing
+        window.dispatchEvent(new Event('open-global-voice-recorder'));
     };
 
     const handleAddAppointment = () => {

@@ -117,7 +117,10 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         recognitionRef.current.continuous = true;
         recognitionRef.current.interimResults = true;
         recognitionRef.current.lang = 'ar-SA';
-        processedIndicesRef.current = new Set(); // Reset for new session
+
+        // Reset processed index
+        processedIndicesRef.current = new Set();
+        let lastContentLength = content.length;
 
         recognitionRef.current.onstart = () => {
             setIsRecording(true);
@@ -125,27 +128,32 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            let finalForThisEvent = '';
+            let finalTranscript = '';
+            let interimTranscript = '';
+
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
-                    finalForThisEvent += event.results[i][0].transcript;
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
                 }
             }
 
-            if (finalForThisEvent) {
+            if (finalTranscript) {
                 setContent(prev => {
                     const current = prev.trim();
-                    const addition = finalForThisEvent.trim();
-                    // Basic duplicate check: if addition is already at the end, skip
-                    if (current.toLowerCase().endsWith(addition.toLowerCase())) return prev;
-                    return current + (current ? ' ' : '') + addition;
+                    if (!current) return finalTranscript;
+                    return current + ' ' + finalTranscript;
                 });
             }
         };
 
         recognitionRef.current.onerror = (event: any) => {
             console.error('Speech recognition error', event.error);
-            setIsRecording(false);
+            // Don't stop recording on no-speech errors, just ignore
+            if (event.error !== 'no-speech') {
+                setIsRecording(false);
+            }
         };
 
         recognitionRef.current.onend = () => {
@@ -238,236 +246,209 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
             setIsLoading(false);
         }
     };
-
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {
             if (!open) stopRecording();
             onClose();
         }}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" dir="rtl">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center justify-between text-xl font-bold text-gray-800">
+            <DialogContent className="sm:max-w-[600px] h-[70vh] fixed top-[5%] translate-y-0 flex flex-col p-0 gap-0 overflow-hidden" dir="rtl">
+                {/* Header with Title and Actions */}
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50 shrink-0">
+                    <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
                         <span>ملاحظة جديدة</span>
                         {isRecording && (
-                            <span className="flex items-center gap-2 text-red-500 text-sm animate-pulse bg-red-50 px-3 py-1 rounded-full">
-                                <span className="w-2 h-2 rounded-full bg-red-500" />
-                                جاري التسجيل...
+                            <span className="flex items-center gap-1.5 text-red-500 text-xs animate-pulse bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                تسجيل...
                             </span>
                         )}
                     </DialogTitle>
-                </DialogHeader>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onClose}
+                            disabled={isLoading}
+                            className="text-gray-500 hover:text-gray-700 h-8 px-3"
+                        >
+                            إلغاء
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => handleSubmit()}
+                            disabled={isLoading}
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-4 rounded-md shadow-sm"
+                        >
+                            {isLoading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : 'حفظ'}
+                        </Button>
+                    </div>
+                </div>
 
-                <div className="space-y-5 py-2">
+                {/* Scrollable Content Body */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                     {/* Title Input */}
-                    <div className="space-y-1.5">
-                        <Label className="text-gray-600">عنوان الملاحظة</Label>
+                    <div className="space-y-1">
                         <Input
-                            placeholder="سيتم إنشاؤه تلقائياً إذا ترك فارغاً"
+                            placeholder="عنوان الملاحظة (اختياري)"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="text-lg font-medium"
+                            className="text-lg font-bold border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-emerald-500 placeholder:text-gray-400"
                         />
                     </div>
 
-                    {/* Rich Formatting Controls Row */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {/* Font Family */}
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-gray-500">نوع الخط</Label>
+                    {/* Controls & Options Wrapped for Compactness */}
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-100">
+                        {/* Row 1: Formatting */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Font Family */}
                             <Select value={fontFamily} onValueChange={setFontFamily}>
-                                <SelectTrigger className="h-9">
+                                <SelectTrigger className="h-7 w-[110px] text-xs bg-white border-gray-200">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {FONT_FAMILIES.map(f => (
-                                        <SelectItem key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+                                        <SelectItem key={f.value} value={f.value} style={{ fontFamily: f.value }} className="text-xs">
                                             {f.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
 
-                        {/* Font Size */}
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-gray-500">حجم الخط</Label>
+                            {/* Font Size */}
                             <Select value={fontSize} onValueChange={setFontSize}>
-                                <SelectTrigger className="h-9">
+                                <SelectTrigger className="h-7 w-[80px] text-xs bg-white border-gray-200">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {FONT_SIZES.map(s => (
-                                        <SelectItem key={s.value} value={s.value}>
-                                            {s.name} ({s.value})
+                                        <SelectItem key={s.value} value={s.value} className="text-xs">
+                                            {s.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
 
-                        {/* Text Color */}
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-gray-500">لون النص</Label>
-                            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-md border">
-                                {TEXT_COLORS.slice(0, 5).map((c) => (
+                            {/* Text Color */}
+                            <Select value={textColor} onValueChange={setTextColor}>
+                                <SelectTrigger className="h-7 w-[40px] px-1 bg-white border-gray-200 flex justify-center items-center">
+                                    <Palette className="w-3.5 h-3.5" style={{ color: textColor }} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {TEXT_COLORS.map(c => (
+                                        <SelectItem key={c.value} value={c.value}>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />
+                                                {c.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            {/* Background Color Shortcuts */}
+                            <div className="flex items-center gap-1 mr-auto pl-1 scale-90 origin-left">
+                                {NOTE_COLORS.slice(0, 5).map((c) => (
                                     <button
                                         key={c.value}
                                         type="button"
-                                        onClick={() => setTextColor(c.value)}
-                                        className={`w-5 h-5 rounded-full border border-gray-200 transition-all ${textColor === c.value ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
+                                        onClick={() => setColor(c.value)}
+                                        className={`w-5 h-5 rounded-full border border-gray-200 transition-all ${color === c.value ? 'ring-2 ring-emerald-500 scale-110' : ''}`}
                                         style={{ backgroundColor: c.value }}
                                         title={c.name}
                                     />
                                 ))}
-                                <Select value={textColor} onValueChange={setTextColor}>
-                                    <SelectTrigger className="w-8 h-6 p-0 border-0 bg-transparent focus:ring-0">
-                                        <Palette className="w-4 h-4 text-gray-500 mx-auto" />
+                            </div>
+                        </div>
+
+                        {/* Row 2: Folder & Distraction */}
+                        <div className="flex items-center gap-2 border-t pt-2 border-gray-200/50">
+                            <div className="flex-1">
+                                <Select value={folderId} onValueChange={setFolderId}>
+                                    <SelectTrigger className="h-7 text-xs bg-white border-gray-200">
+                                        <SelectValue placeholder="اختر مجلد" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {TEXT_COLORS.map(c => (
-                                            <SelectItem key={c.value} value={c.value}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: c.value }} />
-                                                    {c.name}
-                                                </div>
+                                        <SelectItem value="none">-- عام --</SelectItem>
+                                        {folders.map(f => (
+                                            <SelectItem key={f.id} value={f.id} className="text-xs">
+                                                <span className="flex items-center gap-2">
+                                                    {f.color ? (
+                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.color }}></span>
+                                                    ) : (
+                                                        <span>📂</span>
+                                                    )}
+                                                    {f.name}
+                                                </span>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
 
-                        {/* Background Color */}
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-gray-500">لون الخلفية</Label>
-                            <div className="flex items-center gap-1 overflow-x-auto p-1">
-                                {NOTE_COLORS.slice(0, 4).map((c) => (
-                                    <button
-                                        key={c.value}
-                                        type="button"
-                                        onClick={() => setColor(c.value)}
-                                        className={`w-6 h-6 rounded-full border border-gray-200 transition-all shrink-0 ${color === c.value ? 'ring-2 ring-indigo-500 scale-110' : ''}`}
-                                        style={{ backgroundColor: c.value }}
-                                        title={c.name}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-
-                    {/* Folder Selection & Distraction Toggle */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="flex-1 space-y-1.5">
-                            <Label className="text-gray-600">المجلد</Label>
-                            <Select value={folderId} onValueChange={setFolderId}>
-                                <SelectTrigger className="w-full h-9">
-                                    <SelectValue placeholder="اختر مجلد" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">-- عام (بدون مجلد) --</SelectItem>
-                                    {folders.map(f => (
-                                        <SelectItem key={f.id} value={f.id}>
-                                            <span className="flex items-center gap-2">
-                                                {f.color ? (
-                                                    <span className="w-3 h-3 rounded-full border shadow-sm" style={{ backgroundColor: f.color }}></span>
-                                                ) : (
-                                                    <span>📂</span>
-                                                )}
-                                                {f.name}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex items-end pb-1">
-                            <div className="flex items-center space-x-2 space-x-reverse bg-red-50 px-3 py-2 rounded-md border border-red-100 hover:bg-red-100 transition-colors cursor-pointer" onClick={() => setIsDistraction(!isDistraction)}>
+                            <div
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition-colors border ${isDistraction ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                onClick={() => setIsDistraction(!isDistraction)}
+                            >
                                 <Checkbox
                                     id="distraction-mode"
                                     checked={isDistraction}
                                     onCheckedChange={(checked) => setIsDistraction(checked as boolean)}
-                                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
+                                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500 w-3.5 h-3.5"
                                 />
-                                <Label
-                                    htmlFor="distraction-mode"
-                                    className="text-sm font-medium leading-none text-red-700 cursor-pointer pointer-events-none"
-                                >
-                                    تسجيل كتشتت
+                                <Label htmlFor="distraction-mode" className="text-[10px] font-medium cursor-pointer pointer-events-none">
+                                    تشتت
                                 </Label>
                             </div>
+
+                            {isDistraction && (
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="د"
+                                    title="المدة بالدقائق"
+                                    value={distractionDuration}
+                                    onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
+                                    className="h-7 w-12 text-center text-xs bg-white border-red-200 focus:border-red-400"
+                                />
+                            )}
                         </div>
                     </div>
 
-                    {/* Distraction Duration Input */}
-                    {isDistraction && (
-                        <div className="flex items-center gap-2 bg-red-50 p-2 rounded-md border border-red-100 animate-in fade-in slide-in-from-top-1">
-                            <Label className="text-xs text-red-600 whitespace-nowrap">مدة التشتت (دقيقة):</Label>
-                            <Input
-                                type="number"
-                                min="0"
-                                value={distractionDuration}
-                                onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
-                                className="h-7 w-20 text-center bg-white border-red-200 focus:border-red-400"
-                            />
-                        </div>
-                    )}
-
                     {/* Content Area */}
-                    <div className="space-y-2 relative">
-                        <Label className="text-gray-600">المحتوى</Label>
+                    <div className="relative flex-1 min-h-[200px] h-full">
                         <Textarea
                             placeholder="اكتب تفاصيل الملاحظة هنا..."
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            className="min-h-[200px] resize-y p-4 shadow-sm transition-all duration-300"
+                            className="w-full h-full min-h-[250px] resize-none p-4 shadow-sm border-0 focus-visible:ring-1 focus-visible:ring-emerald-500/30 rounded-lg text-base"
                             style={{
-                                backgroundColor: color !== '#FFFFFF' ? color : undefined,
+                                backgroundColor: color !== '#FFFFFF' ? color : '#fafafa',
                                 fontFamily: fontFamily !== 'Inherit' ? fontFamily : undefined,
                                 fontSize: fontSize,
                                 color: textColor,
                                 lineHeight: '1.6'
                             }}
                         />
-                        {/* Floating Mic Button inside Textarea area */}
-                        {!isRecording && (
-                            <button
-                                onClick={startRecording}
-                                className="absolute bottom-4 left-4 p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-full transition-colors shadow-sm border border-emerald-200"
-                                title="بدء التسجيل الصوتي"
-                                type="button"
-                            >
-                                <Mic className="w-5 h-5" />
-                            </button>
-                        )}
-                        {isRecording && (
-                            <button
-                                onClick={stopRecording}
-                                className="absolute bottom-4 left-4 p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-full transition-colors shadow-sm border border-red-200 animate-pulse"
-                                title="إيقاف التسجيل"
-                                type="button"
-                            >
-                                <MicOff className="w-5 h-5" />
-                            </button>
-                        )}
+
+                        {/* Floating Mic Button - Positioned absolutely within the textarea container */}
+                        <button
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`absolute bottom-4 left-4 p-2 rounded-full transition-all shadow-md border ${isRecording
+                                ? 'bg-red-500 text-white hover:bg-red-600 border-red-600 animate-pulse'
+                                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-emerald-200'
+                                }`}
+                            title={isRecording ? "إيقاف التسجيل" : "تسجيل صوتي"}
+                            type="button"
+                        >
+                            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
-
-                <DialogFooter className="gap-2 sm:gap-0 mt-2">
-                    <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
-                        إلغاء
-                    </Button>
-                    <Button type="button" onClick={() => handleSubmit()} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                                جاري الحفظ...
-                            </>
-                        ) : 'حفظ الملاحظة'}
-                    </Button>
-                </DialogFooter>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     );
 };

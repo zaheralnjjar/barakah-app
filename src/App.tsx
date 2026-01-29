@@ -36,6 +36,8 @@ import { DiagnosticPage } from "./components/DiagnosticPage";
 import WidgetPage from "./pages/WidgetPage";
 import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 import CoreLayout from "./components/CoreLayout";
+import PrayerTimes from "@/components/PrayerTimes";
+import LocationsPage from "@/pages/LocationsPage";
 
 const queryClient = new QueryClient();
 
@@ -162,6 +164,8 @@ const App = () => {
                 <Route path="/notes-v2" element={<NotesLayoutV2 />} />
                 <Route path="/widget" element={<WidgetPage />} />
                 <Route path="/diagnostic" element={<DiagnosticPage />} />
+                <Route path="/prayer-times" element={<PrayerTimes />} />
+                <Route path="/locations" element={<LocationsPage />} />
 
                 {/* Thesis Manager Routes - Now inside CoreLayout for SideNavBar */}
                 <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />

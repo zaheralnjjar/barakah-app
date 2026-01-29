@@ -126,49 +126,13 @@ export const useShortcutExecution = (props: {
             case 'timer': executeShortcut('start_pomodoro'); break;
             case 'event': executeShortcut('add_event'); break;
             case 'expense': executeShortcut('add_expense'); break;
-            case 'location': executeShortcut('save_location_current'); break;
-            case 'note': executeShortcut('add_note'); break;
-            case 'shopping': executeShortcut('show_shopping'); break;
-
-            // --- SMART TOOLS ---
-            case 'brain_dump':
-                props.onOpenAddDialog('note');
-                // We use a timeout to let the dialog open, then try to set the type if possible, 
-                // or relies on the 'open-quick-note' event if implemented globally.
-                setTimeout(() => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'brain_dump' } })), 100);
+            case 'location':
+            case 'save_location':
+                // Open the full Location Manager Dialog instead of just saving current
+                props.onOpenAddDialog('location');
                 break;
-
-            case 'log_distraction': {
-                const reason = prompt('ما هو سبب التشتت؟');
-                if (reason) {
-                    await supabase.from('distraction_logs').insert({
-                        user_id: (await supabase.auth.getUser()).data.user?.id,
-                        reason
-                    });
-                    toast({ title: '✅ تم التسجيل', description: 'عُد إلى تركيزك الآن!' });
-                }
-                break;
-            }
-
-
-
-
-            // --- UTILITY TOOLS ---
-
-
-            case 'find_car': {
-                const { data: carLoc } = await supabase.from('saved_locations')
-                    .select('*').eq('type', 'car').order('created_at', { ascending: false }).limit(1).single();
-
-                if (carLoc) {
-                    window.open(`https://www.google.com/maps?q=${carLoc.latitude},${carLoc.longitude}`, '_blank');
-                } else {
-                    toast({ title: 'تنبيه', description: 'لم يتم حفظ موقع سيارة مسبقاً' });
-                }
-                break;
-            }
-
             case 'save_location_current':
+                // Keep quick save current for specific calls
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(async (pos) => {
                         const name = prompt('اسم الموقع:', 'موقعي الحالي');
@@ -184,82 +148,16 @@ export const useShortcutExecution = (props: {
                     });
                 }
                 break;
-
-            case 'share_location':
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition((pos) => {
-                        const link = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
-                        navigator.clipboard.writeText(link);
-                        toast({ title: '📍 تم النسخ', description: 'الرابط جاهز للمشاركة' });
-                    });
-                }
-                break;
-
-
-
-
-
-            // --- BASIC ACTIONS ---
-            case 'show_calculator': window.dispatchEvent(new CustomEvent('open-calculator')); break;
-
-            case 'sync_now':
-                toast({ title: '🔄 جاري المزامنة...', description: 'تحديث البيانات' });
-                // Trigger a soft reload of data by dispatching a custom event
-                window.dispatchEvent(new CustomEvent('sync-data'));
-                setTimeout(() => {
-                    toast({ title: '✅ تم التحديث', description: 'البيانات محدثة' });
-                }, 1000);
-                break;
-
-            case 'power_mode':
-                const isPowerMode = document.body.classList.toggle('reduce-motion');
-                localStorage.setItem('power_mode', isPowerMode ? 'true' : 'false');
-                toast({
-                    title: isPowerMode ? '⚡ وضع توفير الطاقة' : '✨ الوضع العادي',
-                    description: isPowerMode ? 'تم تقليل المؤثرات البصرية' : 'تم تفعيل جميع المؤثرات'
-                });
-                break;
-
-            case 'clear_cache':
-                try {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    toast({ title: '🧹 تم التنظيف', description: 'سيتم إعادة تحميل الصفحة...' });
-                    setTimeout(() => window.location.reload(), 1000);
-                } catch (e) {
-                    toast({ title: '❌ خطأ', description: 'فشل في التنظيف', variant: 'destructive' });
-                }
-                break;
-
-            // copy_location is an alias for share_location, handled below
             case 'open_map':
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition((pos) => {
-                        window.open(`https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`, '_blank');
-                    });
-                }
+                // Changed to open the Locations tab or dialog instead of Google Maps external link
+                props.onNavigateToTab?.('locations'); // Or props.onOpenAddDialog('location') depending on preference
                 break;
-            case 'remind_water': toast({ title: '💧 تذكير', description: 'اشرب الماء الآن!' }); break;
-            case 'remind_5min':
-                toast({ title: '⏰ مؤقت 5 دقائق', description: 'بدأ العد...' });
-                setTimeout(() => { new Notification('انتهى الوقت!'); alert('انتهت الـ 5 دقائق'); }, 5 * 60 * 1000);
-                break;
-
-            // --- DIALOGS ---
-            case 'add_task': props.onOpenAddDialog('task'); break;
-            case 'add_appointment': props.onOpenAddDialog('appointment'); break;
-            case 'add_note': props.onOpenAddDialog('note'); break;
-            case 'add_expense': props.onOpenAddDialog('expense'); break;
-            case 'add_shopping': props.onOpenAddDialog('shopping'); break;
-            case 'add_medication': props.onOpenAddDialog('medication'); break;
-            case 'add_habit': props.onOpenAddDialog('habit'); break;
-            case 'add_project': props.onOpenAddDialog('project'); break;
-            case 'show_new_muslims': props.onOpenNewMuslims?.(); break;
-            case 'start_pomodoro': props.onOpenTimer?.(); break;
             case 'save_parking':
+                // Ensure this opens the parking dialog if onQuickParking is implemented, otherwise the map
                 if (props.onQuickParking) {
                     props.onQuickParking();
                 } else {
+                    // Fallback to triggering the global event which DashboardLocations listens to
                     window.dispatchEvent(new CustomEvent('save-parking'));
                 }
                 break;

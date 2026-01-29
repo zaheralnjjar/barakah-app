@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useMedications } from '@/hooks/useMedications';
 import { useTasks } from '@/hooks/useTasks';
+import { useAppStore, Task } from '@/stores/useAppStore';
 import { useHabits } from '@/hooks/useHabits';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useFinance } from '@/hooks/useFinance';
@@ -37,12 +38,13 @@ import DashboardHeader from './dashboard/DashboardHeader';
 import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
 
+import { ActiveTimerCard } from './dashboard/ActiveTimerCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
 import { MasterAgenda } from './dashboard/MasterAgenda';
-import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
+import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
 import FlashlightOverlay from './FlashlightOverlay';
@@ -80,6 +82,40 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
     const [routineVisibleSections, setRoutineVisibleSections] = useState<string[]>(['notes', 'shopping', 'calendar']);
     const { activeTab } = useOutletContext<{ activeTab: string }>();
+
+    // Editing State
+    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+    const [editingAppointment, setEditingAppointment] = useState<any>(null);
+    const [taskTitle, setTaskTitle] = useState('');
+    const [taskDate, setTaskDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [taskPriority, setTaskPriority] = useState<'high' | 'medium' | 'low'>('medium');
+
+    const { updateTask } = useAppStore();
+
+    useEffect(() => {
+        const handleEditTask = (evt: CustomEvent) => {
+            const task = evt.detail;
+            setEditingTaskId(task.id);
+            setTaskTitle(task.title);
+            setTaskDate(task.deadline || new Date().toISOString().split('T')[0]);
+            setTaskPriority(task.priority || 'medium');
+            setShowAddDialog('task');
+        };
+
+        const handleEditAppointment = (evt: CustomEvent) => {
+            const apt = evt.detail;
+            setEditingAppointment(apt);
+            setShowAddDialog('appointment');
+        };
+
+        window.addEventListener('edit-task', handleEditTask as EventListener);
+        window.addEventListener('edit-appointment', handleEditAppointment as EventListener);
+
+        return () => {
+            window.removeEventListener('edit-task', handleEditTask as EventListener);
+            window.removeEventListener('edit-appointment', handleEditAppointment as EventListener);
+        };
+    }, []);
 
     const { executeShortcut, shortcutResult, setShortcutResult } = useShortcutExecution({
         onOpenAddDialog: setShowAddDialog,
@@ -216,8 +252,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', isAndroid() ? "space-y-1.5" : "space-y-1")}>
                         <DashboardHeaderStrip />
 
-                        {/* Quick Access Grid - Sky Identity - MOVED UP */}
-                        <div className="bg-sky-50/40 border border-sky-100 rounded-3xl p-1.5 shadow-sm mb-1.5 transition-all">
+                        {/* 1. Quick Access Grid (Text-Only) */}
+                        <div className="mb-2">
                             <QuickActionsGridV2
                                 onOpenAddDialog={setShowAddDialog}
                                 onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
@@ -226,8 +262,27 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                                 onOpenShortcuts={() => setShowShortcutsSettings(true)}
                                 onOpenSearch={() => setIsSearchOpen(true)}
+                                onQuickParking={() => window.dispatchEvent(new CustomEvent('save-parking'))}
                                 isCleanMode={isCleanMode}
                                 onToggleCleanMode={() => setIsCleanMode(prev => !prev)}
+                            />
+                        </div>
+
+                        {/* 2. Active Timer / Event Card (CYCLING) */}
+                        <div className="mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <ActiveTimerCard
+                                onOpenTimer={() => window.dispatchEvent(new Event('openPomodoroDialog'))}
+                                onOpenEvent={(evt) => {
+                                    if ((evt as any).type === 'appointment') {
+                                        // Dispatch event to open appointment edit dialog (requires implementation in App or listening component)
+                                        // For now, we'll assume a custom event 'edit-appointment' 
+                                        window.dispatchEvent(new CustomEvent('edit-appointment', { detail: evt }));
+                                    } else {
+                                        // Dispatch event to open task details
+                                        window.dispatchEvent(new CustomEvent('edit-task', { detail: evt }));
+                                    }
+                                }}
+                                onOpenCalendar={() => onNavigateToTab('calendar')}
                             />
                         </div>
 
@@ -335,13 +390,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             {/* Dialogs */}
             <GlobalSearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigateToTab={onNavigateToTab} onOpenNewMuslims={() => setShowNewMuslimsDialog(true)} />
-            <QuickNoteDialog isOpen={showAddDialog === 'note'} onClose={() => setShowAddDialog(null)} />
+
 
             <Dialog open={showAddDialog !== null && showAddDialog !== 'note'} onOpenChange={(open) => {
                 if (!open) {
                     if (showAddDialog === 'appointment') refreshAppointments();
                     if (showAddDialog === 'task') refreshTasks();
                     setShowAddDialog(null);
+                    // Reset editing state
+                    setEditingTaskId(null);
+                    setEditingAppointment(null);
+                    setTaskTitle('');
+                    setTaskDate(new Date().toISOString().split('T')[0]);
+                    setTaskPriority('medium');
                 }
             }}>
                 <DialogContent className={cn(
@@ -371,25 +432,52 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                     </DialogHeader>
 
                     <div className="p-6 pt-4">
-                        {showAddDialog === 'appointment' && <AppointmentManager />}
+                        {showAddDialog === 'appointment' && <AppointmentManager hideList={true} appointmentToEdit={editingAppointment} />}
                         {showAddDialog === 'task' && (
                             <div className="space-y-4">
-                                <Input id="task-title" placeholder="عنوان المهمة" className="text-right" />
+                                <Input
+                                    value={taskTitle}
+                                    onChange={(e) => setTaskTitle(e.target.value)}
+                                    placeholder="عنوان المهمة"
+                                    className="text-right"
+                                />
                                 <div className="grid grid-cols-2 gap-2">
-                                    <Input id="task-date" type="date" defaultValue={todayStr} />
-                                    <select id="task-priority" className="border rounded-md px-2 bg-white">
+                                    <Input
+                                        type="date"
+                                        value={taskDate}
+                                        onChange={(e) => setTaskDate(e.target.value)}
+                                    />
+                                    <select
+                                        value={taskPriority}
+                                        onChange={(e) => setTaskPriority(e.target.value as any)}
+                                        className="border rounded-md px-2 bg-white"
+                                    >
                                         <option value="medium">متوسطة</option>
                                         <option value="high">عالية</option>
                                         <option value="low">منخفضة</option>
                                     </select>
                                 </div>
                                 <Button className="w-full bg-blue-600 font-bold py-6 text-lg rounded-2xl shadow-lg active:scale-95 transition-transform" onClick={async () => {
-                                    const title = (document.getElementById('task-title') as HTMLInputElement).value;
-                                    if (!title) return;
-                                    await addTask({ title, deadline: (document.getElementById('task-date') as HTMLInputElement).value || todayStr, priority: (document.getElementById('task-priority') as HTMLSelectElement).value as any, type: 'task' });
-                                    toast({ title: 'تمت إضافة المهمة' });
+                                    if (!taskTitle) return;
+
+                                    if (editingTaskId) {
+                                        updateTask(editingTaskId, {
+                                            title: taskTitle,
+                                            deadline: taskDate,
+                                            priority: taskPriority as any
+                                        });
+                                        toast({ title: 'تم تحديث المهمة' });
+                                    } else {
+                                        await addTask({
+                                            title: taskTitle,
+                                            deadline: taskDate,
+                                            priority: taskPriority as any,
+                                            type: 'task'
+                                        });
+                                        toast({ title: 'تمت إضافة المهمة' });
+                                    }
                                     setShowAddDialog(null);
-                                }}>حفظ المهمة</Button>
+                                }}>{editingTaskId ? 'حفظ التعديلات' : 'حفظ المهمة'}</Button>
                             </div>
                         )}
                         {showAddDialog === 'location' && <div className="h-[400px]"><InteractiveMap /></div>}
@@ -639,10 +727,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
 
 
-            <QuickNoteDialog
+            <CreateNoteDialog
                 isOpen={showAddDialog === 'note'}
                 onClose={() => setShowAddDialog(null)}
-                defaultTag={quickNoteTag}
+                autoStartRecording={quickNoteTag === 'brain_dump'}
             />
 
             <GlobalSearchDialog

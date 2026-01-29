@@ -51,7 +51,7 @@ const RECURRENCE_OPTIONS = [
     { value: 'monthly', label: 'شهري' },
 ];
 
-const AppointmentManager: React.FC = () => {
+const AppointmentManager: React.FC<{ hideList?: boolean; appointmentToEdit?: Appointment | null }> = ({ hideList = false, appointmentToEdit = null }) => {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [newTitle, setNewTitle] = useState('');
     const [newDate, setNewDate] = useState('');
@@ -67,6 +67,18 @@ const AppointmentManager: React.FC = () => {
     // Edit State
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingApt, setEditingApt] = useState<Appointment | null>(null);
+
+    const startEdit = (apt: Appointment) => {
+        setEditingApt(apt);
+        setIsEditDialogOpen(true);
+    };
+
+    // Open edit dialog if appointmentToEdit is provided
+    useEffect(() => {
+        if (appointmentToEdit) {
+            startEdit(appointmentToEdit);
+        }
+    }, [appointmentToEdit]);
 
     const { toast } = useToast();
     const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
@@ -359,10 +371,7 @@ const AppointmentManager: React.FC = () => {
         }
     };
 
-    const startEdit = (apt: Appointment) => {
-        setEditingApt(apt);
-        setIsEditDialogOpen(true);
-    };
+
 
     const saveEdit = () => {
         if (!editingApt || !editingApt.title.trim()) return;
@@ -524,48 +533,50 @@ END:VCALENDAR`;
                     </div>
 
                     {/* Pending Appointments */}
-                    <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                        {pendingApts.length === 0 ? (
-                            <p className="text-center text-muted-foreground arabic-body text-sm py-4">
-                                لا توجد مواعيد قادمة
-                            </p>
-                        ) : (
-                            pendingApts.map(apt => (
-                                <div key={apt.id} className="flex items-center gap-2 p-2 bg-white rounded border">
-                                    <button onClick={() => toggleComplete(apt.id)} className="text-gray-400 hover:text-green-500">
-                                        <Check className="w-5 h-5" />
-                                    </button>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
-                                            <Badge className={`text-[10px] font-bold ${getCountdownColor(apt.date)}`}>
-                                                ⏱️ {getDaysRemaining(apt.date)}
-                                            </Badge>
+                    {!hideList && (
+                        <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                            {pendingApts.length === 0 ? (
+                                <p className="text-center text-muted-foreground arabic-body text-sm py-4">
+                                    لا توجد مواعيد قادمة
+                                </p>
+                            ) : (
+                                pendingApts.map(apt => (
+                                    <div key={apt.id} className="flex items-center gap-2 p-2 bg-white rounded border">
+                                        <button onClick={() => toggleComplete(apt.id)} className="text-gray-400 hover:text-green-500">
+                                            <Check className="w-5 h-5" />
+                                        </button>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="arabic-body text-sm font-medium truncate">{apt.title}</p>
+                                                <Badge className={`text-[10px] font-bold ${getCountdownColor(apt.date)}`}>
+                                                    ⏱️ {getDaysRemaining(apt.date)}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <span>{formatDate(apt.date)}</span>
+                                                <span>{apt.time}</span>
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
+                                                </Badge>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span>{formatDate(apt.date)}</span>
-                                            <span>{apt.time}</span>
-                                            <Badge variant="outline" className="text-[10px]">
-                                                <Bell className="w-2 h-2 ml-1" />{apt.reminderMinutes}د
-                                            </Badge>
-                                        </div>
+                                        <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
+                                            <Edit2 className="w-4 h-4 text-gray-500" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" onClick={() => exportToCalendar(apt)} className="h-8 w-8">
+                                            <Calendar className="w-4 h-4 text-blue-500" />
+                                        </Button>
+                                        <Button size="icon" variant="ghost" onClick={() => deleteAppointment(apt.id)} className="h-8 w-8">
+                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                        </Button>
                                     </div>
-                                    <Button size="icon" variant="ghost" onClick={() => startEdit(apt)} className="h-8 w-8">
-                                        <Edit2 className="w-4 h-4 text-gray-500" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" onClick={() => exportToCalendar(apt)} className="h-8 w-8">
-                                        <Calendar className="w-4 h-4 text-blue-500" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" onClick={() => deleteAppointment(apt.id)} className="h-8 w-8">
-                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                    </Button>
-                                </div>
-                            ))
-                        )}
-                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
 
                     {/* Completed Toggle */}
-                    {completedApts.length > 0 && (
+                    {!hideList && completedApts.length > 0 && (
                         <button
                             onClick={() => setShowCompleted(!showCompleted)}
                             className="flex items-center gap-1 text-sm text-muted-foreground arabic-body"

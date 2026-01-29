@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { cn } from '@/lib/utils';
 import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
-import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder } from 'lucide-react';
+import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder, Map } from 'lucide-react';
 import { ProductivityTicker } from './ProductivityTicker';
 import { SmartGridTicker } from './SmartGridTicker';
 import { DailyReportDialog, WeeklyReportDialog } from './ProductivityReportsDialogs';
@@ -63,6 +63,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
     const [showEventMenu, setShowEventMenu] = useState(false);
     const [showLocationMenu, setShowLocationMenu] = useState(false);
+    const [showSettingsMenu, setShowSettingsMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
     const [showDailyReport, setShowDailyReport] = useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = useState(false);
@@ -97,351 +98,73 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
     const fixedActionIds = ['timer', 'event', 'expense', 'location', 'shopping', 'open_settings', 'show_new_muslims', 'open_tools', 'note'];
 
-    // Unified Button Component
-    const ActionButton = ({ shortcutId, isFixed = false, customData, className }: { shortcutId: string, isFixed?: boolean, customData?: any, className?: string }) => {
-        let displayName = '';
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let DisplayIcon: any = FileText;
-        let colorClass = 'text-gray-700 bg-white border-gray-200';
-        let onClickHandler = () => { };
-        let onLongPressHandler = () => { };
-
-        // 1. Fixed Actions
-        if (isFixed) {
-            const action = getActionById(shortcutId);
-            if (!action) return null;
-
-            // Override name and icon for settings button
-            if (shortcutId === 'open_settings') {
-                displayName = isCleanMode ? 'إظهار' : 'إخفاء';
-                DisplayIcon = isCleanMode ? LayoutGrid : Icons.EyeOff;
-            } else {
-                displayName = action.name;
-                DisplayIcon = null; // No icon for others
-            }
-
-            colorClass = colorMap[shortcutId] || 'text-gray-700';
-
-            // Handlers
-            onClickHandler = () => executeShortcut(shortcutId);
-
-            // Specific overrides
-            if (shortcutId === 'open_settings') {
-                onClickHandler = () => {
-                    if (onToggleCleanMode) {
-                        onToggleCleanMode();
-                        if (navigator.vibrate) navigator.vibrate(50);
-                    }
-                };
-            } else if (shortcutId === 'timer') {
-                onLongPressHandler = () => executeShortcut('quick_timer_5');
-            } else if (shortcutId === 'event') {
-                onClickHandler = () => setShowEventMenu(true);
-                onLongPressHandler = () => onNavigateToTab?.('appointments');
-            } else if (shortcutId === 'expense') {
-                onClickHandler = () => onOpenAddDialog('expense');
-                onLongPressHandler = () => executeShortcut('finance_summary');
-            } else if (shortcutId === 'location') {
-                onClickHandler = () => setShowLocationMenu(true);
-                onLongPressHandler = () => executeShortcut('copy_coords');
-            } else if (shortcutId === 'shopping') {
-                onClickHandler = () => onOpenAddDialog('shopping');
-                onLongPressHandler = () => onNavigateToTab?.('shopping');
-            } else if (shortcutId === 'note') {
-                onClickHandler = () => onOpenAddDialog('note');
-                onLongPressHandler = () => onOpenVoiceRecorder?.();
-            } else if (shortcutId === 'open_academic') {
-                onClickHandler = () => navigate('/thesis');
-            } else if (shortcutId === 'show_new_muslims') {
-                onClickHandler = () => onOpenNewMuslims?.();
-                onLongPressHandler = () => toast({ title: '📊 إحصائيات', description: 'تم تحديث البيانات' });
-            }
-
-        }
-        // 2. Custom Shortcuts (DB)
-        else if (customData) {
-            displayName = customData.custom_name || 'اختصار';
-            colorClass = `bg-${customData.icon_color || 'gray'}-50 text-${customData.icon_color || 'gray'}-700 border-${customData.icon_color || 'gray'}-200`;
-
-            // No Icon for custom shortcuts to match the minimal text-only style
-            DisplayIcon = null;
-
-            // Handlers
-            if (customData.is_folder) {
-                onClickHandler = () => {
-                    toast({ title: customData.custom_name, description: 'فتح المجلد...' });
-                };
-                onLongPressHandler = () => setShowShortcutsDialog(true);
-            } else if (customData.shortcut_type === 'action') {
-                onClickHandler = () => {
-                    if (customData.click_action_id) executeShortcut(customData.click_action_id);
-                };
-                onLongPressHandler = () => {
-                    if (customData.long_press_action_id) {
-                        executeShortcut(customData.long_press_action_id);
-                    } else {
-                        setShowShortcutsDialog(true); // Default to edit if no long press action
-                    }
-                };
-            } else if (customData.shortcut_type === 'url') {
-                onClickHandler = () => {
-                    let targetUrl = customData.url || '';
-                    if (targetUrl && !targetUrl.startsWith('http')) {
-                        targetUrl = 'https://' + targetUrl;
-                    }
-                    if (targetUrl) window.open(targetUrl, '_blank');
-                };
-                onLongPressHandler = () => setShowShortcutsDialog(true);
-            } else if (customData.shortcut_type === 'navigation') {
-                onClickHandler = () => {
-                    if (customData.location_lat && customData.location_lng) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${customData.location_lat},${customData.location_lng}`, '_blank');
-                    } else if (customData.location_address) {
-                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(customData.location_address)}`, '_blank');
-                    } else {
-                        toast({ title: 'خطأ', description: 'لا توجد إحداثيات محفوظة لهذا الاختصار', variant: 'destructive' });
-                    }
-                };
-                onLongPressHandler = () => setShowShortcutsDialog(true);
-            } else if (customData.shortcut_type === 'save_location') {
-                onClickHandler = () => executeShortcut('save_location_current');
-                onLongPressHandler = () => setShowShortcutsDialog(true);
-            } else if (customData.shortcut_type === 'save_parking') {
-                onClickHandler = () => executeShortcut('save_parking');
-                onLongPressHandler = () => setShowShortcutsDialog(true);
-            }
-        }
-
-        const bind = useLongPress({ onClick: onClickHandler, onLongPress: onLongPressHandler });
-
-        return (
-            <button
-                {...bind}
-                className={cn(
-                    "flex flex-col items-center justify-center p-2",
-                    // Only apply aspect-square if no specific height class is provided
-                    !className?.includes('h-') && "aspect-square",
-                    "w-full active:scale-90 transition-transform",
-                    "rounded-2xl border shadow-sm",
-                    colorClass,
-                    className
-                )}
-            >
-                {DisplayIcon && <DisplayIcon className="w-6 h-6 stroke-[2]" />}
-                <span className={cn(
-                    "font-bold tracking-tight text-center leading-tight line-clamp-2",
-                    DisplayIcon ? "text-[10px] mt-1" : "text-xs px-1"
-                )}>
-                    {displayName}
-                </span>
-            </button>
-        );
-    };
-
-    // Android Layout - Proper Order: Fixed Actions → Custom Shortcuts
-    if (isAndroid()) {
-        const row1Ids = ['timer', 'event', 'expense', 'location', 'shopping'];
-
-        return (
-            <div className="space-y-3">
-                {/* 1. Row 1: Fixed Quick Actions (5 cols) */}
-                <div className="px-1" dir="rtl">
-                    <div className="grid grid-cols-5 gap-2">
-                        {row1Ids.map(id => <ActionButton key={id} shortcutId={id} isFixed={true} />)}
-                    </div>
-                </div>
-
-                {/* 2. Row 2: Note | Productivity Ticker (3) | Customize */}
-                <div className="px-1" dir="rtl">
-                    <div className="grid grid-cols-5 gap-2" style={{ height: '72px' }}>
-                        {/* Right: Add Note */}
-                        <div className="col-span-1 h-full">
-                            <ActionButton
-                                shortcutId="note"
-                                isFixed={true}
-                                className="h-full !aspect-auto"
-                            />
-                        </div>
-
-                        {/* Center: Smart Grid Widget (Span 3) */}
-                        <div className="col-span-3 h-full">
-                            <SmartGridTicker
-                                onClick={() => setShowDailyReport(true)}
-                                onLongPress={() => setShowWeeklyReport(true)}
-                            />
-                        </div>
-
-                        {/* Left: Customize/Tools */}
-                        <div className="col-span-1 h-full">
-                            <ActionButton
-                                shortcutId="open_tools"
-                                isFixed={true}
-                                className="h-full !aspect-auto"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* 3. Custom Shortcuts from Settings - Conditional Render */}
-                {!isCleanMode && gridShortcuts.length > 0 && (
-                    <div className="px-1 animate-in slide-in-from-top-2 fade-in duration-300" dir="rtl">
-                        <div className="grid grid-cols-5 gap-2">
-                            {filteredGridShortcuts.map(shortcut => (
-                                <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Event Type Selection Menu */}
-                <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
-                    <DialogContent className="max-w-[90vw] rounded-3xl">
-                        <DialogHeader>
-                            <DialogTitle className="text-center text-lg">اختر نوع الحدث</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-4 py-4">
-                            <button
-                                onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }}
-                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-600 active:scale-95"
-                            >
-                                <CalendarPlus className="w-10 h-10 mb-2" />
-                                <span className="text-sm font-bold">موعد</span>
-                            </button>
-                            <button
-                                onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }}
-                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
-                            >
-                                <CheckSquare className="w-10 h-10 mb-2" />
-                                <span className="text-sm font-bold">مهمة</span>
-                            </button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Location Type Selection Menu */}
-                <Dialog open={showLocationMenu} onOpenChange={setShowLocationMenu}>
-                    <DialogContent className="max-w-[90vw] rounded-3xl">
-                        <DialogHeader>
-                            <DialogTitle className="text-center flex items-center justify-center gap-2">
-                                <MapPin className="w-5 h-5 text-green-500" />
-                                الموقع
-                            </DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-4 py-4">
-                            <button
-                                onClick={() => { setShowLocationMenu(false); onQuickParking?.(); }}
-                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-700 active:scale-95"
-                            >
-                                <span className="text-3xl mb-2">🅿️</span>
-                                <span className="text-sm font-bold">حفظ موقف</span>
-                            </button>
-                            <button
-                                onClick={() => { setShowLocationMenu(false); setShowSavedLocations(true); }}
-                                className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
-                            >
-                                <MapPin className="w-8 h-8 mb-2" />
-                                <span className="text-sm font-bold">المواقع</span>
-                            </button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
-                <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
-            </div>
-        );
-    }
-
-    // Web Layout (3-Row Sequential)
+    // Simplified Layout - Text Only Grid
+    const gridActions = [
+        { id: 'event', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200' }, // Violet
+        { id: 'timer', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200' }, // Orange
+        { id: 'expense', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200' }, // Red
+        { id: 'location', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200' }, // Emerald
+        { id: 'shopping', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200' }, // Pink
+        { id: 'settings', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200' }, // Blue (replaced prayer)
+    ];
 
     return (
-        <div className="space-y-8 py-2" dir="rtl">
-            {/* Row 1: User's Selected Quick Access Icons (5 cols mobile, 10 desktop) */}
-            <div className="space-y-3">
-                <h3 className="text-sm font-black text-gray-400 px-2 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    الوصول السريع
-                </h3>
-                <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4 px-1">
-                    {fixedActionIds.map(id => <ActionButton key={id} shortcutId={id} isFixed={true} />)}
-                </div>
+        <div className="w-full relative">
+            <div className="grid grid-cols-6 gap-2 px-1" dir="rtl">
+                {gridActions.map((action) => {
+                    const isSettings = action.id === 'settings';
+                    return (
+                        <div key={action.id} className="relative">
+                            <button
+                                onClick={() => {
+                                    if (action.id === 'event') setShowEventMenu(true);
+                                    else if (action.id === 'timer') window.dispatchEvent(new Event('openPomodoroDialog'));
+                                    else if (action.id === 'expense') onOpenAddDialog('expense');
+                                    else if (action.id === 'location') setShowLocationMenu(true);
+                                    else if (action.id === 'shopping') onOpenAddDialog('shopping');
+                                    else if (action.id === 'settings') onOpenShortcuts?.(); // Direct to Shortcuts
+                                }}
+                                className={cn(
+                                    "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full",
+                                    action.color,
+                                    "border-b-2 border-black/10"
+                                )}
+                            >
+                                <span className="text-[10px] md:text-xs font-black tracking-wide" style={{ fontFamily: 'Cairo, sans-serif' }}>{action.label}</span>
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Row 2: Saved Locations (5 cols mobile, 10 desktop) */}
-            {pinnedLocationsList.length > 0 && (
-                <div className="space-y-3">
-                    <h3 className="text-sm font-black text-gray-400 px-2 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        المواقع المحفوظة
-                    </h3>
-                    <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4 px-1">
-                        {pinnedLocationsList.map(loc => (
-                            <button
-                                key={loc.id}
-                                onClick={() => window.open(loc.url, '_blank')}
-                                className="flex flex-col items-center justify-center p-2 rounded-[1.5rem] border border-emerald-100 shadow-sm aspect-square w-full active:scale-95 transition-all group overflow-hidden bg-emerald-50/50 text-emerald-700"
-                            >
-                                <span className="text-[10px] md:text-[12px] font-black tracking-tight text-center leading-tight line-clamp-3 w-full px-1">
-                                    {loc.title}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Row 3: Custom Shortcuts from Database (اختصاراتي) */}
-            <CustomShortcutsGrid
-                placement="shortcuts_grid"
-                onOpenAddDialog={onOpenAddDialog}
-                onNavigateToTab={onNavigateToTab}
-                columns={5}
-                size="md"
-            />
-
-            {/* Row 4: Shortcuts from DB displayed as ActionButtons (Alternative view if needed) */}
-            {!isCleanMode && gridShortcuts.length > 0 && (
-                <div className="px-1">
-                    <h3 className="text-sm font-black text-gray-400 px-2 flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                        اختصاراتي اضافية
-                    </h3>
-                    <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
-                        {filteredGridShortcuts.map(shortcut => (
-                            <ActionButton key={shortcut.id} shortcutId={shortcut.id} customData={shortcut} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Event Type Selection Menu - Appointment & Task Only */}
+            {/* Event Type Selection Menu */}
             <Dialog open={showEventMenu} onOpenChange={setShowEventMenu}>
-                <DialogContent className="sm:max-w-[400px]">
+                <DialogContent className="max-w-[90vw] rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="text-center text-lg">اختر نوع الحدث</DialogTitle>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-4 py-6">
+                    <div className="grid grid-cols-2 gap-4 py-4">
                         <button
                             onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }}
-                            className="flex flex-col items-center justify-center p-6 rounded-2xl bg-orange-100 text-orange-600 active:scale-95 transition-transform"
+                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-600 active:scale-95"
                         >
-                            <CalendarPlus className="w-12 h-12 mb-3" />
-                            <span className="text-base font-bold">موعد</span>
+                            <CalendarPlus className="w-10 h-10 mb-2" />
+                            <span className="text-sm font-bold">موعد</span>
                         </button>
                         <button
                             onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }}
-                            className="flex flex-col items-center justify-center p-6 rounded-2xl bg-blue-100 text-blue-600 active:scale-95 transition-transform"
+                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
                         >
-                            <CheckSquare className="w-12 h-12 mb-3" />
-                            <span className="text-base font-bold">مهمة</span>
+                            <CheckSquare className="w-10 h-10 mb-2" />
+                            <span className="text-sm font-bold">مهمة</span>
                         </button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            {/* Location Type Selection Menu - Quick Parking & Saved Locations Only */}
+            {/* Location Type Selection Menu */}
             <Dialog open={showLocationMenu} onOpenChange={setShowLocationMenu}>
-                <DialogContent className="sm:max-w-[350px]">
+                <DialogContent className="max-w-[90vw] rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="text-center flex items-center justify-center gap-2">
                             <MapPin className="w-5 h-5 text-green-500" />
@@ -450,18 +173,25 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-4 py-4">
                         <button
-                            onClick={() => { setShowLocationMenu(false); onQuickParking?.(); }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-700 active:scale-95 transition-transform"
-                        >
-                            <span className="text-3xl mb-2">🅿️</span>
-                            <span className="text-sm font-bold">حفظ موقف</span>
-                        </button>
-                        <button
-                            onClick={() => { setShowLocationMenu(false); setShowSavedLocations(true); }}
-                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95 transition-transform"
+                            onClick={() => {
+                                setShowLocationMenu(false);
+                                setShowSavedLocations(true); // Open Saved Locations Dialog
+                            }}
+                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-blue-100 text-blue-600 active:scale-95"
                         >
                             <MapPin className="w-8 h-8 mb-2" />
-                            <span className="text-sm font-bold">المواقع</span>
+                            <span className="text-sm font-bold">مواقع محفوظة</span>
+                        </button>
+
+                        <button
+                            onClick={() => { setShowLocationMenu(false); onQuickParking?.(); }}
+                            className="flex flex-col items-center justify-center p-5 rounded-2xl bg-orange-100 text-orange-700 active:scale-95"
+                        >
+                            <div className="relative">
+                                <MapPin className="w-8 h-8 mb-2 text-orange-600" />
+                                <span className="text-2xl absolute -top-1 -right-1">🅿️</span>
+                            </div>
+                            <span className="text-sm font-bold">حفظ سريع (موقف)</span>
                         </button>
                     </div>
                 </DialogContent>
@@ -469,12 +199,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
-
-            {/* Productivity Reports */}
-            <DailyReportDialog open={showDailyReport} onOpenChange={setShowDailyReport} />
-            <WeeklyReportDialog open={showWeeklyReport} onOpenChange={setShowWeeklyReport} />
         </div>
     );
 };
-
 export default QuickActionsGridV2;
