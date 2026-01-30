@@ -3,7 +3,7 @@ import React from 'react';
 const NotesHeaderSimple: React.FC = () => {
     const currentDate = new Date();
 
-    const spanishDate = currentDate.toLocaleDateString('es-ES', {
+    const spanishDate = currentDate.toLocaleDateString('ar-EG', {
         day: 'numeric',
         month: 'long'
     });

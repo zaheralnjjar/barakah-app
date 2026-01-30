@@ -48,9 +48,11 @@ const fontFamilies = [
 ];
 
 const colors = [
-    '#000000', '#4B5563', '#DC2626', '#EA580C',
-    '#D97706', '#65A30D', '#059669', '#0891B2',
-    '#2563EB', '#7C3AED', '#DB2777'
+    '#000000', '#4B5563', '#9CA3AF', '#FFFFFF', // Grayscale & White
+    '#DC2626', '#EA580C', '#D97706', '#CA8A04', // Reds/Oranges/Yellows
+    '#65A30D', '#16A34A', '#059669', '#0D9488', // Greens/Teals
+    '#0891B2', '#2563EB', '#4F46E5', '#7C3AED', // Blues/Indigos/Purples
+    '#DB2777', '#E11D48' // Pinks/Roses
 ];
 
 const highlights = [
@@ -66,13 +68,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
     const addTimeSeparator = () => {
         const now = new Date();
-        const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const dateString = `${now.getDate()} de ${months[now.getMonth()]}`;
-        const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const dateString = `${now.getDate()} ${months[now.getMonth()]}`;
+        const timeString = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         editor.chain().focus()
             .setHorizontalRule()
-            .insertContent(`<p style="text-align: center; color: #9CA3AF; font-size: 0.85em; margin-top: -1em; background: white; width: fit-content; margin-left: auto; margin-right: auto; padding: 0 10px;">${dateString} a las ${timeString}</p>`)
+            .insertContent(`<p style="text-align: center; color: #9CA3AF; font-size: 0.85em; margin-top: -1em; background: white; width: fit-content; margin-left: auto; margin-right: auto; padding: 0 10px;">${dateString} ${timeString}</p>`)
             .enter()
             .run();
     };

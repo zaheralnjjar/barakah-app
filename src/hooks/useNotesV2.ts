@@ -16,6 +16,7 @@ export interface NoteV2 {
     text_color?: string;
     background_color?: string; // Explicit background color
     is_bold?: boolean;
+    text_align?: 'right' | 'center' | 'left';
     created_at: string;
     updated_at: string;
 }
@@ -52,7 +53,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
 
     // 2. Create Note
     const createNoteMut = useMutation({
-        mutationFn: async ({ title, folder_id, content = '', color, tags = [], font_family, font_size, text_color, background_color, is_bold }: Partial<NoteV2>) => {
+        mutationFn: async ({ title, folder_id, content = '', color, tags = [], font_family, font_size, text_color, background_color, is_bold, text_align }: Partial<NoteV2>) => {
             const userId = (await supabase.auth.getUser()).data.user?.id;
             if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
 
@@ -68,6 +69,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                     font_size: font_size || 'normal',
                     text_color: text_color || '#000000',
                     is_bold: is_bold || false,
+                    text_align: text_align || 'right',
                     tags: tags,
                     user_id: userId,
                     is_pinned: false

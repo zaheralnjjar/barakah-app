@@ -25,13 +25,26 @@ import {
 export const ShortcutDialogs = () => {
     const { toast } = useToast();
 
-    // Distraction Dialog State
+    // Activity/Distraction Dialog State
     const [showDistraction, setShowDistraction] = useState(false);
     const [distractionLogs, setDistractionLogs] = useState<any[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [distractionReason, setDistractionReason] = useState('');
-    const [distractionDuration, setDistractionDuration] = useState(0); // Added State
+    const [distractionDuration, setDistractionDuration] = useState(0);
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
     const [showExportConfirm, setShowExportConfirm] = useState(false);
+
+    // Auto-calculate duration
+    useEffect(() => {
+        if (startTime && endTime) {
+            const start = new Date(`1970-01-01T${startTime}`);
+            const end = new Date(`1970-01-01T${endTime}`);
+            let diff = (end.getTime() - start.getTime()) / 1000 / 60; // minutes
+            if (diff < 0) diff += 24 * 60; // Handle overnight
+            setDistractionDuration(Math.round(diff));
+        }
+    }, [startTime, endTime]);
 
     // Medical Profile State
     const [showMedical, setShowMedical] = useState(false);
@@ -56,7 +69,11 @@ export const ShortcutDialogs = () => {
 
 
     useEffect(() => {
-        const handleOpenDistraction = () => setShowDistraction(true);
+        const handleOpenDistraction = () => {
+            setShowDistraction(true);
+            // Default start time to now
+            setStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+        };
         const handleOpenMedical = () => setShowMedical(true);
         const handleOpenAppointment = () => {
             setApptDate(new Date().toISOString().split('T')[0]);
@@ -88,18 +105,32 @@ export const ShortcutDialogs = () => {
     const handleSaveDistraction = async () => {
         if (!distractionReason.trim()) return;
 
+        // Construct full timestamps if times are provided
+        let startTimestamp = null;
+        let endTimestamp = null;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (startTime) startTimestamp = new Date(`${today}T${startTime}`).toISOString();
+        if (endTime) endTimestamp = new Date(`${today}T${endTime}`).toISOString();
+
+
         const { error } = await supabase.from('distraction_logs').insert({
             user_id: (await supabase.auth.getUser()).data.user?.id,
             reason: distractionReason,
-            duration_minutes: distractionDuration, // Added Duration
+            duration_minutes: distractionDuration,
+            start_time: startTimestamp,
+            end_time: endTimestamp
         });
 
         if (!error) {
-            toast({ title: 'تم التسجيل', description: 'تم تسجيل سبب التشتت بنجاح' });
+            toast({ title: 'تم التسجيل', description: 'تم تسجيل النشاط بنجاح' });
             setShowDistraction(false);
             setDistractionReason('');
-            setDistractionDuration(0); // Reset
+            setDistractionDuration(0);
+            setStartTime('');
+            setEndTime('');
         } else {
+            console.error(error);
             toast({ title: 'خطأ', description: 'فشل التسجيل', variant: 'destructive' });
         }
     };
@@ -117,23 +148,23 @@ export const ShortcutDialogs = () => {
     const performExport = async () => {
         // 1. Prepare Data for Excel
         const dataToExport = distractionLogs.map(log => ({
-            'السبب': log.reason,
-            'المدة (دقيقة)': log.duration_minutes || 0, // Added Column
+            'النشاط/السبب': log.reason,
+            'المدة (دقيقة)': log.duration_minutes || 0,
+            'وقت البداية': log.start_time ? new Date(log.start_time).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-',
+            'وقت النهاية': log.end_time ? new Date(log.end_time).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-',
             'التاريخ': new Date(log.created_at).toLocaleDateString('ar-SA'),
             'الوقت': new Date(log.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
-            'التاريخ الميلادي': new Date(log.created_at).toLocaleDateString('en-GB'),
         }));
 
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(dataToExport);
         ws['!views'] = [{ rightToLeft: true }];
 
-        // Adjust column widths
-        ws['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        ws['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
 
-        XLSX.utils.book_append_sheet(wb, ws, "سجل التشتت");
+        XLSX.utils.book_append_sheet(wb, ws, "سجل النشاط");
 
-        const fileName = `Distraction_Log_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const fileName = `Activity_Log_${new Date().toISOString().split('T')[0]}.xlsx`;
 
         // 2. Handle Export based on Platform
         try {
@@ -142,7 +173,6 @@ export const ShortcutDialogs = () => {
                 const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
                 try {
-                    // Try saving to Documents first (User accessible)
                     await Filesystem.writeFile({
                         path: fileName,
                         data: wbout,
@@ -151,21 +181,19 @@ export const ShortcutDialogs = () => {
 
                     toast({ title: 'تم الحفظ ✅', description: `تم حفظ الملف في مجلد المستندات باسم: ${fileName}` });
 
-                    // Optional: Share immediately
                     const uriResult = await Filesystem.getUri({
                         directory: Directory.Documents,
                         path: fileName,
                     });
 
                     await Share.share({
-                        title: 'سجل التشتت',
+                        title: 'سجل النشاط',
                         url: uriResult.uri,
                         dialogTitle: 'مشاركة ملف Excel'
                     });
 
                 } catch (e) {
                     console.error('Documents save error:', e);
-                    // Fallback to Cache if Documents fails (Android 10- scoped storage issues)
                     try {
                         await Filesystem.writeFile({
                             path: fileName,
@@ -177,7 +205,7 @@ export const ShortcutDialogs = () => {
                             path: fileName,
                         });
                         await Share.share({
-                            title: 'سجل التشتت',
+                            title: 'سجل النشاط',
                             url: uriResult.uri,
                             dialogTitle: 'مشاركة ملف Excel'
                         });
@@ -186,7 +214,6 @@ export const ShortcutDialogs = () => {
                     }
                 }
             } else {
-                // Web: Browser Download
                 XLSX.writeFile(wb, fileName);
                 toast({ title: 'تم التحميل', description: 'جارٍ تحميل ملف Excel...' });
             }
@@ -284,14 +311,14 @@ export const ShortcutDialogs = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Distraction Dialog */}
+            {/* Activity/Distraction Dialog */}
             <Dialog open={showDistraction} onOpenChange={setShowDistraction}>
                 <DialogContent className="max-w-md" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 justify-between">
                             <div className="flex items-center gap-2">
                                 <AlertTriangle className="w-5 h-5 text-orange-500" />
-                                تسجيل تشتت
+                                تسجيل نشاط
                             </div>
                             <div className="flex gap-1">
                                 {showHistory && distractionLogs.length > 0 && (
@@ -303,12 +330,12 @@ export const ShortcutDialogs = () => {
                                     if (!showHistory) fetchDistractionLogs();
                                     setShowHistory(!showHistory);
                                 }}>
-                                    {showHistory ? 'إخفاء السجل' : 'سجل التشتت'}
+                                    {showHistory ? 'إخفاء السجل' : 'سجل النشاط'}
                                 </Button>
                             </div>
                         </DialogTitle>
                         <DialogDescription>
-                            {showHistory ? 'سجل التشتت السابق' : 'ما الذي يشتت انتباهك الآن؟ الاعتراف بالمشكلة هو أول خطوة للحل.'}
+                            {showHistory ? 'سجل النشاط السابق' : 'سجل تفاصيل النشاط والوقت المستغرق'}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -317,16 +344,38 @@ export const ShortcutDialogs = () => {
                             <Input
                                 value={distractionReason}
                                 onChange={(e) => setDistractionReason(e.target.value)}
-                                placeholder="مثال: تصفح فيسبوك، ضجيج، مكالمة هاتفية..."
+                                placeholder="اسم النشاط..."
                             />
-                            <div className="flex items-center gap-2">
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-gray-500">بداية</Label>
+                                    <Input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="h-8 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-gray-500">نهاية</Label>
+                                    <Input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="h-8 text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 justify-end">
                                 <Label className="text-xs text-yellow-600 whitespace-nowrap">المدة (دقيقة):</Label>
                                 <Input
                                     type="number"
                                     min="0"
                                     value={distractionDuration}
                                     onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
-                                    className="w-24 text-center"
+                                    className="w-24 text-center font-bold"
                                 />
                             </div>
                         </div>
@@ -339,6 +388,13 @@ export const ShortcutDialogs = () => {
                                     <div key={log.id} className="bg-gray-50 p-3 rounded-lg border flex justify-between items-center group">
                                         <div className="flex flex-col gap-1 text-right">
                                             <span className="font-medium text-gray-700">{log.reason}</span>
+
+                                            <div className="flex gap-2 text-[10px] text-gray-400">
+                                                {log.start_time && <span>{new Date(log.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                                {log.start_time && log.end_time && <span>-</span>}
+                                                {log.end_time && <span>{new Date(log.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                            </div>
+
                                             {log.duration_minutes > 0 && (
                                                 <span className="text-[10px] text-yellow-600 font-bold bg-yellow-50 px-1.5 py-0.5 rounded w-fit">
                                                     {log.duration_minutes} دقيقة
@@ -348,7 +404,6 @@ export const ShortcutDialogs = () => {
                                         <div className="flex items-center gap-2">
                                             <div className="text-xs text-gray-400 text-left dir-ltr">
                                                 <div>{new Date(log.created_at).toLocaleDateString('en-GB')}</div>
-                                                <div>{new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
                                             </div>
                                             <Button
                                                 variant="ghost"
@@ -377,7 +432,7 @@ export const ShortcutDialogs = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Medical / Emergency Dialog */}
+            {/* Medical / Emergency Dialog Logic Remains... */}
             < Dialog open={showMedical} onOpenChange={setShowMedical} >
                 <DialogContent className="border-red-500 border-2 bg-red-50/10">
                     <DialogHeader>
@@ -436,9 +491,9 @@ export const ShortcutDialogs = () => {
             <AlertDialog open={showExportConfirm} onOpenChange={setShowExportConfirm}>
                 <AlertDialogContent dir="rtl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle>تصدير سجل التشتت</AlertDialogTitle>
+                        <AlertDialogTitle>تصدير سجل النشاط</AlertDialogTitle>
                         <AlertDialogDescription>
-                            هل تريد تصدير جميع سجلات التشتت إلى ملف Excel وحفظه على جهازك؟
+                            هل تريد تصدير جميع سجلات النشاط إلى ملف Excel وحفظه على جهازك؟
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

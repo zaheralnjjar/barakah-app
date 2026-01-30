@@ -59,7 +59,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const { items: shoppingItems } = useShoppingList();
     const { notes: notesHistory } = useNotesV2();
 
-    const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('es');
+    const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('ar');
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
     const [reportData, setReportData] = useState<ReportData | null>(null);
 
@@ -283,7 +283,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         return {
             title: t('dailySummary', lang),
             sections: [
-                { type: 'text', content: `${t('date', lang)}: ${today.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES')} | ${hijriDate.split('،')[0]}`, align: 'center' },
+                { type: 'text', content: `${t('date', lang)}: ${today.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'ar-EG')} | ${hijriDate.split('،')[0]}`, align: 'center' },
                 {
                     type: 'table',
                     title: t('finance', lang),
@@ -351,7 +351,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                     type: 'table',
                     headers: [t('day', lang), t('task', lang), t('status', lang)],
                     rows: weekTasks.length > 0 ? weekTasks.map(tsk => [
-                        new Date(tsk.deadline).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES', { weekday: 'short' }),
+                        new Date(tsk.deadline).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'ar-EG', { weekday: 'short' }),
                         tsk.title,
                         tsk.progress >= 100 ? '✓' : '○'
                     ]) : [['-', t('noUpcomingTasks', lang), '-']]
@@ -369,7 +369,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                     type: 'table',
                     headers: [t('date', lang), t('time', lang), t('appointment', lang)],
                     rows: upcomingAppts.length > 0 ? upcomingAppts.map(a => [
-                        new Date(a.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES', { weekday: 'short', day: 'numeric' }),
+                        new Date(a.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'ar-EG', { weekday: 'short', day: 'numeric' }),
                         a.time || '-',
                         a.title
                     ]) : [['-', '-', t('noAppts', lang)]]

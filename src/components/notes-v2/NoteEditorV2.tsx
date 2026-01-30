@@ -82,6 +82,7 @@ interface NoteEditorV2Props {
     autoInsertSeparator?: boolean;
     isBookmarked?: boolean;
     onToggleBookmark?: () => void;
+    backgroundColor?: string;
 }
 
 export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
@@ -90,7 +91,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     editable = true,
     autoInsertSeparator = true,
     isBookmarked = false,
-    onToggleBookmark
+    onToggleBookmark,
+    backgroundColor = '#ffffff'
 }) => {
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
@@ -138,8 +140,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     // Sync external content changes
     useEffect(() => {
-        if (editor && initialContent !== editor.getHTML()) {
-            // editor.commands.setContent(initialContent); // Optional sync
+        if (editor && initialContent && initialContent !== editor.getHTML()) {
+            // Only update if content is actually different to avoid cursor jumps
+            // Check if both are empty to avoid loops
+            if (initialContent === '<p></p>' && editor.isEmpty) return;
+
+            // Compare text content to avoid HTML attribute shuffle loops if possible, 
+            // but for now just exact match check is improved by checking isEmpty
+            editor.commands.setContent(initialContent);
         }
     }, [initialContent, editor]);
 
@@ -172,11 +180,24 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             } else if (type === 'pdf' || type === 'image') {
                 const element = editorRef.current;
                 if (element) {
+                    // Use actual background color for export
+                    // Use pageBackground (image) if set, otherwise prop backgroundColor
+                    let exportBg = backgroundColor;
+                    if (pageBackground && !pageBackground.startsWith('{')) {
+                        // If it's a simple color string in pageBackground? 
+                        // Actually pageBackground usually stores image URL/gradient.
+                        // If pageBackground is set, html2canvas should capture the background image/style naturally from the element style.
+                        // But we also need to tell html2canvas the 'backgroundColor' option.
+                        // If transparent, it defaults to black in some versions or white.
+                        // If we pass null, it uses transparent.
+                        exportBg = '#ffffff'; // Default to white if complex background to verify
+                    }
+
                     // @ts-ignore
                     const canvas = await html2canvas(element, {
                         scale: 2,
-                        backgroundColor: '#ffffff', // Ensure white background
-                        useCORS: true // Handle images
+                        backgroundColor: pageBackground ? null : backgroundColor, // Use transparent if bg image exists, else color
+                        useCORS: true
                     } as any);
 
                     if (type === 'image') {
@@ -276,7 +297,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                 paddingTop: '4px'
                             };
                         }
-                        return {};
+                        // Default: Use backgroundColor prop if no specific page background/ruling
+                        return {
+                            backgroundColor: backgroundColor
+                        };
                     })()}
                 >
                     <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />

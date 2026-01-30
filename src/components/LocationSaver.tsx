@@ -357,18 +357,26 @@ const LocationSaver: React.FC = () => {
                                 className="group flex flex-col p-3 bg-gray-50/50 hover:bg-white border border-transparent hover:border-gray-200 rounded-xl transition-all shadow-sm hover:shadow"
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <Badge variant="secondary" className={`${getTypeColor(loc.type)} w-6 h-6 p-0 flex items-center justify-center rounded-full flex-shrink-0`}>
-                                            <MapPin className="w-3 h-3" />
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <Badge variant="secondary" className={`${getTypeColor(loc.type)} w-10 h-10 p-0 flex items-center justify-center rounded-full flex-shrink-0 shadow-sm`}>
+                                            <MapPin className="w-5 h-5" />
                                         </Badge>
-                                        <div className="min-w-0 flex-1">
-                                            <span className="arabic-body font-bold text-gray-800 block truncate">{loc.name}</span>
-                                            {loc.address && (
-                                                <span className="text-xs text-gray-500 block truncate">{loc.address}</span>
-                                            )}
+                                        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                                            {/* Row 1: Name */}
+                                            <span className="arabic-body font-bold text-gray-900 text-sm block truncate">{loc.name}</span>
+
+                                            {/* Row 2: Address */}
+                                            <span className="text-xs text-gray-600 block truncate font-medium min-h-[1.2em]">
+                                                {loc.address || 'العنوان غير متوفر'}
+                                            </span>
+
+                                            {/* Row 3: Date */}
+                                            <span className="text-[10px] text-gray-400 block truncate dir-rtl text-right font-medium">
+                                                {new Date(loc.createdAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                            </span>
                                         </div>
                                     </div>
-                                    <Badge variant="outline" className="text-xs font-normal text-gray-500 flex-shrink-0">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 font-normal text-gray-500 flex-shrink-0 self-start mt-1">
                                         {getTypeLabel(loc.type)}
                                     </Badge>
                                 </div>

@@ -106,7 +106,7 @@ export const generateGenericPDF = (data: ReportData, filename: string) => {
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Fecha del Informe: ${new Date().toLocaleDateString('es-ES')}`, 105, 30, { align: 'center' });
+    doc.text(`Fecha del Informe: ${new Date().toLocaleDateString('ar-EG')}`, 105, 30, { align: 'center' });
 
     let yPos = 40;
 
@@ -208,7 +208,7 @@ export const generatePDF = (
     viewType: 'table' | 'timeline',
     data: PrintData,
     dateRange: string,
-    lang: Language = 'es' // Default to ES
+    lang: Language = 'ar' // Default to AR
 ) => {
     const t = getLabel;
     const doc = new jsPDF({
@@ -380,8 +380,8 @@ export const generatePDF = (
     saveAndSharePDF(doc, `barakah-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const generateStudentReport = (students: any[], lang: Language = 'es') => {
-    lang = 'es';
+export const generateStudentReport = (students: any[], lang: Language = 'ar') => {
+
     const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
@@ -401,7 +401,7 @@ export const generateStudentReport = (students: any[], lang: Language = 'es') =>
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('es-ES')}`, 105, 30, { align: 'center' });
+    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('ar-EG')}`, 105, 30, { align: 'center' });
 
     autoTable(doc, {
         startY: 40,
@@ -435,8 +435,8 @@ export const generateStudentReport = (students: any[], lang: Language = 'es') =>
     saveAndSharePDF(doc, `students-report-${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
-export const generateStudentProfile = (student: any, communications: any[], lessons: any[], lang: Language = 'es') => {
-    lang = 'es';
+export const generateStudentProfile = (student: any, communications: any[], lessons: any[], lang: Language = 'ar') => {
+
     const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
@@ -556,8 +556,8 @@ export const generateStudentProfile = (student: any, communications: any[], less
     saveAndSharePDF(doc, `${student.fullName}-profile.pdf`);
 };
 
-export const generateProtocolPDF = (protocol: any, studentName?: string, lang: Language = 'es') => {
-    lang = 'es';
+export const generateProtocolPDF = (protocol: any, studentName?: string, lang: Language = 'ar') => {
+
     const t = getLabel;
     const doc = new jsPDF({
         orientation: 'p',
@@ -582,7 +582,7 @@ export const generateProtocolPDF = (protocol: any, studentName?: string, lang: L
     }
 
     doc.setFontSize(10);
-    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('es-ES')}`, 105, 40, { align: 'center' });
+    doc.text(`${t('report_date')}: ${new Date().toLocaleDateString('ar-EG')}`, 105, 40, { align: 'center' });
 
     let yPos = 50;
 
@@ -647,8 +647,8 @@ export const generateCertificatePDF = (data: {
     customDateLabel?: string;
     customSheikhLabel?: string;
     customFooter?: string;
-}, lang: Language = 'es') => {
-    lang = 'es';
+}, lang: Language = 'ar') => {
+
     const t = getLabel;
     const doc = new jsPDF({
         orientation: 'landscape',

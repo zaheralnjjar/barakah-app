@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNotesV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
-import { Mic, MicOff, Loader2, Type, Palette, PaintBucket } from 'lucide-react';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { NoteEditorV2 } from './NoteEditorV2';
 
 interface CreateNoteDialogProps {
     isOpen: boolean;
@@ -20,45 +19,6 @@ interface CreateNoteDialogProps {
     autoStartRecording?: boolean;
 }
 
-const NOTE_COLORS = [
-    { name: 'أسود', value: '#000000' },
-    { name: 'افتراضي', value: '#FFFFFF' },
-    { name: 'أحمر فاتح', value: '#FEF2F2' },
-    { name: 'أصفر فاتح', value: '#FFFBEB' },
-    { name: 'أخضر فاتح', value: '#ECFDF5' },
-    { name: 'أزرق فاتح', value: '#EFF6FF' },
-    { name: 'بنفسجي فاتح', value: '#F5F3FF' },
-];
-
-const FONT_FAMILIES = [
-    { name: 'الخط الافتراضي', value: 'Inherit' },
-    { name: 'Cairo', value: 'Cairo' },
-    { name: 'Tajawal', value: 'Tajawal' },
-    { name: 'Amiri', value: 'Amiri' },
-    { name: 'Almarai', value: 'Almarai' },
-    { name: 'Reem Kufi', value: 'Reem Kufi' },
-];
-
-const FONT_SIZES = [
-    { name: 'صغير', value: '14px' },
-    { name: 'متوسط', value: '16px' },
-    { name: 'كبير', value: '18px' },
-    { name: 'كبير جداً', value: '24px' },
-];
-
-const TEXT_COLORS = [
-    { name: 'أبيض', value: '#FFFFFF' },
-    { name: 'أسود', value: '#000000' },
-    { name: 'رمادي', value: '#4B5563' },
-    { name: 'أحمر', value: '#DC2626' },
-    { name: 'برتقالي', value: '#EA580C' },
-    { name: 'كهرماني', value: '#D97706' },
-    { name: 'أخضر', value: '#16A34A' },
-    { name: 'أزرق', value: '#2563EB' },
-    { name: 'بنفسجي', value: '#7C3AED' },
-    { name: 'وردي', value: '#DB2777' },
-];
-
 export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onClose, initialFolderId, autoStartRecording = false }) => {
     const { createNote } = useNotesV2(null);
     const { toast } = useToast();
@@ -66,15 +26,9 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
     // Form State
     const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [folderId, setFolderId] = useState<string>(initialFolderId || 'none');
+    const [content, setContent] = useState(''); // Stores HTML
     const [color, setColor] = useState('#FFFFFF'); // Background Color
-
-    // Rich Text State
-    const [fontFamily, setFontFamily] = useState('Inherit');
-    const [fontSize, setFontSize] = useState('16px');
-    const [textColor, setTextColor] = useState('#000000');
-    const [isBold, setIsBold] = useState(false);
+    const [folderId, setFolderId] = useState<string>(initialFolderId || 'none');
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -90,14 +44,9 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
     useEffect(() => {
         if (isOpen) {
             setFolderId(initialFolderId || 'none');
-            setTitle(''); // Reset title
-            setContent(''); // Reset content
-            setColor('#FFFFFF');
-            setFontFamily('Inherit');
-            setFontSize('16px');
-            setTextColor('#000000');
-            setIsBold(false);
-            setIsDistraction(false); // Reset distraction flag
+            setTitle('');
+            setContent('');
+            setIsDistraction(false);
 
             if (autoStartRecording) {
                 startRecording();
@@ -106,9 +55,6 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
             stopRecording();
         }
     }, [isOpen, initialFolderId, autoStartRecording]);
-
-    // Track processed result indices to prevent duplicates
-    const processedIndicesRef = useRef<Set<number>>(new Set());
 
     const startRecording = () => {
         if (!('webkitSpeechRecognition' in window)) {
@@ -130,7 +76,6 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            // Build the final transcript from ALL final results so far (not just this event)
             let accumulatedFinal = '';
             let currentInterim = '';
 
@@ -143,14 +88,18 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                 }
             }
 
-            // Combine: original content + all finals + current interim
-            const prefix = originalContentRef.current ? originalContentRef.current.trim() + ' ' : '';
-            setContent(prefix + accumulatedFinal.trim() + (currentInterim ? ' ' + currentInterim : ''));
+            // Append to existing HTML or text
+            // Since content is HTML, we simply append text. NoteEditorV2 sync logic handles it.
+            // For better UX during recording, we might assume simple text append.
+            // If we blindly append text to HTML string, it might break tags.
+            // But usually raw text appended to HTML renders as text outside tags or is fixed by parser.
+            // Let's rely on simple concatenation for now.
+            const prefix = originalContentRef.current ? originalContentRef.current : '';
+            setContent(prefix + ' ' + accumulatedFinal.trim() + (currentInterim ? ' ' + currentInterim : ''));
         };
 
         recognitionRef.current.onerror = (event: any) => {
             console.error('Speech recognition error', event.error);
-            // Don't stop recording on no-speech errors, just ignore
             if (event.error !== 'no-speech') {
                 setIsRecording(false);
             }
@@ -177,13 +126,13 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
+        // Strip HTML to get plain text for title generation if needed
+        const plainText = content.replace(/<[^>]*>?/gm, '');
         let finalTitle = title.trim();
 
-        // Auto-generate title if empty from content or date
         if (!finalTitle) {
-            if (content.trim()) {
-                // Use first 5 words of content
-                finalTitle = content.trim().split(/\s+/).slice(0, 5).join(' ') + '...';
+            if (plainText.trim()) {
+                finalTitle = plainText.trim().split(/\s+/).slice(0, 5).join(' ') + '...';
             } else {
                 finalTitle = `ملاحظة جديدة ${new Date().toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}`;
             }
@@ -191,55 +140,43 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         setIsLoading(true);
         try {
-            // Determine folder: User selected > System/General > None
             let targetFolder = folderId === 'none' ? null : folderId;
             if (!targetFolder) {
-                // Try to find a default "General" folder if user didn't pick one
                 const generalFolder = folders.find(f => f.is_system) || folders.find(f => f.name === 'عام' || f.name.toLowerCase() === 'general');
                 if (generalFolder) targetFolder = generalFolder.id;
             }
 
-            // 1. Distraction Logic: If it's a distraction, save ONLY to distraction_logs and RETURN.
             if (isDistraction) {
-                try {
-                    const userId = (await supabase.auth.getUser()).data.user?.id;
-                    if (userId) {
-                        await supabase.from('distraction_logs').insert([{
-                            user_id: userId,
-                            reason: content || finalTitle,
-                            task_id: null,
-                            duration_minutes: distractionDuration,
-                            created_at: new Date().toISOString()
-                        }]);
-                        toast({ title: "تم تسجيل التشتت", description: "تم الحفظ في سجل التشتت فقط." });
-                    }
-                } catch (distractionError) {
-                    console.error("Failed to log distraction:", distractionError);
-                    toast({ title: "خطأ", description: "فشل تسجيل التشتت", variant: "destructive" });
+                const userId = (await supabase.auth.getUser()).data.user?.id;
+                if (userId) {
+                    await supabase.from('distraction_logs').insert([{
+                        user_id: userId,
+                        reason: plainText || finalTitle,
+                        task_id: null,
+                        duration_minutes: distractionDuration,
+                        created_at: new Date().toISOString()
+                    }]);
+                    toast({ title: "تم تسجيل التشتت", description: "تم الحفظ في سجل التشتت فقط." });
                 }
-
-                // Reset and Close - DO NOT save as note
                 setIsLoading(false);
-                setContent('');
-                setTitle('');
-                setIsDistraction(false);
                 onClose();
                 return;
             }
 
-            // 2. Create Note (Only if NOT a distraction)
-            const noteTags = [];
+            // Create Note with HTML content
             await createNote({
                 title: finalTitle,
                 folder_id: targetFolder,
-                content: content,
-                color: color,
-                font_family: fontFamily,
-                font_size: fontSize,
-                text_color: textColor,
-                background_color: color,
-                is_bold: isBold,
-                tags: noteTags
+                content: content, // HTML
+                // Default legacy values
+                color: '#FFFFFF',
+                font_family: 'Inherit',
+                font_size: '16px',
+                text_color: '#000000',
+                background_color: '#FFFFFF',
+                is_bold: false,
+                text_align: 'right',
+                tags: []
             } as any);
 
             onClose();
@@ -247,235 +184,132 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
 
         } catch (error: any) {
             console.error('Failed to create note:', error);
-            toast({
-                title: "فشل إنشاء الملاحظة",
-                description: error.message || "حدث خطأ غير متوقع",
-                variant: "destructive"
-            });
+            toast({ title: "فشل إنشاء الملاحظة", description: error.message, variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
     };
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => {
             if (!open) stopRecording();
             onClose();
         }}>
-            <DialogContent className="sm:max-w-[600px] h-[70vh] fixed top-[5%] translate-y-0 flex flex-col p-0 gap-0 overflow-hidden" dir="rtl">
-                {/* Header with Title and Actions */}
-                <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50 shrink-0">
-                    <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-800">
-                        <span>ملاحظة جديدة</span>
+            <DialogContent className="sm:max-w-[700px] h-[80vh] fixed top-[5%] translate-y-0 flex flex-col p-0 gap-0 overflow-hidden rounded-2xl shadow-xl" dir="rtl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-3 py-2 border-b bg-gray-50/80 shrink-0 gap-2 backdrop-blur-sm z-20">
+                    <div className="flex-1 flex items-center gap-2">
+                        <Input
+                            placeholder="عنوان الملاحظة (اختياري)"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="h-9 text-sm font-bold bg-transparent border-transparent focus:bg-white focus:border-gray-200 transition-all rounded-lg placeholder:text-gray-400 px-2"
+                        />
                         {isRecording && (
-                            <span className="flex items-center gap-1.5 text-red-500 text-xs animate-pulse bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
+                            <span className="flex items-center gap-1.5 text-red-500 text-[10px] animate-pulse bg-red-50 px-2 py-0.5 rounded-full border border-red-100 whitespace-nowrap">
                                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                                 تسجيل...
                             </span>
                         )}
-                    </DialogTitle>
-                    <div className="flex items-center gap-2">
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                        {/* Folder Select */}
+                        <Select value={folderId} onValueChange={setFolderId}>
+                            <SelectTrigger className="h-8 w-[120px] text-xs bg-gray-50 border-transparent hover:bg-gray-100">
+                                <SelectValue placeholder="مجلد" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">-- عام --</SelectItem>
+                                {folders.map(f => (
+                                    <SelectItem key={f.id} value={f.id} className="text-xs">
+                                        {f.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Distraction Toggle */}
+                        <div
+                            className={cn("h-8 w-8 flex items-center justify-center rounded-md cursor-pointer transition-colors border border-transparent", isDistraction ? "bg-red-100 text-red-600 border-red-200" : "hover:bg-gray-100 text-gray-400")}
+                            onClick={() => setIsDistraction(!isDistraction)}
+                            title="تشتت"
+                        >
+                            <Checkbox id="distraction-mode-compact" checked={isDistraction} className="hidden" />
+                            <span className="text-xs font-bold">⚠️</span>
+                        </div>
+                        {isDistraction && (
+                            <Input
+                                type="number"
+                                min="0"
+                                placeholder="د"
+                                value={distractionDuration}
+                                onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
+                                className="h-8 w-14 text-center text-xs bg-red-50 border-transparent rounded-md px-1"
+                            />
+                        )}
+
+                        <div className="w-px h-6 bg-gray-300 mx-1" />
+
                         <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={onClose}
                             disabled={isLoading}
-                            className="text-gray-500 hover:text-gray-700 h-8 px-3"
+                            className="text-gray-500 hover:text-gray-700 h-8 px-3 text-xs"
                         >
                             إلغاء
                         </Button>
+
+                        {/* Background Color Picker */}
+                        <div className="relative">
+                            <Input
+                                type="color"
+                                value={color}
+                                onChange={(e) => setColor(e.target.value)}
+                                className="w-8 h-8 p-0 border-0 rounded-full overflow-hidden cursor-pointer"
+                                title="لون الخلفية"
+                            />
+                        </div>
+
                         <Button
                             type="button"
                             onClick={() => handleSubmit()}
                             disabled={isLoading}
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-4 rounded-md shadow-sm"
+                            className="bg-gray-900 hover:bg-black text-white h-8 px-4 rounded-lg shadow-sm text-xs"
                         >
                             {isLoading ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <Loader2 className="w-3 h-3 animate-spin" />
                             ) : 'حفظ'}
                         </Button>
                     </div>
                 </div>
 
-                {/* Scrollable Content Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                    {/* Title Input */}
-                    <div className="space-y-1">
-                        <Input
-                            placeholder="عنوان الملاحظة (اختياري)"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="text-lg font-bold border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-emerald-500 placeholder:text-gray-400"
-                        />
-                    </div>
+                {/* Editor Area - Using NoteEditorV2 */}
+                <div className="flex-1 min-h-0 bg-slate-50 relative p-2">
+                    <NoteEditorV2
+                        initialContent={content}
+                        onUpdate={setContent}
+                        editable={!isLoading}
+                        backgroundColor={color}
+                    />
 
-                    {/* Controls & Options Wrapped for Compactness */}
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-100">
-                        {/* Row 1: Formatting */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            {/* Bold Toggle */}
-                            <button
-                                type="button"
-                                onClick={() => setIsBold(!isBold)}
-                                className={cn(
-                                    "p-1.5 rounded-lg transition-all border shrink-0",
-                                    isBold ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-white text-gray-400 border-gray-200 hover:bg-gray-50"
-                                )}
-                                title="عرض عريض"
-                            >
-                                <span className="font-bold">B</span>
-                            </button>
-
-                            <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
-
-                            {/* Font Family */}
-                            <Select value={fontFamily} onValueChange={setFontFamily}>
-                                <SelectTrigger className="h-7 w-[110px] text-xs bg-white border-gray-200">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {FONT_FAMILIES.map(f => (
-                                        <SelectItem key={f.value} value={f.value} style={{ fontFamily: f.value }} className="text-xs">
-                                            {f.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Font Size */}
-                            <Select value={fontSize} onValueChange={setFontSize}>
-                                <SelectTrigger className="h-7 w-[80px] text-xs bg-white border-gray-200">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {FONT_SIZES.map(s => (
-                                        <SelectItem key={s.value} value={s.value} className="text-xs">
-                                            {s.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Text Color */}
-                            <Select value={textColor} onValueChange={setTextColor}>
-                                <SelectTrigger className="h-7 w-[40px] px-1 bg-white border-gray-200 flex justify-center items-center">
-                                    <Palette className="w-3.5 h-3.5" style={{ color: textColor }} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {TEXT_COLORS.map(c => (
-                                        <SelectItem key={c.value} value={c.value}>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: c.value }} />
-                                                {c.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Background Color Shortcuts */}
-                            {/* Background Color Dropdown */}
-                            <Select value={color} onValueChange={setColor}>
-                                <SelectTrigger className="h-7 w-[40px] px-1 bg-white border-gray-200 flex justify-center items-center" title="لون الخلفية">
-                                    <PaintBucket className="w-3.5 h-3.5 text-gray-600" style={{ fill: color !== '#FFFFFF' ? color : 'none' }} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {NOTE_COLORS.map(c => (
-                                        <SelectItem key={c.value} value={c.value}>
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full border border-gray-100" style={{ backgroundColor: c.value }} />
-                                                {c.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Row 2: Folder & Distraction */}
-                        <div className="flex items-center gap-2 border-t pt-2 border-gray-200/50">
-                            <div className="flex-1">
-                                <Select value={folderId} onValueChange={setFolderId}>
-                                    <SelectTrigger className="h-7 text-xs bg-white border-gray-200">
-                                        <SelectValue placeholder="اختر مجلد" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">-- عام --</SelectItem>
-                                        {folders.map(f => (
-                                            <SelectItem key={f.id} value={f.id} className="text-xs">
-                                                <span className="flex items-center gap-2">
-                                                    {f.color ? (
-                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.color }}></span>
-                                                    ) : (
-                                                        <span>📂</span>
-                                                    )}
-                                                    {f.name}
-                                                </span>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div
-                                className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition-colors border ${isDistraction ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                                onClick={() => setIsDistraction(!isDistraction)}
-                            >
-                                <Checkbox
-                                    id="distraction-mode"
-                                    checked={isDistraction}
-                                    onCheckedChange={(checked) => setIsDistraction(checked as boolean)}
-                                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500 w-3.5 h-3.5"
-                                />
-                                <Label htmlFor="distraction-mode" className="text-[10px] font-medium cursor-pointer pointer-events-none">
-                                    تشتت
-                                </Label>
-                            </div>
-
-                            {isDistraction && (
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    placeholder="د"
-                                    title="المدة بالدقائق"
-                                    value={distractionDuration}
-                                    onChange={(e) => setDistractionDuration(parseInt(e.target.value) || 0)}
-                                    className="h-7 w-12 text-center text-xs bg-white border-red-200 focus:border-red-400"
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Content Area */}
-                    <div className="relative flex-1 min-h-[200px] h-full">
-                        <Textarea
-                            placeholder="اكتب تفاصيل الملاحظة هنا..."
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            className="w-full h-full min-h-[250px] resize-none p-4 shadow-sm border-0 focus-visible:ring-1 focus-visible:ring-emerald-500/30 rounded-lg text-base"
-                            style={{
-                                backgroundColor: color !== '#FFFFFF' ? color : '#fafafa',
-                                fontFamily: fontFamily !== 'Inherit' ? fontFamily : undefined,
-                                fontSize: fontSize,
-                                color: textColor,
-                                lineHeight: '1.6'
-                            }}
-                        />
-
-                        {/* Floating Mic Button - Positioned absolutely within the textarea container */}
-                        <button
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`absolute bottom-4 left-4 p-2 rounded-full transition-all shadow-md border ${isRecording
+                    {/* Floating Mic Button */}
+                    <button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={cn(
+                            "absolute bottom-4 left-4 p-3 rounded-full transition-all shadow-lg border z-50",
+                            isRecording
                                 ? 'bg-red-500 text-white hover:bg-red-600 border-red-600 animate-pulse'
-                                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-emerald-200'
-                                }`}
-                            title={isRecording ? "إيقاف التسجيل" : "تسجيل صوتي"}
-                            type="button"
-                        >
-                            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                        </button>
-                    </div>
+                                : 'bg-white/90 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 border-gray-200 backdrop-blur-sm'
+                        )}
+                        title={isRecording ? "إيقاف التسجيل" : "تسجيل صوتي"}
+                        type="button"
+                    >
+                        {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    </button>
                 </div>
             </DialogContent>
         </Dialog>

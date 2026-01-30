@@ -36,7 +36,7 @@ export const AVAILABLE_ACTIONS = [
     { id: 'add_note_quick', name: 'ملاحظة سريعة', icon: StickyNote, iconName: 'StickyNote', category: 'action', description: 'إضافة ملاحظة نصية' },
     { id: 'add_voice_quick', name: 'تسجيل صبري', icon: Mic, iconName: 'Mic', category: 'action', description: 'إضافة ملاحظة صوتية فورية' },
     { id: 'add_event_quick', name: 'موعد جديد', icon: Calendar, iconName: 'Calendar', category: 'action', description: 'إضافة موعد أو حدث' },
-    { id: 'add_distraction_log', name: 'سجل تشتت', icon: Zap, iconName: 'Zap', category: 'action', description: 'تسجيل تشتت فوري' },
+    { id: 'add_distraction_log', name: 'سجل نشاط', icon: Zap, iconName: 'Zap', category: 'action', description: 'تسجيل نشاط فوري' },
 
     // ===== المؤقتات (إجراءات ذكية) =====
     { id: 'timer_focus', name: 'مؤقت تركيز', icon: Timer, iconName: 'Timer', category: 'timer', description: 'بدء جلسة بومودورو' },
@@ -59,7 +59,7 @@ export const AVAILABLE_ACTIONS = [
     { id: 'sys_settings', name: 'إعدادات النظام', icon: Settings, iconName: 'Settings', category: 'system', description: 'تخصيص التطبيق' },
 
     // ===== الإنتاجية ( Productivity) =====
-    { id: 'prod_distraction', name: 'تسجيل تشتت', icon: Zap, iconName: 'Zap', category: 'productivity', description: 'سجل سبب تشتت انتباهك' },
+    { id: 'prod_distraction', name: 'تسجيل نشاط', icon: Zap, iconName: 'Zap', category: 'productivity', description: 'سجل نشاطك الحالي' },
     { id: 'prod_water', name: 'شرب ماء', icon: Droplets, iconName: 'Droplets', category: 'productivity', description: 'تسجيل كوب ماء' },
     { id: 'prod_pomo', name: 'بدء بومودورو', icon: Timer, iconName: 'Timer', category: 'productivity', description: 'جلسة تركيز 25 دقيقة' },
     { id: 'prod_reading', name: 'وقت قراءة', icon: FileText, iconName: 'FileText', category: 'productivity', description: 'بدء مؤقت قراءة' },

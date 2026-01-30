@@ -175,7 +175,7 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
                 title={collapsed ? "سجل التشتت" : undefined}
             >
                 <Zap className="w-4 h-4" />
-                {!collapsed && <span>سجل التشتت</span>}
+                {!collapsed && <span>سجل النشاط</span>}
             </div>
 
             <div

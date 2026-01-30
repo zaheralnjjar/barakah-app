@@ -253,10 +253,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
             <div className="mx-[2%] mt-0.5 w-[96%]">
                 <div className={cn("flex flex-col gap-2", activeWidgets.length > 0 && 'lg:flex-row-reverse', !isAndroid() && "gap-1")}>
-                    <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', isAndroid() ? "space-y-1.5" : "space-y-1")}>
+                    <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', "space-y-3")}>
                         <DashboardHeaderStrip />
 
-                        {/* 1. Quick Access Grid (Restored to Top) */}
+                        {/* 1. Quick Access Grid (Top Priority) */}
                         <div className="mb-2">
                             <QuickActionsGridV2
                                 onOpenAddDialog={setShowAddDialog}
@@ -278,8 +278,10 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 onOpenAdd={(type) => {
                                     if (type === 'task') setShowAddDialog('task');
                                     else if (type === 'shopping') setShowAddDialog('shopping');
-                                    else if (type === 'goal') toast({ title: 'قريباً', description: 'إضافة الأهداف قادمة قريباً' });
-                                    else if (type === 'project') setShowAddDialog('task'); // Reuse task dialog for project? Or separate?
+                                    else if (type === 'goal') setShowAddDialog('goal');
+                                    else if (type === 'project') setShowAddDialog('project');
+                                    else if (type === 'medication') setShowAddDialog('medication');
+                                    else if (type === 'habit') setShowAddDialog('habit');
                                 }}
                                 onOpenEvent={(evt) => {
                                     if ((evt as any).type === 'appointment') {
@@ -294,58 +296,57 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
 
 
-                        {/* Financial Summary - Emerald Identity */}
-                        <div className="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-3 px-4 shadow-sm space-y-2 mb-1.5 transition-all">
-                            <div className="flex justify-between items-center border-b border-emerald-100 pb-1.5">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="bg-emerald-100 p-1.5 rounded-full">
-                                        <Wallet className="w-4 h-4 text-emerald-700" />
+
+
+                        {/* Financial Summary - Emerald Identity (Compact) */}
+                        <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl py-3 px-3 shadow-sm space-y-2 mb-1.5 transition-all">
+                            <div className="flex justify-between items-center border-b border-emerald-100 pb-1">
+                                <div className="flex items-center gap-2">
+                                    <div className="bg-emerald-100 p-1 rounded-full">
+                                        <Wallet className="w-3 h-3 text-emerald-700" />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 md:gap-3">
-                                    <span className="text-[10px] md:text-sm font-bold text-emerald-800/60">ARS</span>
-                                    <span className="text-sm md:text-2xl font-mono font-black text-emerald-700">{financeData?.current_balance_ars?.toLocaleString() || 0}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-emerald-800/60">ARS</span>
+                                    <span className="text-sm font-mono font-black text-emerald-700">{financeData?.current_balance_ars?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 md:gap-3 border-l border-emerald-200/50 pl-2 md:pl-4">
-                                    <span className="text-[10px] md:text-sm font-bold text-emerald-800/60">USD</span>
-                                    <span className="text-sm md:text-2xl font-mono font-black text-emerald-700">{financeData?.current_balance_usd?.toLocaleString() || 0}</span>
+                                <div className="flex items-center gap-2 border-l border-emerald-200/50 pl-2">
+                                    <span className="text-[9px] font-bold text-emerald-800/60">USD</span>
+                                    <span className="text-sm font-mono font-black text-emerald-700">{financeData?.current_balance_usd?.toLocaleString() || 0}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 md:gap-3 border-l border-emerald-200/50 pl-2 md:pl-4">
-                                    <div className="bg-blue-100 p-1 md:p-1.5 rounded-full">
-                                        <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-blue-600" />
+                                <div className="flex items-center gap-2 border-l border-emerald-200/50 pl-2">
+                                    <div className="bg-blue-100 p-0.5 rounded-full">
+                                        <TrendingUp className="w-2.5 h-2.5 text-blue-600" />
                                     </div>
-                                    <span className="text-[10px] md:text-xl font-black text-blue-700">{monthlySavings?.toLocaleString() || 0}</span>
+                                    <span className="text-sm font-black text-blue-700">{monthlySavings?.toLocaleString() || 0}</span>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <div className="flex flex-col">
-                                        <span className="text-[7px] md:text-[10px] text-gray-400 font-bold">المتبقي اليومي</span>
-                                        <span className="text-[10px] md:text-lg font-mono font-bold text-emerald-700">{dailyLimitARS?.toLocaleString() || 0}</span>
-                                        <span className="text-[6.5px] md:text-[9px] font-bold text-emerald-900/30 -mt-0.5 leading-none">{((dailyLimitARS || 0) / (financeData?.exchange_rate || 1000)).toFixed(1)}</span>
+                                        <span className="text-[6px] text-gray-400 font-bold">المتبقي</span>
+                                        <span className="text-xs font-mono font-bold text-emerald-700 leading-none">{dailyLimitARS?.toLocaleString() || 0}</span>
                                     </div>
-                                    <div className="flex flex-col border-r border-emerald-100/30 pr-2 md:pr-4">
-                                        <span className="text-[7px] md:text-[10px] text-gray-400 font-bold">مصروف اليوم</span>
-                                        <span className="text-[10px] md:text-lg font-mono font-bold text-red-500">{todayExpense?.toLocaleString() || 0}</span>
-                                        <span className="text-[6.5px] md:text-[9px] font-bold text-red-900/30 -mt-0.5 leading-none">{((todayExpense || 0) / (financeData?.exchange_rate || 1000)).toFixed(1)}</span>
+                                    <div className="flex flex-col border-r border-emerald-100/30 pr-2">
+                                        <span className="text-[6px] text-gray-400 font-bold">مصروف</span>
+                                        <span className="text-xs font-mono font-bold text-red-500 leading-none">{todayExpense?.toLocaleString() || 0}</span>
                                     </div>
-                                    <div className="flex flex-col border-r border-emerald-100/30 pr-2 md:pr-4">
-                                        <span className="text-[7px] md:text-[10px] text-gray-400 font-bold">إجمالي الشهر</span>
-                                        <span className="text-[10px] md:text-lg font-mono font-bold text-indigo-600">{monthlyTotalSpent?.toLocaleString() || 0}</span>
-                                        <span className="text-[6.5px] md:text-[9px] font-bold text-indigo-900/30 -mt-0.5 leading-none">{((monthlyTotalSpent || 0) / (financeData?.exchange_rate || 1000)).toFixed(1)}</span>
+                                    <div className="flex flex-col border-r border-emerald-100/30 pr-2">
+                                        <span className="text-[6px] text-gray-400 font-bold">الشهر</span>
+                                        <span className="text-xs font-mono font-bold text-indigo-600 leading-none">{monthlyTotalSpent?.toLocaleString() || 0}</span>
                                     </div>
                                 </div>
                                 <div className="flex flex-col text-right">
-                                    <span className="text-[7px] text-gray-400 font-bold uppercase">Rate</span>
-                                    <div className="flex items-center gap-1">
-                                        <Info className="w-2.5 h-2.5 text-emerald-400" />
-                                        <span className="text-[9px] font-bold text-emerald-600">{financeData?.exchange_rate || 1200}</span>
+                                    <span className="text-[6px] text-gray-400 font-bold uppercase">Rate</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <Info className="w-2 h-2 text-emerald-400" />
+                                        <span className="text-[8px] font-bold text-emerald-600">{financeData?.exchange_rate || 1200}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 3. Custom Shortcuts Grid (Moved after Financial Summary) */}
+                        {/* 3. Custom Shortcuts Grid (Moved After Finance) */}
                         <div className="mb-2">
                             <CustomShortcutsGrid
                                 placement="shortcuts_grid"
@@ -357,6 +358,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 readonly={true}
                             />
                         </div>
+
+
 
                         {/* Master Agenda - NEW Unified Intelligence */}
                         {!isCleanMode && (
@@ -370,7 +373,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
                         {/* Shortcut Result Dialog */}
                         <Dialog open={shortcutResult !== null} onOpenChange={(open) => { if (!open) setShortcutResult(null); }}>
-                            <DialogContent className="sm:max-w-md" dir="rtl">
+                            <DialogContent className="sm:max-w-md top-[5%] translate-y-0" dir="rtl">
                                 <DialogHeader>
                                     <DialogTitle className="text-right text-lg border-b pb-2 flex items-center gap-2">
                                         <Sparkles className="w-5 h-5 text-emerald-500" />
@@ -426,6 +429,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
             }}>
                 <DialogContent className={cn(
                     "max-h-[85vh] overflow-y-auto p-0 border-none shadow-2xl rounded-[2rem]",
+                    "top-[5%] translate-y-0", // Fix: Position at top
                     (showAddDialog === 'appointment' || showAddDialog === 'location') ? 'sm:max-w-2xl w-[92%]' : 'sm:max-w-sm w-[90%]'
                 )} dir="rtl">
                     <DialogHeader className="p-6 pb-0">

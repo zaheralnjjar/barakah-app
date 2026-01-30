@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, CheckSquare, ShoppingCart, Target, ChevronLeft, Plus, Clock, ChevronRight } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
@@ -10,12 +10,12 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 
 interface UnifiedDashboardCardProps {
-    onOpenAdd: (type: 'task' | 'appointment' | 'goal' | 'shopping' | 'project') => void;
+    onOpenAdd: (type: 'task' | 'appointment' | 'goal' | 'shopping' | 'project' | 'medication' | 'habit') => void;
     onOpenEvent?: (event: any) => void;
     onOpenCalendar?: () => void;
 }
 
-type SectionType = 'agenda' | 'shopping' | 'goals' | 'projects';
+type SlideType = 'agenda' | 'shopping' | 'goals' | 'projects' | 'appointment' | 'task';
 
 export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOpenAdd, onOpenEvent, onOpenCalendar }) => {
     // Data Hooks
@@ -24,261 +24,314 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
     const { items: shoppingItems } = useShoppingList();
     const { habits } = useHabits();
 
-    // 1. Agenda Logic
-    const todayAgenda = React.useMemo(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const todayTasks = tasks
-            .filter(t => t.progress < 100 && t.deadline?.startsWith(today))
-            .map(t => ({ ...t, type: 'task' as const, time: t.time || '23:59' }));
-        const todayAppts = appointments
-            .filter(a => a.date === today)
-            .map(a => ({ ...a, type: 'appointment' as const, time: a.time }));
-        return [...todayTasks, ...todayAppts]
-            .sort((a, b) => a.time.localeCompare(b.time))
-            .slice(0, 4);
-    }, [tasks, appointments]);
-
-    // 2. Shopping Logic
-    const pendingShopping = shoppingItems.filter(i => !i.completed).slice(0, 4);
-
-    // 3. Goals/Habits Logic
-    const activeHabits = habits.slice(0, 4);
-
-    // 4. Projects Logic
-    const activeProjects = tasks
-        .filter(t => (t.type === 'project' || (t.type as any) === 'goal') && t.progress < 100)
-        .slice(0, 4);
-
-    // Determine available slides
+    // 1. Data Preparation
     const slides = React.useMemo(() => {
-        const available: { type: SectionType, title: string, color: string, icon: any }[] = [];
+        const items: {
+            id: string;
+            type: SlideType;
+            title: string;
+            subtitle?: string;
+            meta?: string;
+            icon: any;
+            progress?: number;
+            data: any;
+            gradient: string;
+            textColor: string;
+            accentColor: string;
+        }[] = [];
 
-        // Always show agenda? Or only if has items? User said "Only display available info".
-        // But if everything is empty, we should probably show at least Agenda or a "Nothing today" state.
-        // Let's assume Agenda is always valid to show "Next upcoming" or standard view, 
-        // but if strictly "only available", we filter.
-        // However, if ALL are empty, we need a fallback.
+        // Agenda Items (Tasks + Appointments)
+        const today = new Date().toISOString().split('T')[0];
 
-        if (todayAgenda.length > 0) available.push({ type: 'agenda', title: 'اليوم', color: 'text-indigo-600', icon: Calendar });
-        if (pendingShopping.length > 0) available.push({ type: 'shopping', title: 'تسوق', color: 'text-pink-600', icon: ShoppingCart });
-        if (activeHabits.length > 0) available.push({ type: 'goals', title: 'أهداف', color: 'text-emerald-600', icon: Target });
-        if (activeProjects.length > 0) available.push({ type: 'projects', title: 'مشاريع', color: 'text-blue-600', icon: Target });
+        // Appointments
+        appointments
+            .filter(a => a.date === today)
+            .forEach(a => {
+                items.push({
+                    id: `appt-${a.id}`,
+                    type: 'appointment',
+                    title: a.title,
+                    subtitle: a.location || 'موعد',
+                    meta: a.time,
+                    icon: Clock,
+                    data: a,
+                    gradient: "from-violet-500 to-fuchsia-600",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            });
 
-        // Fallback if absolutely empty
-        if (available.length === 0) {
-            available.push({ type: 'agenda', title: 'اليوم', color: 'text-gray-400', icon: Calendar });
+        // Tasks (Due Today)
+        tasks
+            .filter(t => t.progress < 100 && t.deadline?.startsWith(today))
+            .forEach(t => {
+                items.push({
+                    id: `task-${t.id}`,
+                    type: 'task',
+                    title: t.title,
+                    subtitle: 'مهمة اليوم',
+                    meta: t.time || '23:59',
+                    icon: CheckSquare,
+                    data: t,
+                    gradient: "from-blue-500 to-cyan-500",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            });
+
+        // Shopping Items (Unchecked)
+        shoppingItems
+            .filter(i => !i.completed)
+            .slice(0, 5) // Limit just in case
+            .forEach(i => {
+                items.push({
+                    id: `shop-${i.id}`,
+                    type: 'shopping',
+                    title: i.text,
+                    subtitle: i.quantity > 1 ? `الكمية: ${i.quantity}` : 'لشراء',
+                    icon: ShoppingCart,
+                    data: i,
+                    gradient: "from-pink-500 to-rose-500",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            });
+
+        // Habits (Active)
+        habits
+            .slice(0, 3)
+            .forEach(h => {
+                items.push({
+                    id: `habit-${h.id}`,
+                    type: 'goals',
+                    title: h.name,
+                    subtitle: `${h.streak} يوم متتالي`,
+                    progress: Math.min(100, (h.streak / 66) * 100),
+                    icon: Target,
+                    data: h,
+                    gradient: "from-emerald-500 to-teal-500",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            });
+
+        // Projects
+        tasks
+            .filter(t => t.type === 'project' && t.progress < 100)
+            .slice(0, 3)
+            .forEach(p => {
+                items.push({
+                    id: `proj-${p.id}`,
+                    type: 'projects',
+                    title: p.title,
+                    subtitle: `${p.progress}% مكتمل`,
+                    progress: p.progress,
+                    icon: Target,
+                    data: p,
+                    gradient: "from-indigo-500 to-blue-600",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            });
+
+        // Productivity Items (Focus & Reading from Tasks/Habits)
+        // We can simulate productivity cues or specific tasks tagged as 'focus'
+        // For now, let's mix in "Deep Work" suggestions if user has many tasks
+        if (tasks.filter(t => t.progress < 100).length > 3) {
+            items.push({
+                id: 'prod-focus',
+                type: 'goals',
+                title: 'جلسة تركيز عميق',
+                subtitle: 'لديك مهام متراكمة، خصص ساعة للتركيز',
+                icon: Target,
+                data: null,
+                gradient: "from-indigo-600 to-purple-700",
+                textColor: "text-white",
+                accentColor: "bg-white/20"
+            });
         }
 
-        return available;
-    }, [todayAgenda.length, pendingShopping.length, activeHabits.length, activeProjects.length]);
+        // Empty State
+        if (items.length === 0) {
+            items.push({
+                id: 'empty',
+                type: 'agenda',
+                title: 'لا يوجد مهام حالياً',
+                subtitle: 'استمتع بوقتك!',
+                icon: Calendar,
+                data: null,
+                gradient: "from-slate-700 to-slate-800",
+                textColor: "text-white",
+                accentColor: "bg-white/10"
+            });
+        }
+
+        return items;
+    }, [tasks, appointments, shoppingItems, habits]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isPaused, setIsPaused] = useState(false);
 
-    // Reset index if slides change significantly (optional, but safer)
+    // Reset index safely
     useEffect(() => {
         if (currentIndex >= slides.length) {
             setCurrentIndex(0);
         }
     }, [slides.length]);
 
-    // Auto-Rotation Logic
+    // Auto-Rotation
     useEffect(() => {
-        // If only 1 slide, no need to rotate
-        if (slides.length <= 1) return;
+        if (slides.length <= 1 || isPaused) return;
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % slides.length);
+        }, 3500); // Slightly slower for better readability
+        return () => clearInterval(interval);
+    }, [slides.length, isPaused]);
 
-        const startTimer = () => {
-            timeoutRef.current = setTimeout(() => {
-                setCurrentIndex((prev) => (prev + 1) % slides.length);
-            }, 3000); // 3 Seconds
-        };
+    const activeItem = slides[currentIndex] || slides[0];
+    const Icon = activeItem.icon;
 
-        startTimer();
+    // Navigation
+    const handleNext = () => setCurrentIndex(prev => (prev + 1) % slides.length);
+    const handlePrev = () => setCurrentIndex(prev => (prev - 1 + slides.length) % slides.length);
 
-        return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        };
-    }, [currentIndex, slides.length]); // Dep includes currentIndex to re-trigger on change
+    // Helpers
+    const getCountdown = (timeStr?: string) => {
+        if (!timeStr) return null;
+        const now = new Date();
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const eventTime = new Date();
+        eventTime.setHours(hours, minutes, 0, 0);
 
-    const activeSlide = slides[currentIndex] || slides[0];
+        const diff = (eventTime.getTime() - now.getTime()) / 60000; // minutes
 
-    // Manual Navigation
-    const handleNext = () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setCurrentIndex((prev) => (prev + 1) % slides.length);
+        if (diff < 0) return 'انتهى';
+        if (diff < 60) return `${Math.floor(diff)} دقيقة`;
+        const h = Math.floor(diff / 60);
+        const m = Math.floor(diff % 60);
+        return `${h} ساعة ${m} دقيقة`;
     };
 
-    const handlePrev = () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
-    };
-
-    // Render Content based on active slide
-    const renderContent = () => {
-        switch (activeSlide.type) {
-            case 'agenda':
-                if (todayAgenda.length === 0) return (
-                    <div className="flex flex-col items-center justify-center h-32 text-gray-400 gap-2">
-                        <CheckSquare className="w-8 h-8 opacity-20" />
-                        <p className="text-xs">يومك فارغ! استرح قليلاً.</p>
-                    </div>
-                );
-                return (
-                    <div className="space-y-2 animate-in fade-in duration-500">
-                        {todayAgenda.map((item) => (
-                            <div
-                                key={`${item.type}-${item.id}`}
-                                className="flex items-center gap-3 p-2 rounded-xl bg-white border border-gray-100 hover:border-indigo-100 transition-all group cursor-pointer"
-                                onClick={() => onOpenEvent && onOpenEvent(item)}
-                            >
-                                <div className={cn(
-                                    "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                                    item.type === 'appointment' ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"
-                                )}>
-                                    {item.type === 'appointment' ? <Clock className="w-4 h-4" /> : <CheckSquare className="w-4 h-4" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-gray-800 text-sm truncate">{item.title}</h4>
-                                    <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                                        {format(new Date(`2000-01-01T${item.time}`), 'p', { locale: arSA })}
-                                        {item.type === 'appointment' && ` • ${item.location || 'بدون موقع'}`}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'shopping':
-                return (
-                    <div className="grid grid-cols-2 gap-2 animate-in fade-in duration-500">
-                        {pendingShopping.map(item => (
-                            <div key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-white border border-gray-100">
-                                <div className="w-2 h-2 rounded-full bg-pink-400 shrink-0" />
-                                <span className="text-xs font-bold text-gray-700 truncate">{item.text}</span>
-                                {item.quantity > 1 && <span className="text-[10px] bg-gray-100 px-1.5 rounded text-gray-500">{item.quantity}</span>}
-                            </div>
-                        ))}
-                        {pendingShopping.length > 0 && (
-                            <button onClick={() => onOpenAdd('shopping')} className="col-span-2 text-xs text-center text-pink-600 font-bold py-1 hover:underline">
-                                إدارة القائمة
-                            </button>
-                        )}
-                    </div>
-                );
-            case 'goals':
-                return (
-                    <div className="space-y-2 animate-in fade-in duration-500">
-                        {activeHabits.map(habit => (
-                            <div key={habit.id} className="flex items-center justify-between p-2 rounded-xl bg-white border border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg">🎯</span>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-800">{habit.name}</span>
-                                        <span className="text-[9px] text-gray-400">{habit.streak} يوم متتالي</span>
-                                    </div>
-                                </div>
-                                <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-emerald-500 rounded-full"
-                                        style={{ width: `${Math.min(100, (habit.streak / 66) * 100)}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'projects':
-                return (
-                    <div className="space-y-2 animate-in fade-in duration-500">
-                        {activeProjects.map(project => (
-                            <div key={project.id} className="flex flex-col gap-1 p-2 rounded-xl bg-white border border-gray-100">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold text-gray-800">{project.title}</span>
-                                    <span className="text-[9px] text-gray-400">{project.progress}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-blue-500 rounded-full"
-                                        style={{ width: `${project.progress}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const Icon = activeSlide.icon;
+    const countdown = activeItem.meta ? getCountdown(activeItem.meta) : null;
 
     return (
-        <Card className="w-full bg-white/80 backdrop-blur-sm border-gray-100 shadow-sm overflow-hidden rounded-3xl" dir="rtl">
-            <CardContent className="p-0">
-                {/* Header */}
-                <div
-                    className="flex items-center justify-between p-3 bg-gray-50/50 border-b border-gray-100 cursor-pointer select-none"
-                    onClick={handleNext}
-                >
-                    <div className="flex items-center gap-2">
-                        <div className={cn("p-1.5 rounded-lg bg-white shadow-sm", activeSlide.color)}>
-                            <Icon className="w-4 h-4" />
+        <Card
+            className={cn(
+                "w-full overflow-hidden border-0 shadow-xl rounded-[2rem] transition-all duration-700 bg-gradient-to-br min-h-[145px] relative group",
+                activeItem.gradient
+            )}
+            dir="rtl"
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
+        >
+            <CardContent className="p-5 relative h-full flex flex-col justify-between z-10">
+
+                {/* Background Decor */}
+                <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
+
+                {/* Header: Category & Meta */}
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className={cn("p-2.5 rounded-2xl backdrop-blur-xl shadow-lg border border-white/10", activeItem.accentColor)}>
+                            <Icon className={cn("w-5 h-5", activeItem.textColor)} />
                         </div>
-                        <h3 className={cn("text-sm font-bold transition-colors duration-300", activeSlide.color)}>
-                            {activeSlide.title}
-                        </h3>
-                        {/* Pagination Dots */}
-                        <div className="flex gap-1 mr-3">
-                            {slides.map((_, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                        idx === currentIndex ? "bg-gray-800 w-3" : "bg-gray-300"
-                                    )}
-                                />
-                            ))}
+                        <div className="flex flex-col">
+                            <span className={cn("text-[10px] font-bold tracking-wider uppercase opacity-70", activeItem.textColor)}>
+                                {activeItem.type === 'shopping' ? 'تسوّق' :
+                                    activeItem.type === 'goals' ? 'عادات' :
+                                        activeItem.type === 'projects' ? 'مشاريع' :
+                                            activeItem.type === 'appointment' ? 'موعد' : 'مهام'}
+                            </span>
+                            {/* Pagination Indicators - Moved here for cleaner look */}
+                            <div className="flex gap-1 mt-1">
+                                {slides.map((_, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={cn(
+                                            "h-1 rounded-full transition-all duration-500",
+                                            idx === currentIndex ? "w-4 bg-white" : "w-1 bg-white/30"
+                                        )}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                        {/* Interactive Calendar/Add Buttons */}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (activeSlide.type === 'agenda' && onOpenCalendar) onOpenCalendar();
-                                else onOpenAdd(activeSlide.type === 'agenda' ? 'task' : activeSlide.type === 'shopping' ? 'shopping' : activeSlide.type === 'goals' ? 'goal' : 'project');
-                            }}
-                            className="bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-xl p-1.5 transition-colors shadow-sm active:scale-95"
-                        >
-                            {activeSlide.type === 'agenda' ? <Calendar className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Content Area - Swipeable via Clicks for now (Desktop/Mobile unified) */}
-                <div className="p-3 min-h-[140px] relative">
-                    {/* Arrows for manual navigation */}
-                    {slides.length > 1 && (
-                        <>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                                className="absolute top-1/2 -translate-y-1/2 right-1 p-1 text-gray-300 hover:text-gray-600 z-10 hidden md:block"
-                            >
-                                <ChevronRight className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                                className="absolute top-1/2 -translate-y-1/2 left-1 p-1 text-gray-300 hover:text-gray-600 z-10 hidden md:block"
-                            >
-                                <ChevronLeft className="w-5 h-5" />
-                            </button>
-                        </>
+                    {/* Meta Badge (Countdown or Time) */}
+                    {(countdown || activeItem.meta) && (
+                        <div className={cn(
+                            "px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1.5",
+                            activeItem.accentColor
+                        )}>
+                            <Clock className={cn("w-3 h-3 opacity-80", activeItem.textColor)} />
+                            <span className={cn("text-xs font-bold font-mono pt-0.5", activeItem.textColor)}>
+                                {countdown || activeItem.meta}
+                            </span>
+                        </div>
                     )}
-
-                    {renderContent()}
                 </div>
+
+                {/* Main Content: Title & Action */}
+                <div className="mt-2 flex flex-col gap-1 z-20"
+                    onClick={() => {
+                        if (activeItem.data && onOpenEvent && (activeItem.type === 'task' || activeItem.type === 'appointment')) {
+                            onOpenEvent(activeItem.data);
+                        } else {
+                            handleNext();
+                        }
+                    }}
+                >
+                    <h2 className={cn("text-2xl font-black leading-tight tracking-tight line-clamp-2 drop-shadow-sm", activeItem.textColor)}>
+                        {activeItem.title}
+                    </h2>
+                    <p className={cn("text-sm font-medium opacity-85 line-clamp-1", activeItem.textColor)}>
+                        {activeItem.subtitle}
+                    </p>
+                </div>
+
+                {/* Footer: Progress & Quick Action */}
+                <div className="flex items-end justify-between mt-3">
+                    {/* Progress Bar */}
+                    <div className="flex-1 pl-6">
+                        {activeItem.progress !== undefined ? (
+                            <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                <div
+                                    className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
+                                    style={{ width: `${activeItem.progress}%` }}
+                                />
+                            </div>
+                        ) : (
+                            // If no progress, maybe show a motivational quote or just spacer
+                            <div className="h-1.5" />
+                        )}
+                    </div>
+
+                    {/* Quick Add Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (activeItem.type === 'shopping') onOpenAdd('shopping');
+                            else if (activeItem.type === 'goals') onOpenAdd('habit');
+                            else if (activeItem.type === 'projects') onOpenAdd('project');
+                            else onOpenAdd('task');
+                        }}
+                        className={cn(
+                            "rounded-full p-2.5 backdrop-blur-md border border-white/20 shadow-lg transition-all active:scale-95 hover:bg-white/20 hover:scale-105",
+                            activeItem.accentColor,
+                            activeItem.textColor
+                        )}
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Click Areas for Navigation */}
+                <div className="absolute inset-y-0 left-0 w-16 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
+                <div className="absolute inset-y-0 right-0 w-16 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
+
             </CardContent>
         </Card>
     );

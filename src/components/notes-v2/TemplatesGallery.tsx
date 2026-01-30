@@ -194,133 +194,45 @@ export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onCl
                     </Button>
                 </div>
 
-                {!selectedTemplate ? (
-                    <Tabs defaultValue="paper" className="flex-1 flex flex-col w-full overflow-hidden">
-                        <div className="bg-white px-6 border-b border-gray-100 pb-0">
-                            <TabsList className="bg-slate-100 p-1 rounded-xl w-auto inline-flex gap-1">
-                                <TabsTrigger value="paper" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 px-6 py-2">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    الورق (Paper)
-                                </TabsTrigger>
-                                <TabsTrigger value="templates" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 px-6 py-2">
-                                    <LayoutTemplate className="w-4 h-4 mr-2" />
-                                    القوالب (Templates)
-                                </TabsTrigger>
-                            </TabsList>
-                        </div>
-
-                        <TabsContent value="paper" className="flex-1 p-0 m-0 overflow-y-auto bg-slate-50/50 custom-scrollbar">
-                            <div className="p-8 space-y-8">
-                                {paperStyles.map((cat, idx) => (
-                                    <div key={idx} className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1 h-6 bg-amber-400 rounded-full" />
-                                            <h3 className="font-bold text-gray-700 text-lg">{cat.category}</h3>
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {cat.items.map(item => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        const payload = item.content === 'none' ? '' : JSON.stringify({
-                                                            image: item.content,
-                                                            size: item.size || 'auto',
-                                                            repeat: 'repeat'
-                                                        });
-                                                        onSelectTemplate(payload, 'background');
-                                                        onClose();
-                                                    }}
-                                                    className="group flex flex-col items-center gap-2"
-                                                >
-                                                    <div className="w-full aspect-[4/5] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-indigo-300">
-                                                        <div className="w-full h-full opacity-70" style={{ backgroundColor: item.bg, backgroundImage: item.content === 'none' ? 'none' : item.content, backgroundSize: item.size || 'auto' }} />
-                                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity">
-                                                            <span className="bg-white text-gray-900 text-xs px-3 py-1 rounded-full shadow font-medium">استخدام</span>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">{item.title}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                <div className="flex-1 flex flex-col w-full overflow-hidden">
+                    <div className="flex-1 p-0 m-0 overflow-y-auto bg-slate-50/50 custom-scrollbar">
+                        <div className="p-8 space-y-8">
+                            {paperStyles.map((cat, idx) => (
+                                <div key={idx} className="space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1 h-6 bg-amber-400 rounded-full" />
+                                        <h3 className="font-bold text-gray-700 text-lg">{cat.category}</h3>
                                     </div>
-                                ))}
-                            </div>
-                        </TabsContent>
-
-                        <TabsContent value="templates" className="flex-1 p-0 m-0 overflow-y-auto bg-slate-50/50 custom-scrollbar">
-                            <div className="p-8 space-y-8">
-                                {templateCategories.map((cat, idx) => (
-                                    <div key={idx} className="space-y-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1 h-6 bg-purple-500 rounded-full" />
-                                            <h3 className="font-bold text-gray-700 text-lg">{cat.category}</h3>
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {cat.items.map(item => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => handleTemplateClick(item)}
-                                                    className="group flex flex-col items-center gap-2"
-                                                >
-                                                    <div className={`w-full aspect-[4/5] rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-purple-300 ${item.previewColor || 'bg-white'}`}>
-                                                        <div className="w-full h-full p-4 flex flex-col items-center justify-center opacity-80">
-                                                            <div className="w-3/4 h-1/2 bg-white/50 border border-black/5 rounded-md mb-2" />
-                                                            <div className="w-3/4 h-2 bg-black/5 rounded-full mb-1" />
-                                                            <div className="w-1/2 h-2 bg-black/5 rounded-full" />
-                                                        </div>
-                                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity">
-                                                            <span className="bg-white text-gray-900 text-xs px-3 py-1 rounded-full shadow font-medium">استخدام</span>
-                                                        </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        {cat.items.map(item => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => {
+                                                    const payload = item.content === 'none' ? '' : JSON.stringify({
+                                                        image: item.content,
+                                                        size: item.size || 'auto',
+                                                        repeat: 'repeat'
+                                                    });
+                                                    onSelectTemplate(payload, 'background');
+                                                    onClose();
+                                                }}
+                                                className="group flex flex-col items-center gap-2"
+                                            >
+                                                <div className="w-full aspect-[4/5] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-indigo-300">
+                                                    <div className="w-full h-full opacity-70" style={{ backgroundColor: item.bg, backgroundImage: item.content === 'none' ? 'none' : item.content, backgroundSize: item.size || 'auto' }} />
+                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity">
+                                                        <span className="bg-white text-gray-900 text-xs px-3 py-1 rounded-full shadow font-medium">استخدام</span>
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-600 group-hover:text-purple-600">{item.title}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">{item.title}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="space-y-2">
-                            <h3 className="text-2xl font-bold text-gray-800">كيف تريد استخدام هذا القالب؟</h3>
-                            <p className="text-gray-500">يمكنك إدراج القالب كنص قابل للتعديل أو كخلفية ثابتة (مثل PDF)</p>
+                                </div>
+                            ))}
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-                            <button
-                                onClick={() => confirmSelection('text')}
-                                className="group flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-gray-200 hover:border-indigo-500 hover:bg-indigo-50/50 transition-all bg-white"
-                            >
-                                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <FileText className="w-8 h-8 text-indigo-600" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="font-bold text-lg text-gray-800">نص قابل للتعديل</h4>
-                                    <p className="text-sm text-gray-500">يدرج الجداول والنصوص لتتمكن من الكتابة بداخلها وتعديلها.</p>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => confirmSelection('background')}
-                                className="group flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50/50 transition-all bg-white"
-                            >
-                                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <LayoutTemplate className="w-8 h-8 text-purple-600" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="font-bold text-lg text-gray-800">خلفية ثابتة (PDF Style)</h4>
-                                    <p className="text-sm text-gray-500">يدرج التصميم كخلفية ثابتة للكتابة فوقها بالرسم أو النص الحر.</p>
-                                </div>
-                            </button>
-                        </div>
-
-                        <Button variant="ghost" onClick={() => setSelectedTemplate(null)} className="text-gray-400 hover:text-gray-600">
-                            الرجوع للقائمة
-                        </Button>
                     </div>
-                )}
+                </div>
 
 
                 {!selectedTemplate && (
