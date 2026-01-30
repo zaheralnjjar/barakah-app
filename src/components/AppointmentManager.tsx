@@ -462,7 +462,7 @@ END:VCALENDAR`;
     return (
         <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
             <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b shadow-sm rounded-t-xl transition-all">
                     <CardTitle className="arabic-title text-lg flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-blue-500" />
                         المواعيد والتذكيرات

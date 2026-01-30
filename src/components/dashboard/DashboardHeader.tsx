@@ -150,7 +150,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ currentDate = new Dat
     return (
         <>
             {/* ===== INTERACTIVE HEADER ===== */}
-            <div className={`relative ${isAndroid() ? 'pt-[6mm]' : 'pt-2'} mb-2`}>
+            <div className={`sticky top-0 z-50 transition-all duration-300 ${isAndroid() ? 'pt-[6mm] pb-2' : 'pt-2 mb-2'} bg-gradient-to-b from-white/95 to-transparent backdrop-blur-sm`}>
                 {/* Event Notification Banner (slides in when event is near) */}
                 {showEventBanner && upcomingEvent && (
                     <div

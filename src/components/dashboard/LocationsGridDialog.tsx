@@ -45,44 +45,62 @@ export const LocationsGridDialog: React.FC<LocationsGridDialogProps> = ({ open, 
                             <p className="text-sm font-bold text-gray-400">لا توجد مواقع محفوظة</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-3">
                             {sortedLocations.map((loc) => {
                                 const dateStr = loc.createdAt
-                                    ? new Date(loc.createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })
+                                    ? new Date(loc.createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })
                                     : '';
                                 return (
-                                    <button
+                                    <div
                                         key={loc.id}
                                         onClick={() => handleLocationClick(loc)}
                                         className={cn(
-                                            "flex flex-col items-center justify-center p-2 rounded-2xl bg-white border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-center h-auto min-h-[80px] relative overflow-hidden",
-                                            loc.type === 'parking' ? "border-blue-200 bg-blue-50/30" : "border-gray-100"
+                                            "w-full flex items-center gap-3 p-3 rounded-2xl bg-white border transition-all cursor-pointer relative overflow-hidden group",
+                                            loc.type === 'parking' ? "border-blue-200 bg-blue-50/20" : "border-gray-100 hover:border-emerald-200 shadow-sm"
                                         )}
                                     >
-                                        {loc.type === 'parking' && (
-                                            <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                        )}
-
+                                        {/* Icon */}
                                         <div className={cn(
-                                            "w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 shadow-sm",
+                                            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105",
                                             loc.type === 'parking'
                                                 ? "bg-blue-100 text-blue-600"
                                                 : "bg-emerald-50 text-emerald-600"
                                         )}>
-                                            {loc.type === 'parking' ? <Car className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                            {loc.type === 'parking' ? <Car className="w-6 h-6" /> : <MapPin className="w-6 h-6" />}
                                         </div>
 
-                                        <span className="block text-[10px] font-bold text-gray-800 leading-tight line-clamp-1 w-full">
-                                            {loc.title}
-                                        </span>
-                                        {loc.type === 'parking' ? (
-                                            <ParkingTimer startTime={loc.createdAt} />
-                                        ) : (
-                                            <span className="block text-[9px] text-gray-400 mt-0.5">
-                                                {dateStr}
-                                            </span>
+                                        {/* Info */}
+                                        <div className="flex-1 text-right min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-bold text-gray-900 text-sm truncate pl-2">
+                                                    {loc.title}
+                                                </span>
+                                                {loc.type === 'parking' && (
+                                                    <div className="shrink-0">
+                                                        <ParkingTimer startTime={loc.createdAt} />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center text-xs text-gray-500 gap-1.5 direction-rtl">
+                                                {loc.address ? (
+                                                    <span className="truncate opacity-80 flex-1">{loc.address}</span>
+                                                ) : (
+                                                    <span className="opacity-60">{dateStr}</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Action Icon */}
+                                        <div className="shrink-0 bg-gray-50 p-2 rounded-full group-hover:bg-emerald-50 transition-colors">
+                                            <Navigation className="w-4 h-4 text-gray-400 group-hover:text-emerald-600" />
+                                        </div>
+
+                                        {/* Parking Pulse Indicator */}
+                                        {loc.type === 'parking' && (
+                                            <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                                         )}
-                                    </button>
+                                    </div>
                                 );
                             })}
                         </div>

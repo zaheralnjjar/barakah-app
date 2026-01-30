@@ -19,14 +19,23 @@ import {
     Image as ImageIcon,
     FileText,
     File as FileIcon,
-    Plus
+    Bold,
+    Italic,
+    Underline,
+    Strikethrough,
+    Eraser
 } from 'lucide-react';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EditorToolbarProps {
     editor: Editor | null;
@@ -80,246 +89,280 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     };
 
     return (
-        <div className="flex flex-col gap-2 p-2 mb-4 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl sticky top-0 z-10 transition-all">
-            {/* Row 1: Font & Style */}
-            {/* Row 1: Font & Style */}
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-                {/* Font Family Selector */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm">
-                            <Type className="w-4 h-4 text-emerald-500" />
-                            <span className="max-w-[70px] truncate">
-                                {fontFamilies.find(f => editor.isActive('textStyle', { fontFamily: f.value }))?.name || 'الخط'}
-                            </span>
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-48 p-1 rounded-xl shadow-xl border-gray-100" align="start">
-                        <div className="flex flex-col gap-0.5">
-                            {fontFamilies.map((font) => (
+        <TooltipProvider delayDuration={300}>
+            <div className="flex flex-col gap-2 p-2 mb-4 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl sticky top-0 z-10 transition-all">
+
+                {/* ROW 1: Typography & Formatting (Font, Size, B/I/U, Color, Highlight) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 no-scrollbar">
+
+                    {/* Font Family */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors font-medium text-xs sm:text-sm">
+                                        <span className="max-w-[80px] truncate">
+                                            {fontFamilies.find(f => editor.isActive('textStyle', { fontFamily: f.value }))?.name || 'الخط'}
+                                        </span>
+                                        <ChevronDown className="w-3 h-3 opacity-50" />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-1 rounded-xl shadow-xl border-gray-100" align="start">
+                                    <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
+                                        {fontFamilies.map((font) => (
+                                            <button
+                                                key={font.value}
+                                                onClick={() => editor.chain().focus().setFontFamily(font.value).run()}
+                                                className={`
+                                                    flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
+                                                    ${editor.isActive('textStyle', { fontFamily: font.value })
+                                                        ? 'bg-emerald-50 text-emerald-600 font-bold'
+                                                        : 'hover:bg-gray-50 text-gray-700'}
+                                                `}
+                                                style={{ fontFamily: font.value }}
+                                            >
+                                                {font.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </TooltipTrigger>
+                        <TooltipContent>نوع الخط</TooltipContent>
+                    </Tooltip>
+
+                    {/* Font Size */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors font-medium text-xs sm:text-sm">
+                                        <Type className="w-3.5 h-3.5" />
+                                        <span className="min-w-[18px] text-center">
+                                            {editor.getAttributes('textStyle').fontSize?.replace('px', '') || '16'}
+                                        </span>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-16 p-1 rounded-xl shadow-xl border-gray-100 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                    <div className="flex flex-col gap-0.5" dir="rtl">
+                                        {Array.from({ length: 21 }, (_, i) => 10 + i).map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => editor.chain().focus().setMark('textStyle', { fontSize: `${size}` }).run()}
+                                                className={`
+                                                    flex items-center justify-center px-1 py-1.5 rounded-md text-sm transition-colors
+                                                    ${editor.getAttributes('textStyle').fontSize === `${size}`
+                                                        ? 'bg-emerald-50 text-emerald-600 font-bold'
+                                                        : 'hover:bg-gray-50 text-gray-700'}
+                                                `}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </TooltipTrigger>
+                        <TooltipContent>حجم الخط</TooltipContent>
+                    </Tooltip>
+
+                    <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+
+                    {/* Basic Formatting Group */}
+                    <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
                                 <button
-                                    key={font.value}
-                                    onClick={() => editor.chain().focus().setFontFamily(font.value).run()}
-                                    className={`
-                                        flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
-                                        ${editor.isActive('textStyle', { fontFamily: font.value })
-                                            ? 'bg-emerald-50 text-emerald-600 font-bold'
-                                            : 'hover:bg-gray-50 text-gray-700'}
-                                    `}
-                                    style={{ fontFamily: font.value }}
+                                    onClick={() => editor.chain().focus().toggleBold().run()}
+                                    className={`p-1.5 rounded-md transition-all ${editor.isActive('bold') ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
                                 >
-                                    {font.name}
+                                    <Bold className="w-4 h-4" />
                                 </button>
-                            ))}
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>غمق (Bold)</TooltipContent>
+                        </Tooltip>
 
-                {/* Font Size Picker */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-gray-100 text-gray-700 transition-colors font-medium text-sm border border-transparent hover:border-gray-200">
-                            <Type className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="min-w-[20px] text-center">
-                                {editor.getAttributes('textStyle').fontSize?.replace('px', '') || '16'}
-                            </span>
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-20 p-1 rounded-xl shadow-xl border-gray-100 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        <div className="flex flex-col gap-0.5" dir="rtl">
-                            {Array.from({ length: 21 }, (_, i) => 10 + i).map((size) => (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
                                 <button
-                                    key={size}
-                                    onClick={() => editor.chain().focus().setMark('textStyle', { fontSize: `${size}` }).run()}
-                                    className={`
-                                        flex items-center justify-center px-2 py-1.5 rounded-lg text-sm transition-colors
-                                        ${editor.getAttributes('textStyle').fontSize === `${size}`
-                                            ? 'bg-emerald-50 text-emerald-600 font-bold'
-                                            : 'hover:bg-gray-50 text-gray-700'}
-                                    `}
+                                    onClick={() => editor.chain().focus().toggleItalic().run()}
+                                    className={`p-1.5 rounded-md transition-all ${editor.isActive('italic') ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
                                 >
-                                    {size}
+                                    <Italic className="w-4 h-4" />
                                 </button>
-                            ))}
-                        </div>
-                    </PopoverContent>
-                </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>مائل (Italic)</TooltipContent>
+                        </Tooltip>
 
-                <div className="w-px h-5 bg-gray-200 mx-1" />
-
-                <div className="w-px h-5 bg-gray-200 mx-1" />
-
-                {/* Color Picker */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-colors">
-                            <div
-                                className="w-5 h-5 rounded-full border border-gray-200 shadow-sm"
-                                style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }}
-                            />
-                            <ChevronDown className="w-3 h-3 opacity-50 text-gray-500" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-3 rounded-2xl shadow-xl border-gray-100">
-                        <div className="grid grid-cols-6 gap-2">
-                            {colors.map((color) => (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
                                 <button
-                                    key={color}
-                                    onClick={() => editor.chain().focus().setColor(color).run()}
-                                    className={`
-                                        w-8 h-8 rounded-full border transition-transform hover:scale-110
-                                        ${editor.isActive('textStyle', { color }) ? 'ring-2 ring-offset-1 ring-indigo-500 border-transparent' : 'border-gray-100'}
-                                    `}
-                                    style={{ backgroundColor: color }}
-                                />
-                            ))}
-                        </div>
-                        <button
-                            onClick={() => editor.chain().focus().unsetColor().run()}
-                            className="w-full mt-3 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                            إزالة اللون
-                        </button>
-                    </PopoverContent>
-                </Popover>
-
-                {/* Highlight Picker */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button
-                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl transition-colors ${editor.isActive('highlight') ? 'bg-gray-100' : 'hover:bg-gray-100 text-gray-600'}`}
-                            style={{ color: editor.getAttributes('highlight').color || undefined }}
-                        >
-                            <Highlighter className="w-4 h-4" />
-                            <ChevronDown className="w-3 h-3 opacity-50" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-48 p-3 rounded-2xl shadow-xl border-gray-100">
-                        <div className="grid grid-cols-4 gap-2">
-                            {highlights.map((color) => (
-                                <button
-                                    key={color}
-                                    onClick={() => {
-                                        if (color === 'transparent') {
-                                            editor.chain().focus().unsetHighlight().run();
-                                        } else {
-                                            editor.chain().focus().toggleHighlight({ color }).run();
-                                        }
-                                    }}
-                                    className={`
-                                        w-8 h-8 rounded-md border transition-transform hover:scale-105 flex items-center justify-center
-                                        ${editor.isActive('highlight', { color }) ? 'ring-2 ring-offset-1 ring-yellow-400 border-transparent' : 'border-gray-100'}
-                                    `}
-                                    style={{ backgroundColor: color === 'transparent' ? 'white' : color }}
+                                    onClick={() => editor.chain().focus().unsetAllMarks().run()}
+                                    className="p-1.5 rounded-md text-gray-500 hover:text-red-500 hover:bg-red-50 transition-all"
                                 >
-                                    {color === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                                    <Eraser className="w-4 h-4" />
                                 </button>
-                            ))}
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div >
+                            </TooltipTrigger>
+                            <TooltipContent>مسح التنسيق</TooltipContent>
+                        </Tooltip>
+                    </div>
 
-            {/* Row 2: Alignment, Lists, Extra */}
-            < div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1" >
-                {/* Alignment */}
-                < div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr" >
-                    <button
-                        onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
-                    ><AlignLeft className="w-4 h-4" /></button>
-                    <button
-                        onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
-                    ><AlignCenter className="w-4 h-4" /></button>
-                    <button
-                        onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
-                    ><AlignRight className="w-4 h-4" /></button>
-                    <button
-                        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                        className={`p-1.5 rounded-md hover:bg-white hover:shadow-sm transition-all ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-emerald-600' : 'text-gray-500'}`}
-                    ><AlignJustify className="w-4 h-4" /></button>
-                </div >
+                    <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
-                <div className="w-px h-5 bg-gray-200 mx-1" />
+                    {/* Colors */}
+                    <div className="flex items-center gap-1">
+                        {/* Text Color */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors relative group">
+                                            <Palette className="w-4 h-4 text-gray-600" />
+                                            <div
+                                                className="absolute bottom-1 right-1 left-1 h-0.5 rounded-full"
+                                                style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }}
+                                            />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-3 rounded-2xl shadow-xl border-gray-100">
+                                        <div className="grid grid-cols-6 gap-2">
+                                            {colors.map((color) => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => editor.chain().focus().setColor(color).run()}
+                                                    className={`w-7 h-7 rounded-full border hover:scale-110 transition-transform ${editor.isActive('textStyle', { color }) ? 'ring-2 ring-offset-1 ring-blue-500' : 'border-gray-200'}`}
+                                                    style={{ backgroundColor: color }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <button onClick={() => editor.chain().focus().unsetColor().run()} className="w-full mt-2 text-xs text-gray-500 hover:text-red-500">إزالة اللون</button>
+                                    </PopoverContent>
+                                </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>لون النص</TooltipContent>
+                        </Tooltip>
 
-                {/* Lists */}
-                <button
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={`p-2 rounded-xl transition-all ${editor.isActive('bulletList') ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'hover:bg-gray-100 text-gray-500'}`}
-                    title="تعداد نقطي"
-                >
-                    <List className="w-4 h-4" />
-                </button>
-                <button
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={`p-2 rounded-xl transition-all ${editor.isActive('orderedList') ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'hover:bg-gray-100 text-gray-500'}`}
-                    title="تعداد رقمي"
-                >
-                    <ListOrdered className="w-4 h-4" />
-                </button>
+                        {/* Highlight */}
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors relative">
+                                            <Highlighter className="w-4 h-4 text-gray-600" />
+                                            <div
+                                                className="absolute bottom-1 right-1 left-1 h-0.5 rounded-full opacity-50"
+                                                style={{ backgroundColor: editor.getAttributes('highlight').color || 'transparent' }}
+                                            />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-48 p-2 rounded-xl shadow-xl border-gray-100">
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {highlights.map((color) => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => color === 'transparent' ? editor.chain().focus().unsetHighlight().run() : editor.chain().focus().toggleHighlight({ color }).run()}
+                                                    className={`w-8 h-8 rounded-md border flex items-center justify-center ${editor.isActive('highlight', { color }) ? 'ring-2 ring-blue-500' : 'border-gray-100'}`}
+                                                    style={{ backgroundColor: color === 'transparent' ? '#fff' : color }}
+                                                >
+                                                    {color === 'transparent' && <div className="w-full h-px bg-red-500 rotate-45" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>تمييز النص</TooltipContent>
+                        </Tooltip>
+                    </div>
+                </div>
 
-                <div className="w-px h-5 bg-gray-200 mx-1" />
+                {/* ROW 2: Paragraph & Inserts (Align, List, Separators, Templates, Export) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 no-scrollbar border-t border-gray-50/50 pt-1.5">
 
-                {/* Time Separator */}
-                <button
-                    onClick={addTimeSeparator}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-emerald-50 text-gray-600 hover:text-emerald-600 transition-colors"
-                >
-                    <Minus className="w-4 h-4" />
-                    <Clock className="w-3.5 h-3.5" />
-                </button>
+                    {/* Alignment Group */}
+                    <div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignLeft className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>محاذاة لليسار</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignCenter className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>توسيط</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignRight className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>محاذاة لليمين</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'justify' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignJustify className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>ضبط كامل</TooltipContent>
+                        </Tooltip>
+                    </div>
 
-                {/* Templates */}
-                <button
-                    onClick={onOpenTemplates}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-amber-50 text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                    <LayoutTemplate className="w-4 h-4" />
-                </button>
+                    <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
-                <div className="w-px h-5 bg-gray-200 mx-1" />
+                    {/* Lists */}
+                    <div className="flex items-center gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded-lg ${editor.isActive('bulletList') ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}><List className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>قائمة نقطية</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded-lg ${editor.isActive('orderedList') ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}><ListOrdered className="w-4 h-4" /></button>
+                            </TooltipTrigger>
+                            <TooltipContent>قائمة رقمية</TooltipContent>
+                        </Tooltip>
+                    </div>
 
-                {/* Export Menu */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-green-50 text-gray-600 hover:text-green-600 transition-colors"
-                            title="تصدير الملاحظة"
-                        >
-                            <Download className="w-4 h-4" />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-40 p-1 rounded-xl shadow-xl border-gray-100" align="end">
-                        <div className="flex flex-col gap-0.5">
-                            <button
-                                onClick={() => onExport?.('image')}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 text-gray-700 transition-colors w-full text-right"
-                            >
-                                <ImageIcon className="w-4 h-4 text-purple-500" />
-                                <span>صورة (Image)</span>
-                            </button>
-                            <button
-                                onClick={() => onExport?.('pdf')}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 text-gray-700 transition-colors w-full text-right"
-                            >
-                                <FileText className="w-4 h-4 text-red-500" />
-                                <span>ملف PDF</span>
-                            </button>
-                            <button
-                                onClick={() => onExport?.('word')}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 text-gray-700 transition-colors w-full text-right"
-                            >
-                                <FileIcon className="w-4 h-4 text-blue-500" />
-                                <span>ملف Word</span>
-                            </button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div >
-        </div >
+                    <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+
+                    {/* Insertions */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={addTimeSeparator} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><Clock className="w-4 h-4" /></button>
+                        </TooltipTrigger>
+                        <TooltipContent>إضافة فاصل زمني</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={onOpenTemplates} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><LayoutTemplate className="w-4 h-4" /></button>
+                        </TooltipTrigger>
+                        <TooltipContent>القوالب الجاهزة</TooltipContent>
+                    </Tooltip>
+
+                    <div className="ml-auto flex items-center gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 text-xs text-gray-700 transition-colors">
+                                            <Download className="w-3.5 h-3.5" />
+                                            <span>تصدير</span>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-40 p-1" align="end">
+                                        <button onClick={() => onExport?.('image')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">صورة</button>
+                                        <button onClick={() => onExport?.('pdf')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">PDF</button>
+                                    </PopoverContent>
+                                </Popover>
+                            </TooltipTrigger>
+                            <TooltipContent>تصدير الملاحظة</TooltipContent>
+                        </Tooltip>
+                    </div>
+                </div>
+            </div>
+        </TooltipProvider>
     );
 };

@@ -88,12 +88,12 @@ export const ShortcutDialogs = () => {
             setShowAppointment(true);
         };
 
-        window.addEventListener('open-distraction-dialog', handleOpenDistraction);
+        // window.addEventListener('open-distraction-dialog', handleOpenDistraction);
         window.addEventListener('open-medical-profile', handleOpenMedical);
         window.addEventListener('open-appointment-dialog', handleOpenAppointment);
 
         return () => {
-            window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
+            // window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
             window.removeEventListener('open-medical-profile', handleOpenMedical);
             window.removeEventListener('open-appointment-dialog', handleOpenAppointment);
         };

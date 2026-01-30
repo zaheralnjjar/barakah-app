@@ -46,7 +46,7 @@ import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
 import { MasterAgenda } from './dashboard/MasterAgenda';
-import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
+import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 import { ParkingFloatingWidget } from './dashboard/ParkingFloatingWidget';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
@@ -210,18 +210,27 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
     // Listen for custom shortcut events
     const [quickNoteTag, setQuickNoteTag] = useState<string | undefined>(undefined);
+    const [quickNoteMode, setQuickNoteMode] = useState<'note' | 'activity'>('note');
 
     useEffect(() => {
         const handleOpenQuickNote = (e: Event) => {
             const detail = (e as CustomEvent).detail;
             setQuickNoteTag(detail?.tag || (detail?.type === 'brain_dump' ? 'تفريغ' : undefined));
+            setQuickNoteMode('note');
+            setShowAddDialog('note');
+        };
+
+        const handleOpenDistraction = () => {
+            setQuickNoteMode('activity');
             setShowAddDialog('note');
         };
 
         window.addEventListener('open-quick-note', handleOpenQuickNote);
+        window.addEventListener('open-distraction-dialog', handleOpenDistraction);
 
         return () => {
             window.removeEventListener('open-quick-note', handleOpenQuickNote);
+            window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
         }
     }, []);
 
@@ -824,10 +833,11 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
 
 
-            <CreateNoteDialog
+            <QuickNoteDialog
                 isOpen={showAddDialog === 'note'}
                 onClose={() => setShowAddDialog(null)}
-                autoStartRecording={quickNoteTag === 'brain_dump'}
+                defaultTag={quickNoteTag}
+                initialMode={quickNoteMode}
             />
 
             <GlobalSearchDialog

@@ -234,8 +234,8 @@ const ShoppingList = () => {
 
     return (
         <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
-            <Card className="w-full">
-                <CardHeader className="pb-2">
+            <Card className="w-full relative overflow-visible">
+                <CardHeader className="pb-2 sticky top-0 z-10 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b shadow-sm rounded-t-xl transition-all">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                             <div className="bg-green-100 p-1.5 rounded-lg">

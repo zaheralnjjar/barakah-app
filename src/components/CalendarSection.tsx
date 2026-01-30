@@ -129,55 +129,57 @@ const CalendarSection: React.FC = () => {
 
     return (
         <div className="space-y-6 container mx-auto px-4 py-4 md:py-8">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>
-            </div>
+            {/* Sticky Header Wrapper */}
+            <div className="sticky top-0 z-50 bg-background/95 backdrop-blur pb-2 pt-2 -mx-4 px-4 border-b mb-4">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>
+                </div>
 
 
-            {/* View Toggle */}
-            <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm">
-                <button
-                    onClick={() => setViewMode('daily')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'daily'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <List className="w-4 h-4 inline-block ml-1" />
-                    اليومي
-                </button>
-                <button
-                    onClick={() => setViewMode('weekly')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'weekly'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <CalendarDays className="w-4 h-4 inline-block ml-1" />
-                    أسبوعي
-                </button>
-                <button
-                    onClick={() => setViewMode('grid3x3')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'grid3x3'
-                        ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <Grid3X3 className="w-4 h-4 inline-block ml-1" />
-                    شبكة 3x3
-                </button>
-                <button
-                    onClick={() => setViewMode('monthly')}
-                    className={`px-4 py-2 text-sm rounded-xl font-bold transition-all duration-300 ${viewMode === 'monthly'
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
-                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
-                >
-                    <CalendarIcon className="w-4 h-4 inline-block ml-1" />
-                    الشهري
-                </button>
-
+                {/* View Toggle */}
+                <div className="flex gap-2 bg-gray-50/50 p-1.5 rounded-2xl border w-fit mx-auto shadow-sm overflow-x-auto max-w-full">
+                    <button
+                        onClick={() => setViewMode('daily')}
+                        className={`px-4 py-2 text-xs md:text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${viewMode === 'daily'
+                            ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                    >
+                        <List className="w-3 h-3 md:w-4 md:h-4 inline-block ml-1" />
+                        اليومي
+                    </button>
+                    <button
+                        onClick={() => setViewMode('weekly')}
+                        className={`px-4 py-2 text-xs md:text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${viewMode === 'weekly'
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-200 scale-105'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                    >
+                        <CalendarDays className="w-3 h-3 md:w-4 md:h-4 inline-block ml-1" />
+                        أسبوعي
+                    </button>
+                    <button
+                        onClick={() => setViewMode('grid3x3')}
+                        className={`px-4 py-2 text-xs md:text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${viewMode === 'grid3x3'
+                            ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                    >
+                        <Grid3X3 className="w-3 h-3 md:w-4 md:h-4 inline-block ml-1" />
+                        3x3
+                    </button>
+                    <button
+                        onClick={() => setViewMode('monthly')}
+                        className={`px-4 py-2 text-xs md:text-sm rounded-xl font-bold transition-all duration-300 whitespace-nowrap ${viewMode === 'monthly'
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-lg shadow-purple-200 scale-105'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
+                    >
+                        <CalendarIcon className="w-3 h-3 md:w-4 md:h-4 inline-block ml-1" />
+                        الشهري
+                    </button>
+                </div>
             </div>
 
             <Suspense fallback={null}>

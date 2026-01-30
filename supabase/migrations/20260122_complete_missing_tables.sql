@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS quick_notes (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     title TEXT NOT NULL DEFAULT 'ملاحظة',
     content TEXT,
-    color TEXT DEFAULT '#ffffff',
+    color TEXT DEFAULT '#ffffffff',
     folder_id UUID,
     is_pinned BOOLEAN DEFAULT FALSE,
     is_activities BOOLEAN DEFAULT FALSE,

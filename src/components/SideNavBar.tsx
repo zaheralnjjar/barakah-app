@@ -163,7 +163,41 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <button
-                            onClick={onAddNote}
+                            onMouseDown={() => {
+                                isLongPress.current = false;
+                                pressTimer.current = setTimeout(() => {
+                                    isLongPress.current = true;
+                                    if (navigator.vibrate) navigator.vibrate(50);
+                                    onAddDistraction();
+                                }, 500);
+                            }}
+                            onMouseUp={() => {
+                                if (pressTimer.current) clearTimeout(pressTimer.current);
+                                if (!isLongPress.current) {
+                                    onAddNote();
+                                }
+                                setTimeout(() => { isLongPress.current = false; }, 100);
+                            }}
+                            onMouseLeave={() => {
+                                if (pressTimer.current) clearTimeout(pressTimer.current);
+                                isLongPress.current = false;
+                            }}
+                            onTouchStart={() => {
+                                isLongPress.current = false;
+                                pressTimer.current = setTimeout(() => {
+                                    isLongPress.current = true;
+                                    if (navigator.vibrate) navigator.vibrate(50);
+                                    onAddDistraction();
+                                }, 500);
+                            }}
+                            onTouchEnd={() => {
+                                if (pressTimer.current) clearTimeout(pressTimer.current);
+                                if (!isLongPress.current) {
+                                    onAddNote();
+                                }
+                                setTimeout(() => { isLongPress.current = false; }, 100);
+                            }}
+                            onContextMenu={(e) => e.preventDefault()}
                             className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 text-amber-500 hover:bg-amber-50 active:scale-95 mb-1 relative"
                         >
                             <StickyNote className="w-6 h-6" />
@@ -171,7 +205,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                         </button>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-lg">
-                        إضافة ملاحظة
+                        إضافة ملاحظة (اضغط مطولاً للنشاط)
                     </TooltipContent>
                 </Tooltip>
 

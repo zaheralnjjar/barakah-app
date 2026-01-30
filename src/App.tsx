@@ -162,20 +162,14 @@ const App = () => {
 
   // Global Listeners for Notes/Voice
   useEffect(() => {
-    const handleOpenQuickNote = (e: any) => {
-      setIsVoiceMode(false);
-      setShowVoiceRecorder(true);
-    };
     const handleOpenVoice = () => {
       setIsVoiceMode(true);
       setShowVoiceRecorder(true);
     };
 
-    window.addEventListener('open-quick-note', handleOpenQuickNote);
     window.addEventListener('open-global-voice-recorder', handleOpenVoice);
 
     return () => {
-      window.removeEventListener('open-quick-note', handleOpenQuickNote);
       window.removeEventListener('open-global-voice-recorder', handleOpenVoice);
     };
   }, []);
