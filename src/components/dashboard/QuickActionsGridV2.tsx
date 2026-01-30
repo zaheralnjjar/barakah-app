@@ -8,6 +8,7 @@ import { useSystemModes } from '@/hooks/useSystemModes';
 import { getActionById } from '@/constants/actionDefinitions';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
+import { LocationsGridDialog } from '@/components/dashboard/LocationsGridDialog'; // Import new dialog
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -66,6 +67,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const [showLocationMenu, setShowLocationMenu] = useState(false);
     const [showSettingsMenu, setShowSettingsMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
+    const [showLocationsGrid, setShowLocationsGrid] = useState(false); // New state for grid dialog
     const [showDailyReport, setShowDailyReport] = useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = useState(false);
 
@@ -102,45 +104,60 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         { id: 'event-default', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200', actionId: 'event' },
         { id: 'timer-default', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200', actionId: 'timer' },
         { id: 'expense-default', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200', actionId: 'expense' },
-        { id: 'location-default', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'location' },
+        { id: 'my-locations-default', label: 'مواقعي', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'open_locations_grid' },
         { id: 'shopping-default', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200', actionId: 'shopping' },
         { id: 'settings-default', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200', actionId: 'sys_settings' },
     ];
 
-    // Enforce static default actions - Ignore dynamic shortcuts
-    const displayActions = defaultActions;
+    // Close menus when clicking outside
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setShowSettingsMenu(false);
+                setShowEventMenu(false);
+                setShowLocationMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleActionClick = (action: any) => {
+        const isSettings = action.actionId === 'sys_settings' || action.actionId === 'nav_settings' || action.actionId === 'open_settings' || action.actionId === 'settings';
+        const isEvent = action.actionId === 'event' || action.actionId === 'add_event';
+        const isLocation = action.actionId === 'location' || action.actionId === 'loc_save_current' || action.actionId === 'save_location_current';
+        const isMyLocations = action.actionId === 'open_locations_grid';
+
+        if (isSettings) setShowSettingsMenu(!showSettingsMenu);
+        else if (isEvent) setShowEventMenu(!showEventMenu);
+        else if (isLocation) setShowLocationMenu(!showLocationMenu);
+        else if (isMyLocations) setShowLocationsGrid(true);
+        else if (action.actionId) executeShortcut(action.actionId);
+    };
 
     return (
-        <div className="w-full relative">
-            <div className={`grid grid-cols-${Math.min(displayActions.length, 6)} gap-2 px-1`} dir="rtl">
-                {displayActions.map((action) => {
-                    // Check for menu types
-                    const isSettings = action.actionId === 'sys_settings' || action.actionId === 'nav_settings' || action.actionId === 'open_settings' || action.actionId === 'settings';
-                    const isEvent = action.actionId === 'event' || action.actionId === 'add_event';
-                    const isLocation = action.actionId === 'location' || action.actionId === 'loc_save_current' || action.actionId === 'save_location_current';
+        <div className="w-full relative" ref={containerRef}>
+            <div className={`grid grid-cols-${Math.min(defaultActions.length, 6)} gap-2 px-1`} dir="rtl">
+                {defaultActions.map((action) => {
+                    const isSettings = action.actionId === 'sys_settings';
+                    const isEvent = action.actionId === 'event';
+                    const isLocation = action.actionId === 'location';
+                    const isMyLocations = action.actionId === 'open_locations_grid';
 
-                    // Determine if any menu is open for this action
                     const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu) || (isLocation && showLocationMenu);
 
                     return (
                         <div key={action.id} className="relative col-span-1">
-                            <button
-                                onClick={() => {
-                                    if (isSettings) setShowSettingsMenu(!showSettingsMenu);
-                                    else if (isEvent) setShowEventMenu(!showEventMenu);
-                                    else if (isLocation) setShowLocationMenu(!showLocationMenu);
-                                    else if (action.actionId) executeShortcut(action.actionId);
-                                }}
-                                className={cn(
-                                    "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full h-full min-h-[50px]",
-                                    action.color,
-                                    "border-b-2 border-black/10"
-                                )}
-                            >
-                                <span className={cn("text-[10px] md:text-xs font-black tracking-wide", displayActions.length > 5 && "text-[9px]")} style={{ fontFamily: 'Cairo, sans-serif' }}>
-                                    {action.label}
-                                </span>
-                            </button>
+                            <QuickActionButton
+                                action={action}
+                                onClick={() => handleActionClick(action)}
+                                onLongPress={isMyLocations ? onQuickParking : undefined}
+                            />
 
                             {/* Unified Floating Menu Logic */}
                             {isOpen && (
@@ -183,7 +200,37 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
+            <LocationsGridDialog open={showLocationsGrid} onOpenChange={setShowLocationsGrid} />
         </div>
     );
 };
+
+const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onClick: () => void, onLongPress?: () => void }) => {
+    const { onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd } = useLongPress({
+        onClick,
+        onLongPress: onLongPress || (() => { }),
+        ms: 600
+    });
+
+    // If no long press handler is provided, use standard onclick for better responsiveness
+    const handlers = onLongPress ? {
+        onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd
+    } : { onClick };
+
+    return (
+        <button
+            {...handlers}
+            className={cn(
+                "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full h-full min-h-[50px]",
+                action.color,
+                "border-b-2 border-black/10"
+            )}
+        >
+            <span className={cn("text-[10px] md:text-xs font-black tracking-wide", "text-[9px]")} style={{ fontFamily: 'Cairo, sans-serif' }}>
+                {action.label}
+            </span>
+        </button>
+    );
+};
+
 export default QuickActionsGridV2;

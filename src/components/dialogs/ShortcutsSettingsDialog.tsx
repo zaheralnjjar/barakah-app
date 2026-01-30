@@ -22,14 +22,14 @@ interface ShortcutsSettingsDialogProps {
 
 export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = ({ open, onOpenChange }) => {
     const { toast } = useToast();
-    const {
-        customShortcuts,
-        addShortcut,
-        removeShortcut
-    } = useShortcuts();
 
-    // Custom shortcuts (new system with full customization)
-    const { shortcuts: myCustomShortcuts, deleteShortcut: deleteCustomShortcut } = useCustomShortcuts();
+    // Custom shortcuts (new system for everything now)
+    const {
+        shortcuts: customShortcuts,
+        addShortcut,
+        deleteShortcut
+    } = useCustomShortcuts();
+
     const [editingShortcut, setEditingShortcut] = useState<CustomShortcut | null>(null);
     const [showCustomizerDialog, setShowCustomizerDialog] = useState(false);
 
@@ -125,6 +125,24 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
         }
     };
 
+    const handleAddFunctionShortcut = async (actionId: string, actionName: string, iconName?: string) => {
+        try {
+            await addShortcut({
+                custom_name: actionName,
+                custom_icon: iconName || 'Zap', // Use string name or default
+                icon_color: 'emerald', // Default styling
+                shortcut_type: 'action', // Ensure this maps to legacy execution
+                placement: 'quick_access', // Default placement
+                click_action_id: actionId,
+                order_index: customShortcuts.length
+            });
+            // Toast is handled in hook
+        } catch (e) {
+            console.error(e);
+            toast({ title: 'خطأ', description: 'فشل إضافة الاختصار', variant: 'destructive' });
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col p-0">
@@ -144,11 +162,11 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                         </TabsList>
                     </div>
 
-                    {/* === CUSTOM SHORTCUTS TAB (NEW) === */}
+                    {/* === CUSTOM SHORTCUTS TAB === */}
                     <TabsContent value="custom" className="flex-1 overflow-y-auto p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-bold text-gray-700">
-                                اختصاراتي المخصصة ({myCustomShortcuts.length})
+                                اختصاراتي المخصصة ({customShortcuts.length})
                             </h4>
                             <Button
                                 size="sm"
@@ -160,7 +178,7 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                             </Button>
                         </div>
 
-                        {myCustomShortcuts.length === 0 ? (
+                        {customShortcuts.length === 0 ? (
                             <div className="text-center py-8 text-gray-400">
                                 <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                 <p className="text-sm">لم تقم بإنشاء اختصارات مخصصة بعد</p>
@@ -168,7 +186,7 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {myCustomShortcuts.map(shortcut => {
+                                {customShortcuts.map(shortcut => {
                                     const typeIcon = shortcut.shortcut_type === 'url' ? Link
                                         : shortcut.shortcut_type === 'contact' ? Phone
                                             : shortcut.shortcut_type === 'macro' ? Layers
@@ -185,7 +203,8 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                                                     <p className="text-[10px] text-gray-400">
                                                         {shortcut.shortcut_type === 'url' ? 'رابط خارجي' :
                                                             shortcut.shortcut_type === 'contact' ? 'جهة اتصال' :
-                                                                shortcut.shortcut_type === 'macro' ? 'ماكرو' : 'وظيفة'}
+                                                                shortcut.shortcut_type === 'macro' ? 'ماكرو' :
+                                                                    shortcut.click_action_id ? getActionById(shortcut.click_action_id)?.name : 'وظيفة'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -203,7 +222,7 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                                                     size="sm"
                                                     onClick={async () => {
                                                         if (confirm('هل أنت متأكد من حذف هذا الاختصار؟')) {
-                                                            await deleteCustomShortcut(shortcut.id);
+                                                            await deleteShortcut(shortcut.id);
                                                             toast({ title: '🗑️ تم حذف الاختصار' });
                                                         }
                                                     }}
@@ -315,36 +334,8 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                         </div>
                     </TabsContent>
 
-                    {/* === SHORTCUTS TAB === */}
+                    {/* === SHORTCUTS TAB (UPDATED TO USE SUPABASE) === */}
                     <TabsContent value="shortcuts" className="flex-1 overflow-y-auto p-4">
-                        {/* Enabled Shortcuts List */}
-                        {customShortcuts.length > 0 && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-emerald-600 mb-3 bg-emerald-50 p-2 rounded-lg inline-block">
-                                    الاختصارات المفعلة ({customShortcuts.length})
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {customShortcuts.map(id => {
-                                        const action = getActionById(id);
-                                        if (!action) return null;
-                                        const Icon = action.icon;
-                                        return (
-                                            <div key={id} className="flex items-center gap-1.5 bg-white border border-emerald-200 rounded-full pl-1 pr-3 py-1 shadow-sm">
-                                                <Icon className="w-3.5 h-3.5 text-emerald-600" />
-                                                <span className="text-xs font-medium text-emerald-900">{action.name}</span>
-                                                <button
-                                                    onClick={() => removeShortcut(id)}
-                                                    className="w-5 h-5 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 mr-1"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
                         <div className="space-y-6">
                             {Object.entries(ACTION_CATEGORIES).map(([category, label]) => {
                                 const actions = AVAILABLE_ACTIONS.filter(a => a.category === category);
@@ -357,33 +348,44 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                                         </Badge>
                                         <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                                             {actions.map(action => {
-                                                const isAdded = customShortcuts.includes(action.id);
+                                                // Check if this action ID is already present in click_action_id of any custom shortcut
+                                                const existingShortcut = customShortcuts.find(s => s.click_action_id === action.id);
+                                                const isAdded = !!existingShortcut;
                                                 const Icon = action.icon;
+
                                                 return (
                                                     <button
                                                         key={action.id}
                                                         onClick={() => {
                                                             if (!isAdded) {
-                                                                addShortcut(action.id);
-                                                                toast({ title: '✅ تم الإضافة', description: `تم إضافة ${action.name} للشاشة الرئيسية` });
+                                                                handleAddFunctionShortcut(action.id, action.name, (action as any).iconName);
+                                                            } else if (existingShortcut) {
+                                                                // Optional: Allow removing directly from here?
+                                                                // For now, let's keep it additive-focused or toggle
+                                                                if (confirm(`هل تريد إزالة ${action.name}؟`)) {
+                                                                    deleteShortcut(existingShortcut.id);
+                                                                }
                                                             }
                                                         }}
-                                                        disabled={isAdded}
                                                         className={cn(
                                                             "relative flex flex-col items-center justify-center p-2 rounded-xl transition-all border aspect-square",
                                                             isAdded
-                                                                ? 'bg-gray-50 border-gray-100 opacity-60 grayscale cursor-not-allowed'
+                                                                ? 'bg-emerald-50 border-emerald-200 shadow-sm'
                                                                 : 'bg-white border-gray-200 hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5'
                                                         )}
                                                     >
-                                                        <Icon className={cn("w-6 h-6 mb-2", isAdded ? 'text-gray-400' : 'text-gray-700')} />
-                                                        <span className="text-[10px] font-bold text-center leading-tight line-clamp-2">{action.name}</span>
+                                                        <Icon className={cn("w-6 h-6 mb-2", isAdded ? 'text-emerald-600' : 'text-gray-700')} />
+                                                        <span className={cn("text-[10px] font-bold text-center leading-tight line-clamp-2", isAdded ? 'text-emerald-800' : '')}>{action.name}</span>
 
-                                                        {!isAdded && (
-                                                            <div className="absolute top-1 right-1">
-                                                                <Plus className="w-3 h-3 text-emerald-500" />
-                                                            </div>
-                                                        )}
+                                                        <div className="absolute top-1 right-1">
+                                                            {isAdded ? (
+                                                                <div className="bg-emerald-500 rounded-full p-0.5">
+                                                                    <div className="w-2 h-2 bg-white rounded-full" />
+                                                                </div>
+                                                            ) : (
+                                                                <Plus className="w-3 h-3 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            )}
+                                                        </div>
                                                     </button>
                                                 );
                                             })}

@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { isAndroid } from '@/utils/platformDetection';
 import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { useCustomShortcutExecution } from '@/hooks/useCustomShortcutExecution';
 import { useShortcutExecution } from '@/hooks/useShortcutExecution';
@@ -35,17 +36,16 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
     gridVariant = 'icon',
     readonly = false
 }) => {
-    const { shortcuts, getByPlacement } = useCustomShortcuts();
+    const { shortcuts, getByPlacement, isLoading } = useCustomShortcuts();
     const [showCustomizer, setShowCustomizer] = useState(false);
     const [editingShortcut, setEditingShortcut] = useState<CustomShortcut | null>(null);
 
-    // Get the base executeShortcut from the standard hook
+    // ... hooks ...
     const { executeShortcut: baseExecuteShortcut } = useShortcutExecution({
         onOpenAddDialog,
         onNavigateToTab
     });
 
-    // Create extended execution hook
     const { executeCustomShortcut } = useCustomShortcutExecution({
         executeAction: baseExecuteShortcut
     });
@@ -65,6 +65,23 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
         setEditingShortcut(null);
         setShowCustomizer(true);
     };
+
+    if (isLoading) {
+        return (
+            <div className={cn("grid gap-2 px-1", {
+                'grid-cols-4': columns === 4,
+                'grid-cols-5': columns === 5,
+                'grid-cols-6': columns === 6,
+                'md:grid-cols-8 lg:grid-cols-10': columns === 6 && !isAndroid(),
+            })} dir="rtl">
+                {[...Array(columns * 2)].map((_, i) => (
+                    <div key={i} className={cn("rounded-xl bg-gray-100 dark:bg-zinc-800 animate-pulse",
+                        gridVariant === 'text-card' ? "h-[50px] w-full" : "h-16 w-16"
+                    )} />
+                ))}
+            </div>
+        );
+    }
 
     // Empty state
     if (placementShortcuts.length === 0) {
@@ -104,6 +121,8 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
                             'grid-cols-4': columns === 4,
                             'grid-cols-5': columns === 5,
                             'grid-cols-6': columns === 6,
+                            // Responsive overrides if default (6) is used, or explicit if passed
+                            'md:grid-cols-8 lg:grid-cols-10': columns === 6 && !isAndroid(),
                         })}
                         dir="rtl"
                     >

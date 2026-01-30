@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNotesV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
-import { Mic, MicOff, Loader2, Type, Palette } from 'lucide-react';
+import { Mic, MicOff, Loader2, Type, Palette, PaintBucket } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -378,21 +378,22 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
                             </Select>
 
                             {/* Background Color Shortcuts */}
-                            <div className="flex items-center gap-1 mr-auto pl-1 scale-90 origin-left overflow-x-auto max-w-[150px] no-scrollbar">
-                                {NOTE_COLORS.map((c) => (
-                                    <button
-                                        key={c.value}
-                                        type="button"
-                                        onClick={() => setColor(c.value)}
-                                        className={cn(
-                                            "w-5 h-5 rounded-full border border-gray-200 transition-all shrink-0",
-                                            color === c.value ? 'ring-2 ring-emerald-500 scale-110' : ''
-                                        )}
-                                        style={{ backgroundColor: c.value }}
-                                        title={c.name}
-                                    />
-                                ))}
-                            </div>
+                            {/* Background Color Dropdown */}
+                            <Select value={color} onValueChange={setColor}>
+                                <SelectTrigger className="h-7 w-[40px] px-1 bg-white border-gray-200 flex justify-center items-center" title="لون الخلفية">
+                                    <PaintBucket className="w-3.5 h-3.5 text-gray-600" style={{ fill: color !== '#FFFFFF' ? color : 'none' }} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {NOTE_COLORS.map(c => (
+                                        <SelectItem key={c.value} value={c.value}>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full border border-gray-100" style={{ backgroundColor: c.value }} />
+                                                {c.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {/* Row 2: Folder & Distraction */}

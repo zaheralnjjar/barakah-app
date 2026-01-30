@@ -550,12 +550,16 @@ const InteractiveMap = () => {
                 <div className="flex flex-col lg:flex-row h-auto lg:h-[80vh] min-h-[500px]">
                     {/* Map Section - 70% on Desktop */}
                     <div className="h-[50vh] min-h-[400px] lg:h-full lg:w-[70%] w-full relative z-0 order-1 border-b lg:border-b-0 lg:border-l border-gray-200 isolate">
+                        {/* Map Container with Key for Remounting */}
                         <MapContainer
                             key={mapKey}
                             center={mapCenter}
                             zoom={13}
                             zoomControl={false}
                             style={{ height: '100%', width: '100%', minHeight: '400px' }}
+                            whenReady={() => {
+                                // Safety check or initialization
+                            }}
                         >
                             <ChangeView center={mapCenter} zoom={15} />
                             <TileLayer

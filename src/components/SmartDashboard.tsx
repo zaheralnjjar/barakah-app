@@ -354,9 +354,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             </div>
                         )}
 
-                        {/* DashboardLocations - Conditionally Hidden in Clean Mode */}
-                        {!isCleanMode && <DashboardLocations />}
-
+                        {/* DashboardLocations and DashboardParking Removed as per user request (moved to My Locations icon) */}
 
 
                         {/* Shortcut Result Dialog */}
@@ -730,10 +728,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 </div>
             )}
 
-            {/* Parking Section */}
-            <div className="mx-[2%] mt-2 mb-4">
-                <DashboardParking />
-            </div>
+
 
             {/* Quick Actions Grid (Bottom Section - REMOVED) */}
 

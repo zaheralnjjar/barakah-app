@@ -173,10 +173,17 @@ export const useLocations = () => {
                 const addr = data.address || {};
                 const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
                 const number = addr.house_number || '';
-                const streetInfo = road ? (number ? `${road} ${number}` : road) : '';
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+
+                // Strictly format as "Road Name Number, City" for precise global navigation
+                let streetInfo = road ? (number ? `${road} ${number}` : road) : '';
+                if (streetInfo && city) {
+                    streetInfo = `${streetInfo}, ${city}`;
+                }
 
                 if (streetInfo) {
-                    return `${title} ${streetInfo}`.trim();
+                    // If title is default, use street info. If custom title, append street info in address only.
+                    return title === 'موقع جديد' ? streetInfo : title;
                 }
             } catch (e) {
                 console.error('Error fetching address for title:', e);
@@ -186,13 +193,35 @@ export const useLocations = () => {
 
         const finalTitle = await titleWithInfo();
 
+        // Re-fetch basic info to ensure address field is set correctly if it wasn't passed in options
+        let finalAddress = options?.address;
+
+        if (!finalAddress) {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+                const data = await res.json();
+                const addr = data.address || {};
+                const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+                const number = addr.house_number || '';
+                const city = addr.city || addr.town || addr.village || addr.county || '';
+
+                let streetStr = road ? (number ? `${road} ${number}` : road) : '';
+                if (streetStr && city) streetStr = `${streetStr}, ${city}`;
+
+                finalAddress = streetStr || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            } catch (e) {
+                finalAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            }
+        }
+
         const newLocation: SavedLocation = {
             id: Date.now().toString(),
             title: finalTitle,
-            address: options?.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            address: finalAddress,
             lat,
             lng,
-            url: `geo:${lat},${lng}`,
+            // Strictly use address-based query for navigation as requested by user
+            url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(finalAddress || '')}`,
             category: options?.category || 'other',
             type: options?.type || 'location',
             createdAt: now.toISOString()

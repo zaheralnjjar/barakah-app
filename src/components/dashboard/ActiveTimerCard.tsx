@@ -5,9 +5,10 @@ import { Clock, Calendar, ChevronRight, Play, Pause, ChevronLeft, MapPin, Info }
 import { useTime } from '@/hooks/useTime';
 import { useAppointments, Appointment } from '@/hooks/useAppointments';
 import { useTasks, MainTask } from '@/hooks/useTasks';
-import { format } from 'date-fns';
-import { arSA } from 'date-fns/locale';
 import { useMedications } from '@/hooks/useMedications';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 import { useHabits } from '@/hooks/useHabits';
 import { useShoppingList } from '@/hooks/useShoppingList';
 
@@ -165,13 +166,13 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
 
     const getTypeLabel = (type: string) => {
         switch (type) {
-            case 'appointment': return 'موعد';
-            case 'task': return 'مهمة';
-            case 'project': return 'مشروع';
-            case 'medication': return 'دواء';
-            case 'habit': return 'عادة';
-            case 'shopping': return 'تسوّق';
-            default: return 'حدث';
+            case 'appointment': return 'Cita';
+            case 'task': return 'Tarea';
+            case 'project': return 'Proyecto';
+            case 'medication': return 'Dosis';
+            case 'habit': return 'Hábito';
+            case 'shopping': return 'Compras';
+            default: return 'Evento';
         }
     };
 
@@ -193,7 +194,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
             const diff = target.getTime() - now.getTime();
 
             if (diff <= 0) {
-                setTimeLeft('حان الوقت');
+                setTimeLeft('¡Es hora!');
                 return;
             }
 
@@ -201,7 +202,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-            if (days > 0) setTimeLeft(`${days} يوم ${hours} س`);
+            if (days > 0) setTimeLeft(`${days}d ${hours}h`);
             else setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}`);
         };
 
@@ -216,7 +217,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
 
         // Items like Shopping or Habits might not have a specific time, default to all day
         if (item.type === 'habit' || item.type === 'shopping' || item.type === 'project') {
-            return { dateDisplay: 'اليوم', timeDisplay: 'طوال اليوم' };
+            return { dateDisplay: 'Hoy', timeDisplay: 'Todo el día' };
         }
 
         const dateStr = item.date;
@@ -229,16 +230,19 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        let dateDisplay = format(date, 'EEEE d MMMM', { locale: arSA });
+        let dateDisplay = format(date, 'EEEE d MMMM', { locale: es });
         if (date.toDateString() === today.toDateString()) {
-            dateDisplay = 'اليوم';
+            dateDisplay = 'Hoy';
         } else if (date.toDateString() === tomorrow.toDateString()) {
-            dateDisplay = 'غداً';
+            dateDisplay = 'Mañana';
         }
+
+        // Capitalize first letter
+        dateDisplay = dateDisplay.charAt(0).toUpperCase() + dateDisplay.slice(1);
 
         return {
             dateDisplay,
-            timeDisplay: timeStr ? format(date, 'h:mm a', { locale: arSA }) : ''
+            timeDisplay: timeStr ? format(date, 'h:mm a', { locale: es }) : ''
         };
     };
 
@@ -255,11 +259,11 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
                 </div>
 
                 <div className="relative z-10 h-full flex flex-col justify-center items-start px-6 text-white space-y-1">
-                    <span className="text-violet-200 text-sm font-medium">لا توجد أحداث قادمة</span>
-                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight">استرح وخطط ليومك</h3>
+                    <span className="text-violet-200 text-sm font-medium">No hay eventos próximos</span>
+                    <h3 className="text-2xl md:text-3xl font-bold tracking-tight">Descansa y planifica</h3>
                     <div className="flex items-center gap-2 text-xs md:text-sm text-violet-100 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm mt-2">
                         <Play className="w-3 h-3 fill-current" />
-                        <span>اضغط للإضافة</span>
+                        <span>Toca para añadir</span>
                     </div>
                 </div>
             </Card>
@@ -267,7 +271,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
     }
 
     const { dateDisplay, timeDisplay } = getFormattedDate(currentItem);
-    const isToday = dateDisplay === 'اليوم';
+    const isToday = dateDisplay === 'Hoy';
 
 
     return (
@@ -311,7 +315,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
             <div className="flex-1 flex items-center justify-between px-5 relative z-10">
                 {/* Right: Countdown */}
                 <div className="flex items-end flex-col">
-                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">متبقي للانطلاق</span>
+                    <span className="text-[10px] text-gray-400 font-bold mb-0.5">Tiempo restante</span>
                     <div className="text-2xl font-black font-mono tracking-tight text-gray-800 flex items-center gap-1">
                         {timeLeft}
                     </div>
@@ -327,9 +331,9 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
                     ) : (
                         <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
                             <span className="text-xs font-bold text-gray-400">
-                                {currentItem.type === 'shopping' ? 'عناصر بالقائمة' :
-                                    currentItem.type === 'medication' ? 'موعد الجرعة' :
-                                        currentItem.type === 'habit' ? 'عادة يومية' : 'لا يوجد موقع'}
+                                {currentItem.type === 'shopping' ? 'Elementos en lista' :
+                                    currentItem.type === 'medication' ? 'Hora de la dosis' :
+                                        currentItem.type === 'habit' ? 'Hábito diario' : 'Sin ubicación'}
                             </span>
                             <div className="bg-gray-100 p-1 rounded-full"><Info className="w-3 h-3 text-gray-400" /></div>
                         </div>

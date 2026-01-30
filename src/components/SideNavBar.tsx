@@ -159,16 +159,21 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                     {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                 </div>
 
-                {/* Multi-Action FAB - Desktop Only (Integrated in Sidebar) */}
-                <div className="mb-2">
-                    <MultiActionFAB
-                        onAddNote={onAddNote}
-                        onVoiceNote={onVoiceNote}
-                        onAddAppointment={onAddAppointment}
-                        onAddDistraction={onAddDistraction}
-                        isFixed={false}
-                    />
-                </div>
+                {/* Add Note Button - Fixed Sidebar Item (Replaces FAB) */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={onAddNote}
+                            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 text-amber-500 hover:bg-amber-50 active:scale-95 mb-1 relative"
+                        >
+                            <StickyNote className="w-6 h-6" />
+                            <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-amber-500 rounded-full border border-white" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-lg">
+                        إضافة ملاحظة
+                    </TooltipContent>
+                </Tooltip>
 
                 {/* Send Report Button - Bottom */}
                 <Tooltip>
