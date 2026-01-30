@@ -52,7 +52,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
 
     // 2. Create Note
     const createNoteMut = useMutation({
-        mutationFn: async ({ title, folder_id, content = '', color, tags = [], font_family, font_size, text_color, is_bold }: Partial<NoteV2>) => {
+        mutationFn: async ({ title, folder_id, content = '', color, tags = [], font_family, font_size, text_color, background_color, is_bold }: Partial<NoteV2>) => {
             const userId = (await supabase.auth.getUser()).data.user?.id;
             if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
 
@@ -63,6 +63,7 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                     folder_id: (folder_id === 'trash' || folder_id === 'all') ? null : folder_id,
                     content,
                     color: color || '#ffffff',
+                    background_color: background_color || color || '#ffffff',
                     font_family: font_family || 'Inherit',
                     font_size: font_size || 'normal',
                     text_color: text_color || '#000000',

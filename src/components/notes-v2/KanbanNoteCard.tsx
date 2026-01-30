@@ -32,6 +32,9 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick, o
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.5 : 1,
         touchAction: 'none', // Essential for dnd-kit on mobile/touch
+        backgroundColor: note.background_color || note.color || '#FFFFFF',
+        fontFamily: note.font_family && note.font_family !== 'Inherit' ? note.font_family : undefined,
+        color: note.text_color || undefined
     };
 
     // Strip HTML for preview
@@ -43,7 +46,7 @@ export const KanbanNoteCard: React.FC<KanbanNoteCardProps> = ({ note, onClick, o
             style={style}
             onClick={onClick}
             className={`
-                bg-white p-1.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative select-none
+                p-1.5 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative select-none
                 ${isDragging ? 'shadow-lg border-indigo-300 rotate-2 z-50' : ''}
             `}
         >

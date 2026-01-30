@@ -84,10 +84,12 @@ export const useUnifiedTaskEngine = () => {
                     break;
 
                 case 'medication':
-                    const parts = task.id.split('-');
-                    const dateStr = parts.pop()!;
-                    const medId = parts.slice(1).join('-');
-                    await toggleMedTaken(medId, dateStr);
+                    const parts = task.id.split('_');
+                    if (parts.length >= 3) {
+                        const medId = parts[1];
+                        const dateStr = parts[2];
+                        await toggleMedTaken(medId, dateStr);
+                    }
                     break;
 
                 case 'mode':
@@ -158,7 +160,7 @@ export const useUnifiedTaskEngine = () => {
         const todayStr = new Date().toISOString().split('T')[0];
         medications.forEach(med => {
             results.push({
-                id: `med-${med.id}-${todayStr}`,
+                id: `med_${med.id}_${todayStr}`,
                 source: 'medication',
                 title: `دواء: ${med.name}`,
                 description: `موعد: ${med.time}`,

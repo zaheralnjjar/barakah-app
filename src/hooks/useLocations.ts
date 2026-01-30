@@ -413,6 +413,121 @@ export const useLocations = () => {
         return locations.filter(l => l.type === 'parking');
     }, [locations]);
 
+    // === Active Parking Session Management ===
+    const ACTIVE_PARKING_KEY = 'baraka_active_parking';
+
+    const [activeParking, setActiveParking] = useState<SavedLocation | null>(() => {
+        try {
+            const stored = localStorage.getItem(ACTIVE_PARKING_KEY);
+            return stored ? JSON.parse(stored) : null;
+        } catch {
+            return null;
+        }
+    });
+
+    // Start a new parking session (called on long-press)
+    const startParkingSession = useCallback(async (): Promise<SavedLocation | null> => {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                toast({ title: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
+                resolve(null);
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    let streetAddress = 'موقف السيارة';
+
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
+                        const data = await res.json();
+                        const addr = data.address || {};
+                        const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
+                        const number = addr.house_number || '';
+                        const city = addr.city || addr.town || addr.village || addr.county || '';
+
+                        let streetStr = road ? (number ? `${road} ${number}` : road) : '';
+                        if (streetStr && city) streetStr = `${streetStr}, ${city}`;
+                        if (streetStr) streetAddress = streetStr;
+                    } catch (e) {
+                        console.log('Could not fetch address for parking session');
+                    }
+
+                    const session: SavedLocation = {
+                        id: `parking-${Date.now()}`,
+                        title: streetAddress,
+                        address: streetAddress,
+                        lat: latitude,
+                        lng: longitude,
+                        url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(streetAddress)}`,
+                        category: 'parking',
+                        type: 'parking',
+                        createdAt: new Date().toISOString()
+                    };
+
+                    setActiveParking(session);
+                    localStorage.setItem(ACTIVE_PARKING_KEY, JSON.stringify(session));
+
+                    toast({ title: '🅿️ بدأ تتبع الموقف', description: streetAddress });
+                    resolve(session);
+                },
+                (err) => {
+                    toast({ title: 'تعذر تحديد الموقع', description: err.message, variant: 'destructive' });
+                    resolve(null);
+                },
+                { enableHighAccuracy: true }
+            );
+        });
+    }, [toast]);
+
+    // Cancel active parking without saving
+    const cancelActiveParking = useCallback(() => {
+        setActiveParking(null);
+        localStorage.removeItem(ACTIVE_PARKING_KEY);
+    }, []);
+
+    // Finalize and save active parking to permanent locations
+    const finalizeActiveParking = useCallback(async (customTitle?: string) => {
+        if (!activeParking) return;
+
+        const finalLocation: SavedLocation = {
+            ...activeParking,
+            id: Date.now().toString(), // New permanent ID
+            title: customTitle || activeParking.title
+        };
+
+        // Add to locations list
+        const updated = [...locations, finalLocation];
+        setLocations(updated);
+        localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem('baraka_resources', JSON.stringify(updated));
+
+        // Sync with Supabase
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('saved_locations').insert({
+                    id: finalLocation.id,
+                    user_id: user.id,
+                    title: finalLocation.title,
+                    address: finalLocation.address,
+                    lat: finalLocation.lat,
+                    lng: finalLocation.lng,
+                    url: finalLocation.url,
+                    category: finalLocation.category
+                });
+            }
+        } catch (e) {
+            console.error('Error syncing parking to cloud:', e);
+        }
+
+        // Clear active session
+        setActiveParking(null);
+        localStorage.removeItem(ACTIVE_PARKING_KEY);
+        window.dispatchEvent(new Event('locations-updated'));
+    }, [activeParking, locations]);
+
     return {
         locations,
         loading,
@@ -423,7 +538,12 @@ export const useLocations = () => {
         deleteLocations,
         getLocationsOnly,
         getParkingOnly,
-        refresh: loadLocations
+        refresh: loadLocations,
+        // Active Parking Session
+        activeParking,
+        startParkingSession,
+        cancelActiveParking,
+        finalizeActiveParking
     };
 };
 

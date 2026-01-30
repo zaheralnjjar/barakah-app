@@ -45,43 +45,46 @@ export const LocationsGridDialog: React.FC<LocationsGridDialogProps> = ({ open, 
                             <p className="text-sm font-bold text-gray-400">لا توجد مواقع محفوظة</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-4 gap-3">
-                            {sortedLocations.map((loc) => (
-                                <button
-                                    key={loc.id}
-                                    onClick={() => handleLocationClick(loc)}
-                                    className={cn(
-                                        "flex flex-col items-center justify-center p-2 rounded-2xl bg-white border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-center h-auto min-h-[90px] relative overflow-hidden",
-                                        loc.type === 'parking' ? "border-blue-200 bg-blue-50/30" : "border-gray-100"
-                                    )}
-                                >
-                                    {loc.type === 'parking' && (
-                                        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                    )}
+                        <div className="grid grid-cols-3 gap-2">
+                            {sortedLocations.map((loc) => {
+                                const dateStr = loc.createdAt
+                                    ? new Date(loc.createdAt).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })
+                                    : '';
+                                return (
+                                    <button
+                                        key={loc.id}
+                                        onClick={() => handleLocationClick(loc)}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center p-2 rounded-2xl bg-white border shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all text-center h-auto min-h-[80px] relative overflow-hidden",
+                                            loc.type === 'parking' ? "border-blue-200 bg-blue-50/30" : "border-gray-100"
+                                        )}
+                                    >
+                                        {loc.type === 'parking' && (
+                                            <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                        )}
 
-                                    <div className={cn(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center mb-2 shadow-sm",
-                                        loc.type === 'parking'
-                                            ? "bg-blue-100 text-blue-600"
-                                            : "bg-emerald-50 text-emerald-600"
-                                    )}>
-                                        {loc.type === 'parking' ? <Car className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
-                                    </div>
+                                        <div className={cn(
+                                            "w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 shadow-sm",
+                                            loc.type === 'parking'
+                                                ? "bg-blue-100 text-blue-600"
+                                                : "bg-emerald-50 text-emerald-600"
+                                        )}>
+                                            {loc.type === 'parking' ? <Car className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                        </div>
 
-                                    <div className="w-full space-y-0.5">
-                                        <span className="block text-[11px] font-bold text-gray-800 leading-tight line-clamp-1 w-full">
+                                        <span className="block text-[10px] font-bold text-gray-800 leading-tight line-clamp-1 w-full">
                                             {loc.title}
                                         </span>
                                         {loc.type === 'parking' ? (
                                             <ParkingTimer startTime={loc.createdAt} />
                                         ) : (
-                                            <span className="block text-[9px] text-gray-400 leading-tight line-clamp-1 w-full" style={{ fontSize: '10px' }}>
-                                                {loc.address ? loc.address.split(',')[0] : 'إحداثيات'}
+                                            <span className="block text-[9px] text-gray-400 mt-0.5">
+                                                {dateStr}
                                             </span>
                                         )}
-                                    </div>
-                                </button>
-                            ))}
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

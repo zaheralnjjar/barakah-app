@@ -46,6 +46,7 @@ import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
 import { MasterAgenda } from './dashboard/MasterAgenda';
 import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
+import { ParkingFloatingWidget } from './dashboard/ParkingFloatingWidget';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';
 import FlashlightOverlay from './FlashlightOverlay';
@@ -70,7 +71,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
     const { tasks, refreshTasks, addTask } = useTasks();
     const { appointments, refreshAppointments } = useAppointments();
     const { notes, createNote } = useNotesV2();
-    const { locations, saveParking } = useLocations();
+    const { locations, saveParking, startParkingSession, activeParking } = useLocations();
 
     // State
     const [weekStartDate, setWeekStartDate] = useState(new Date());
@@ -247,6 +248,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         )}>
             <DashboardHeader />
             <FlashlightOverlay />
+            <ParkingFloatingWidget />
 
             <div className="mx-[2%] mt-0.5 w-[96%]">
                 <div className={cn("flex flex-col gap-2", activeWidgets.length > 0 && 'lg:flex-row-reverse', !isAndroid() && "gap-1")}>
@@ -263,7 +265,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 onOpenNewMuslims={() => setShowNewMuslimsDialog(true)}
                                 onOpenShortcuts={() => setShowShortcutsSettings(true)}
                                 onOpenSearch={() => setIsSearchOpen(true)}
-                                onQuickParking={() => window.dispatchEvent(new CustomEvent('save-parking'))}
+                                onQuickParking={() => startParkingSession()}
                                 isCleanMode={isCleanMode}
                                 onToggleCleanMode={() => setIsCleanMode(prev => !prev)}
                             />
@@ -283,18 +285,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             />
                         </div>
 
-                        {/* 1.5 Custom Shortcuts Grid (Now below Interactive Card) */}
-                        <div className="mb-2">
-                            <CustomShortcutsGrid
-                                placement="shortcuts_grid"
-                                onOpenAddDialog={setShowAddDialog}
-                                onNavigateToTab={onNavigateToTab}
-                                columns={6}
-                                size="sm"
-                                gridVariant="text-card"
-                                readonly={true} // Hide Add button as requested
-                            />
-                        </div>
+
 
                         {/* Financial Summary - Emerald Identity */}
                         <div className="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-3 px-4 shadow-sm space-y-2 mb-1.5 transition-all">
@@ -345,6 +336,19 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* 3. Custom Shortcuts Grid (Moved after Financial Summary) */}
+                        <div className="mb-2">
+                            <CustomShortcutsGrid
+                                placement="shortcuts_grid"
+                                onOpenAddDialog={setShowAddDialog}
+                                onNavigateToTab={onNavigateToTab}
+                                columns={6}
+                                size="sm"
+                                gridVariant="text-card"
+                                readonly={true}
+                            />
                         </div>
 
                         {/* Master Agenda - NEW Unified Intelligence */}

@@ -59,7 +59,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
     const { items: shoppingItems } = useShoppingList();
     const { notes: notesHistory } = useNotesV2();
 
-    const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('ar');
+    const [reportLanguage, setReportLanguage] = useState<'ar' | 'es'>('es');
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
     const [reportData, setReportData] = useState<ReportData | null>(null);
 
@@ -94,10 +94,66 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
             address: { ar: 'العنوان', es: 'Dirección' },
             notes: { ar: 'ملاحظات', es: 'Notas' },
             details: { ar: 'التفاصيل', es: 'Detalles' },
-            statement: { ar: 'البيان', es: 'Dato' },
+            statement: { ar: 'البيان', es: 'Denominación' },
             dataFor: { ar: 'بيانات', es: 'Datos de' },
             newMuslimReport: { ar: 'تقرير المسلمين الجدد', es: 'Reporte de Nuevos Musulmanes' },
             prayerTimesToday: { ar: 'أوقات الصلاة - اليوم', es: 'Horarios de Oración - Hoy' },
+            // Daily Summary
+            dailySummary: { ar: 'ملخص اليوم', es: 'Resumen Diario' },
+            date: { ar: 'التاريخ', es: 'Fecha' },
+            finance: { ar: '💰 المالية', es: '💰 Finanzas' },
+            item: { ar: 'البند', es: 'Concepto' },
+            value: { ar: 'القيمة', es: 'Valor' },
+            balance: { ar: 'الرصيد', es: 'Balance' },
+            expense: { ar: 'المصروف', es: 'Gasto' },
+            remaining: { ar: 'المتبقي', es: 'Restante' },
+            tasks: { ar: '✅ المهام', es: '✅ Tareas' },
+            task: { ar: 'المهمة', es: 'Tarea' },
+            status: { ar: 'الحالة', es: 'Estado' },
+            completed: { ar: 'مكتملة', es: 'Completada' },
+            inProgress: { ar: 'قيد التنفيذ', es: 'En Progreso' },
+            completedCount: { ar: 'اكتمل', es: 'Completado' },
+            of: { ar: 'من', es: 'de' },
+            nextPrayer: { ar: '🕌 الصلاة القادمة', es: '🕌 Próxima Oración' },
+            unavailable: { ar: 'غير متاح', es: 'N/A' },
+            timeLeft: { ar: 'المتبقي', es: 'Restante' },
+            // Tasks
+            todayTasks: { ar: 'مهام اليوم', es: 'Tareas de Hoy' },
+            weekTasks: { ar: 'مهام الأسبوع', es: 'Tareas de la Semana' },
+            priority: { ar: 'الأهمية', es: 'Prioridad' },
+            high: { ar: 'عالي', es: 'Alta' },
+            normal: { ar: 'عادي', es: 'Normal' },
+            noTasks: { ar: 'لا توجد مهام', es: 'No hay tareas' },
+            noUpcomingTasks: { ar: 'لا توجد مهام قادمة', es: 'No hay tareas próximas' },
+            day: { ar: 'اليوم', es: 'Día' },
+            // Appointments
+            upcomingAppts: { ar: 'المواعيد القادمة', es: 'Próximas Citas' },
+            time: { ar: 'الوقت', es: 'Hora' },
+            appointment: { ar: 'الموعد', es: 'Cita' },
+            noAppts: { ar: 'لا توجد مواعيد', es: 'No hay citas' },
+            // Medications
+            medSchedule: { ar: 'جدول الأدوية الأسبوعي', es: 'Cronograma Semanal de Medicamentos' },
+            dosageDetails: { ar: 'تفاصيل الجرعات', es: 'Detalles de Dosis' },
+            medication: { ar: 'الدواء', es: 'Medicamento' },
+            sat: { ar: 'سبت', es: 'Sáb' },
+            sun: { ar: 'أحد', es: 'Dom' },
+            mon: { ar: 'اثنين', es: 'Lun' },
+            tue: { ar: 'ثلاثاء', es: 'Mar' },
+            wed: { ar: 'أربعاء', es: 'Mié' },
+            thu: { ar: 'خميس', es: 'Jue' },
+            fri: { ar: 'جمعة', es: 'Vie' },
+            // Locations
+            savedLocations: { ar: 'المواقع المحفوظة', es: 'Ubicaciones Guardadas' },
+            name: { ar: 'الاسم', es: 'Nombre' },
+            link: { ar: 'الرابط', es: 'Enlace' },
+            noLocations: { ar: 'لا توجد مواقع', es: 'No hay ubicaciones' },
+            // Shopping
+            shoppingList: { ar: 'قائمة المشتريات', es: 'Lista de Compras' },
+            quantity: { ar: 'الكمية', es: 'Cantidad' },
+            allBought: { ar: 'تم شراء كل العناصر', es: 'Todo comprado' },
+            // Notes Report
+            notesReport: { ar: 'تقرير الملاحظات', es: 'Reporte de Notas' },
+            untitled: { ar: 'بدون عنوان', es: 'Sin título' },
         };
         return dict[key]?.[lang] || key;
     };
@@ -218,69 +274,69 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
 
     // --- Report Generators (Returning ReportData) ---
 
-    const generateDailySummary = (): ReportData => {
+    const generateDailySummary = (lang: 'ar' | 'es'): ReportData => {
         const todayTasks = tasks.filter(t => t.deadline === todayStr);
         const completedTasks = todayTasks.filter(t => t.progress >= 100);
         const todayExpenses = financeData?.pending_expenses?.filter(e => e.timestamp?.startsWith(todayStr)) || [];
         const totalExpenses = todayExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
         return {
-            title: 'ملخص اليوم',
+            title: t('dailySummary', lang),
             sections: [
-                { type: 'text', content: `التاريخ: ${today.toLocaleDateString('ar-SA')} | ${hijriDate.split('،')[0]}`, align: 'center' },
+                { type: 'text', content: `${t('date', lang)}: ${today.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES')} | ${hijriDate.split('،')[0]}`, align: 'center' },
                 {
                     type: 'table',
-                    title: '💰 المالية',
-                    headers: ['البند', 'القيمة'],
+                    title: t('finance', lang),
+                    headers: [t('item', lang), t('value', lang)],
                     rows: [
-                        ['الرصيد', `${financeData?.current_balance_ars?.toLocaleString() || 0}`],
-                        ['المصروف', `${totalExpenses.toLocaleString()}`],
-                        ['المتبقي', `${dailyLimit?.toLocaleString() || 0}`]
+                        [t('balance', lang), `${financeData?.current_balance_ars?.toLocaleString() || 0}`],
+                        [t('expense', lang), `${totalExpenses.toLocaleString()}`],
+                        [t('remaining', lang), `${dailyLimit?.toLocaleString() || 0}`]
                     ]
                 },
                 {
                     type: 'table',
-                    title: '✅ المهام',
-                    headers: ['م', 'المهمة', 'الحالة'],
-                    rows: todayTasks.slice(0, 10).map((t, idx) => [
+                    title: t('tasks', lang),
+                    headers: ['#', t('task', lang), t('status', lang)],
+                    rows: todayTasks.slice(0, 10).map((tsk, idx) => [
                         (idx + 1).toString(),
-                        t.title,
-                        t.progress >= 100 ? 'مكتملة' : 'قيد التنفيذ'
+                        tsk.title,
+                        tsk.progress >= 100 ? t('completed', lang) : t('inProgress', lang)
                     ])
                 },
                 {
                     type: 'text',
-                    content: `اكتمل: ${completedTasks.length} من ${todayTasks.length}`,
-                    align: 'right'
+                    content: `${t('completedCount', lang)}: ${completedTasks.length} ${t('of', lang)} ${todayTasks.length}`,
+                    align: lang === 'es' ? 'left' : 'right'
                 },
                 {
                     type: 'text',
-                    content: `🕌 الصلاة القادمة: ${nextPrayer?.nameAr || 'غير متاح'} (${nextPrayer?.time || '--:--'}) - المتبقي: ${timeUntilNext || '--:--'}`,
+                    content: `${t('nextPrayer', lang)}: ${lang === 'es' ? (['Fajr', 'Shuruq', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].find((_, i) => prayerTimes[i]?.time === nextPrayer?.time) || nextPrayer?.nameAr) : nextPrayer?.nameAr || t('unavailable', lang)} (${nextPrayer?.time || '--:--'}) - ${t('timeLeft', lang)}: ${timeUntilNext || '--:--'}`,
                     align: 'center'
                 }
             ]
         };
     };
 
-    const generateTodayTasks = (): ReportData => {
+    const generateTodayTasks = (lang: 'ar' | 'es'): ReportData => {
         const todayTasks = tasks.filter(t => t.deadline === todayStr);
         return {
-            title: 'مهام اليوم',
+            title: t('todayTasks', lang),
             sections: [
                 {
                     type: 'table',
-                    headers: ['الحالة', 'المهمة', 'الأهمية'],
-                    rows: todayTasks.length > 0 ? todayTasks.map(t => [
-                        t.progress >= 100 ? '✓' : '○',
-                        t.title,
-                        t.priority === 'high' ? 'عالي' : 'عادي'
-                    ]) : [['-', 'لا توجد مهام', '-']]
+                    headers: [t('status', lang), t('task', lang), t('priority', lang)],
+                    rows: todayTasks.length > 0 ? todayTasks.map(tsk => [
+                        tsk.progress >= 100 ? '✓' : '○',
+                        tsk.title,
+                        tsk.priority === 'high' ? t('high', lang) : t('normal', lang)
+                    ]) : [['-', t('noTasks', lang), '-']]
                 }
             ]
         };
     };
 
-    const generateWeekTasks = (): ReportData => {
+    const generateWeekTasks = (lang: 'ar' | 'es'): ReportData => {
         const weekEnd = new Date(today);
         weekEnd.setDate(weekEnd.getDate() + 7);
         const weekTasks = tasks.filter(t => {
@@ -289,56 +345,67 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         });
 
         return {
-            title: 'مهام الأسبوع',
+            title: t('weekTasks', lang),
             sections: [
                 {
                     type: 'table',
-                    headers: ['اليوم', 'المهمة', 'الحالة'],
-                    rows: weekTasks.length > 0 ? weekTasks.map(t => [
-                        new Date(t.deadline).toLocaleDateString('ar-SA', { weekday: 'short' }),
-                        t.title,
-                        t.progress >= 100 ? '✓' : '○'
-                    ]) : [['-', 'لا توجد مهام قادمة', '-']]
+                    headers: [t('day', lang), t('task', lang), t('status', lang)],
+                    rows: weekTasks.length > 0 ? weekTasks.map(tsk => [
+                        new Date(tsk.deadline).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES', { weekday: 'short' }),
+                        tsk.title,
+                        tsk.progress >= 100 ? '✓' : '○'
+                    ]) : [['-', t('noUpcomingTasks', lang), '-']]
                 }
             ]
         };
     };
 
-    const generateAppointments = (): ReportData => {
+    const generateAppointments = (lang: 'ar' | 'es'): ReportData => {
         const upcomingAppts = appointments.filter(a => new Date(a.date) >= today).slice(0, 10);
         return {
-            title: 'المواعيد القادمة',
+            title: t('upcomingAppts', lang),
             sections: [
                 {
                     type: 'table',
-                    headers: ['التاريخ', 'الوقت', 'الموعد'],
+                    headers: [t('date', lang), t('time', lang), t('appointment', lang)],
                     rows: upcomingAppts.length > 0 ? upcomingAppts.map(a => [
-                        new Date(a.date).toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric' }),
+                        new Date(a.date).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'es-ES', { weekday: 'short', day: 'numeric' }),
                         a.time || '-',
                         a.title
-                    ]) : [['-', '-', 'لا توجد مواعيد']]
+                    ]) : [['-', '-', t('noAppts', lang)]]
                 }
             ]
         };
     };
 
-    const generateMedications = (): ReportData => {
+    const generateMedications = (lang: 'ar' | 'es'): ReportData => {
         const activeMeds = medications.filter(m => m.isPermanent || (m.startDate <= todayStr && (!m.endDate || m.endDate >= todayStr)));
-        const days = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
-        const headers = ['الدواء', ...days.map(d => d.substring(0, 1))];
+        // Fixed days mapping for correct order and translation
+        const daysKeys = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'];
+        const daysLabels = daysKeys.map(k => t(k, lang));
+
+        // Internal English day names for matching logic (assuming logic uses English names or indexes)
+        // Original logic: "days = ['السبت' ...]" used for matching?? 
+        // Let's check logic: m.customDays?.includes(day). 
+        // If 'm.customDays' stores Arabic strings, we need to match against Arabic.
+        // Assuming m.customDays stores Arabic day names from the UI (which is likely).
+        const arabicDays = ['السبت', 'الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة'];
+
+        const headers = [t('medication', lang), ...daysLabels];
 
         const rows = activeMeds.map(m => {
-            const schedule = days.map(day => {
+            const schedule = arabicDays.map(dayAr => {
+                // Logic based on arabic days stored in DB?
                 if (m.frequency === 'daily') return '✓';
-                if (m.frequency === 'specific_days' && m.customDays?.includes(day)) return '✓';
-                if (m.frequency === 'weekly' && m.customDays?.includes(day)) return '✓';
+                if (m.frequency === 'specific_days' && m.customDays?.includes(dayAr)) return '✓';
+                if (m.frequency === 'weekly' && m.customDays?.includes(dayAr)) return '✓';
                 return '.';
             });
             return [m.name, ...schedule];
         });
 
         return {
-            title: 'جدول الأدوية الأسبوعي',
+            title: t('medSchedule', lang),
             sections: [
                 {
                     type: 'table',
@@ -347,25 +414,25 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                 },
                 {
                     type: 'text',
-                    content: 'تفاصيل الجرعات:',
-                    align: 'right'
+                    content: t('dosageDetails', lang) + ':',
+                    align: lang === 'es' ? 'left' : 'right'
                 },
                 {
                     type: 'table',
-                    headers: ['الدواء', 'الوقت', 'ملاحظات'],
+                    headers: [t('medication', lang), t('time', lang), t('notes', lang)],
                     rows: activeMeds.map(m => [m.name, m.time || '-', (m as any).notes || '-'])
                 }
             ]
         };
     };
 
-    const generateTodayPrayer = (): ReportData => {
-        const titles = reportLanguage === 'es'
+    const generateTodayPrayer = (lang: 'ar' | 'es'): ReportData => {
+        const titles = lang === 'es'
             ? ['Fajr', 'Shuruq', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']
             : prayerTimes.map(p => p.nameAr);
 
         return {
-            title: t('prayerTimesToday', reportLanguage),
+            title: t('prayerTimesToday', lang),
             sections: [
                 {
                     type: 'table',
@@ -376,7 +443,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         };
     };
 
-    const generateLocations = (): ReportData => {
+    const generateLocations = (lang: 'ar' | 'es'): ReportData => {
         let allLocations: any[] = [];
         try {
             const savedLocations = JSON.parse(localStorage.getItem('baraka_resources') || '[]');
@@ -385,92 +452,92 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         } catch { }
 
         return {
-            title: 'المواقع المحفوظة',
+            title: t('savedLocations', lang),
             sections: [
                 {
                     type: 'table',
-                    headers: ['الاسم', 'الرابط'],
-                    rows: allLocations.length > 0 ? allLocations.map(l => [l.title || l.name, l.url || '-']) : [['-', 'لا توجد مواقع']]
+                    headers: [t('name', lang), t('link', lang)],
+                    rows: allLocations.length > 0 ? allLocations.map(l => [l.title || l.name, l.url || '-']) : [['-', t('noLocations', lang)]]
                 }
             ]
         };
     };
 
-    const generateShopping = (): ReportData => {
+    const generateShopping = (lang: 'ar' | 'es'): ReportData => {
         const pending = shoppingItems.filter(i => !i.completed);
         return {
-            title: 'قائمة المشتريات',
+            title: t('shoppingList', lang),
             sections: [
                 {
                     type: 'table',
-                    headers: ['المادة', 'الكمية'],
+                    headers: [t('item', lang), t('quantity', lang)],
                     rows: pending.length > 0 ? pending.map(i => [
                         i.text,
                         `${i.quantity || ''} ${i.unit === 'unit' ? '' : i.unit || ''}`.trim() || '-'
-                    ]) : [['-', 'تم شراء كل العناصر']]
+                    ]) : [['-', t('allBought', lang)]]
                 }
             ]
         };
     };
 
-    const generateSelectedMuslimsReport = (muslimIds: string[]): ReportData => {
+    const generateSelectedMuslimsReport = (muslimIds: string[], lang: 'ar' | 'es'): ReportData => {
         const selected = newMuslims.filter(m => muslimIds.includes(m.id));
         const sections: any[] = [];
 
         selected.forEach(m => {
             sections.push({
                 type: 'text',
-                content: `${t('dataFor', reportLanguage)}: ${m.name}`,
-                align: reportLanguage === 'es' ? 'left' : 'right'
+                content: `${t('dataFor', lang)}: ${m.name}`,
+                align: lang === 'es' ? 'left' : 'right'
             });
             sections.push({
                 type: 'table',
-                headers: [t('statement', reportLanguage), t('details', reportLanguage)],
+                headers: [t('statement', lang), t('details', lang)],
                 rows: [
-                    [t('gender', reportLanguage), m.gender === 'male' ? t('male', reportLanguage) : t('female', reportLanguage)],
-                    [t('country', reportLanguage), m.country || '-'],
-                    [t('phone', reportLanguage), m.phone || '-'],
-                    [t('conversionDate', reportLanguage), m.conversionDate || '-'],
-                    [t('stage', reportLanguage), m.stage || '-'],
-                    [t('address', reportLanguage), m.address || '-']
+                    [t('gender', lang), m.gender === 'male' ? t('male', lang) : t('female', lang)],
+                    [t('country', lang), m.country || '-'],
+                    [t('phone', lang), m.phone || '-'],
+                    [t('conversionDate', lang), m.conversionDate || '-'],
+                    [t('stage', lang), m.stage || '-'],
+                    [t('address', lang), m.address || '-']
                 ]
             });
             if (m.notes) {
                 sections.push({
                     type: 'text',
-                    content: `${t('notes', reportLanguage)}: ${m.notes}`,
-                    align: reportLanguage === 'es' ? 'left' : 'right'
+                    content: `${t('notes', lang)}: ${m.notes}`,
+                    align: lang === 'es' ? 'left' : 'right'
                 });
             }
             sections.push({ type: 'text', content: ' ', align: 'center' }); // Spacer
         });
 
         return {
-            title: t('newMuslimReport', reportLanguage),
+            title: t('newMuslimReport', lang),
             sections: sections
         };
     };
 
-    const generateSelectedNotesReport = (noteIds: string[]): ReportData => {
+    const generateSelectedNotesReport = (noteIds: string[], lang: 'ar' | 'es'): ReportData => {
         const selected = notesHistory.filter(n => noteIds.includes(n.id));
         const sections: any[] = [];
 
         selected.forEach((note, idx) => {
             sections.push({
                 type: 'text',
-                content: `${idx + 1}. ${note.title || 'بدون عنوان'}`,
-                align: 'right'
+                content: `${idx + 1}. ${note.title || t('untitled', lang)}`,
+                align: lang === 'es' ? 'left' : 'right'
             });
             sections.push({
                 type: 'text',
                 content: note.content || '',
-                align: 'right'
+                align: lang === 'es' ? 'left' : 'right'
             });
             sections.push({ type: 'text', content: '-------------------', align: 'center' });
         });
 
         return {
-            title: 'تقرير الملاحظات',
+            title: t('notesReport', lang),
             sections: sections
         };
     };
@@ -493,33 +560,55 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
         { id: 'newMuslim', name: 'تقرير مسلم جديد', icon: User, generator: () => null, needsSelection: true },
     ];
 
-    const handleSelectReport = (reportId: string) => {
+    const handleSelectReport = (reportId: string, langToUse: 'ar' | 'es' = reportLanguage) => {
         const report = reportTypes.find(r => r.id === reportId);
         if (report) {
 
-            if (reportId === 'newMuslim' || reportId === 'prayerToday') {
-                setReportLanguage('es');
-            } else {
-                setReportLanguage('ar');
-            }
+            // Always respect passed language, or default logic if needed
+            // But we want manual toggle to override implicit logic, or vice versa?
+            // The language buttons call setReportLanguage.
+            // This function is called when clicking a report type.
+
+            // If just clicking report content, use current `langToUse`.
 
             if (report.id === 'newMuslim') {
                 setSelectedMuslims([]); setShowMuslimPicker(true); setSelectedReportId(reportId);
             } else if (report.id === 'notes') {
                 setSelectedNotes([]); setShowNotePicker(true); setSelectedReportId(reportId);
             } else {
-                setReportData(report.generator());
+                setReportData(report.generator(langToUse));
                 setSelectedReportId(reportId);
             }
         }
     };
+
+    // Function to handle language switch specifically
+    const handleLanguageSwitch = (newLang: 'ar' | 'es') => {
+        setReportLanguage(newLang);
+        // If a report is already selected, regenerate it!
+        if (selectedReportId) {
+            const report = reportTypes.find(r => r.id === selectedReportId);
+            if (report && !report.needsSelection) {
+                setReportData(report.generator(newLang));
+            } else if (report?.id === 'newMuslim' && selectedMuslims.length > 0) {
+                setReportData(generateSelectedMuslimsReport(selectedMuslims, newLang));
+            } else if (report?.id === 'notes' && selectedNotes.length > 0) {
+                setReportData(generateSelectedNotesReport(selectedNotes, newLang));
+            }
+        }
+    };
+
+    // We need to update `generateSelectedMuslimsReport` to accept lang as well to be pure.
+    // The previous implementation of `generateSelectedMuslimsReport` used `t(..., reportLanguage)`.
+    // I should update it to accept lang.
+
 
     const handleMuslimSelection = () => {
         if (selectedMuslims.length === 0) {
             toast({ title: 'اختر مسلماً واحداً على الأقل', variant: 'destructive' });
             return;
         }
-        setReportData(generateSelectedMuslimsReport(selectedMuslims));
+        setReportData(generateSelectedMuslimsReport(selectedMuslims, reportLanguage));
         setShowMuslimPicker(false);
     };
 
@@ -528,7 +617,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
             toast({ title: 'اختر ملاحظة واحدة على الأقل', variant: 'destructive' });
             return;
         }
-        setReportData(generateSelectedNotesReport(selectedNotes));
+        setReportData(generateSelectedNotesReport(selectedNotes, reportLanguage));
         setShowNotePicker(false);
     };
 
@@ -571,13 +660,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ isOpen, onClose }) =>
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setReportLanguage('ar')}
+                                onClick={() => handleLanguageSwitch('ar')}
                                 className={`px-2 py-1 text-xs rounded-md border ${reportLanguage === 'ar' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'text-gray-500 border-gray-200'}`}
                             >
                                 🇰🇼 AR
                             </button>
                             <button
-                                onClick={() => setReportLanguage('es')}
+                                onClick={() => handleLanguageSwitch('es')}
                                 className={`px-2 py-1 text-xs rounded-md border ${reportLanguage === 'es' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'text-gray-500 border-gray-200'}`}
                             >
                                 🇪🇸 ES

@@ -60,9 +60,18 @@ export const NoteList: React.FC<NoteListProps> = ({
                     className={`
                         group relative p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md
                         ${activeNoteId === note.id
-                            ? 'bg-indigo-50 border-indigo-200 shadow-sm'
-                            : (isSelectionMode && selectedIds.has(note.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm' : 'bg-white border-gray-100 hover:border-indigo-100')}
+                            ? 'border-indigo-200 shadow-sm'
+                            : (isSelectionMode && selectedIds.has(note.id) ? 'border-emerald-300 shadow-sm' : 'border-gray-100 hover:border-indigo-100')}
                     `}
+                    style={{
+                        backgroundColor: activeNoteId === note.id
+                            ? '#EEF2FF' // indigo-50 for active
+                            : (isSelectionMode && selectedIds.has(note.id)
+                                ? '#ECFDF5' // emerald-50 for selected
+                                : (note.background_color || note.color || '#FFFFFF')),
+                        fontFamily: note.font_family && note.font_family !== 'Inherit' ? note.font_family : undefined,
+                        color: note.text_color || undefined
+                    }}
                 >
                     {isSelectionMode && (
                         <div className="absolute top-3 left-3 z-10">

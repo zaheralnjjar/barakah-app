@@ -11,6 +11,7 @@ import { es } from 'date-fns/locale';
 
 import { useHabits } from '@/hooks/useHabits';
 import { useShoppingList } from '@/hooks/useShoppingList';
+import { useToast } from '@/hooks/use-toast';
 
 interface ActiveTimerCardProps {
     onOpenEvent?: (event: Appointment | MainTask) => void;
@@ -27,6 +28,7 @@ export const ActiveTimerCard: React.FC<ActiveTimerCardProps> = ({
     const { medications } = useMedications();
     const { habits } = useHabits();
     const { items: shoppingList } = useShoppingList();
+    const { toast } = useToast();
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [displayItems, setDisplayItems] = useState<any[]>([]); // Using any for flexibility or define a union type

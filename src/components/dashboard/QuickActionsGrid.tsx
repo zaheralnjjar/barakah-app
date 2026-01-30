@@ -17,7 +17,7 @@ import { AVAILABLE_ACTIONS, getActionById } from '@/constants/actionDefinitions'
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useLongPress } from '@/hooks/useLongPress';
-import { useShortcuts } from '@/hooks/useShortcuts';
+import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { FloatingTimer } from '@/components/FloatingTimer';
 import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
 
@@ -85,13 +85,13 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
 
     // Shortcuts Management (Unified Hook)
     const {
-        customShortcuts,
-        customLocations,
+        shortcuts,
         addShortcut,
-        removeShortcut,
-        addLocation,
-        removeLocation
-    } = useShortcuts();
+        deleteShortcut,
+    } = useCustomShortcuts();
+
+    const customShortcuts = shortcuts.filter(s => s.shortcut_type === 'action');
+    const customLocations = shortcuts.filter(s => s.shortcut_type === 'url');
 
     const [newLocName, setNewLocName] = useState('');
     const [newLocUrl, setNewLocUrl] = useState('');
@@ -789,16 +789,16 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
                         <div className="mb-3">
                             <h4 className="text-xs font-bold text-gray-500 mb-2">الاختصارات الحالية</h4>
                             <div className="flex flex-wrap gap-2">
-                                {customShortcuts.map(id => {
-                                    const action = getActionById(id);
+                                {customShortcuts.map(shortcut => {
+                                    const action = getActionById(shortcut.click_action_id || '');
                                     if (!action) return null;
                                     const Icon = action.icon;
                                     return (
-                                        <div key={id} className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-1">
+                                        <div key={shortcut.id} className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-1">
                                             <Icon className="w-3 h-3 text-emerald-600" />
-                                            <span className="text-xs text-emerald-700">{action.name}</span>
+                                            <span className="text-xs text-emerald-700">{shortcut.custom_name || action.name}</span>
                                             <button
-                                                onClick={() => removeShortcut(id)}
+                                                onClick={() => deleteShortcut(shortcut.id, true)}
                                                 className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
                                             >
                                                 <Trash2 className="w-3 h-3" />
@@ -856,7 +856,15 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
                                         className="h-8 w-8 bg-indigo-600 hover:bg-indigo-700"
                                         onClick={() => {
                                             if (newLocName && newLocUrl) {
-                                                addLocation(newLocName, newLocUrl);
+                                                addShortcut({
+                                                    custom_name: newLocName,
+                                                    url: newLocUrl,
+                                                    shortcut_type: 'url',
+                                                    custom_icon: 'MapPin',
+                                                    icon_color: 'indigo',
+                                                    placement: 'shortcuts_grid',
+                                                    order_index: shortcuts.length
+                                                });
                                                 setNewLocName('');
                                                 setNewLocUrl('');
                                                 setSearchAddress('');
@@ -876,9 +884,9 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     {customLocations.map(loc => (
                                         <div key={loc.id} className="flex items-center gap-1 bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm">
-                                            <span className="text-xs text-gray-600">{loc.name}</span>
+                                            <span className="text-xs text-gray-600">{loc.custom_name}</span>
                                             <button
-                                                onClick={() => removeLocation(loc.id)}
+                                                onClick={() => deleteShortcut(loc.id, true)}
                                                 className="p-0.5 text-red-400 hover:text-red-600 rounded-full"
                                             >
                                                 <Trash2 className="w-3 h-3" />
@@ -901,12 +909,22 @@ const QuickActionsGrid: React.FC<QuickActionsGridProps> = ({
                                 </Badge>
                                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                                     {AVAILABLE_ACTIONS.filter(a => a.category === category).map(action => {
-                                        const isAdded = customShortcuts.includes(action.id);
+                                        const isAdded = customShortcuts.some(s => s.click_action_id === action.id);
                                         const Icon = action.icon;
                                         return (
                                             <button
                                                 key={action.id}
-                                                onClick={() => !isAdded && addShortcut(action.id)}
+                                                onClick={() => !isAdded && addShortcut({
+                                                    click_action_id: action.id,
+                                                    shortcut_type: 'action',
+                                                    custom_name: action.name,
+                                                    custom_icon: action.iconName || 'Sparkles',
+                                                    placement: 'shortcuts_grid',
+                                                    // order_index provided by hook or backend? The hook's addShortcut passes the object to supabase.
+                                                    // Supabase order_index is required in types? CustomShortcut type has it. NewCustomShortcut has it optional?
+                                                    // NewCustomShortcut order_index is optional.
+                                                    icon_color: 'emerald'
+                                                })}
                                                 disabled={isAdded}
                                                 className={`flex flex-col items-center justify-between rounded-xl border aspect-square transition-all overflow-hidden ${isAdded
                                                     ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'

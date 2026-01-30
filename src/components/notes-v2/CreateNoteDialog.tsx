@@ -130,25 +130,22 @@ export const CreateNoteDialog: React.FC<CreateNoteDialogProps> = ({ isOpen, onCl
         };
 
         recognitionRef.current.onresult = (event: any) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+            // Build the final transcript from ALL final results so far (not just this event)
+            let accumulatedFinal = '';
+            let currentInterim = '';
 
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+            for (let i = 0; i < event.results.length; i++) {
+                const result = event.results[i];
+                if (result.isFinal) {
+                    accumulatedFinal += result[0].transcript + ' ';
                 } else {
-                    interimTranscript += event.results[i][0].transcript;
+                    currentInterim += result[0].transcript;
                 }
             }
 
-            // Append to original content instead of current state to avoid duplication loop
-            const prefix = originalContentRef.current ? (originalContentRef.current + ' ') : '';
-            setContent(prefix + finalTranscript + interimTranscript);
-
-            // If final, update original so next accumulation includes it
-            if (finalTranscript) {
-                originalContentRef.current = prefix + finalTranscript;
-            }
+            // Combine: original content + all finals + current interim
+            const prefix = originalContentRef.current ? originalContentRef.current.trim() + ' ' : '';
+            setContent(prefix + accumulatedFinal.trim() + (currentInterim ? ' ' + currentInterim : ''));
         };
 
         recognitionRef.current.onerror = (event: any) => {
