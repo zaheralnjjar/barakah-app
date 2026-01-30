@@ -403,8 +403,8 @@ const InteractiveMap = () => {
 
             // Generate basic name if geocoding fails or just append time for uniqueness
             const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            const title = addressName ? `${addressName} ${timeStr}` : `موقعي ${timeStr}`;
+            const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')}.${now.getFullYear()}`;
+            const title = addressName ? `${addressName} ${dateTimeStr}` : `موقعي ${dateTimeStr}`;
 
             const standardUrl = generateGoogleMapsLink(latitude, longitude);
 

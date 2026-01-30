@@ -38,6 +38,7 @@ import DashboardHeader from './dashboard/DashboardHeader';
 import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
+import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 
 import { UnifiedDashboardCard } from './dashboard/UnifiedDashboardCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
@@ -616,14 +617,37 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
                         {showAddDialog === 'medication' && (
                             <div className="space-y-4">
-                                <Input id="med-name" placeholder="اسم الدواء" className="text-right" />
-                                <Input id="med-time" placeholder="الوقت (مثلاً: 08:00)" className="text-right" />
-                                <Button className="w-full bg-teal-600 font-bold py-6 rounded-2xl" onClick={async () => {
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 px-1">اسم الدواء</label>
+                                    <Input
+                                        id="med-name"
+                                        placeholder="مثلاً: بنادول، فيتامين سي..."
+                                        className="h-12 rounded-2xl border-2 border-gray-100 px-4 focus:border-teal-200 transition-all font-bold text-right"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 px-1">الجرعة</label>
+                                        <Input id="med-dosage" placeholder="مثلاً: 500mg" className="h-12 rounded-2xl border-2 border-gray-100 px-4 text-center focus:border-teal-200 transition-all font-bold" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 px-1">الوقت</label>
+                                        <Input id="med-time" type="time" className="h-12 rounded-2xl border-2 border-gray-100 px-4 text-center focus:border-teal-200 transition-all font-bold" />
+                                    </div>
+                                </div>
+
+                                <Button className="w-full bg-teal-600 text-white font-bold py-7 rounded-2xl shadow-xl active:scale-95 transition-all text-lg mt-2" onClick={async () => {
                                     const name = (document.getElementById('med-name') as HTMLInputElement).value;
+                                    const dosage = (document.getElementById('med-dosage') as HTMLInputElement).value;
                                     const time = (document.getElementById('med-time') as HTMLInputElement).value;
+
                                     if (!name) return;
+
+                                    // Use addMedication if available or fallback
+                                    // Assuming hook signature: (name, dosage, time, ...) or object
+                                    // Current hook usage observed: addMedication({ name, dosage, time, ... })
                                     await addMedication({
-                                        name,
+                                        name: dosage ? `${name} ${dosage}` : name,
                                         time: time || '08:00',
                                         frequency: 'daily',
                                         customDays: [],
@@ -632,79 +656,114 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                         isPermanent: true,
                                         reminder: true
                                     });
+                                    toast({ title: '💊 تم حفظ الدواء' });
                                     setShowAddDialog(null);
                                 }}>حفظ الدواء</Button>
                             </div>
                         )}
 
-                        {showAddDialog === 'habit' && (
+                        {(showAddDialog === 'habit' || showAddDialog === 'goal') && (
                             <div className="space-y-4">
-                                <Input id="habit-title" placeholder="اسم العادة" className="text-right" />
-                                <Button className="w-full bg-emerald-600 font-bold py-6 rounded-2xl" onClick={async () => {
-                                    const name = (document.getElementById('habit-title') as HTMLInputElement).value;
-                                    if (!name) return;
-                                    await addHabit(name, 'daily');
-                                    setShowAddDialog(null);
-                                }}>حفظ العادة</Button>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 px-1">
+                                        {showAddDialog === 'goal' ? 'اسم الهدف' : 'اسم العادة'}
+                                    </label>
+                                    <Input
+                                        id="habit-name"
+                                        placeholder={showAddDialog === 'goal' ? "مثلاً: قراءة كتاب، حفظ قرآن..." : "مثلاً: شرب ماء، رياضة..."}
+                                        className="h-12 rounded-2xl border-2 border-gray-100 px-4 focus:border-emerald-200 transition-all font-bold text-right"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                document.getElementById('btn-add-habit')?.click();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 px-1">التكرار</label>
+                                    <select id="habit-freq" className="w-full h-12 border-2 border-gray-100 rounded-2xl px-2 font-bold bg-white text-center focus:border-emerald-200 transition-all">
+                                        <option value="daily">يومي</option>
+                                        <option value="weekly">أسبوعي</option>
+                                        <option value="monthly">شهري</option>
+                                    </select>
+                                </div>
+
+                                <Button
+                                    id="btn-add-habit"
+                                    className="w-full bg-emerald-600 text-white font-bold py-7 rounded-2xl shadow-xl active:scale-95 transition-all text-lg mt-2"
+                                    onClick={async () => {
+                                        const name = (document.getElementById('habit-name') as HTMLInputElement).value;
+                                        const freq = (document.getElementById('habit-freq') as HTMLSelectElement).value as any;
+                                        if (!name) return;
+
+                                        await addHabit(name, freq);
+                                        toast({ title: showAddDialog === 'goal' ? '🎯 تم حفظ الهدف' : '💪 تم حفظ العادة' });
+                                        setShowAddDialog(null);
+                                    }}
+                                >
+                                    {showAddDialog === 'goal' ? 'حفظ الهدف' : 'حفظ العادة'}
+                                </Button>
                             </div>
                         )}
 
                         {showAddDialog === 'project' && (
                             <div className="space-y-4">
-                                <Input id="proj-title" placeholder="اسم المشروع" className="text-right" />
-                                <Button className="w-full bg-indigo-600 font-bold py-6 rounded-2xl" onClick={async () => {
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 px-1">اسم المشروع</label>
+                                    <Input
+                                        id="proj-title"
+                                        placeholder="اسم المشروع"
+                                        className="text-right h-12 rounded-2xl border-2 border-gray-100 px-4 focus:border-indigo-200 font-bold"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 px-1">تاريخ البدء</label>
+                                        <Input
+                                            id="proj-date"
+                                            type="date"
+                                            defaultValue={new Date().toISOString().split('T')[0]}
+                                            className="h-12 rounded-2xl border-2 border-gray-100 px-4 text-center focus:border-indigo-200 font-bold"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 px-1">الأولوية</label>
+                                        <select
+                                            id="proj-prio"
+                                            className="border-2 border-gray-100 rounded-2xl px-2 bg-white h-12 font-bold text-center w-full focus:border-indigo-200"
+                                        >
+                                            <option value="medium">متوسطة</option>
+                                            <option value="high">عالية</option>
+                                            <option value="low">منخفضة</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <Button className="w-full bg-indigo-700 text-white font-bold py-7 text-lg rounded-2xl shadow-lg active:scale-95 transition-transform mt-2" onClick={async () => {
                                     const title = (document.getElementById('proj-title') as HTMLInputElement).value;
+                                    const date = (document.getElementById('proj-date') as HTMLInputElement).value;
+                                    const priority = (document.getElementById('proj-prio') as HTMLSelectElement).value as any;
+
                                     if (!title) return;
+
                                     await addTask({
-                                        title,
-                                        deadline: new Date().toISOString().split('T')[0],
-                                        priority: 'medium',
+                                        title: title,
+                                        deadline: date,
+                                        priority: priority as any,
                                         type: 'project'
                                     });
+                                    toast({ title: '🚀 تم إنشاء المشروع' });
                                     setShowAddDialog(null);
-                                }}>بدء المشروع</Button>
-                            </div>
-                        )}
-                        {showAddDialog === 'goal' && (
-                            <div className="space-y-4">
-                                <Input id="goal-title" placeholder="اسم الهدف 🎯" className="text-right h-12 rounded-xl" />
-                                <div className="space-y-1">
-                                    <label className="text-xs text-gray-400 px-1">تاريخ التحقيق</label>
-                                    <Input id="goal-deadline" type="date" className="text-right h-12 rounded-xl" defaultValue={todayStr} />
-                                </div>
-                                <Button className="w-full bg-purple-600 hover:bg-purple-700 font-bold py-6 rounded-2xl text-lg shadow-lg active:scale-95 transition-all" onClick={async () => {
-                                    const title = (document.getElementById('goal-title') as HTMLInputElement).value;
-                                    const deadline = (document.getElementById('goal-deadline') as HTMLInputElement).value;
-                                    if (!title) return;
-
-                                    await addTask({
-                                        title,
-                                        deadline: deadline || todayStr,
-                                        priority: 'high',
-                                        type: 'goal'
-                                    } as any); // Type cast if 'goal' isn't yet in MainTask type definition, but DB will accept text
-
-                                    toast({ title: 'تمت إضافة الهدف بنجاح 🎯' });
-                                    setShowAddDialog(null);
-                                }}>حفظ الهدف</Button>
+                                }}>إنشاء المشروع</Button>
                             </div>
                         )}
                     </div>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={showShortcutsSettings} onOpenChange={setShowShortcutsSettings}>
-                <DialogContent dir="rtl" className="sm:max-w-lg">
-                    <DialogHeader><DialogTitle>إدارة الاختصارات</DialogTitle></DialogHeader>
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                        {AVAILABLE_ACTIONS.map(a => (
-                            <Button key={a.id} variant={customShortcuts.includes(a.id) ? "secondary" : "outline"} onClick={() => customShortcuts.includes(a.id) ? removeShortcut(a.id) : addShortcut(a.id)} className="text-[10px] h-auto py-2 flex-col gap-1">
-                                <a.icon className="w-4 h-4" /> {a.name}
-                            </Button>
-                        ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <ShortcutsSettingsDialog
+                open={showShortcutsSettings}
+                onOpenChange={setShowShortcutsSettings}
+            />
 
             {showNewMuslimsDialog && (
                 <div className="fixed inset-0 lg:right-16 z-[100] bg-white flex flex-col">
