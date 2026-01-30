@@ -414,7 +414,7 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     {/* View: Note List */}
                     {(viewMode === 'list' || searchQuery || activeFolderId === 'bookmarked') && !activeNote && (
                         <div className="h-full flex gap-4 animate-in slide-in-from-right-4 duration-300">
-                            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 h-full overflow-y-auto bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 h-full overflow-y-auto custom-scrollbar-visible bg-white rounded-2xl border border-gray-100 shadow-sm">
                                 <NoteList
                                     folderId={activeFolderId}
                                     searchQuery={searchQuery}

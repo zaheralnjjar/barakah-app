@@ -45,39 +45,12 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     const lastProcessedTextRef = useRef<string>('');
 
     // Robust merge function to prevent duplicate captures
-    const mergeTranscripts = useCallback((existing: string, addition: string) => {
-        const e = existing.trim();
-        const a = addition.trim();
-        if (!e) return a;
-        if (!a) return e;
-
-        const eLower = e.toLowerCase();
-        const aLower = a.toLowerCase().trim();
-
-        // If the addition is already exactly at the end, ignore it
-        if (eLower.endsWith(aLower)) return e;
-
-        // If the addition is a substring of the last portion, ignore it
-        const lastPortion = eLower.slice(-Math.max(30, aLower.length + 10));
-        if (lastPortion.includes(aLower)) return e;
-
-        // Check word-level overlap
-        const wordsE = e.split(/\s+/);
-        const wordsA = a.split(/\s+/);
-
-        const maxCheck = Math.min(wordsE.length, wordsA.length, 15);
-        for (let i = maxCheck; i > 0; i--) {
-            const suffix = wordsE.slice(-i).join(' ').toLowerCase();
-            const prefix = wordsA.slice(0, i).join(' ').toLowerCase();
-            if (suffix === prefix) {
-                // Only add the non-overlapping part
-                const newPart = wordsA.slice(i).join(' ');
-                return newPart ? e + ' ' + newPart : e;
-            }
-        }
-
-        return e + ' ' + a;
-    }, []);
+    // Simplified merge only for manual edits
+    const simpleMerge = (existing: string, addition: string) => {
+        if (!existing) return addition;
+        if (!addition) return existing;
+        return `${existing} ${addition}`;
+    };
 
     useEffect(() => {
         const checkSpeechSupport = async () => {
@@ -235,24 +208,21 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
             let interimContent = '';
-            let newFinalSegment = '';
 
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
                 const text = result[0].transcript;
 
                 if (result.isFinal) {
-                    newFinalSegment += text + ' ';
+                    setTranscript(prev => {
+                        const newText = prev ? `${prev} ${text}` : text;
+                        previousTranscriptRef.current = newText;
+                        return newText;
+                    });
                 } else {
                     interimContent += text;
                 }
             }
-
-            if (newFinalSegment) {
-                finalTranscriptRef.current = mergeTranscripts(finalTranscriptRef.current, newFinalSegment);
-            }
-
-            setTranscript(mergeTranscripts(previousTranscriptRef.current, finalTranscriptRef.current));
             setInterimTranscript(interimContent);
         };
 

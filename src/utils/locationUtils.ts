@@ -1,143 +1,69 @@
-import { Geolocation } from '@capacitor/geolocation';
-import { Share } from '@capacitor/share';
 
 /**
- * Reverse geocode coordinates to address using Nominatim (OpenStreetMap)
- * Free alternative to Google Geocoding API
+ * Utility for standardizing location operations across Barakah App.
+ * Enforces "Street Name + Building Number" format and consistent Google Maps links.
  */
-export async function reverseGeocode(lat: number, lng: number): Promise<{
-    street: string;
-    houseNumber: string;
-    fullAddress: string;
-} | null> {
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-            {
-                headers: {
-                    'User-Agent': 'Barakah-App/1.0'
-                }
-            }
-        );
 
-        if (!response.ok) {
-            throw new Error('Geocoding failed');
-        }
-
-        const data = await response.json();
-        const address = data.address || {};
-
-        const street = address.road || address.street || address.pedestrian || 'شارع غير معروف';
-        const houseNumber = address.house_number || address.building || 'رقم تقريبي';
-        const neighborhood = address.neighbourhood || address.suburb || '';
-        const city = address.city || address.town || address.village || '';
-
-        const fullAddress = [
-            street,
-            houseNumber,
-            neighborhood,
-            city
-        ].filter(Boolean).join(', ');
-
-        return {
-            street,
-            houseNumber,
-            fullAddress
-        };
-    } catch (error) {
-        console.error('Reverse geocoding error:', error);
-        return null;
-    }
-}
-
-/**
- * Get current location with address
- */
-export async function getCurrentLocationWithAddress(): Promise<{
+export interface LocationInfo {
+    name: string;
+    details: string; // Street + Number
+    url: string;
     lat: number;
     lng: number;
-    address: string;
-    street: string;
-    houseNumber: string;
-} | null> {
+}
+
+/**
+ * Reverse geocode coordinates to get a standardized address.
+ * Prioritizes "Road + House Number".
+ */
+export const reverseGeocodeLimit = async (lat: number, lng: number): Promise<string> => {
     try {
-        const position = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 10000
-        });
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+        const data = await response.json();
 
-        const { latitude, longitude } = position.coords;
-        const addressData = await reverseGeocode(latitude, longitude);
+        if (data.address) {
+            const road = data.address.road || '';
+            const houseNumber = data.address.house_number || '';
+            const suburb = data.address.suburb || data.address.neighbourhood || '';
 
-        if (!addressData) {
-            return {
-                lat: latitude,
-                lng: longitude,
-                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-                street: 'موقع غير معروف',
-                houseNumber: ''
-            };
+            // Format: Street 123
+            let formatted = `${road} ${houseNumber}`.trim();
+
+            // If empty, stick to suburb/neighborhood
+            if (!formatted) formatted = suburb;
+
+            // If still empty, display name (truncated)
+            if (!formatted && data.display_name) {
+                formatted = data.display_name.split(',')[0];
+            }
+
+            return formatted || 'موقع محدد';
         }
-
-        return {
-            lat: latitude,
-            lng: longitude,
-            address: addressData.fullAddress,
-            street: addressData.street,
-            houseNumber: addressData.houseNumber
-        };
+        return 'موقع محدد';
     } catch (error) {
-        console.error('Get location error:', error);
-        return null;
+        console.error("Geocoding error:", error);
+        return 'موقع غير معروف';
     }
-}
+};
 
 /**
- * Share location using native share dialog
+ * Generates a standard Google Maps URL.
+ * Used for sharing and opening locations.
  */
-export async function shareLocation(address: string, lat: number, lng: number): Promise<boolean> {
-    try {
-        const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-        const text = `📍 ${address}\n\n${googleMapsUrl}`;
-
-        await Share.share({
-            title: 'مشاركة الموقع',
-            text: text,
-            url: googleMapsUrl,
-            dialogTitle: 'مشاركة الموقع عبر'
-        });
-
-        return true;
-    } catch (error) {
-        console.error('Share error:', error);
-        return false;
-    }
-}
+export const generateGoogleMapsLink = (lat: number, lng: number): string => {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+};
 
 /**
- * Open location in Google Maps for navigation
+ * Validates and normalizes a location object before saving.
  */
-export function navigateToLocation(address: string, lat?: number, lng?: number): void {
-    let url: string;
-
-    if (lat && lng) {
-        // Use coordinates if available
-        url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    } else {
-        // Use address search
-        const encodedAddress = encodeURIComponent(address);
-        url = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-    }
-
-    window.open(url, '_blank');
-}
-
-/**
- * Format location name from address
- */
-export function formatLocationName(street: string, houseNumber: string): string {
-    if (houseNumber && houseNumber !== 'رقم تقريبي') {
-        return `${street}، ${houseNumber}`;
-    }
-    return street;
-}
+export const normalizeLocation = (title: string, address: string | undefined, lat: number, lng: number) => {
+    const validUrl = generateGoogleMapsLink(lat, lng);
+    return {
+        title: title || 'موقع جديد',
+        address: address || validUrl,
+        lat,
+        lng,
+        category: 'pinned' // Enforce category for standard locations
+    };
+};

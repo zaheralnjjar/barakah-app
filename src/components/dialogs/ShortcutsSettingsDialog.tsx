@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ShortcutCustomizerDialog } from './ShortcutCustomizerDialog';
 import type { CustomShortcut } from '@/types/shortcuts';
 import { cn } from '@/lib/utils'; // Import cn
+import { reverseGeocodeLimit, generateGoogleMapsLink } from '@/utils/locationUtils';
 
 interface ShortcutsSettingsDialogProps {
     open: boolean;
@@ -54,33 +55,17 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
         }
         setIsLoadingLocation(true);
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const link = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+            async (pos) => {
+                const link = generateGoogleMapsLink(pos.coords.latitude, pos.coords.longitude);
                 setNewLocUrl(link);
                 setTempCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
 
-                // Reverse Geocoding
+                // Standardized Reverse Geocoding
                 if (!newLocName) {
                     setIsLoadingLocation(true);
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&accept-language=ar`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.display_name) {
-                                // Extract street/building from address if possible, or use full name
-                                const road = data.address?.road || '';
-                                const houseNumber = data.address?.house_number || '';
-                                const city = data.address?.city || data.address?.town || '';
-                                const formatted = `${road} ${houseNumber} ${city}`.trim();
-                                setNewLocName(formatted || data.display_name.split(',')[0]);
-                            } else {
-                                setNewLocName("موقعي الحالي");
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Reverse geocoding error:", err);
-                            setNewLocName("موقعي الحالي");
-                        })
-                        .finally(() => setIsLoadingLocation(false));
+                    const name = await reverseGeocodeLimit(pos.coords.latitude, pos.coords.longitude);
+                    setNewLocName(name);
+                    setIsLoadingLocation(false);
                 } else {
                     setIsLoadingLocation(false);
                 }
@@ -97,9 +82,9 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
 
     const handleGenerateUrlFromAddress = () => {
         if (!searchAddress) return;
+        // Search query link
         const link = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchAddress)}`;
         setNewLocUrl(link);
-        // We don't have coords here easily without API, so we'll pass 0,0 and rely on URL
         setTempCoords({ lat: 0, lng: 0 }); // Fallback
         if (!newLocName) setNewLocName(searchAddress);
     };
@@ -132,7 +117,7 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                 custom_icon: iconName || 'Zap', // Use string name or default
                 icon_color: 'emerald', // Default styling
                 shortcut_type: 'action', // Ensure this maps to legacy execution
-                placement: 'quick_access', // Default placement
+                placement: 'shortcuts_grid', // Default placement for dashboard visibility
                 click_action_id: actionId,
                 order_index: customShortcuts.length
             });

@@ -39,7 +39,7 @@ import DashboardHeaderStrip from './dashboard/DashboardHeaderStrip';
 import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 
-import { ActiveTimerCard } from './dashboard/ActiveTimerCard';
+import { UnifiedDashboardCard } from './dashboard/UnifiedDashboardCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
@@ -271,9 +271,15 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                             />
                         </div>
 
-                        {/* 2. Active Timer / Event Card (Moved between Quick Actions and Shortcuts) */}
-                        <div className="mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <ActiveTimerCard
+                        {/* Unified Dashboard Card - Replacing Active Timer */}
+                        <div className="mb-6 animate-in slide-in-from-top-4 duration-700">
+                            <UnifiedDashboardCard
+                                onOpenAdd={(type) => {
+                                    if (type === 'task') setShowAddDialog('task');
+                                    else if (type === 'shopping') setShowAddDialog('shopping');
+                                    else if (type === 'goal') toast({ title: 'قريباً', description: 'إضافة الأهداف قادمة قريباً' });
+                                    else if (type === 'project') setShowAddDialog('task'); // Reuse task dialog for project? Or separate?
+                                }}
                                 onOpenEvent={(evt) => {
                                     if ((evt as any).type === 'appointment') {
                                         window.dispatchEvent(new CustomEvent('edit-appointment', { detail: evt }));
@@ -559,7 +565,24 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                                 <div className="space-y-3">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-bold text-gray-400 px-1">اسم المنتج</label>
-                                        <Input placeholder="مثلاً: خبز، حليب..." value={shoppingItemName} onChange={e => setShoppingItemName(e.target.value)} className="h-12 rounded-2xl border-2 border-gray-100 px-4 focus:border-pink-200 transition-all font-bold" />
+                                        <Input
+                                            placeholder="مثلاً: خبز، حليب..."
+                                            value={shoppingItemName}
+                                            onChange={e => setShoppingItemName(e.target.value)}
+                                            onKeyDown={async (e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    if (!shoppingItemName) return;
+                                                    const unit = (document.getElementById('shop-unit') as HTMLSelectElement).value as any;
+                                                    await addShoppingItem({ text: shoppingItemName, quantity: shoppingItemQuantity, unit });
+                                                    setShoppingItemName('');
+                                                    setShoppingItemQuantity(1);
+                                                    toast({ title: '🛒 تمت الإضافة للقائمة' });
+                                                    // e.currentTarget.focus(); // Keep focus
+                                                }
+                                            }}
+                                            className="h-12 rounded-2xl border-2 border-gray-100 px-4 focus:border-pink-200 transition-all font-bold"
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3">

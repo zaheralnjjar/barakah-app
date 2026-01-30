@@ -16,6 +16,8 @@ import { CustomShortcutButton } from './CustomShortcutButton';
 import { ShortcutCustomizerDialog } from '@/components/dialogs/ShortcutCustomizerDialog';
 import { Plus, Sparkles } from 'lucide-react';
 import type { CustomShortcut, ActionPlacement } from '@/types/shortcuts';
+import { useLocations } from '@/hooks/useLocations';
+import { MapPin } from 'lucide-react';
 
 interface CustomShortcutsGridProps {
     placement: ActionPlacement;
@@ -46,11 +48,44 @@ export const CustomShortcutsGrid: React.FC<CustomShortcutsGridProps> = ({
         onNavigateToTab
     });
 
+    // Locations integration
+    const { locations } = useLocations();
+
+    // Combine shortcuts with pinned locations for grid view
+    const placementShortcuts = React.useMemo(() => {
+        const baseShortcuts = getByPlacement(placement);
+
+        if (placement === 'shortcuts_grid') {
+            const pinnedLocs = locations
+                .filter(l => l.category === 'pinned')
+                .map(loc => ({
+                    id: `loc-${loc.id}`,
+                    user_id: 'local',
+                    custom_name: loc.title,
+                    custom_icon: 'MapPin',
+                    icon_color: 'emerald',
+                    shortcut_type: 'url' as const, // Treat as URL shortcut
+                    url: loc.address || `https://www.google.com/maps?q=${loc.lat},${loc.lng}`,
+                    location_lat: loc.lat,
+                    location_lng: loc.lng,
+                    location_address: loc.address,
+                    placement: 'shortcuts_grid' as ActionPlacement,
+                    order_index: 999, // Append at end
+                    is_active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                } as CustomShortcut));
+
+            return [...baseShortcuts, ...pinnedLocs];
+        }
+
+        return baseShortcuts;
+    }, [getByPlacement, placement, locations]);
+
     const { executeCustomShortcut } = useCustomShortcutExecution({
         executeAction: baseExecuteShortcut
     });
 
-    const placementShortcuts = getByPlacement(placement);
 
     const handleExecute = (shortcut: CustomShortcut, isLongPress: boolean) => {
         executeCustomShortcut(shortcut, isLongPress);

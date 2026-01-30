@@ -6,7 +6,7 @@ interface UseLongPressOptions {
     ms?: number;
 }
 
-export const useLongPress = ({ onLongPress, onClick, ms = 500 }: UseLongPressOptions) => {
+export const useLongPress = ({ onLongPress, onClick, ms = 400 }: UseLongPressOptions) => {
     const timerRef = useRef<NodeJS.Timeout>();
     const isLongPressActive = useRef(false);
     const hasStarted = useRef(false);
@@ -77,7 +77,7 @@ export const useLongPress = ({ onLongPress, onClick, ms = 500 }: UseLongPressOpt
         const diffY = Math.abs(currentY - startY.current);
 
         // If moved more than 10px, it's likely a scroll/drag, so cancel
-        if (diffX > 10 || diffY > 10) {
+        if (diffX > 15 || diffY > 15) {
             cancel();
         }
     }, [cancel]);

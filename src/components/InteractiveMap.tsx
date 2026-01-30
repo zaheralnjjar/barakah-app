@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useLocations } from '@/hooks/useLocations'; // Added import
+import { useLocations } from '@/hooks/useLocations';
+import { reverseGeocodeLimit, generateGoogleMapsLink } from '@/utils/locationUtils';
 import {
     MapPin,
     Search,
@@ -315,13 +316,18 @@ const InteractiveMap = () => {
             return;
         }
 
-        // Add timestamp to title if needed, or just save
-        const now = new Date();
-        const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const finalTitle = `${addressName} ${dateTimeStr}`;
+        const standardUrl = generateGoogleMapsLink(position.lat, position.lng);
+        const finalDetails = addressDetails || standardUrl;
 
-        await hookSaveLocation(finalTitle, position.lat, position.lng, {
-            address: addressDetails,
+        // Use the passed name directly, assuming user input is preferred.
+        // If we wanted to enforce standard naming, we'd use a util here.
+        // But keeping user input with optional date is better UX for "Save Location" dialog.
+        // We removed the forced date appending to be cleaner, or we can keep it if user prefers.
+        // The previous code appended date. Let's keep it if the name is generic, but usually user types a name.
+        // Let's stick to the name provided by user.
+
+        await hookSaveLocation(addressName, position.lat, position.lng, {
+            address: finalDetails,
             category: selectedCategory as any
         });
 
@@ -392,14 +398,23 @@ const InteractiveMap = () => {
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const { latitude, longitude } = pos.coords;
 
-            // Generate basic name
-            const now = new Date();
-            const dateTimeStr = `${now.getDate().toString().padStart(2, '0')}.${(now.getMonth() + 1).toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            const title = `موقعي ${dateTimeStr}`;
+            // Use reverse geocoding for a better name
+            const addressName = await reverseGeocodeLimit(latitude, longitude);
 
-            await hookSaveLocation(title, latitude, longitude, { category: 'other' });
+            // Generate basic name if geocoding fails or just append time for uniqueness
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const title = addressName ? `${addressName} ${timeStr}` : `موقعي ${timeStr}`;
+
+            const standardUrl = generateGoogleMapsLink(latitude, longitude);
+
+            await hookSaveLocation(title, latitude, longitude, {
+                category: 'other',
+                address: standardUrl
+            });
 
             setIsLocating(false);
+            toast({ title: "تم حفظ موقعك الحالي" });
         }, (err) => {
             setIsLocating(false);
             toast({ title: "تعذر تحديد الموقع", description: err.message, variant: "destructive" });
