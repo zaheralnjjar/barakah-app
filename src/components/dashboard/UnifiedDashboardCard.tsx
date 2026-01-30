@@ -217,7 +217,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
     return (
         <Card
             className={cn(
-                "w-full overflow-hidden border-0 shadow-xl rounded-[2rem] transition-all duration-700 bg-gradient-to-br min-h-[145px] relative group",
+                "w-full overflow-hidden border-0 shadow-xl rounded-[1.5rem] transition-all duration-700 bg-gradient-to-br min-h-[90px] relative group",
                 activeItem.gradient
             )}
             dir="rtl"
@@ -226,90 +226,76 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             onTouchStart={() => setIsPaused(true)}
             onTouchEnd={() => setIsPaused(false)}
         >
-            <CardContent className="p-5 relative h-full flex flex-col justify-between z-10">
+            <CardContent className="p-3 relative h-full flex flex-col justify-center gap-1 z-10">
 
                 {/* Background Decor */}
-                <div className="absolute top-0 left-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-                <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
+                <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
-                {/* Header: Category & Meta */}
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className={cn("p-2.5 rounded-2xl backdrop-blur-xl shadow-lg border border-white/10", activeItem.accentColor)}>
-                            <Icon className={cn("w-5 h-5", activeItem.textColor)} />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className={cn("text-[10px] font-bold tracking-wider uppercase opacity-70", activeItem.textColor)}>
-                                {activeItem.type === 'shopping' ? 'تسوّق' :
-                                    activeItem.type === 'goals' ? 'عادات' :
-                                        activeItem.type === 'projects' ? 'مشاريع' :
-                                            activeItem.type === 'appointment' ? 'موعد' : 'مهام'}
-                            </span>
-                            {/* Pagination Indicators - Moved here for cleaner look */}
-                            <div className="flex gap-1 mt-1">
-                                {slides.map((_, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={cn(
-                                            "h-1 rounded-full transition-all duration-500",
-                                            idx === currentIndex ? "w-4 bg-white" : "w-1 bg-white/30"
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                        </div>
+                {/* row 1: Icon - Title - Countdown */}
+                <div className="flex items-center gap-2 w-full">
+                    <div className={cn("p-1.5 rounded-xl backdrop-blur-md border border-white/10 shrink-0", activeItem.accentColor)}>
+                        <Icon className={cn("w-4 h-4", activeItem.textColor)} />
                     </div>
 
-                    {/* Meta Badge (Countdown or Time) */}
+                    <div className="flex-1 min-w-0 flex items-center gap-2"
+                        onClick={() => {
+                            if (activeItem.data && onOpenEvent && (activeItem.type === 'task' || activeItem.type === 'appointment')) {
+                                onOpenEvent(activeItem.data);
+                            } else {
+                                handleNext();
+                            }
+                        }}
+                    >
+                        <h2 className={cn("text-lg font-bold leading-tight truncate drop-shadow-sm", activeItem.textColor)}>
+                            {activeItem.title}
+                        </h2>
+                    </div>
+
                     {(countdown || activeItem.meta) && (
                         <div className={cn(
-                            "px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1.5",
+                            "px-2 py-0.5 rounded-lg backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1 shrink-0",
                             activeItem.accentColor
                         )}>
                             <Clock className={cn("w-3 h-3 opacity-80", activeItem.textColor)} />
-                            <span className={cn("text-xs font-bold font-mono pt-0.5", activeItem.textColor)}>
+                            <span className={cn("text-[10px] font-bold font-mono pt-0.5", activeItem.textColor)}>
                                 {countdown || activeItem.meta}
                             </span>
                         </div>
                     )}
                 </div>
 
-                {/* Main Content: Title & Action */}
-                <div className="mt-2 flex flex-col gap-1 z-20"
-                    onClick={() => {
-                        if (activeItem.data && onOpenEvent && (activeItem.type === 'task' || activeItem.type === 'appointment')) {
-                            onOpenEvent(activeItem.data);
-                        } else {
-                            handleNext();
-                        }
-                    }}
-                >
-                    <h2 className={cn("text-2xl font-black leading-tight tracking-tight line-clamp-2 drop-shadow-sm", activeItem.textColor)}>
-                        {activeItem.title}
-                    </h2>
-                    <p className={cn("text-sm font-medium opacity-85 line-clamp-1", activeItem.textColor)}>
-                        {activeItem.subtitle}
-                    </p>
-                </div>
+                {/* Row 2: Indicators - Subtitle - Progress - Button */}
+                <div className="flex items-center justify-between gap-2 w-full mt-0.5">
 
-                {/* Footer: Progress & Quick Action */}
-                <div className="flex items-end justify-between mt-3">
-                    {/* Progress Bar */}
-                    <div className="flex-1 pl-6">
-                        {activeItem.progress !== undefined ? (
-                            <div className="h-1.5 w-full bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
+                    {/* Dots + Subtitle Group */}
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex gap-0.5 shrink-0">
+                            {slides.map((_, idx) => (
                                 <div
-                                    className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
-                                    style={{ width: `${activeItem.progress}%` }}
+                                    key={idx}
+                                    className={cn(
+                                        "h-1 rounded-full transition-all duration-500",
+                                        idx === currentIndex ? "w-3 bg-white" : "w-1 bg-white/30"
+                                    )}
                                 />
-                            </div>
-                        ) : (
-                            // If no progress, maybe show a motivational quote or just spacer
-                            <div className="h-1.5" />
-                        )}
+                            ))}
+                        </div>
+                        <p className={cn("text-xs font-medium opacity-80 truncate", activeItem.textColor)}>
+                            {activeItem.subtitle}
+                        </p>
                     </div>
 
-                    {/* Quick Add Button */}
+                    {/* Progress Bar (if exists) */}
+                    {activeItem.progress !== undefined && (
+                        <div className="w-16 h-1 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm shrink-0">
+                            <div
+                                className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
+                                style={{ width: `${activeItem.progress}%` }}
+                            />
+                        </div>
+                    )}
+
+                    {/* Action Button */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -319,18 +305,18 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                             else onOpenAdd('task');
                         }}
                         className={cn(
-                            "rounded-full p-2.5 backdrop-blur-md border border-white/20 shadow-lg transition-all active:scale-95 hover:bg-white/20 hover:scale-105",
+                            "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
                             activeItem.accentColor,
                             activeItem.textColor
                         )}
                     >
-                        <Plus className="w-5 h-5" />
+                        <Plus className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* Click Areas for Navigation */}
-                <div className="absolute inset-y-0 left-0 w-16 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
-                <div className="absolute inset-y-0 right-0 w-16 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
+                <div className="absolute inset-y-0 left-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
+                <div className="absolute inset-y-0 right-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
 
             </CardContent>
         </Card>

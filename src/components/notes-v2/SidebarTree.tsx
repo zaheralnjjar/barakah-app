@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFolders } from '@/hooks/useFolders';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Trash2, Search, Zap } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Hash, Trash2, Search, Zap, FileClock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
     ContextMenu,
@@ -166,15 +166,28 @@ export const SidebarTree: React.FC<SidebarTreeProps> = ({ activeFolderId, onSele
             {!collapsed && <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">التنظيم</h3>}
 
             <div
-                onClick={() => window.dispatchEvent(new Event('open-distraction-dialog'))}
+                onClick={() => window.dispatchEvent(new CustomEvent('open-distraction-dialog', { detail: { view: 'new' } }))}
                 className={`
                     flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm mb-1 font-medium w-full
-                    text-rose-600 hover:bg-rose-50
+                    text-orange-600 hover:bg-orange-50
                     ${collapsed ? 'justify-center px-0' : ''}
                 `}
-                title={collapsed ? "سجل التشتت" : undefined}
+                title={collapsed ? "تسجيل نشاط" : undefined}
             >
                 <Zap className="w-4 h-4" />
+                {!collapsed && <span>تسجيل نشاط</span>}
+            </div>
+
+            <div
+                onClick={() => window.dispatchEvent(new CustomEvent('open-distraction-dialog', { detail: { view: 'history' } }))}
+                className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm mb-1 font-medium w-full
+                    text-emerald-600 hover:bg-emerald-50
+                    ${collapsed ? 'justify-center px-0' : ''}
+                `}
+                title={collapsed ? "سجل النشاط" : undefined}
+            >
+                <FileClock className="w-4 h-4" />
                 {!collapsed && <span>سجل النشاط</span>}
             </div>
 

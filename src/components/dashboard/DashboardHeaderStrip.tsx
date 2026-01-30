@@ -75,8 +75,9 @@ const DashboardHeaderStrip: React.FC<DashboardHeaderStripProps> = ({ newMuslimsC
                 const diffMins = Math.floor(diff / 60000);
                 const hours = Math.floor(diffMins / 60);
                 const mins = diffMins % 60;
-                const prevNameAr = PRAYER_NAMES[prevNameKey as keyof typeof PRAYER_NAMES];
-                setElapsedSincePrev(`${hours > 0 ? hours + 'س ' : ''}${mins}د منذ ${prevNameAr}`);
+                const PRAYER_NAMES_ES = { 'fajr': 'Fajr', 'sunrise': 'Amanecer', 'dhuhr': 'Dhuhr', 'asr': 'Asr', 'maghrib': 'Maghrib', 'isha': 'Isha' };
+                const prevNameEs = PRAYER_NAMES_ES[prevNameKey as keyof typeof PRAYER_NAMES_ES];
+                setElapsedSincePrev(`${hours > 0 ? hours + 'h ' : ''}${mins}m desde ${prevNameEs}`);
             }
         };
         calcElapsed();

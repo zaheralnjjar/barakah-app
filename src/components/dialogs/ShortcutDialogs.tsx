@@ -69,10 +69,17 @@ export const ShortcutDialogs = () => {
 
 
     useEffect(() => {
-        const handleOpenDistraction = () => {
+        const handleOpenDistraction = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
             setShowDistraction(true);
-            // Default start time to now
-            setStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+            if (detail?.view === 'history') {
+                setShowHistory(true);
+                fetchDistractionLogs();
+            } else {
+                setShowHistory(false);
+                // Default start time to now
+                setStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+            }
         };
         const handleOpenMedical = () => setShowMedical(true);
         const handleOpenAppointment = () => {
@@ -130,8 +137,13 @@ export const ShortcutDialogs = () => {
             setStartTime('');
             setEndTime('');
         } else {
-            console.error(error);
-            toast({ title: 'خطأ', description: 'فشل التسجيل', variant: 'destructive' });
+            console.error("Activity Log Save Error:", error);
+            toast({
+                title: 'خطأ في التسجيل',
+                description: `فشل حفظ النشاط: ${error.message || 'خطأ غير معروف'}`,
+                variant: 'destructive',
+                duration: 5000
+            });
         }
     };
 
@@ -145,9 +157,28 @@ export const ShortcutDialogs = () => {
         }
     };
 
+    // Export State
+    const [exportStartDate, setExportStartDate] = useState('');
+    const [exportEndDate, setExportEndDate] = useState('');
+
     const performExport = async () => {
+        // Filter Logs if dates selected
+        let logsToExport = [...distractionLogs];
+
+        if (exportStartDate) {
+            const start = new Date(exportStartDate);
+            start.setHours(0, 0, 0, 0);
+            logsToExport = logsToExport.filter(log => new Date(log.created_at) >= start);
+        }
+
+        if (exportEndDate) {
+            const end = new Date(exportEndDate);
+            end.setHours(23, 59, 59, 999);
+            logsToExport = logsToExport.filter(log => new Date(log.created_at) <= end);
+        }
+
         // 1. Prepare Data for Excel
-        const dataToExport = distractionLogs.map(log => ({
+        const dataToExport = logsToExport.map(log => ({
             'النشاط/السبب': log.reason,
             'المدة (دقيقة)': log.duration_minutes || 0,
             'وقت البداية': log.start_time ? new Date(log.start_time).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-',
@@ -228,8 +259,14 @@ export const ShortcutDialogs = () => {
             toast({ title: 'تنبيه', description: 'لا توجد سجلات للمشاركة' });
             return;
         }
+        setExportStartDate('');
+        setExportEndDate('');
         setShowExportConfirm(true);
     };
+
+    // ... existing code ...
+
+
 
     const handleSaveAppointment = async () => {
         if (!apptTitle.trim() || !apptDate || !apptTime) {
@@ -492,8 +529,28 @@ export const ShortcutDialogs = () => {
                 <AlertDialogContent dir="rtl">
                     <AlertDialogHeader>
                         <AlertDialogTitle>تصدير سجل النشاط</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            هل تريد تصدير جميع سجلات النشاط إلى ملف Excel وحفظه على جهازك؟
+                        <AlertDialogDescription className="space-y-4 pt-2">
+                            <p>يمكنك تصفية السجلات حسب التاريخ قبل التصدير. اترك الحقول فارغة لتصدير الكل.</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs">من تاريخ</Label>
+                                    <Input
+                                        type="date"
+                                        value={exportStartDate}
+                                        onChange={(e) => setExportStartDate(e.target.value)}
+                                        className="h-9"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">إلى تاريخ</Label>
+                                    <Input
+                                        type="date"
+                                        value={exportEndDate}
+                                        onChange={(e) => setExportEndDate(e.target.value)}
+                                        className="h-9"
+                                    />
+                                </div>
+                            </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
