@@ -9,6 +9,7 @@ export interface NoteV2 {
     content: string;
     folder_id: string | null;
     is_pinned: boolean;
+    is_favorite?: boolean;
     tags: string[] | null;
     color: string; // Background color (legacy/primary)
     font_family?: string;
@@ -138,6 +139,25 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
     // 6. Permanent Delete (Same as Delete)
     const permanentDeleteMut = deleteNoteMut;
 
+    // 7. Toggle Favorite
+    const toggleFavoriteMut = useMutation({
+        mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) => {
+            const { data, error } = await supabase
+                .from('quick_notes')
+                .update({ is_favorite: isFavorite })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['quick_notes'] });
+            toast({ title: variables.isFavorite ? 'تمت الإضافة للمفضلة' : 'تم الإزالة من المفضلة' });
+        },
+    });
+
     return {
         notes,
         isLoading,
@@ -146,5 +166,6 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
         deleteNote: deleteNoteMut.mutateAsync,
         restoreNote: restoreNoteMut.mutateAsync,
         permanentDelete: permanentDeleteMut.mutateAsync,
+        toggleFavorite: toggleFavoriteMut.mutateAsync,
     };
 };

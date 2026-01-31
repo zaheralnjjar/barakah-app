@@ -73,7 +73,7 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
     isRecording, startRecording, stopRecording,
     onClose, handleSave, isLoading,
     folders, duration, setDuration,
-    voiceTranscript
+    voiceTranscript, isMobile
 }) => {
     // Track where to insert text
     const lastFocusedField = useRef<'title' | 'content'>('title');
@@ -226,6 +226,8 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
                         isRecording={isRecording}
                         onRecordingClick={isRecording ? stopRecording : startRecording}
                         voiceTranscript={voiceTranscript}
+                        toolbarPosition="top"
+                        isMobile={isMobile}
                     />
                 </div>
             )}
@@ -537,11 +539,11 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[700px] h-[85vh] p-0 flex flex-col bg-transparent border-none shadow-2xl" dir="rtl">
+            <DialogContent className="sm:max-w-[700px] h-[85vh] p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden min-h-[400px]" dir="rtl" style={{ height: '85vh', maxHeight: '95vh', minHeight: '300px' }}>
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
                 </DialogHeader>
-                <div className="h-full bg-white rounded-lg overflow-hidden">
+                <div className="h-full bg-white rounded-lg overflow-hidden flex flex-col">
                     <QuickNoteForm {...formProps} />
                 </div>
             </DialogContent>

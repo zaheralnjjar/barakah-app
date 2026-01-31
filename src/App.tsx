@@ -43,6 +43,8 @@ import { MultiActionFAB } from '@/components/MultiActionFAB';
 import { isAndroid } from '@/utils/platformDetection';
 import { useState } from 'react';
 import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
+import { LocationShortcutListener } from "@/components/LocationShortcutListener";
+import { ShortcutDialogs } from "@/components/dashboard/ShortcutDialogs";
 
 const queryClient = new QueryClient();
 
@@ -213,6 +215,8 @@ const App = () => {
       <TooltipProvider>
         <PermissionRequester />
         <DeepLinkHandler />
+        <LocationShortcutListener />
+        <ShortcutDialogs />
 
         <Toaster />
         <Sonner />

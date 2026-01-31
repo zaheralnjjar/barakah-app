@@ -1,9 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+
 // Unified storage key
 const LOCATIONS_STORAGE_KEY = 'baraka_locations';
+const FOLDERS_STORAGE_KEY = 'baraka_location_folders';
+
+export interface LocationFolder {
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+    user_id?: string;
+}
 
 export interface SavedLocation {
     id: string;
@@ -13,7 +23,9 @@ export interface SavedLocation {
     lat: number;
     lng: number;
     url: string;
+    street_line?: string; // New: Specific street/building info
     category: 'home' | 'work' | 'mosque' | 'market' | 'restaurant' | 'parking' | 'pinned' | 'other';
+    folder_id?: string; // New: Folder link
     type: 'location' | 'parking';
     createdAt: string;
     user_id?: string;
@@ -78,58 +90,120 @@ const migrateOldData = (): SavedLocation[] => {
 
 export const useLocations = () => {
     const [locations, setLocations] = useState<SavedLocation[]>([]);
+    const [folders, setFolders] = useState<LocationFolder[]>([]); // New folders state
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const [session, setSession] = useState<any>(null);
+    const recentlyDeletedIds = useRef<Set<string>>(new Set()); // Track deleted IDs to prevent sync race conditions
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // --- Supabase Sync Functions ---
+    const syncLocationsWithSupabase = useCallback(async (localData: SavedLocation[]) => {
+        if (!session?.user) return localData;
+
+        try {
+            const { data: cloudData, error } = await supabase
+                .from('saved_locations')
+                .select('*')
+                .eq('user_id', session.user.id);
+
+            if (!error && cloudData) {
+                const merged = [...localData];
+                cloudData.forEach((cloudLoc: any) => {
+                    // Skip if recently deleted (prevents race condition)
+                    if (recentlyDeletedIds.current.has(cloudLoc.id)) return;
+
+                    if (!merged.find(l => l.id === cloudLoc.id)) {
+                        merged.push({
+                            id: cloudLoc.id,
+                            title: cloudLoc.title,
+                            address: cloudLoc.address,
+                            lat: cloudLoc.lat,
+                            lng: cloudLoc.lng,
+                            url: cloudLoc.url || `geo:${cloudLoc.lat},${cloudLoc.lng}`,
+                            category: cloudLoc.category || 'other',
+                            type: cloudLoc.type || 'location',
+                            createdAt: cloudLoc.created_at,
+                            user_id: cloudLoc.user_id,
+                            folder_id: cloudLoc.folder_id,
+                            street_line: cloudLoc.street_line // Sync new field
+                        });
+                    }
+                });
+                return merged;
+            }
+        } catch (e) {
+            console.error('Error syncing locations with Supabase:', e);
+        }
+        return localData;
+    }, [session]);
+
+    const syncFoldersWithSupabase = useCallback(async () => {
+        if (!session?.user) return;
+        try {
+            const { data, error } = await supabase
+                .from('location_folders')
+                .select('*')
+                .eq('user_id', session.user.id);
+
+            if (data && !error) {
+                const serverFolders = data as LocationFolder[];
+                const merged = [...folders]; // Start with current local folders
+                serverFolders.forEach(sf => {
+                    const idx = merged.findIndex(f => f.id === sf.id);
+                    if (idx >= 0) merged[idx] = sf; // Server overwrites local if ID matches
+                    else merged.push(sf); // Add new server folder
+                });
+
+                setFolders(merged);
+                localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(merged));
+            }
+        } catch (e) {
+            console.error("Folder Sync failed", e);
+        }
+    }, [session, folders]);
 
     // Load locations on mount
     const loadLocations = useCallback(async () => {
         setLoading(true);
         try {
             // First migrate and load from localStorage
-            const localData = migrateOldData();
+            const localLocations = migrateOldData();
+            setLocations(localLocations);
+
+            // Load folders locally
+            const localFolders = localStorage.getItem(FOLDERS_STORAGE_KEY);
+            if (localFolders) {
+                setFolders(JSON.parse(localFolders));
+            }
 
             // Try to sync with Supabase if user is logged in
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: cloudData, error } = await supabase
-                    .from('saved_locations')
-                    .select('*')
-                    .eq('user_id', user.id);
-
-                if (!error && cloudData) {
-                    // Merge cloud data with local
-                    const merged = [...localData];
-                    cloudData.forEach((cloudLoc: any) => {
-                        if (!merged.find(l => l.id === cloudLoc.id)) {
-                            merged.push({
-                                id: cloudLoc.id,
-                                title: cloudLoc.title,
-                                address: cloudLoc.address,
-                                lat: cloudLoc.lat,
-                                lng: cloudLoc.lng,
-                                url: cloudLoc.url || `geo:${cloudLoc.lat},${cloudLoc.lng}`,
-                                category: cloudLoc.category || 'other',
-                                type: cloudLoc.type || 'location',
-                                createdAt: cloudLoc.created_at,
-                                user_id: cloudLoc.user_id
-                            });
-                        }
-                    });
-                    setLocations(merged);
-                    localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(merged));
-                } else {
-                    setLocations(localData);
-                }
-            } else {
-                setLocations(localData);
+            if (session?.user) {
+                const mergedLocations = await syncLocationsWithSupabase(localLocations);
+                setLocations(mergedLocations);
+                localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(mergedLocations));
+                await syncFoldersWithSupabase();
             }
         } catch (e) {
             console.error('Error loading locations:', e);
-            setLocations(migrateOldData());
+            setLocations(migrateOldData()); // Fallback to local if cloud fails
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [session, syncLocationsWithSupabase, syncFoldersWithSupabase]);
 
     useEffect(() => {
         loadLocations();
@@ -139,6 +213,9 @@ export const useLocations = () => {
             if (e.key === LOCATIONS_STORAGE_KEY) {
                 const newData = e.newValue ? JSON.parse(e.newValue) : [];
                 setLocations(newData);
+            } else if (e.key === FOLDERS_STORAGE_KEY) {
+                const newData = e.newValue ? JSON.parse(e.newValue) : [];
+                setFolders(newData);
             }
         };
 
@@ -163,6 +240,8 @@ export const useLocations = () => {
             address?: string;
             category?: SavedLocation['category'];
             type?: 'location' | 'parking';
+            folder_id?: string;
+            street_line?: string;
         }
     ): Promise<SavedLocation | null> => {
         const now = new Date();
@@ -176,7 +255,19 @@ export const useLocations = () => {
                 const city = addr.city || addr.town || addr.village || addr.county || '';
 
                 // Strictly format as "Road Name Number, City" for precise global navigation
-                let streetInfo = road ? (number ? `${road} ${number}` : road) : '';
+                // Enhanced parsing for number
+                let streetInfo = '';
+                if (road) {
+                    if (number) streetInfo = `${road} ${number}`;
+                    else {
+                        // If no number in house_number, try to extract from display_name if it starts with digits
+                        const parts = (data.display_name || '').split(',').map((p: string) => p.trim());
+                        const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.includes(road));
+                        if (partWithNumber) streetInfo = partWithNumber;
+                        else streetInfo = road;
+                    }
+                }
+
                 if (streetInfo && city) {
                     streetInfo = `${streetInfo}, ${city}`;
                 }
@@ -205,7 +296,17 @@ export const useLocations = () => {
                 const number = addr.house_number || '';
                 const city = addr.city || addr.town || addr.village || addr.county || '';
 
-                let streetStr = road ? (number ? `${road} ${number}` : road) : '';
+                let streetStr = '';
+                if (road) {
+                    if (number) streetStr = `${road} ${number}`;
+                    else {
+                        // Fallback attempt to find number in text
+                        const firstPart = (data.display_name || '').split(',')[0];
+                        if (/\d/.test(firstPart)) streetStr = firstPart;
+                        else streetStr = road;
+                    }
+                }
+
                 if (streetStr && city) streetStr = `${streetStr}, ${city}`;
 
                 finalAddress = streetStr || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -215,7 +316,7 @@ export const useLocations = () => {
         }
 
         const newLocation: SavedLocation = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(), // Changed to crypto.randomUUID()
             title: finalTitle,
             address: finalAddress,
             lat,
@@ -224,22 +325,25 @@ export const useLocations = () => {
             url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(finalAddress || '')}`,
             category: options?.category || 'other',
             type: options?.type || 'location',
-            createdAt: now.toISOString()
+            createdAt: now.toISOString(),
+            folder_id: options?.folder_id,
+            street_line: options?.street_line, // Save new field
+            user_id: session?.user?.id
         };
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                newLocation.user_id = user.id;
+            if (session?.user) {
                 const { error } = await supabase.from('saved_locations').insert({
                     id: newLocation.id,
-                    user_id: user.id,
+                    user_id: newLocation.user_id,
                     title: newLocation.title,
                     address: newLocation.address,
                     lat: newLocation.lat,
                     lng: newLocation.lng,
                     url: newLocation.url,
-                    category: newLocation.category
+                    category: newLocation.category,
+                    folder_id: newLocation.folder_id,
+                    street_line: newLocation.street_line
                 });
                 if (error) throw error;
             }
@@ -267,18 +371,18 @@ export const useLocations = () => {
             toast({ title: '✅ تم حفظ الموقع محلياً' });
             return newLocation;
         }
-    }, [locations, toast]);
+    }, [locations, toast, session]);
 
     // Quick save parking
     const saveParking = useCallback(async (customLocation?: { lat: number, lng: number, address?: string, name?: string }): Promise<SavedLocation | null> => {
         return new Promise((resolve) => {
             const processLocation = async (latitude: number, longitude: number) => {
-                let streetAddress = customLocation?.address || 'موقف';
+                let streetAddress = customLocation?.address || 'Estacionamiento'; // Spanish name
 
                 // If address not provided, fetch it
                 if (!customLocation?.address) {
                     try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=es`); // Spanish language
                         const data = await res.json();
                         const addr = data.address || {};
                         const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
@@ -300,7 +404,7 @@ export const useLocations = () => {
                 });
 
                 toast({
-                    title: '🅿️ تم حفظ موقف السيارة',
+                    title: '🅿️ Estacionamiento guardado', // Spanish title
                     description: title
                 });
                 resolve(location);
@@ -310,7 +414,7 @@ export const useLocations = () => {
                 processLocation(customLocation.lat, customLocation.lng);
             } else {
                 if (!navigator.geolocation) {
-                    toast({ title: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
+                    toast({ title: 'El navegador no soporta geolocalización', variant: 'destructive' }); // Spanish message
                     resolve(null);
                     return;
                 }
@@ -319,7 +423,7 @@ export const useLocations = () => {
                     (pos) => processLocation(pos.coords.latitude, pos.coords.longitude),
                     (err) => {
                         toast({
-                            title: 'تعذر تحديد الموقع',
+                            title: 'No se pudo obtener la ubicación', // Spanish message
                             description: err.message,
                             variant: 'destructive'
                         });
@@ -342,12 +446,11 @@ export const useLocations = () => {
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
             // Sync with Supabase
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (session?.user) {
                 await supabase.from('saved_locations')
                     .update(updates)
                     .eq('id', id)
-                    .eq('user_id', user.id);
+                    .eq('user_id', session.user.id);
             }
 
             window.dispatchEvent(new Event('locations-updated'));
@@ -355,30 +458,39 @@ export const useLocations = () => {
         } catch (error) {
             console.error('Error updating location:', error);
         }
-    }, [locations, toast]);
+    }, [locations, toast, session]);
 
     // Delete location
     const deleteLocation = useCallback(async (id: string) => {
+        const previousLocations = [...locations]; // Backup for rollback
         try {
             const updated = locations.filter(loc => loc.id !== id);
             setLocations(updated);
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await supabase.from('saved_locations')
+            if (session?.user) {
+                const { error } = await supabase.from('saved_locations')
                     .delete()
                     .eq('id', id)
-                    .eq('user_id', user.id);
+                    .eq('user_id', session.user.id);
+
+                if (error) throw error;
             }
 
             window.dispatchEvent(new Event('locations-updated'));
             toast({ title: '🗑️ تم حذف الموقع' });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting location:', error);
+            setLocations(previousLocations); // Revert on error
+            localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(previousLocations));
+            toast({
+                title: 'فشل الحذف',
+                description: 'تعذر حذف الموقع من الخادم',
+                variant: 'destructive'
+            });
         }
-    }, [locations, toast]);
+    }, [locations, toast, session]);
 
     // Bulk Delete
     const deleteLocations = useCallback(async (ids: string[]) => {
@@ -388,12 +500,11 @@ export const useLocations = () => {
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (session?.user) {
                 await supabase.from('saved_locations')
                     .delete()
                     .in('id', ids)
-                    .eq('user_id', user.id);
+                    .eq('user_id', session.user.id);
             }
 
             window.dispatchEvent(new Event('locations-updated'));
@@ -401,7 +512,7 @@ export const useLocations = () => {
         } catch (error) {
             console.error('Error deleting locations:', error);
         }
-    }, [locations, toast]);
+    }, [locations, toast, session]);
 
     // Get only locations (not parking)
     const getLocationsOnly = useCallback(() => {
@@ -412,6 +523,49 @@ export const useLocations = () => {
     const getParkingOnly = useCallback(() => {
         return locations.filter(l => l.type === 'parking');
     }, [locations]);
+
+    // --- Folder Actions ---
+    const createFolder = useCallback(async (name: string, color: string = '#3b82f6', icon: string = 'folder') => {
+        const newFolder: LocationFolder = {
+            id: crypto.randomUUID(),
+            name,
+            color,
+            icon,
+            user_id: session?.user?.id
+        };
+
+        const updated = [...folders, newFolder];
+        setFolders(updated);
+        localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(updated));
+
+        if (session?.user) {
+            supabase.from('location_folders').insert([newFolder]).then(({ error }) => {
+                if (error) console.error('Failed to sync folder creation to Supabase', error);
+            });
+        }
+        return newFolder;
+    }, [folders, session]);
+
+    const deleteFolder = useCallback(async (id: string) => {
+        const updatedFolders = folders.filter(f => f.id !== id);
+        setFolders(updatedFolders);
+        localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(updatedFolders));
+
+        // Unlink locations from this folder locally
+        const updatedLocs = locations.map(l => l.folder_id === id ? { ...l, folder_id: undefined } : l);
+        setLocations(updatedLocs);
+        localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updatedLocs));
+
+        if (session?.user) {
+            supabase.from('location_folders').delete().eq('id', id).then(({ error }) => {
+                if (error) console.error('Failed to sync folder deletion to Supabase', error);
+            });
+            // Also update locations in DB to set folder_id null
+            supabase.from('saved_locations').update({ folder_id: null }).eq('folder_id', id).then(({ error }) => {
+                if (error) console.error('Failed to unlink locations from deleted folder in Supabase', error);
+            });
+        }
+    }, [folders, locations, session]);
 
     // === Active Parking Session Management ===
     const ACTIVE_PARKING_KEY = 'baraka_active_parking';
@@ -429,7 +583,7 @@ export const useLocations = () => {
     const startParkingSession = useCallback(async (): Promise<SavedLocation | null> => {
         return new Promise((resolve) => {
             if (!navigator.geolocation) {
-                toast({ title: 'المتصفح لا يدعم تحديد الموقع', variant: 'destructive' });
+                toast({ title: 'El navegador no soporta geolocalización', variant: 'destructive' }); // Spanish message
                 resolve(null);
                 return;
             }
@@ -437,10 +591,10 @@ export const useLocations = () => {
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     const { latitude, longitude } = pos.coords;
-                    let streetAddress = 'موقف السيارة';
+                    let streetAddress = 'Lugar de estacionamiento'; // Spanish name
 
                     try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=ar`);
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=es`); // Spanish language
                         const data = await res.json();
                         const addr = data.address || {};
                         const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
@@ -469,11 +623,11 @@ export const useLocations = () => {
                     setActiveParking(session);
                     localStorage.setItem(ACTIVE_PARKING_KEY, JSON.stringify(session));
 
-                    toast({ title: '🅿️ بدأ تتبع الموقف', description: streetAddress });
+                    toast({ title: '🅿️ Seguimiento de estacionamiento iniciado', description: streetAddress }); // Spanish message
                     resolve(session);
                 },
                 (err) => {
-                    toast({ title: 'تعذر تحديد الموقع', description: err.message, variant: 'destructive' });
+                    toast({ title: 'No se pudo obtener la ubicación', description: err.message, variant: 'destructive' }); // Spanish message
                     resolve(null);
                 },
                 { enableHighAccuracy: true }
@@ -482,7 +636,7 @@ export const useLocations = () => {
     }, [toast]);
 
     // Cancel active parking without saving
-    const cancelActiveParking = useCallback(() => {
+    const clearParking = useCallback(() => { // Renamed from cancelActiveParking
         setActiveParking(null);
         localStorage.removeItem(ACTIVE_PARKING_KEY);
     }, []);
@@ -493,8 +647,9 @@ export const useLocations = () => {
 
         const finalLocation: SavedLocation = {
             ...activeParking,
-            id: Date.now().toString(), // New permanent ID
-            title: customTitle || activeParking.title
+            id: crypto.randomUUID(), // New permanent ID
+            title: customTitle || activeParking.title,
+            user_id: session?.user?.id // Add user_id
         };
 
         // Add to locations list
@@ -505,17 +660,17 @@ export const useLocations = () => {
 
         // Sync with Supabase
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (session?.user) {
                 await supabase.from('saved_locations').insert({
                     id: finalLocation.id,
-                    user_id: user.id,
+                    user_id: finalLocation.user_id,
                     title: finalLocation.title,
                     address: finalLocation.address,
                     lat: finalLocation.lat,
                     lng: finalLocation.lng,
                     url: finalLocation.url,
-                    category: finalLocation.category
+                    category: finalLocation.category,
+                    folder_id: finalLocation.folder_id // Include folder_id
                 });
             }
         } catch (e) {
@@ -526,10 +681,11 @@ export const useLocations = () => {
         setActiveParking(null);
         localStorage.removeItem(ACTIVE_PARKING_KEY);
         window.dispatchEvent(new Event('locations-updated'));
-    }, [activeParking, locations]);
+    }, [activeParking, locations, session]);
 
     return {
         locations,
+        folders,
         loading,
         saveLocation,
         saveParking,
@@ -542,8 +698,9 @@ export const useLocations = () => {
         // Active Parking Session
         activeParking,
         startParkingSession,
-        cancelActiveParking,
-        finalizeActiveParking
+        finalizeActiveParking,
+        createFolder,
+        deleteFolder
     };
 };
 

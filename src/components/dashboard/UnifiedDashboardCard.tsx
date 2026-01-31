@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, CheckSquare, ShoppingCart, Target, ChevronLeft, Plus, Clock, ChevronRight } from 'lucide-react';
+import { Calendar, CheckSquare, ShoppingCart, Target, ChevronLeft, Plus, Clock, ChevronRight, Heart } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useShoppingList } from '@/hooks/useShoppingList';
 import { useHabits } from '@/hooks/useHabits';
+import { useNotesV2 } from '@/hooks/useNotesV2';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
@@ -17,37 +18,99 @@ interface UnifiedDashboardCardProps {
 
 type SlideType = 'agenda' | 'shopping' | 'goals' | 'projects' | 'appointment' | 'task';
 
+type SlideItem = {
+    id: string;
+    type: SlideType;
+    title: string;
+    subtitle?: string;
+    meta?: string;
+    icon: any;
+    progress?: number;
+    data: any;
+    gradient: string;
+    textColor: string;
+    accentColor: string;
+};
+
 export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOpenAdd, onOpenEvent, onOpenCalendar }) => {
     // Data Hooks
     const { tasks } = useTasks();
     const { appointments } = useAppointments();
     const { items: shoppingItems } = useShoppingList();
     const { habits } = useHabits();
+    const { notes } = useNotesV2(); // Fetch notes to find favorites
 
     // 1. Data Preparation
-    const slides = React.useMemo(() => {
-        const items: {
-            id: string;
-            type: SlideType;
-            title: string;
-            subtitle?: string;
-            meta?: string;
-            icon: any;
-            progress?: number;
-            data: any;
-            gradient: string;
-            textColor: string;
-            accentColor: string;
-        }[] = [];
+    const slides = React.useMemo<SlideItem[]>(() => {
+        // --- 1. Collect Favorite Slides ---
+        const favoriteSlides: SlideItem[] = [];
+        const favNotes = notes.filter(n => n.is_favorite);
 
-        // Agenda Items (Tasks + Appointments)
+        favNotes.forEach(note => {
+            // Advanced Parsing: Handle bullet points (- or *) and numbered lists (1.)
+            // Logic:
+            // 1. Split by newline
+            // 2. Filter empty lines
+            // 3. Check if line starts with a marker. If so, strip it.
+            // 4. Ensure line length is reasonable (> 3 chars) to avoid noise.
+
+            const rawLines = note.content.replace(/<[^>]*>?/gm, '\n').split('\n'); // Replace BRs with newlines first
+            const validItems: string[] = [];
+
+            rawLines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                // Regex for list markers:
+                const listMatch = trimmed.match(/^([-*•]|\d+[\.)])\s+(.*)/);
+
+                if (listMatch) {
+                    validItems.push(listMatch[2].trim()); // Push the content part
+                } else if (trimmed.length > 5) {
+                    // Also accept non-list lines if they look like substantial sentences
+                    validItems.push(trimmed);
+                }
+            });
+
+            if (validItems.length > 0) {
+                validItems.forEach((item, idx) => {
+                    favoriteSlides.push({
+                        id: `fav-${note.id}-${idx}`,
+                        type: 'goals',
+                        title: item,
+                        subtitle: note.title || 'من المفضلة',
+                        icon: Heart,
+                        data: note,
+                        gradient: "from-rose-500 to-pink-600",
+                        textColor: "text-white",
+                        accentColor: "bg-white/20"
+                    });
+                });
+            } else {
+                // If just title
+                favoriteSlides.push({
+                    id: `fav-${note.id}`,
+                    type: 'goals',
+                    title: note.title,
+                    subtitle: 'ملاحظة مميزة',
+                    icon: Heart,
+                    data: note,
+                    gradient: "from-rose-500 to-pink-600",
+                    textColor: "text-white",
+                    accentColor: "bg-white/20"
+                });
+            }
+        });
+
+        // --- 2. Collect Standard Items ---
+        const standardItems: SlideItem[] = [];
         const today = new Date().toISOString().split('T')[0];
 
         // Appointments
         appointments
             .filter(a => a.date === today)
             .forEach(a => {
-                items.push({
+                standardItems.push({
                     id: `appt-${a.id}`,
                     type: 'appointment',
                     title: a.title,
@@ -65,7 +128,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
         tasks
             .filter(t => t.progress < 100 && t.deadline?.startsWith(today))
             .forEach(t => {
-                items.push({
+                standardItems.push({
                     id: `task-${t.id}`,
                     type: 'task',
                     title: t.title,
@@ -84,7 +147,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             .filter(i => !i.completed)
             .slice(0, 5) // Limit just in case
             .forEach(i => {
-                items.push({
+                standardItems.push({
                     id: `shop-${i.id}`,
                     type: 'shopping',
                     title: i.text,
@@ -101,7 +164,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
         habits
             .slice(0, 3)
             .forEach(h => {
-                items.push({
+                standardItems.push({
                     id: `habit-${h.id}`,
                     type: 'goals',
                     title: h.name,
@@ -120,7 +183,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             .filter(t => t.type === 'project' && t.progress < 100)
             .slice(0, 3)
             .forEach(p => {
-                items.push({
+                standardItems.push({
                     id: `proj-${p.id}`,
                     type: 'projects',
                     title: p.title,
@@ -134,11 +197,9 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                 });
             });
 
-        // Productivity Items (Focus & Reading from Tasks/Habits)
-        // We can simulate productivity cues or specific tasks tagged as 'focus'
-        // For now, let's mix in "Deep Work" suggestions if user has many tasks
+        // Productivity Items
         if (tasks.filter(t => t.progress < 100).length > 3) {
-            items.push({
+            standardItems.push({
                 id: 'prod-focus',
                 type: 'goals',
                 title: 'جلسة تركيز عميق',
@@ -151,9 +212,15 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             });
         }
 
-        // Empty State
-        if (items.length === 0) {
-            items.push({
+        // --- 3. Interleave Logic ---
+        // Strategy: Start with standard items. Insert one favorite item after every 2 standard items.
+        // This ensures the "intermittent" display style.
+
+        const finalSlides: SlideItem[] = [];
+
+        // Emtpy States
+        if (standardItems.length === 0 && favoriteSlides.length === 0) {
+            return [{
                 id: 'empty',
                 type: 'agenda',
                 title: 'لا يوجد مهام حالياً',
@@ -163,11 +230,48 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                 gradient: "from-slate-700 to-slate-800",
                 textColor: "text-white",
                 accentColor: "bg-white/10"
-            });
+            }];
         }
 
-        return items;
-    }, [tasks, appointments, shoppingItems, habits]);
+        // If no standard, just return favorites
+        if (standardItems.length === 0) return favoriteSlides;
+
+        // Interleave loop
+        let favIndex = 0;
+        let stdIndex = 0;
+        const ratio = 2; // Ratio: 2 standard items -> 1 favorite note
+
+        while (stdIndex < standardItems.length) {
+            // 1. Push batch of standard items
+            for (let i = 0; i < ratio && stdIndex < standardItems.length; i++) {
+                finalSlides.push(standardItems[stdIndex]);
+                stdIndex++;
+            }
+
+            // 2. Push 1 favorite item (if any exist)
+            // Use modulo to cycle through favorites if we run out but still have standard items,
+            // or just stop if user prefers strictly "what is available".
+            // Since user said "intermittent", let's cycle them to keep the vibe alive.
+            if (favoriteSlides.length > 0) {
+                finalSlides.push(favoriteSlides[favIndex % favoriteSlides.length]);
+                favIndex++;
+            }
+        }
+
+        // If we have "leftover" favorites that were not shown because standard list finished?
+        // Add a few more at the end just to be sure, or rely on the cycle. 
+        // Logic above only loops while stdIndex < standardItems.length.
+        // It's safer to ensure at least some favorites are shown if standard list is short.
+        if (standardItems.length < 3 && favoriteSlides.length > 0) {
+            // If very short standard list, append remaining distinct favorites
+            while (favIndex < favoriteSlides.length) {
+                finalSlides.push(favoriteSlides[favIndex]);
+                favIndex++;
+            }
+        }
+
+        return finalSlides;
+    }, [tasks, appointments, shoppingItems, habits, notes]); // Added 'notes' to dependency array
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);

@@ -1,5 +1,5 @@
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
-import { FileText, Clock, Pin, RotateCcw, Trash, Trash2, Bookmark } from 'lucide-react';
+import { FileText, Clock, Pin, RotateCcw, Trash, Trash2, Bookmark, Heart } from 'lucide-react';
 import React, { useState } from 'react';
 import {
     AlertDialog,
@@ -31,7 +31,7 @@ export const NoteList: React.FC<NoteListProps> = ({
     selectedIds = new Set(),
     onToggleSelection
 }) => {
-    const { notes, isLoading, deleteNote, restoreNote, permanentDelete } = useNotesV2(folderId, searchQuery);
+    const { notes, isLoading, deleteNote, restoreNote, permanentDelete, toggleFavorite } = useNotesV2(folderId, searchQuery);
     const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'soft' | 'permanent' } | null>(null);
 
     if (isLoading) return <div className="p-8 text-center text-gray-400">جاري التحميل...</div>;
@@ -86,6 +86,16 @@ export const NoteList: React.FC<NoteListProps> = ({
                             {note.title || 'بدون عنوان'}
                         </h3>
                         <div className="flex items-center gap-1">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite({ id: note.id, isFavorite: !note.is_favorite });
+                                }}
+                                className={`p-1 rounded-full transition-colors ${note.is_favorite ? 'text-rose-500 bg-rose-50' : 'text-gray-300 hover:text-rose-400'}`}
+                                title={note.is_favorite ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+                            >
+                                <Heart className={`w-4 h-4 ${note.is_favorite ? 'fill-current' : ''}`} />
+                            </button>
                             {note.is_pinned && <Pin className="w-4 h-4 text-indigo-500 rotate-45" />}
                         </div>
                     </div>

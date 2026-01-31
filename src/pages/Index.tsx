@@ -17,7 +17,7 @@ import PageLoading from '@/components/PageLoading';
 const FinancialController = lazy(() => import('@/components/agents/FinancialController'));
 const LogisticsManager = lazy(() => import('@/components/agents/LogisticsManager'));
 const CalendarSection = lazy(() => import('@/components/CalendarSection'));
-const InteractiveMap = lazy(() => import('@/components/InteractiveMap'));
+import InteractiveMap from '@/components/InteractiveMap';
 const SettingsPanel = lazy(() => import('@/components/SettingsPanel'));
 const PrayerManager = lazy(() => import('@/components/PrayerManager'));
 
@@ -414,9 +414,7 @@ const Index = () => {
 
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
                 <ErrorBoundary>
-                  <Suspense fallback={<PageLoading message="جاري تحميل الخريطة..." />}>
-                    <InteractiveMap />
-                  </Suspense>
+                  <InteractiveMap />
                 </ErrorBoundary>
               </TabsContent>
 

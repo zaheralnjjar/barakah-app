@@ -16,33 +16,44 @@ export interface LocationInfo {
  * Reverse geocode coordinates to get a standardized address.
  * Prioritizes "Road + House Number".
  */
-export const reverseGeocodeLimit = async (lat: number, lng: number): Promise<string> => {
+export const reverseGeocodeLimit = async (lat: number, lng: number): Promise<{ name: string, details: string }> => {
     try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
+        // Fetch detailed address in local language (to get 'Avenida' etc) and Arabic
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
         const data = await response.json();
 
         if (data.address) {
-            const road = data.address.road || '';
+            let road = data.address.road || '';
             const houseNumber = data.address.house_number || '';
             const suburb = data.address.suburb || data.address.neighbourhood || '';
+            const city = data.address.city || data.address.town || data.address.state || '';
 
-            // Format: Street 123
-            let formatted = `${road} ${houseNumber}`.trim();
+            // Clean common prefixes (Case insensitive)
+            const prefixesToRemove = ['Avenida', 'Av.', 'Av', 'Calle', 'Routa', 'Camino', 'Boulevard', 'Bv.'];
+            const roadLower = road.toLowerCase();
 
-            // If empty, stick to suburb/neighborhood
-            if (!formatted) formatted = suburb;
-
-            // If still empty, display name (truncated)
-            if (!formatted && data.display_name) {
-                formatted = data.display_name.split(',')[0];
+            for (const prefix of prefixesToRemove) {
+                if (roadLower.startsWith(prefix.toLowerCase())) {
+                    road = road.substring(prefix.length).trim();
+                    break;
+                }
             }
 
-            return formatted || 'موقع محدد';
+            // Primary Name: Street + Number (e.g., "Cordoba 1234")
+            let name = `${road} ${houseNumber}`.trim();
+            if (!name) name = suburb;
+            if (!name) name = city;
+            if (!name) name = data.display_name?.split(',')[0] || 'موقع محدد';
+
+            // Details: City, Suburb (Context)
+            let details = [suburb, city].filter(Boolean).join('، ');
+
+            return { name, details };
         }
-        return 'موقع محدد';
+        return { name: 'موقع محدد', details: '' };
     } catch (error) {
         console.error("Geocoding error:", error);
-        return 'موقع غير معروف';
+        return { name: 'موقع غير معروف', details: '' };
     }
 };
 

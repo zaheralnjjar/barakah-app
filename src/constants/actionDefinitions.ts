@@ -46,6 +46,8 @@ export const AVAILABLE_ACTIONS = [
     { id: 'timer_60', name: 'مؤقت ساعة', icon: Clock, iconName: 'Clock', category: 'timer', description: 'مؤقت لمدة ساعة' },
 
     // ===== الموقع والخرائط =====
+    { id: 'loc_add_new', name: 'الموقع بالتفصيل', icon: MapPin, iconName: 'MapPin', category: 'location', description: 'فتح نافذة إضافة موقع جديد بالتفصيل' },
+    { id: 'loc_direct_detailed', name: 'الموقع المباشر', icon: Navigation, iconName: 'Navigation', category: 'location', description: 'فتح نافذة الموقع المباشر فوراً' },
     { id: 'loc_save_current', name: 'حفظ موقعي', icon: MapPin, iconName: 'MapPin', category: 'location', description: 'حفظ الموقع الحالي' },
     { id: 'loc_save_parking', name: 'حفظ الموقف', icon: Navigation, iconName: 'Navigation', category: 'location', description: 'حفظ مكان ركن السيارة' },
     { id: 'loc_find_car', name: 'أين السيارة؟', icon: Navigation, iconName: 'Navigation', category: 'location', description: 'الملاحة لموقع السيارة' },

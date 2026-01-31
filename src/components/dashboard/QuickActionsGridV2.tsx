@@ -104,7 +104,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         { id: 'event-default', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200', actionId: 'event' },
         { id: 'timer-default', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200', actionId: 'timer' },
         { id: 'expense-default', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200', actionId: 'expense' },
-        { id: 'my-locations-default', label: 'مواقعي', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'open_locations_grid' },
+        { id: 'location-default', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'location' },
         { id: 'shopping-default', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200', actionId: 'shopping' },
         { id: 'settings-default', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200', actionId: 'sys_settings' },
     ];
@@ -137,7 +137,27 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
         else if (isEvent) setShowEventMenu(!showEventMenu);
         else if (isLocation) setShowLocationMenu(!showLocationMenu);
         else if (isMyLocations) setShowLocationsGrid(true);
+        else if (action.id === 'loc_direct_detailed' || action.actionId === 'loc_direct_detailed') {
+            window.dispatchEvent(new Event('open-location-shortcut-dialog'));
+        }
         else if (action.actionId) executeShortcut(action.actionId);
+    };
+
+    const handleLongPress = (action: any) => {
+        if (action.id === 'loc_direct_detailed' || action.actionId === 'loc_direct_detailed') {
+            // Planificar Ruta (Plan Route) -> Open Google Maps Directions
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const url = `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}`;
+                    window.open(url, '_blank');
+                });
+            } else {
+                window.open('https://www.google.com/maps', '_blank');
+            }
+            toast({ title: 'رسم المسار', description: 'جاري فتح الخرائط...' });
+        } else if (action.actionId === 'open_locations_grid') {
+            onQuickParking?.();
+        }
     };
 
     return (
@@ -156,7 +176,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                             <QuickActionButton
                                 action={action}
                                 onClick={() => handleActionClick(action)}
-                                onLongPress={isMyLocations ? onQuickParking : undefined}
+                                onLongPress={() => handleLongPress(action)}
                             />
 
                             {/* Unified Floating Menu Logic */}
@@ -184,6 +204,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                                     ))}
 
                                     {isLocation && [
+                                        { icon: Map, action: () => { setShowLocationMenu(false); navigate('/locations'); }, color: 'bg-emerald-500 text-white shadow-emerald-200' },
                                         { icon: MapPin, action: () => { setShowLocationMenu(false); setShowSavedLocations(true); }, color: 'bg-blue-500 text-white shadow-blue-200' },
                                         { icon: Navigation, action: () => { setShowLocationMenu(false); onQuickParking?.(); }, color: 'bg-orange-500 text-white shadow-orange-200' }
                                     ].map((item, idx) => (
@@ -221,12 +242,13 @@ const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onCl
         <button
             {...handlers}
             className={cn(
-                "flex items-center justify-center py-2.5 rounded-xl transition-all active:scale-95 shadow-md w-full h-full min-h-[50px]",
+                "flex flex-col items-center justify-center p-1 rounded-xl transition-all active:scale-95 shadow-md w-full h-[60px] relative overflow-hidden",
                 action.color,
                 "border-b-2 border-black/10"
             )}
         >
-            <span className={cn("text-[10px] md:text-xs font-black tracking-wide", "text-[9px]")} style={{ fontFamily: 'Cairo, sans-serif' }}>
+            <span className={cn("text-[11px] font-black tracking-wide leading-tight text-center w-full px-0.5 max-h-[2.4em] overflow-hidden")} style={{ fontFamily: 'Cairo, sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                {action.icon ? <action.icon className="w-6 h-6 mb-1" /> : null}
                 {action.label}
             </span>
         </button>

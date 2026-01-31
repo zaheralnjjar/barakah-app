@@ -198,8 +198,15 @@ export const handleShortcut = async (shortcutType: string): Promise<void> => {
     }
 
     switch (shortcutType) {
-        case 'save-location':
-            await handleSaveLocation();
+        case 'loc_add_new':
+            window.dispatchEvent(new Event('open-add-location-dialog'));
+            break;
+        case 'save-location': // Legacy
+        case 'loc_save_current':
+            window.dispatchEvent(new Event('action-save-current-location'));
+            break;
+        case 'loc_save_parking':
+            window.dispatchEvent(new Event('action-save-parking'));
             break;
         case 'dollar-rate':
             await handleDollarRate();
@@ -208,6 +215,7 @@ export const handleShortcut = async (shortcutType: string): Promise<void> => {
             await handlePrayerTimes();
             break;
         case 'saved-locations':
+        case 'nav_map':
             window.dispatchEvent(new Event('open-saved-locations'));
             break;
         default:

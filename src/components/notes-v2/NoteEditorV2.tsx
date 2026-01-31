@@ -92,6 +92,9 @@ interface NoteEditorV2Props {
     isRecording?: boolean;
     onRecordingClick?: () => void;
     voiceTranscript?: string;
+    voiceTranscript?: string;
+    toolbarPosition?: 'top' | 'bottom';
+    isMobile?: boolean;
 }
 
 export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
@@ -108,7 +111,9 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     folders,
     isRecording,
     onRecordingClick,
-    voiceTranscript
+    voiceTranscript,
+    toolbarPosition = 'top',
+    isMobile = false
 }) => {
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
@@ -250,23 +255,25 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 rounded-3xl overflow-hidden border border-white shadow-xl">
-            {/* Toolbar Section */}
-            <div className="px-4 pt-4 pb-2 bg-gradient-to-b from-white/80 to-transparent flex items-start gap-2">
-                <div className="flex-1 overflow-x-auto custom-scrollbar pb-2">
-                    <EditorToolbar
-                        editor={editor}
-                        onExport={handleExport}
-                        onOpenTemplates={() => setShowTemplates(true)}
-                        folderId={folderId}
-                        onFolderChange={onFolderChange}
-                        folders={folders}
-                        backgroundColor={backgroundColor}
-                        onBackgroundColorChange={onBackgroundColorChange}
-                        isRecording={isRecording}
-                        onRecordingClick={onRecordingClick}
-                    />
+            {/* Toolbar Section - Top Position */}
+            {toolbarPosition === 'top' && (
+                <div className="px-4 pt-4 pb-2 bg-gradient-to-b from-white/80 to-transparent flex items-start gap-2 shrink-0 z-10">
+                    <div className="flex-1 overflow-x-auto custom-scrollbar pb-2">
+                        <EditorToolbar
+                            editor={editor}
+                            onExport={handleExport}
+                            onOpenTemplates={() => setShowTemplates(true)}
+                            folderId={folderId}
+                            onFolderChange={onFolderChange}
+                            folders={folders}
+                            backgroundColor={backgroundColor}
+                            onBackgroundColorChange={onBackgroundColorChange}
+                            isRecording={isRecording}
+                            onRecordingClick={onRecordingClick}
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Editor Area */}
             <div
@@ -336,6 +343,26 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
                 </div>
             </div>
+
+            {/* Toolbar Section - Bottom Position (Sticky) */}
+            {toolbarPosition === 'bottom' && (
+                <div className="px-2 py-2 bg-white border-t border-gray-100 flex items-center gap-2 shrink-0 z-20 sticky bottom-0 safe-area-bottom">
+                    <div className="flex-1 overflow-x-auto custom-scrollbar no-scrollbar">
+                        <EditorToolbar
+                            editor={editor}
+                            onExport={handleExport}
+                            onOpenTemplates={() => setShowTemplates(true)}
+                            folderId={folderId}
+                            onFolderChange={onFolderChange}
+                            folders={folders}
+                            backgroundColor={backgroundColor}
+                            onBackgroundColorChange={onBackgroundColorChange}
+                            isRecording={isRecording}
+                            onRecordingClick={onRecordingClick}
+                        />
+                    </div>
+                </div>
+            )}
 
             <TemplatesGallery
                 isOpen={showTemplates}

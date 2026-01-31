@@ -21,6 +21,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { MapsSettingsDialog } from './MapsSettingsDialog';
 
 export const ShortcutDialogs = () => {
     const { toast } = useToast();
@@ -34,6 +35,7 @@ export const ShortcutDialogs = () => {
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
     const [showExportConfirm, setShowExportConfirm] = useState(false);
+    const [showAddLocation, setShowAddLocation] = useState(false);
 
     // Auto-calculate duration
     useEffect(() => {
@@ -90,12 +92,16 @@ export const ShortcutDialogs = () => {
 
         // window.addEventListener('open-distraction-dialog', handleOpenDistraction);
         window.addEventListener('open-medical-profile', handleOpenMedical);
+        window.addEventListener('open-medical-profile', handleOpenMedical);
         window.addEventListener('open-appointment-dialog', handleOpenAppointment);
+        window.addEventListener('open-add-location-dialog', () => setShowAddLocation(true));
 
         return () => {
             // window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
             window.removeEventListener('open-medical-profile', handleOpenMedical);
+            window.removeEventListener('open-medical-profile', handleOpenMedical);
             window.removeEventListener('open-appointment-dialog', handleOpenAppointment);
+            window.removeEventListener('open-add-location-dialog', () => setShowAddLocation(true));
         };
     }, []);
 
@@ -562,6 +568,7 @@ export const ShortcutDialogs = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <MapsSettingsDialog open={showAddLocation} onOpenChange={setShowAddLocation} initialAddMode={true} />
         </>
     );
 };

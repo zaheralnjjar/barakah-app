@@ -274,6 +274,14 @@ export const useShortcutExecution = (props: {
                 break;
 
             // ===== الموقع (Location) =====
+            case 'loc_add_new':
+                window.dispatchEvent(new Event('open-add-location-dialog'));
+                break;
+
+            case 'loc_direct_detailed':
+                window.dispatchEvent(new Event('open-location-shortcut-dialog'));
+                break;
+
             case 'loc_save_current':
             case 'save_location_current':
                 if (navigator.geolocation) {

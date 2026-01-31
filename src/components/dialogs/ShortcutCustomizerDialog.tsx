@@ -138,6 +138,8 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
         setPlacement('shortcuts_grid');
     };
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     // Save handler
     const handleSave = async () => {
         if (!customName.trim()) {
@@ -145,33 +147,41 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
             return;
         }
 
-        const shortcutData: NewCustomShortcut = {
-            custom_name: customName.trim(),
-            custom_icon: customIcon,
-            icon_color: iconColor,
-            // Map specific actions to legacy types for execution compatibility
-            shortcut_type:
-                (shortcutType === 'action' && clickActionId === 'navigate_to_location') ? 'navigation' :
-                    (shortcutType === 'action' && clickActionId === 'save_parking') ? 'save_parking' :
-                        (shortcutType === 'action' && clickActionId === 'save_location_current') ? 'save_location' :
-                            shortcutType,
-            placement,
-            click_action_id: clickActionId || undefined,
-            long_press_action_id: longPressActionId || undefined,
-            url: shortcutType === 'url' ? url : undefined,
-            location_lat: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLat ? parseFloat(navLat) : undefined,
-            location_lng: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLng ? parseFloat(navLng) : undefined,
-            order_index: editingShortcut?.order_index ?? shortcuts.length
-        };
+        setIsSubmitting(true);
+        try {
+            const shortcutData: NewCustomShortcut = {
+                custom_name: customName.trim(),
+                custom_icon: customIcon,
+                icon_color: iconColor,
+                // Map specific actions to legacy types for execution compatibility
+                shortcut_type:
+                    (shortcutType === 'action' && clickActionId === 'navigate_to_location') ? 'navigation' :
+                        (shortcutType === 'action' && clickActionId === 'save_parking') ? 'save_parking' :
+                            (shortcutType === 'action' && clickActionId === 'save_location_current') ? 'save_location' :
+                                shortcutType,
+                placement,
+                click_action_id: clickActionId || undefined,
+                long_press_action_id: longPressActionId || undefined,
+                url: shortcutType === 'url' ? url : undefined,
+                location_lat: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLat ? parseFloat(navLat) : undefined,
+                location_lng: (shortcutType === 'action' && clickActionId === 'navigate_to_location') && navLng ? parseFloat(navLng) : undefined,
+                order_index: editingShortcut?.order_index ?? shortcuts.length
+            };
 
-        if (editingShortcut) {
-            await updateShortcut(editingShortcut.id, shortcutData);
-        } else {
-            await addShortcut(shortcutData);
+            if (editingShortcut) {
+                await updateShortcut(editingShortcut.id, shortcutData);
+            } else {
+                await addShortcut(shortcutData);
+            }
+
+            resetForm();
+            onOpenChange(false);
+        } catch (error) {
+            console.error('Save shortcut error:', error);
+            // Toast is handled in hook, but this ensures catch block works
+        } finally {
+            setIsSubmitting(false);
         }
-
-        resetForm();
-        onOpenChange(false);
     };
 
 
@@ -546,9 +556,18 @@ export const ShortcutCustomizerDialog: React.FC<ShortcutCustomizerDialogProps> =
                             </Button>
                         )}
                     </div>
-                    <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
-                        <Plus className="w-4 h-4 ml-2" />
-                        {editingShortcut ? 'حفظ التعديلات' : 'إنشاء الاختصار'}
+                    <Button onClick={handleSave} disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 min-w-[140px]">
+                        {isSubmitting ? (
+                            <>
+                                <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                                جاري الحفظ...
+                            </>
+                        ) : (
+                            <>
+                                <Plus className="w-4 h-4 ml-2" />
+                                {editingShortcut ? 'حفظ التعديلات' : 'إنشاء الاختصار'}
+                            </>
+                        )}
                     </Button>
                 </div>
             </DialogContent>

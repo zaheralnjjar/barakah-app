@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Navigation, Share2, Edit2, Trash2, CheckSquare, Plus, Globe, Search, X, Locate, Loader2 } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
+import { LocationIconPicker, getLocationIconComponent } from '@/components/LocationIconPicker';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Share } from '@capacitor/share';
@@ -11,13 +12,21 @@ import { Share } from '@capacitor/share';
 interface MapsSettingsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    initialAddMode?: boolean;
 }
 
-export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogProps) {
+export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsSettingsDialogProps) {
     const { locations, deleteLocation, deleteLocations, updateLocation, saveLocation } = useLocations();
     const { toast } = useToast();
     const [editingResource, setEditingResource] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
+
+    useEffect(() => {
+        if (open && initialAddMode) {
+            setEditingResource({ category: 'other', lat: 0, lng: 0 });
+            setIsEditOpen(true);
+        }
+    }, [open, initialAddMode]);
 
     // Sharing State
     const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set());
@@ -32,8 +41,9 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
         { id: 'other', label: 'آخر', icon: '📍' },
     ];
 
+    // Helper to get icon
     const getCategoryIcon = (catId?: string) => {
-        return LOCATION_CATEGORIES.find(c => c.id === catId)?.icon || '📍';
+        return getLocationIconComponent(catId || 'other');
     };
 
     // Google Maps URL Parser
@@ -77,7 +87,8 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
             }
             await saveLocation(editingResource.title, parseFloat(editingResource.lat), parseFloat(editingResource.lng), {
                 category: editingResource.category || 'other',
-                address: editingResource.address || ''
+                address: editingResource.address || '',
+                street_line: editingResource.street_line || ''
             });
         }
         setIsEditOpen(false);
@@ -248,23 +259,33 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
                                             value={editingResource.title || ''}
                                             onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
                                             className="text-right"
-                                            placeholder="المنزل، العمل..."
+                                            placeholder="المنزل، العمل... (اختياري)"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold block text-right">التصنيف</label>
-                                        <select
-                                            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                            value={editingResource.category || 'other'}
-                                            onChange={(e) => setEditingResource({ ...editingResource, category: e.target.value })}
-                                            dir="rtl"
-                                        >
-                                            {LOCATION_CATEGORIES.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
-                                            ))}
-                                        </select>
+                                        <label className="text-sm font-bold block text-right mb-1">التصنيف</label>
+                                        <div className="w-full">
+                                            <LocationIconPicker
+                                                selectedIconId={editingResource.category || 'other'}
+                                                onSelect={(iconId) => setEditingResource({ ...editingResource, category: iconId })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold block text-right">تفاصيل العنوان (الشارع، المبنى)</label>
+                                    <Input
+                                        value={editingResource.street_line || ''}
+                                        onChange={(e) => setEditingResource({ ...editingResource, street_line: e.target.value })}
+                                        className={`text-right ${(!editingResource.street_line || !/\d/.test(editingResource.street_line)) ? 'border-amber-400 bg-amber-50' : ''}`}
+                                        placeholder="شارع الملك فهد، مبنى 5..."
+                                        dir="rtl"
+                                    />
+                                    {(!editingResource.street_line || !/\d/.test(editingResource.street_line)) && (
+                                        <p className="text-[10px] text-amber-600 font-bold mt-1">⚠️ يرجى التأكد من كتابة رقم المبنى</p>
+                                    )}
+                                </div>
+
 
                                 <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                     <p className="text-xs font-bold text-gray-500 mb-2">أدوات تحديد الموقع</p>
@@ -278,13 +299,44 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
                                                 toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
                                                 return;
                                             }
-                                            navigator.geolocation.getCurrentPosition((pos) => {
-                                                setEditingResource({
-                                                    ...editingResource,
-                                                    lat: pos.coords.latitude,
-                                                    lng: pos.coords.longitude
-                                                });
-                                                toast({ title: "تم تحديد موقعك الحالي" });
+                                            navigator.geolocation.getCurrentPosition(async (pos) => {
+                                                const lat = pos.coords.latitude;
+                                                const lng = pos.coords.longitude;
+                                                let addressStr = '';
+                                                let addressSearchStr = '';
+
+                                                try {
+                                                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&addressdetails=1`);
+                                                    const data = await res.json();
+                                                    if (data) {
+                                                        addressStr = data.display_name;
+                                                        const addr = data.address || {};
+                                                        const road = addr.road || addr.street || addr.pedestrian || '';
+                                                        const number = addr.house_number || '';
+
+                                                        let refinedStr = '';
+                                                        if (number) refinedStr = `${road} ${number}`;
+                                                        else {
+                                                            const parts = (data.display_name || '').split(',');
+                                                            const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.includes(road));
+                                                            refinedStr = partWithNumber || road;
+                                                        }
+                                                        addressSearchStr = refinedStr;
+                                                    }
+                                                } catch (e) { console.error(e); }
+
+                                                setEditingResource(prev => ({
+                                                    ...prev,
+                                                    lat: lat,
+                                                    lng: lng,
+                                                    // Don't overwrite title if it exists, or suggest generic name if empty
+                                                    title: prev.title || 'موقع جديد',
+                                                    street_line: addressSearchStr, // Put detailed Addess here
+                                                    address: addressStr, // Full raw address string
+                                                    address_search: addressSearchStr,
+                                                    url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+                                                }));
+                                                toast({ title: "تم تحديد موقعك وملء البيانات تلقائياً" });
                                             });
                                         }}
                                         className="w-full gap-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 h-9 mb-2"
@@ -326,13 +378,22 @@ export function MapsSettingsDialog({ open, onOpenChange }: MapsSettingsDialogPro
                                                                             div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b last:border-0 text-right text-xs';
                                                                             div.innerHTML = `<div class="font-bold text-gray-700">${(item.display_name || '').split(',').slice(0, 2).join(',')}</div><div class="text-[10px] text-gray-400 truncate">${item.display_name}</div>`;
                                                                             div.onclick = () => {
+                                                                                const lat = parseFloat(item.lat);
+                                                                                const lng = parseFloat(item.lon);
+                                                                                const addr = item.address || {};
+                                                                                const road = addr.road || addr.street || addr.pedestrian || '';
+                                                                                const number = addr.house_number || '';
+                                                                                const searchStr = road ? (number ? `${road} ${number}` : road) : item.display_name.split(',')[0];
+
                                                                                 setEditingResource(prev => ({
                                                                                     ...prev,
-                                                                                    lat: parseFloat(item.lat),
-                                                                                    lng: parseFloat(item.lon),
-                                                                                    title: prev.title || item.display_name.split(',')[0],
+                                                                                    lat: lat,
+                                                                                    lng: lng,
+                                                                                    title: prev.title || '', // Keep existing title or empty
+                                                                                    street_line: searchStr, // Put detailed address here
                                                                                     address: item.display_name,
-                                                                                    address_search: item.display_name.split(',')[0]
+                                                                                    address_search: searchStr,
+                                                                                    url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
                                                                                 }));
                                                                                 resultsDiv.innerHTML = '';
                                                                             };
