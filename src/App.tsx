@@ -41,7 +41,7 @@ import LocationsPage from "@/pages/LocationsPage";
 import { MultiActionFAB } from '@/components/MultiActionFAB';
 import { isAndroid } from '@/utils/platformDetection';
 import { useState } from 'react';
-import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
+import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 
 const queryClient = new QueryClient();
 
@@ -148,31 +148,51 @@ const App = () => {
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
 
-  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  // Global QuickNote Dialog handling
+  const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
+  const [quickNoteTag, setQuickNoteTag] = useState<string | undefined>(undefined);
+  const [quickNoteFolder, setQuickNoteFolder] = useState<string | null>(null);
+  const [quickNoteAutoRecord, setQuickNoteAutoRecord] = useState(false);
+  const [quickNoteMode, setQuickNoteMode] = useState<'note' | 'activity'>('note');
 
-  // Global Handlers (lifted from CoreLayout if needed, or simply dispatch events)
+  useEffect(() => {
+    const handleOpenQuickNote = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setQuickNoteTag(detail?.tag || (detail?.type === 'brain_dump' ? 'تفريغ' : undefined));
+      setQuickNoteFolder(detail?.folderId || null);
+      setQuickNoteAutoRecord(detail?.autoStartRecording || false);
+      setQuickNoteMode(detail?.mode || 'note');
+      setIsQuickNoteOpen(true);
+    };
+
+    const handleOpenDistraction = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Distraction Logic
+      setQuickNoteMode('activity');
+      setQuickNoteFolder(null);
+      setQuickNoteAutoRecord(false);
+      setIsQuickNoteOpen(true);
+    };
+
+    window.addEventListener('open-quick-note', handleOpenQuickNote);
+    // Legacy support if anything still uses open-global-voice-recorder
+    window.addEventListener('open-global-voice-recorder', (e) => {
+      window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', autoStartRecording: true } }));
+    });
+    window.addEventListener('open-distraction-dialog', handleOpenDistraction);
+
+    return () => {
+      window.removeEventListener('open-quick-note', handleOpenQuickNote);
+      window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
+    }
+  }, []);
+
   const handleAddNote = () => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note' } }));
   const handleVoiceNote = () => {
-    setIsVoiceMode(true);
-    setShowVoiceRecorder(true);
+    window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', autoStartRecording: true } }));
   };
   const handleAddAppointment = () => window.dispatchEvent(new Event('open-appointment-dialog'));
   const handleAddDistraction = () => window.dispatchEvent(new Event('open-distraction-dialog'));
-
-  // Global Listeners for Notes/Voice
-  useEffect(() => {
-    const handleOpenVoice = () => {
-      setIsVoiceMode(true);
-      setShowVoiceRecorder(true);
-    };
-
-    window.addEventListener('open-global-voice-recorder', handleOpenVoice);
-
-    return () => {
-      window.removeEventListener('open-global-voice-recorder', handleOpenVoice);
-    };
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -228,10 +248,13 @@ const App = () => {
             )}
 
             {/* Global Note Dialog for Voice/Quick Notes */}
-            <CreateNoteDialog
-              isOpen={showVoiceRecorder}
-              onClose={() => setShowVoiceRecorder(false)}
-              autoStartRecording={isVoiceMode}
+            <QuickNoteDialog
+              isOpen={isQuickNoteOpen}
+              onClose={() => setIsQuickNoteOpen(false)}
+              defaultTag={quickNoteTag}
+              initialMode={quickNoteMode}
+              initialFolderId={quickNoteFolder}
+              autoStartRecording={quickNoteAutoRecord}
             />
           </HashRouter>
         </ErrorBoundary>

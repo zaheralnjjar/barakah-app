@@ -1,4 +1,5 @@
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import React from 'react';
 import { Editor } from '@tiptap/react';
 import {
@@ -23,7 +24,13 @@ import {
     Italic,
     Underline,
     Strikethrough,
-    Eraser
+    Check,
+    FolderOpen,
+    PaintBucket,
+    Eraser,
+    Mic,
+    MicOff,
+    Save
 } from 'lucide-react';
 import {
     Popover,
@@ -42,36 +49,50 @@ interface EditorToolbarProps {
     onOpenTemplates?: () => void;
     onExport?: (type: 'image' | 'pdf' | 'word' | 'text') => void;
 
+    // External Controls Integration
+    folderId?: string | null;
+    onFolderChange?: (id: string | null) => void;
+    folders?: any[];
+    backgroundColor?: string;
+    onBackgroundColorChange?: (color: string) => void;
+
+    // Voice Recording Integration
+    isRecording?: boolean;
+    onRecordingClick?: () => void;
 }
 
 const fontFamilies = [
     { name: 'Default', value: 'Inter' },
+    { name: 'Amiri', value: 'Amiri' },
     { name: 'Cairo', value: 'Cairo' },
     { name: 'Tajawal', value: 'Tajawal' },
-    { name: 'Amiri', value: 'Amiri' },
-    { name: 'Almarai', value: 'Almarai' },
-    { name: 'Harmattan', value: 'Harmattan' },
-    { name: 'Aref Ruqaa', value: 'Aref Ruqaa' },
-    { name: 'Reem Kufi', value: 'Reem Kufi' },
-    { name: 'Calibri', value: 'Calibri' },
+    { name: 'Arial', value: 'Arial' },
+    { name: 'Courier New', value: 'Courier New' },
+    { name: 'Georgia', value: 'Georgia' },
+    { name: 'Times New Roman', value: 'Times New Roman' },
+    { name: 'Verdana', value: 'Verdana' },
 ];
 
 const colors = [
-    '#000000', '#4B5563', '#9CA3AF', '#FFFFFF', // Grayscale & White
-    '#DC2626', '#EA580C', '#D97706', '#CA8A04', // Reds/Oranges/Yellows
-    '#65A30D', '#16A34A', '#059669', '#0D9488', // Greens/Teals
-    '#0891B2', '#2563EB', '#4F46E5', '#7C3AED', // Blues/Indigos/Purples
-    '#DB2777', '#E11D48' // Pinks/Roses
+    '#000000', '#4B5563', '#DC2626', '#EA580C', '#D97706',
+    '#16A34A', '#2563EB', '#7C3AED', '#DB2777', '#ffffff'
 ];
 
 const highlights = [
-    '#ffff00', '#a1ffba', '#ffcba1', '#ffb0e7', '#a6fcfc', '#e7e7e7', 'transparent'
+    'transparent', '#FEF3C7', '#DCFCE7', '#DBEAFE', '#FCE7F3', '#FEE2E2', '#F3E8FF'
 ];
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     editor,
     onOpenTemplates,
     onExport,
+    folderId,
+    onFolderChange,
+    folders = [],
+    backgroundColor,
+    onBackgroundColorChange,
+    isRecording,
+    onRecordingClick
 }) => {
     if (!editor) return null;
 
@@ -90,10 +111,29 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
     return (
         <TooltipProvider delayDuration={300}>
-            <div className="flex flex-col gap-2 p-2 mb-4 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl sticky top-0 z-10 transition-all">
+            <div className="flex flex-col gap-0.5 p-0.5 mb-1 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-xl sticky top-0 z-10 transition-all">
 
                 {/* ROW 1: Typography & Formatting (Font, Size, B/I/U, Color, Highlight) */}
-                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 no-scrollbar">
+                <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5 no-scrollbar">
+
+                    {/* Folder Selection (If provided) */}
+                    {onFolderChange && (
+                        <>
+                            <div className="flex items-center min-w-[120px] max-w-[150px]">
+                                <Select value={folderId || 'none'} onValueChange={(val) => onFolderChange(val === 'none' ? null : val)}>
+                                    <SelectTrigger className="h-8 text-xs bg-gray-50 border-0 shadow-none hover:bg-gray-100 focus:ring-0 px-2 rounded-lg">
+                                        <FolderOpen className="w-3.5 h-3.5 ml-1 text-gray-500" />
+                                        <SelectValue placeholder="المجلد" />
+                                    </SelectTrigger>
+                                    <SelectContent dir="rtl">
+                                        <SelectItem value="none">عام</SelectItem>
+                                        {folders.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+                        </>
+                    )}
 
                     {/* Font Family */}
                     <Tooltip>
@@ -274,6 +314,31 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             <TooltipContent>تمييز النص</TooltipContent>
                         </Tooltip>
                     </div>
+
+                    {/* Background Color Picker (If provided) */}
+                    {onBackgroundColorChange && (
+                        <>
+                            <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="relative flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-100 transition-colors mx-1">
+                                        <PaintBucket className="w-4 h-4 text-gray-600" />
+                                        <Input
+                                            type="color"
+                                            value={backgroundColor || '#ffffff'}
+                                            onChange={(e) => onBackgroundColorChange(e.target.value)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                        />
+                                        <div
+                                            className="absolute bottom-1 right-1 left-1 h-0.5 rounded-full border border-gray-100"
+                                            style={{ backgroundColor: backgroundColor || '#ffffff' }}
+                                        />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>لون خلفية الصفحة</TooltipContent>
+                            </Tooltip>
+                        </>
+                    )}
                 </div>
 
                 {/* ROW 2: Paragraph & Inserts (Align, List, Separators, Templates, Export) */}
@@ -342,7 +407,22 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         <TooltipContent>القوالب الجاهزة</TooltipContent>
                     </Tooltip>
 
+                    {/* Mic & Export Actions */}
                     <div className="ml-auto flex items-center gap-1">
+                        {onRecordingClick && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={onRecordingClick}
+                                        className={`p-1.5 rounded-lg transition-all ${isRecording ? 'bg-red-100 text-red-600 animate-pulse' : 'hover:bg-gray-100 text-gray-600'}`}
+                                    >
+                                        {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}</TooltipContent>
+                            </Tooltip>
+                        )}
+
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Popover>
@@ -363,6 +443,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     </div>
                 </div>
             </div>
-        </TooltipProvider>
+        </TooltipProvider >
     );
 };

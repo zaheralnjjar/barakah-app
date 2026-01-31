@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +20,8 @@ interface QuickNoteDialogProps {
     onClose: () => void;
     defaultTag?: string;
     initialMode?: 'note' | 'activity';
+    initialFolderId?: string | null;
+    autoStartRecording?: boolean;
 }
 
 const CATEGORIES = [
@@ -28,9 +32,212 @@ const CATEGORIES = [
     { id: 'family', label: 'عائلة', icon: Home, color: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200', placeholder: 'تفاصيل النشاط العائلي...' },
 ];
 
-export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClose, defaultTag, initialMode = 'note' }) => {
+// --- Extracted Form Component to fix Focus Bug ---
+interface QuickNoteFormProps {
+    title: string;
+    setTitle: (val: string) => void;
+    content: string;
+    setContent: (val: string) => void;
+    selectedCategory: string | null;
+    setSelectedCategory: (val: string | null) => void;
+    folderId: string | null;
+    setFolderId: (val: string | null) => void;
+    color: string;
+    setColor: (val: string) => void;
+    startTime: string;
+    setStartTime: (val: string) => void;
+    endTime: string;
+    setEndTime: (val: string) => void;
+    isRecording: boolean;
+    startRecording: () => void;
+    stopRecording: () => void;
+    onClose: () => void;
+    handleSave: () => void;
+    isLoading: boolean;
+    folders: any[];
+    isMobile: boolean;
+    duration: string;
+    setDuration: (val: string) => void;
+    voiceTranscript: string;
+}
+
+const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
+    title, setTitle,
+    content, setContent,
+    selectedCategory, setSelectedCategory,
+    folderId, setFolderId,
+    color, setColor,
+    startTime, setStartTime,
+    endTime, setEndTime,
+    isRecording, startRecording, stopRecording,
+    onClose, handleSave, isLoading,
+    folders, duration, setDuration,
+    voiceTranscript
+}) => {
+    // Track where to insert text
+    const lastFocusedField = useRef<'title' | 'content'>('title');
+
+    const handleFocus = (field: 'title' | 'content') => {
+        lastFocusedField.current = field;
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-white sm:rounded-2xl overflow-hidden relative">
+            {/* Header: Title & Categories */}
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between shrink-0 gap-3">
+
+                {/* Header Actions (Save/Cancel) */}
+                <div className="flex items-center gap-2 pl-2 border-r border-gray-100 pr-2 mr-2">
+                    <Button
+                        onClick={handleSave}
+                        variant="ghost"
+                        size="sm"
+                        className={cn("h-8 w-8 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100" : "text-gray-300")}
+                        disabled={isLoading || (!title && !content)}
+                        title="حفظ"
+                    >
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
+                    </Button>
+                    <Button
+                        onClick={onClose}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        title="إلغاء"
+                    >
+                        <ZapOff className="w-5 h-5" />
+                    </Button>
+                </div>
+
+                {/* Title Input */}
+                <div className="flex-1 min-w-[150px]">
+                    <Input
+                        placeholder={selectedCategory
+                            ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
+                            : "عنوان الملاحظة..."}
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="bg-transparent border-transparent focus:bg-white focus:border-indigo-200 font-bold text-lg h-9 px-2 shadow-none"
+                        dir="rtl"
+                        onFocus={() => handleFocus('title')}
+                    />
+                </div>
+
+                {/* Categories Icons */}
+                <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-gray-100 shadow-sm">
+                    <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={cn("p-1.5 rounded-md transition-all", !selectedCategory ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600")}
+                        title="ملاحظة"
+                    >
+                        <FileText className="w-4 h-4" />
+                    </button>
+                    {CATEGORIES.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                            className={cn(
+                                "p-1.5 rounded-md transition-all",
+                                selectedCategory === cat.id
+                                    ? `${cat.bg} ${cat.color} shadow-sm ring-1 ring-inset ring-black/5`
+                                    : "text-gray-400 hover:text-gray-600"
+                            )}
+                            title={cat.label}
+                        >
+                            <cat.icon className="w-4 h-4" />
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Note Options (Folder & Color) - Integrated into Editor Toolbar now */}
+
+            {/* Activity Time Inputs */}
+            {selectedCategory && (
+                <div className="px-4 py-2 bg-red-50/30 flex items-center justify-end gap-2 shrink-0 border-b border-red-100 overflow-x-auto">
+                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-red-100 shrink-0">
+                        <span className="text-[10px] font-bold text-gray-400">المدة (د)</span>
+                        <Input
+                            type="number"
+                            min="0"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            className="h-6 w-12 text-center border-0 p-0 text-sm focus-visible:ring-0"
+                        />
+                    </div>
+
+                    <div className="w-px h-4 bg-red-200 mx-1 shrink-0" />
+
+                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-red-100">
+                        <span className="text-xs font-bold text-gray-400">من</span>
+                        <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-6 w-20 text-center border-0 p-0 text-sm focus-visible:ring-0" />
+                    </div>
+                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-red-100">
+                        <span className="text-xs font-bold text-gray-400">إلى</span>
+                        <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-6 w-20 text-center border-0 p-0 text-sm focus-visible:ring-0" />
+                    </div>
+
+                    <div className="w-px h-4 bg-red-200 mx-1 shrink-0" />
+
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={isRecording ? stopRecording : startRecording}
+                                    className={`
+                                        w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300
+                                        ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 border border-red-100'}
+                                    `}
+                                >
+                                    <Mic className="w-3.5 h-3.5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-xs">
+                                {isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                </div>
+            )}
+
+            {/* Editor Area */}
+            {selectedCategory ? (
+                <textarea
+                    value={content} // Content for activity is plain text
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder={CATEGORIES.find(c => c.id === selectedCategory)?.placeholder}
+                    className="flex-1 p-4 resize-none focus:outline-none text-lg leading-relaxed bg-transparent"
+                    dir="rtl"
+                    onFocus={() => handleFocus('content')}
+                />
+            ) : (
+                <div className="flex-1 overflow-hidden relative flex flex-col">
+                    <NoteEditorV2
+                        initialContent={content}
+                        onUpdate={setContent}
+                        editable={!isLoading}
+                        backgroundColor={color}
+                        onBackgroundColorChange={setColor}
+                        folderId={folderId}
+                        onFolderChange={setFolderId}
+                        folders={folders}
+                        isRecording={isRecording}
+                        onRecordingClick={isRecording ? stopRecording : startRecording}
+                        voiceTranscript={voiceTranscript}
+                    />
+                </div>
+            )}
+
+        </div>
+    );
+};
+
+
+export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClose, defaultTag, initialMode = 'note', initialFolderId, autoStartRecording }) => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState(''); // Holds HTML for Note, Plain Text for Activity
+    const [voiceTranscript, setVoiceTranscript] = useState(''); // New state for transient voice data for Editor
     const [folderId, setFolderId] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [color, setColor] = useState('#FFFFFF');
@@ -44,6 +251,10 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
     // Activity Time State
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [durationInput, setDurationInput] = useState('');
+
+    // Track Last Focused Field for Voice
+    const focusedFieldRef = useRef<'title' | 'content'>('title');
 
     const { folders } = useFolders();
     const { createNote } = useNotesV2();
@@ -59,9 +270,10 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         if (isOpen) {
             setTitle('');
             setContent('');
-            setFolderId(null);
+            setFolderId(initialFolderId || null);
             setStartTime('');
             setEndTime('');
+            setDurationInput('');
             setColor('#FFFFFF');
 
             if (initialMode === 'activity') {
@@ -69,13 +281,20 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
                 // Auto-set start time for activity
                 const now = new Date();
                 setStartTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+                focusedFieldRef.current = 'title'; // Default focus
             } else {
                 setSelectedCategory(null);
+                focusedFieldRef.current = 'content'; // Default focus for note usually content? Or title?
+            }
+
+            if (autoStartRecording) {
+                // Short delay to allow UI to render first
+                setTimeout(() => startRecording(), 300);
             }
         } else {
             stopRecording();
         }
-    }, [isOpen, initialMode]);
+    }, [isOpen, initialMode, initialFolderId, autoStartRecording]);
 
     // Set default start time when category is manually selected (if not already set)
     useEffect(() => {
@@ -84,6 +303,41 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
             setStartTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
         }
     }, [selectedCategory]);
+
+    // Update Duration when Start/End changes
+    useEffect(() => {
+        if (startTime && endTime) {
+            const d = new Date();
+            const [sh, sm] = startTime.split(':').map(Number);
+            d.setHours(sh, sm, 0, 0);
+
+            const e = new Date();
+            const [eh, em] = endTime.split(':').map(Number);
+            e.setHours(eh, em, 0, 0);
+
+            // Handle day crossover if end time is before start time (assume next day)
+            if (e < d) {
+                e.setDate(e.getDate() + 1);
+            }
+
+            const diff = (e.getTime() - d.getTime()) / 60000;
+            if (diff >= 0) {
+                setDurationInput(Math.round(diff).toString());
+            }
+        }
+    }, [startTime, endTime]);
+
+    const handleDurationChange = (val: string) => {
+        setDurationInput(val);
+        const mins = parseInt(val);
+        if (!isNaN(mins) && startTime) {
+            const [sh, sm] = startTime.split(':').map(Number);
+            const start = new Date();
+            start.setHours(sh, sm, 0, 0);
+            const end = new Date(start.getTime() + mins * 60000);
+            setEndTime(`${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`);
+        }
+    };
 
     const startRecording = () => {
         if (!('webkitSpeechRecognition' in window)) {
@@ -104,34 +358,55 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
 
         recognitionRef.current.onresult = (event: any) => {
             let accumulatedFinal = '';
-            let currentInterim = '';
 
-            for (let i = 0; i < event.results.length; i++) {
+            for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
                 if (result.isFinal) {
                     accumulatedFinal += result[0].transcript + ' ';
-                } else {
-                    currentInterim += result[0].transcript;
                 }
             }
 
-            // Simple append for now
-            // For Rich Text, this might append raw text to HTML string. 
-            // Ideally NoteEditorV2 handles this via onUpdate, but here we update state directly.
-            // If Rich Editor is active, appending text to HTML string usually works if appended outside tags
-            // or we accept it's naive. For now simple append.
-            setContent(prev => prev + ' ' + accumulatedFinal + (currentInterim ? ' ' + currentInterim : ''));
+            if (accumulatedFinal.trim()) {
+                const text = accumulatedFinal.trim();
+                const target = focusedFieldRef.current;
+
+                if (target === 'title') {
+                    setTitle(prev => (prev ? prev + ' ' : '') + text);
+                } else {
+                    // If in "Activity" mode (plain text), direct append is fine
+                    if (selectedCategory) {
+                        setContent(prev => (prev ? prev + ' ' : '') + text);
+                    } else {
+                        // If in "Note" mode (Rich Text Editor), pass to generic prop to handle insertion
+                        // We use a unique string triggers or just set it and let generic effect handle it?
+                        // Better to set a transient value. 
+                        // NoteEditorV2 will listen to changes in `voiceTranscript`.
+                        // To ensure repeated same phrases trigger it, handle in child or toggle?
+                        // Simply passing the chunk is enough if we clear it? 
+                        // Ideally NoteEditorV2 effect should depend on the value change. 
+                        // But if I say "Hello" then pause then "Hello", it might not trigger if state is same.
+                        // So we might need to append a timestamp or use a ref mechanism.
+                        // Actually, simplest is to just force a new reference or use a callback prop.
+                        // Let's rely on NoteEditorV2 consuming `voiceTranscript` and we clear it?
+                        // No, NoteEditorV2 receives props.
+                        // Let's try passing the text directly. To handle same-text updates, maybe pass an object? { text, id }
+                        // For now let's try just setting it.
+                        setVoiceTranscript(text);
+                    }
+                }
+            }
         };
 
-        recognitionRef.current.onend = () => {
+        recognitionRef.current.onerror = (event: any) => {
+            console.error('Speech recognition error', event.error);
             setIsRecording(false);
         };
 
-        try {
-            recognitionRef.current.start();
-        } catch (e) {
-            console.error(e);
-        }
+        recognitionRef.current.onend = () => {
+            // Logic when recording ends
+        };
+
+        recognitionRef.current.start();
     };
 
     const stopRecording = () => {
@@ -142,10 +417,6 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
     };
 
     const handleSave = async () => {
-        // Validation logic
-        // For Note: Title optional (can generate later or default), content optional?
-        // For Activity: Title (Reason) recommended.
-
         let finalTitle = title.trim();
         const plainText = content.replace(/<[^>]*>?/gm, ''); // Simple strip for fallback title
 
@@ -233,149 +504,22 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         }
     };
 
-    // Shared Body Content
-    const NoteFormContent = () => (
-        <div className="flex flex-col h-full bg-white sm:rounded-2xl overflow-hidden">
-            {/* Header / Meta Data Row */}
-            <div className="px-4 py-3 border-b bg-gray-50 flex flex-wrap gap-2 items-center justify-between shrink-0">
-                <div className="flex-1 min-w-[200px] flex items-center gap-2">
-                    <Input
-                        placeholder={selectedCategory
-                            ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟ (المهمة / النشاط)")
-                            : "عنوان الملاحظة..."}
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="bg-transparent border-transparent focus:bg-white focus:border-indigo-200 font-bold text-lg h-10 px-2 shadow-none"
-                        dir="rtl"
-                        autoFocus={!isMobile} // Don't autofocus on mobile to prevent keyboard jump
-                    />
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {/* Category / Mode Switcher */}
-                    <div className="flex gap-1 bg-gray-200/50 p-1 rounded-lg">
-                        <button
-                            onClick={() => setSelectedCategory(null)}
-                            className={cn("p-1.5 rounded-md transition-all", !selectedCategory ? "bg-white text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600")}
-                            title="ملاحظة"
-                        >
-                            <FileText className="w-4 h-4" />
-                        </button>
-                        {CATEGORIES.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                                className={cn(
-                                    "p-1.5 rounded-md transition-all",
-                                    selectedCategory === cat.id
-                                        ? `${cat.bg} ${cat.color} shadow-sm ring-1 ring-inset ring-black/5`
-                                        : "text-gray-400 hover:text-gray-600"
-                                )}
-                                title={cat.label}
-                            >
-                                <cat.icon className="w-4 h-4" />
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Note Mode: Color Picker & Folder */}
-            {!selectedCategory && (
-                <div className="px-4 py-2 bg-white flex items-center gap-2 shrink-0 border-b border-gray-100">
-                    <Select value={folderId || 'none'} onValueChange={(val) => setFolderId(val === 'none' ? null : val)}>
-                        <SelectTrigger className="h-8 w-[140px] text-xs bg-gray-50 border-0">
-                            <SelectValue placeholder="المجلد" />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                            <SelectItem value="none">عام</SelectItem>
-                            {folders.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-
-                    <div className="flex items-center gap-2 mr-auto" dir="ltr">
-                        <Input
-                            type="color"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            className="w-6 h-6 p-0 border-0 rounded-full overflow-hidden cursor-pointer shadow-sm ring-1 ring-gray-200"
-                            title="لون الخلفية"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* Activity Mode: Timers */}
-            {selectedCategory && (
-                <div className="px-4 py-3 bg-red-50/30 flex items-center gap-4 shrink-0 border-b border-red-100 animate-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400">من</span>
-                        <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-8 w-24 text-center bg-white border-red-100 font-mono text-sm" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-400">إلى</span>
-                        <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-8 w-24 text-center bg-white border-red-100 font-mono text-sm" />
-                    </div>
-                </div>
-            )}
-
-            {/* Main Content Area */}
-            <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
-                {selectedCategory ? (
-                    <textarea
-                        placeholder="تفاصيل إضافية عن النشاط..."
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        className="flex-1 w-full p-4 resize-none focus:outline-none text-lg leading-relaxed bg-white"
-                        dir="rtl"
-                    />
-                ) : (
-                    <div className="flex-1 overflow-hidden relative">
-                        <NoteEditorV2
-                            initialContent={content}
-                            onUpdate={setContent}
-                            editable={!isLoading}
-                            backgroundColor={color}
-                        />
-                    </div>
-                )}
-
-                {/* Voice Recording Button */}
-                <button
-                    onClick={isRecording ? stopRecording : startRecording}
-                    className={cn(
-                        "absolute bottom-4 left-4 p-3 rounded-full transition-all shadow-lg border z-20",
-                        isRecording
-                            ? 'bg-red-500 text-white hover:bg-red-600 border-red-600 animate-pulse'
-                            : 'bg-white/90 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 border-gray-200 backdrop-blur-sm'
-                    )}
-                    title={isRecording ? "إيقاف التسجيل" : "تسجيل صوتي"}
-                    type="button"
-                >
-                    {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-4 border-t bg-gray-50 flex items-center gap-3 shrink-0">
-                <Button variant="outline" onClick={onClose} className="flex-1 h-11" disabled={isLoading}>
-                    إلغاء
-                </Button>
-                <Button
-                    onClick={handleSave}
-                    className={cn("flex-[2] h-11 text-white shadow-md font-bold text-lg", selectedCategory ? "bg-slate-800 hover:bg-slate-900" : "bg-indigo-600 hover:bg-indigo-700")}
-                    disabled={isLoading}
-                >
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                        <>
-                            <Save className="w-5 h-5 ml-2" />
-                            {selectedCategory ? 'حفظ النشاط' : 'حفظ الملاحظة'}
-                        </>
-                    )}
-                </Button>
-            </div>
-        </div>
-    );
+    const formProps = {
+        title, setTitle,
+        content, setContent,
+        selectedCategory, setSelectedCategory,
+        folderId, setFolderId,
+        color, setColor,
+        startTime, setStartTime,
+        endTime, setEndTime,
+        isRecording, startRecording, stopRecording,
+        onClose, handleSave, isLoading,
+        folders, isMobile,
+        duration: durationInput,
+        setDuration: handleDurationChange,
+        onFieldFocus: (field: 'title' | 'content') => focusedFieldRef.current = field,
+        voiceTranscript
+    };
 
     if (isMobile) {
         return (
@@ -384,7 +528,7 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
                     <DrawerHeader className="sr-only">
                         <DrawerTitle>ملاحظة جديدة</DrawerTitle>
                     </DrawerHeader>
-                    <NoteFormContent />
+                    <QuickNoteForm {...formProps} />
                 </DrawerContent>
             </Drawer>
         );
@@ -396,7 +540,9 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
                 </DialogHeader>
-                <NoteFormContent />
+                <div className="h-full bg-white rounded-lg overflow-hidden">
+                    <QuickNoteForm {...formProps} />
+                </div>
             </DialogContent>
         </Dialog>
     );

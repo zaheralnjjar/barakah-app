@@ -208,31 +208,8 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
         };
     }, [saveParking, locations]);
 
-    // Listen for custom shortcut events
-    const [quickNoteTag, setQuickNoteTag] = useState<string | undefined>(undefined);
-    const [quickNoteMode, setQuickNoteMode] = useState<'note' | 'activity'>('note');
-
-    useEffect(() => {
-        const handleOpenQuickNote = (e: Event) => {
-            const detail = (e as CustomEvent).detail;
-            setQuickNoteTag(detail?.tag || (detail?.type === 'brain_dump' ? 'تفريغ' : undefined));
-            setQuickNoteMode('note');
-            setShowAddDialog('note');
-        };
-
-        const handleOpenDistraction = () => {
-            setQuickNoteMode('activity');
-            setShowAddDialog('note');
-        };
-
-        window.addEventListener('open-quick-note', handleOpenQuickNote);
-        window.addEventListener('open-distraction-dialog', handleOpenDistraction);
-
-        return () => {
-            window.removeEventListener('open-quick-note', handleOpenQuickNote);
-            window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
-        }
-    }, []);
+    // Custom shortcut events moved to CoreLayout for global access
+    // ... existing shortcuts hook ...
 
     const [isCleanMode, setIsCleanMode] = useState(false);
 
@@ -833,12 +810,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
 
 
-            <QuickNoteDialog
-                isOpen={showAddDialog === 'note'}
-                onClose={() => setShowAddDialog(null)}
-                defaultTag={quickNoteTag}
-                initialMode={quickNoteMode}
-            />
+            {/* QuickNoteDialog moved to CoreLayout */}
 
             <GlobalSearchDialog
                 isOpen={isSearchOpen}

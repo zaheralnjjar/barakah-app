@@ -7,7 +7,6 @@ import { NoteEditorV2 } from '@/components/notes-v2/NoteEditorV2';
 import { KanbanView } from '@/components/notes-v2/KanbanView';
 import { NotesSettingsDialog } from '@/components/notes-v2/NotesSettingsDialog';
 import { CreateFolderDialog } from '@/components/notes-v2/CreateFolderDialog';
-import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
 import { Button } from '@/components/ui/button';
 import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid, Library, Search, Cloud, Trash2, Share2, CheckSquare } from 'lucide-react';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
@@ -29,9 +28,6 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
     const [viewMode, setViewMode] = useState<'grid' | 'list' | 'editor' | 'kanban'>('grid');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
-    const [showCreateNote, setShowCreateNote] = useState(false);
-    const [autoStartRecording, setAutoStartRecording] = useState(false);
-    const [createNoteInitialFolderId, setCreateNoteInitialFolderId] = useState<string | null>(null);
     const [showReportGenerator, setShowReportGenerator] = useState(false);
     const [isFloatingSearchOpen, setIsFloatingSearchOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -347,7 +343,14 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                         <FolderPlus className="w-4 h-4" />
                                         <span className="hidden sm:inline">مجلد</span>
                                     </Button>
-                                    <Button onClick={() => { setActiveFolderId(activeFolderId || null); setShowCreateNote(true); }} size="sm" variant="outline" className="gap-2 h-8 text-xs text-emerald-700 border-emerald-100">
+                                    <Button onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('open-quick-note', {
+                                            detail: {
+                                                type: 'quick_note',
+                                                folderId: activeFolderId || null
+                                            }
+                                        }));
+                                    }} size="sm" variant="outline" className="gap-2 h-8 text-xs text-emerald-700 border-emerald-100">
                                         <FilePlus className="w-4 h-4" />
                                         <span className="hidden sm:inline">ملاحظة</span>
                                     </Button>
@@ -385,8 +388,12 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                 onOpenNote={handleSelectNote}
                                 onOpenFolder={(f) => handleSelectFolder(f.id)}
                                 onRequestCreateNote={(folderId) => {
-                                    setActiveFolderId(folderId || null);
-                                    setShowCreateNote(true);
+                                    window.dispatchEvent(new CustomEvent('open-quick-note', {
+                                        detail: {
+                                            type: 'quick_note',
+                                            folderId: folderId || null
+                                        }
+                                    }));
                                 }}
                             />
                         </div>
@@ -399,8 +406,12 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                 onOpenFolder={handleSelectFolder}
                                 onOpenNote={handleSelectNote}
                                 onRequestCreateNote={(folderId) => {
-                                    setActiveFolderId(folderId || null);
-                                    setShowCreateNote(true);
+                                    window.dispatchEvent(new CustomEvent('open-quick-note', {
+                                        detail: {
+                                            type: 'quick_note',
+                                            folderId: folderId || null
+                                        }
+                                    }));
                                 }}
                                 onRequestCreateFolder={() => setShowCreateFolder(true)}
                                 isMobile={isMobile}
@@ -466,16 +477,7 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                 onClose={() => setShowCreateFolder(false)}
                 parentFolderId={activeFolderId === 'trash' ? null : activeFolderId}
             />
-            <CreateNoteDialog
-                isOpen={showCreateNote}
-                onClose={() => {
-                    setShowCreateNote(false);
-                    setAutoStartRecording(false);
-                    setCreateNoteInitialFolderId(null);
-                }}
-                initialFolderId={createNoteInitialFolderId || (activeFolderId === 'trash' ? null : activeFolderId)}
-                autoStartRecording={autoStartRecording}
-            />
+
             <div dir="rtl">
                 <ReportGenerator
                     isOpen={showReportGenerator}

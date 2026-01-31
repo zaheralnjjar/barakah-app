@@ -4,7 +4,7 @@ import SideNavBar from '@/components/SideNavBar';
 import { useSwipeBack } from '@/hooks/useSwipeBack';
 import { ShortcutDialogs } from '@/components/dialogs/ShortcutDialogs';
 import { useNotesV2 } from '@/hooks/useNotesV2';
-import { CreateNoteDialog } from '@/components/notes-v2/CreateNoteDialog';
+
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { MultiActionFAB } from '@/components/MultiActionFAB';
 import { useCloudSync } from '@/hooks/useCloudSync';
@@ -140,9 +140,7 @@ const CoreLayout = () => {
         }
     };
 
-    const [isVoiceMode, setIsVoiceMode] = useState(false);
-    const { notes, createNote, updateNote } = useNotesV2();
-    const activeMode = useSystemModes().modes.find(m => m.is_active);
+
 
     const handleAddNote = () => {
         // Dispatch custom event which SmartDashboard listens to
@@ -150,9 +148,8 @@ const CoreLayout = () => {
     };
 
     const handleVoiceNote = () => {
-        setIsVoiceMode(true);
         // Dispatch event for specialized voice handling if needed, or re-use existing
-        window.dispatchEvent(new Event('open-global-voice-recorder'));
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', autoStartRecording: true } }));
     };
 
     const handleAddAppointment = () => {
@@ -187,6 +184,8 @@ const CoreLayout = () => {
             {/* Multi-Action Floating Button - Moved to App.tsx for global scope */}
 
             <ShortcutDialogs />
+
+
         </div>
     );
 };

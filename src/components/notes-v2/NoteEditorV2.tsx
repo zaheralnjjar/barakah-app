@@ -83,6 +83,15 @@ interface NoteEditorV2Props {
     isBookmarked?: boolean;
     onToggleBookmark?: () => void;
     backgroundColor?: string;
+    // New Props for Layout Integration
+    onBackgroundColorChange?: (color: string) => void;
+    folderId?: string | null;
+    onFolderChange?: (id: string | null) => void;
+    folders?: any[];
+    // Voice Recording Integration
+    isRecording?: boolean;
+    onRecordingClick?: () => void;
+    voiceTranscript?: string;
 }
 
 export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
@@ -92,7 +101,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     autoInsertSeparator = true,
     isBookmarked = false,
     onToggleBookmark,
-    backgroundColor = '#ffffff'
+    backgroundColor = '#ffffff',
+    onBackgroundColorChange,
+    folderId,
+    onFolderChange,
+    folders,
+    isRecording,
+    onRecordingClick,
+    voiceTranscript
 }) => {
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
@@ -150,6 +166,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             editor.commands.setContent(initialContent);
         }
     }, [initialContent, editor]);
+
+    // Insert voice transcript at current position
+    useEffect(() => {
+        if (editor && voiceTranscript) {
+            editor.commands.insertContent(voiceTranscript + ' ');
+        }
+    }, [voiceTranscript, editor]);
 
     const handleSelectTemplate = (content: string, type: 'text' | 'background' = 'text') => {
         if (type === 'background') {
@@ -234,6 +257,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         editor={editor}
                         onExport={handleExport}
                         onOpenTemplates={() => setShowTemplates(true)}
+                        folderId={folderId}
+                        onFolderChange={onFolderChange}
+                        folders={folders}
+                        backgroundColor={backgroundColor}
+                        onBackgroundColorChange={onBackgroundColorChange}
+                        isRecording={isRecording}
+                        onRecordingClick={onRecordingClick}
                     />
                 </div>
             </div>
