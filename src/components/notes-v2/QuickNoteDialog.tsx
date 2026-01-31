@@ -85,69 +85,74 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
     return (
         <div className="flex flex-col h-full bg-white sm:rounded-2xl overflow-hidden relative">
             {/* Header: Title & Categories */}
-            <div className="px-4 py-3 border-b bg-gray-50 flex items-center justify-between shrink-0 gap-3">
+            <div className="flex flex-col border-b bg-gray-50 shrink-0">
+                {/* Row 1: Actions & Title */}
+                <div className="px-4 py-2 flex items-center justify-between gap-3">
+                    {/* Header Actions (Save/Cancel) */}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={handleSave}
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-9 w-9 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-gray-300")}
+                            disabled={isLoading || (!title && !content)}
+                        >
+                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5.5 h-5.5" />}
+                        </Button>
+                        <Button
+                            onClick={onClose}
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        >
+                            <X className="w-5.5 h-5.5" />
+                        </Button>
+                    </div>
 
-                {/* Header Actions (Save/Cancel) */}
-                <div className="flex items-center gap-2 pl-2 border-r border-gray-100 pr-2 mr-2">
-                    <Button
-                        onClick={handleSave}
-                        variant="ghost"
-                        size="sm"
-                        className={cn("h-8 w-8 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 hover:bg-indigo-100" : "text-gray-300")}
-                        disabled={isLoading || (!title && !content)}
-                        title="حفظ"
-                    >
-                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
-                    </Button>
-                    <Button
-                        onClick={onClose}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        title="إلغاء"
-                    >
-                        <X className="w-5 h-5" />
-                    </Button>
+                    {/* Title Input */}
+                    <div className="flex-1">
+                        <Input
+                            placeholder={selectedCategory
+                                ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
+                                : "عنوان الملاحظة..."}
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="bg-transparent border-transparent focus:bg-white focus:border-indigo-100 font-bold text-lg h-10 px-2 shadow-none text-right"
+                            dir="rtl"
+                            onFocus={() => handleFocus('title')}
+                        />
+                    </div>
                 </div>
 
-                {/* Title Input */}
-                <div className="flex-1 min-w-[150px]">
-                    <Input
-                        placeholder={selectedCategory
-                            ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
-                            : "عنوان الملاحظة..."}
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="bg-transparent border-transparent focus:bg-white focus:border-indigo-200 font-bold text-lg h-9 px-2 shadow-none"
-                        dir="rtl"
-                        onFocus={() => handleFocus('title')}
-                    />
-                </div>
-
-                {/* Categories Icons */}
-                <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-gray-100 shadow-sm">
-                    <button
-                        onClick={() => setSelectedCategory(null)}
-                        className={cn("p-1.5 rounded-md transition-all", !selectedCategory ? "bg-indigo-50 text-indigo-600 shadow-sm" : "text-gray-400 hover:text-gray-600")}
-                        title="ملاحظة"
-                    >
-                        <FileText className="w-4 h-4" />
-                    </button>
+                {/* Row 2: Categories (Mobile Only) or integrated */}
+                <div className="px-4 pb-2 flex items-center gap-1 overflow-x-auto no-scrollbar">
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.id}
                             onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
                             className={cn(
-                                "p-1.5 rounded-md transition-all",
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
                                 selectedCategory === cat.id
-                                    ? `${cat.bg} ${cat.color} shadow-sm ring-1 ring-inset ring-black/5`
-                                    : "text-gray-400 hover:text-gray-600"
+                                    ? `${cat.bg} ${cat.color} border-indigo-200 shadow-sm`
+                                    : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
                             )}
-                            title={cat.label}
                         >
-                            <cat.icon className="w-4 h-4" />
+                            <cat.icon className="w-3.5 h-3.5" />
+                            <span>{cat.label}</span>
                         </button>
                     ))}
+                    <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
+                            !selectedCategory
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
+                        )}
+                    >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>ملاحظة</span>
+                    </button>
                 </div>
             </div>
 

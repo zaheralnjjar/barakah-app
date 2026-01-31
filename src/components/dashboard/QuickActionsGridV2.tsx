@@ -247,8 +247,8 @@ const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onCl
                 "border-b-2 border-black/10"
             )}
         >
-            <span className={cn("text-[11px] font-black tracking-wide leading-tight text-center w-full px-0.5 max-h-[2.4em] overflow-hidden")} style={{ fontFamily: 'Cairo, sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {action.icon ? <action.icon className="w-6 h-6 mb-1" /> : null}
+            {action.icon ? <action.icon className="w-5 h-5 mb-0.5 shrink-0" /> : null}
+            <span className={cn("text-[10px] font-black tracking-tight leading-tight text-center w-full px-0.5 max-h-[2.4em] overflow-hidden")} style={{ fontFamily: 'Cairo, sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 {action.label}
             </span>
         </button>

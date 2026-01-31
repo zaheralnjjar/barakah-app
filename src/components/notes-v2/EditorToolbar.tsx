@@ -402,14 +402,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
                 {/* MOBILE LAYOUT: 2 Rows (Stacked) */}
                 {isMobile && (
-                    <>
-                        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5 no-scrollbar">
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 px-1">
                             {GroupFORMATTING}
                         </div>
-                        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5 pt-1 border-t border-gray-100 no-scrollbar justify-between">
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1.5 border-t border-gray-100 px-1">
                             {GroupTOOLS}
                         </div>
-                    </>
+                    </div>
                 )}
             </div>
         </TooltipProvider >

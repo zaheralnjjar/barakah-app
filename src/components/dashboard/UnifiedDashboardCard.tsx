@@ -399,23 +399,29 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                         </div>
                     )}
 
-                    {/* Action Button */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (activeItem.type === 'shopping') onOpenAdd('shopping');
-                            else if (activeItem.type === 'goals') onOpenAdd('habit');
-                            else if (activeItem.type === 'projects') onOpenAdd('project');
-                            else onOpenAdd('task');
-                        }}
-                        className={cn(
-                            "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
-                            activeItem.accentColor,
-                            activeItem.textColor
-                        )}
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
+                    {/* Navigation Arrows (Visible on hover) */}
+                    <div className="flex gap-1">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+                            className={cn(
+                                "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
+                                activeItem.accentColor,
+                                activeItem.textColor
+                            )}
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                            className={cn(
+                                "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
+                                activeItem.accentColor,
+                                activeItem.textColor
+                            )}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Click Areas for Navigation */}
