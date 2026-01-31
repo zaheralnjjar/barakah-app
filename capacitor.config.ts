@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
     android: {
         path: 'android',
         // Fix for touch events and map rendering in Android WebView
-        webContentsDebuggingEnabled: true,
+        webContentsDebuggingEnabled: false,
     },
     server: {
         // Improves performance for local assets

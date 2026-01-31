@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useFolders } from '@/hooks/useFolders';
 import { useNotesV2 } from '@/hooks/useNotesV2';
-import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2 } from 'lucide-react';
+import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2, X } from 'lucide-react';
+
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -105,7 +106,7 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
                         className="h-8 w-8 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
                         title="إلغاء"
                     >
-                        <ZapOff className="w-5 h-5" />
+                        <X className="w-5 h-5" />
                     </Button>
                 </div>
 

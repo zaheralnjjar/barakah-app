@@ -161,7 +161,7 @@ const CoreLayout = () => {
     };
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-white relative">
+        <div className="flex h-screen w-screen overflow-hidden bg-white relative pt-[env(safe-area-inset-top)]">
             <SideNavBar
                 activeTab={activeTab}
                 onNavigate={handleNavigate}

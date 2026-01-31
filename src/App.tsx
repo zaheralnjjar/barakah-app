@@ -29,6 +29,7 @@ import './i18n/config'; // Initialize i18n
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { handleShortcut, parseDeepLink } from '@/services/ShortcutHandler';
 import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 // Untracked/New Component
 import ThesisLayout from "./pages/thesis/ThesisLayout";
@@ -86,10 +87,23 @@ const DeepLinkHandler = () => {
 const PermissionRequester = () => {
   useEffect(() => {
     const requestPermissions = async () => {
-      console.log("Requesting permissions...");
+      // Only request permissions automatically on Native Platforms (Android/iOS)
+      // On Web, permissions should be requested on demand (user interaction)
+      const isNative = Capacitor.isNativePlatform();
+
+      if (!isNative) {
+        console.log("Running on Web - skipping aggressive permission requests.");
+        return;
+      }
+
+      console.log("Requesting permissions on Native...");
 
       // 1. Location
       try {
+        // ... existing location logic ...
+        // For Native, we might want to use Capacitor Geolocation plugin permissions if needed, 
+        // but existing code used navigator.geolocation which works in WebView too if permissions handled.
+        // Let's keep existing logic but wrapped.
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (pos) => console.log("Location granted", pos),

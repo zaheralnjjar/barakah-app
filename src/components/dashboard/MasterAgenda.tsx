@@ -53,7 +53,7 @@ export const MasterAgenda: React.FC = () => {
         <CollapsibleSection title="محرك المهام الموحد" icon={Clock} defaultOpen={false}>
             <div className="p-4 pt-2 space-y-3">
                 {/* Filters */}
-                <div className="flex gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar mb-2">
+                <div className="flex gap-1 overflow-x-auto pb-1 max-w-full mb-2">
                     {(['all', 'general', 'thesis', 'appointment', 'medication'] as const).map(f => (
                         <Button
                             key={f}

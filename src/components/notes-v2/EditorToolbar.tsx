@@ -98,13 +98,19 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
     const addTimeSeparator = () => {
         const now = new Date();
-        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-        const dateString = `${now.getDate()} ${months[now.getMonth()]}`;
-        const timeString = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
+        // Spanish months
+        const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+        const day = now.getDate();
+        const month = months[now.getMonth()];
+        const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+        // Format: "30 de Enero 22:38"
+        const dateString = `${day} de ${month}`;
 
         editor.chain().focus()
             .setHorizontalRule()
-            .insertContent(`<p style="text-align: center; color: #9CA3AF; font-size: 0.85em; margin-top: -1em; background: white; width: fit-content; margin-left: auto; margin-right: auto; padding: 0 10px;">${dateString} ${timeString}</p>`)
+            .insertContent(`<p style="text-align: center; direction: ltr; unicode-bidi: embed; color: #9CA3AF; font-size: 0.85em; margin-top: -1em; background: white; width: fit-content; margin-left: auto; margin-right: auto; padding: 0 10px;">${dateString} ${time}</p>`)
             .enter()
             .run();
     };
@@ -114,7 +120,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             <div className="flex flex-col gap-0.5 p-0.5 mb-1 bg-white/80 backdrop-blur-md border border-white/20 shadow-sm rounded-xl sticky top-0 z-10 transition-all">
 
                 {/* ROW 1: Typography & Formatting (Font, Size, B/I/U, Color, Highlight) */}
-                <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5 no-scrollbar">
+                <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
 
                     {/* Folder Selection (If provided) */}
                     {onFolderChange && (
@@ -208,46 +214,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
                     <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
-                    {/* Basic Formatting Group */}
-                    <div className="flex items-center bg-gray-50 rounded-lg p-0.5">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    onClick={() => editor.chain().focus().toggleBold().run()}
-                                    className={`p-1.5 rounded-md transition-all ${editor.isActive('bold') ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
-                                >
-                                    <Bold className="w-4 h-4" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>غمق (Bold)</TooltipContent>
-                        </Tooltip>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                                    className={`p-1.5 rounded-md transition-all ${editor.isActive('italic') ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-black'}`}
-                                >
-                                    <Italic className="w-4 h-4" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>مائل (Italic)</TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <button
-                                    onClick={() => editor.chain().focus().unsetAllMarks().run()}
-                                    className="p-1.5 rounded-md text-gray-500 hover:text-red-500 hover:bg-red-50 transition-all"
-                                >
-                                    <Eraser className="w-4 h-4" />
-                                </button>
-                            </TooltipTrigger>
-                            <TooltipContent>مسح التنسيق</TooltipContent>
-                        </Tooltip>
-                    </div>
-
-                    <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
                     {/* Colors */}
                     <div className="flex items-center gap-1">
@@ -342,7 +309,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 </div>
 
                 {/* ROW 2: Paragraph & Inserts (Align, List, Separators, Templates, Export) */}
-                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 no-scrollbar border-t border-gray-50/50 pt-1.5">
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 border-t border-gray-50/50 pt-1.5">
 
                     {/* Alignment Group */}
                     <div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr">
