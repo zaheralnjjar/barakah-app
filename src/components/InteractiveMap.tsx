@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useLocations, LocationFolder } from '@/hooks/useLocations';
@@ -63,8 +64,8 @@ const MapRealigner = () => {
     return null;
 };
 
-// Update map view when center/zoom changes
-const MapUpdater = ({ center, zoom }: { center: [number, number], zoom: number }) => {
+// Internal component to handle map movement when state changes
+const RecenterOnChange = ({ center, zoom }: { center: [number, number], zoom: number }) => {
     const map = useMap();
     useEffect(() => {
         map.setView(center, zoom);
@@ -107,16 +108,20 @@ const InteractiveMap = () => {
     const [newLocationCategory, setNewLocationCategory] = useState('other');
     const [newLocationFolder, setNewLocationFolder] = useState<string | undefined>(undefined);
 
+    // Temporary Pin State (Search/Long Press)
+    const [searchMarker, setSearchMarker] = useState<{ lat: number, lng: number, title: string } | null>(null);
+    const [longPressMarker, setLongPressMarker] = useState<{ lat: number, lng: number } | null>(null);
+
     // Sorting State
     const [sortBy, setSortBy] = useState<'date' | 'distance'>('date');
 
     // Dialogs
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editingResource, setEditingResource] = useState<any>(null);
-    const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
-    const [routePoints, setRoutePoints] = useState<any[]>([]);
     const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
+    const [newLocationStreet, setNewLocationStreet] = useState('');
+    const [newLocationNumber, setNewLocationNumber] = useState('');
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768 || isAndroid());
@@ -124,6 +129,21 @@ const InteractiveMap = () => {
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
+
+    // Long Press Event Handler
+    const MapEventsHandler = () => {
+        useMapEvents({
+            contextmenu: (e) => {
+                setLongPressMarker({ lat: e.latlng.lat, lng: e.latlng.lng });
+                setSearchMarker(null); // Clear search marker if dropping a new one
+            },
+            click: () => {
+                // Optionally clear temp pins on single click? 
+                // Let's keep them until dismissed in popup for better UX.
+            }
+        });
+        return null;
+    };
 
     // Initial Geolocation
     useEffect(() => {
@@ -230,6 +250,8 @@ const InteractiveMap = () => {
         setActiveSheet(false);
         setIsAddingMode(true);
         setNewLocationTitle('');
+        setNewLocationStreet('');
+        setNewLocationNumber('');
         setNewLocationCategory('other');
 
         // Auto-center on user location if available
@@ -254,22 +276,20 @@ const InteractiveMap = () => {
     };
 
     const saveNewLocation = async () => {
-        if (!tempLocation) return;
+        if (!tempLocation || !newLocationStreet.trim() || !newLocationNumber.trim()) {
+            toast({ title: 'يرجى إدخال اسم الشارع ورقم البناية', variant: 'destructive' });
+            return;
+        }
 
         let title = newLocationTitle;
         if (!title.trim()) {
-            title = 'Ubicación seleccionada';
-            // Try to auto-name if empty
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLocation.lat}&lon=${tempLocation.lng}&accept-language=es`);
-                const data = await res.json();
-                if (data.address?.road) title = data.address.road;
-            } catch (e) { }
+            title = `${newLocationStreet} ${newLocationNumber}`;
         }
 
         await saveLocation(title, tempLocation.lat, tempLocation.lng, {
             category: newLocationCategory as any,
-            folder_id: newLocationFolder
+            folder_id: newLocationFolder,
+            street_line: `${newLocationStreet} ${newLocationNumber}`
         });
 
         setIsAddingMode(false);
@@ -284,12 +304,14 @@ const InteractiveMap = () => {
                 key={mapKey}
                 center={center}
                 zoom={zoom}
-                zoomControl={!isMobile}
-                style={{ height: '100%', width: '100%', zIndex: 0 }}
+                zoomControl={false}
+                scrollWheelZoom={true}
+                className="w-full h-full z-0"
                 ref={mapRef}
             >
                 <MapRealigner />
-                <MapUpdater center={center} zoom={zoom} />
+                <RecenterOnChange center={center} zoom={zoom} />
+                <MapEventsHandler />
                 <TileLayer
                     url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; OpenStreetMap'
@@ -297,6 +319,77 @@ const InteractiveMap = () => {
 
                 {/* Center Monitor for Add Mode */}
                 {isAddingMode && <CenterMonitor onCenterChange={(c) => setTempLocation({ lat: c.lat, lng: c.lng })} />}
+
+                {/* Temporary Markers (Long Press / Search) */}
+                {!isAddingMode && longPressMarker && (
+                    <Marker position={[longPressMarker.lat, longPressMarker.lng]} icon={new L.Icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })}>
+                        <Popup>
+                            <div className="text-center min-w-[150px]">
+                                <div className="font-bold mb-2">موقع محدد</div>
+                                <div className="flex gap-2">
+                                    <Button size="sm" className="flex-1 h-7 text-xs bg-emerald-600" onClick={() => {
+                                        setNewLocationTitle('');
+                                        setTempLocation(longPressMarker);
+                                        enterAddingMode();
+                                        setLongPressMarker(null);
+                                    }}>
+                                        <Plus className="w-3 h-3 mr-1" /> حفظ
+                                    </Button>
+                                    <Button size="sm" className="flex-1 h-7 text-xs bg-blue-600" onClick={() => {
+                                        window.open(`https://www.google.com/maps/search/?api=1&query=${longPressMarker.lat},${longPressMarker.lng}`, '_blank');
+                                    }}>
+                                        <Navigation className="w-3 h-3 mr-1" /> الذهاب
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => setLongPressMarker(null)}>
+                                        <X className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </Popup>
+                    </Marker>
+                )}
+
+                {!isAddingMode && searchMarker && (
+                    <Marker position={[searchMarker.lat, searchMarker.lng]} icon={new L.Icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })}>
+                        <Popup>
+                            <div className="text-center min-w-[150px]">
+                                <div className="font-bold mb-1 line-clamp-2">{searchMarker.title}</div>
+                                <div className="flex gap-2 mt-2">
+                                    <Button size="sm" className="flex-1 h-7 text-xs bg-emerald-600" onClick={() => {
+                                        setNewLocationTitle(searchMarker.title);
+                                        setTempLocation({ lat: searchMarker.lat, lng: searchMarker.lng });
+                                        enterAddingMode();
+                                        setSearchMarker(null);
+                                    }}>
+                                        <Plus className="w-3 h-3 mr-1" /> حفظ
+                                    </Button>
+                                    <Button size="sm" className="flex-1 h-7 text-xs bg-blue-600" onClick={() => {
+                                        window.open(`https://www.google.com/maps/search/?api=1&query=${searchMarker.lat},${searchMarker.lng}`, '_blank');
+                                    }}>
+                                        <Navigation className="w-3 h-3 mr-1" /> الذهاب
+                                    </Button>
+                                    <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => setSearchMarker(null)}>
+                                        <X className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </Popup>
+                    </Marker>
+                )}
 
                 {/* User Location Marker */}
                 {!isAddingMode && userLocation && (
@@ -402,6 +495,29 @@ const InteractiveMap = () => {
 
                             <div className="grid grid-cols-2 gap-3" dir="rtl">
                                 <div>
+                                    <label className="text-xs font-medium text-gray-500 mb-1 block">اسم الشارع *</label>
+                                    <Input
+                                        placeholder="مثال: شارع النهضة"
+                                        value={newLocationStreet}
+                                        onChange={e => setNewLocationStreet(e.target.value)}
+                                        className="bg-gray-50 border-gray-200 focus:ring-blue-500 text-right"
+                                        dir="rtl"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-gray-500 mb-1 block">رقم البناية *</label>
+                                    <Input
+                                        placeholder="مثال: 12"
+                                        value={newLocationNumber}
+                                        onChange={e => setNewLocationNumber(e.target.value)}
+                                        className="bg-gray-50 border-gray-200 focus:ring-blue-500 text-right"
+                                        dir="rtl"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3" dir="rtl">
+                                <div>
                                     <label className="text-xs font-medium text-gray-500 mb-1 block">التصنيف</label>
                                     <div className="flex gap-2 p-1 bg-gray-50 rounded-md border border-gray-200 h-10 items-center px-2">
                                         <LocationIconPicker
@@ -425,11 +541,20 @@ const InteractiveMap = () => {
                                 </div>
                             </div>
 
-                            <Button className="w-full h-12 text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all mt-2" onClick={saveNewLocation}>
+                            <Button
+                                className={cn(
+                                    "w-full h-12 text-base font-bold transition-all mt-2",
+                                    (newLocationStreet.trim() && newLocationNumber.trim())
+                                        ? "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 text-white"
+                                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                )}
+                                onClick={saveNewLocation}
+                                disabled={!newLocationStreet.trim() || !newLocationNumber.trim()}
+                            >
                                 <MapPin className="w-4 h-4 mr-2" /> حفظ الموقع
                             </Button>
                             <p className="text-[10px] text-center text-gray-400 mt-2">
-                                قم بتحريك الخريطة لتحديد الموقع بدقة
+                                يرجى إدخال اسم الشارع ورقم البناية لحفظ الموقع
                             </p>
                         </div>
                     </div>
@@ -460,10 +585,13 @@ const InteractiveMap = () => {
                                         onClick={() => {
                                             const lat = parseFloat(s.lat);
                                             const lon = parseFloat(s.lon);
+                                            const title = s.display_name.split(',')[0];
                                             setCenter([lat, lon]);
                                             setZoom(16);
                                             setShowSuggestions(false);
                                             setSearchQuery('');
+                                            setSearchMarker({ lat, lng: lon, title });
+                                            setLongPressMarker(null);
                                         }}>
                                         <span className="text-gray-500 text-xs truncate max-w-[200px]">{s.display_name}</span>
                                         <span className="font-bold text-sm">{s.display_name.split(',')[0]}</span>
@@ -484,11 +612,12 @@ const InteractiveMap = () => {
                         </motion.button>
                     </div>
 
-                    {/* Locate Me Button (Right - Stacked) */}
-                    <div className="absolute bottom-24 right-4 z-[999]">
+
+                    {/* Locate Me Button (Right - Bottom) */}
+                    <div className="absolute bottom-8 right-4 z-[999]">
                         <Button
                             size="icon"
-                            className="h-10 w-10 rounded-full shadow-lg bg-white text-gray-700 hover:bg-blue-50 border border-gray-100"
+                            className="h-12 w-12 rounded-full shadow-xl bg-blue-600 text-white hover:bg-blue-700"
                             onClick={() => {
                                 if (navigator.geolocation) {
                                     setIsLocating(true);
@@ -498,7 +627,7 @@ const InteractiveMap = () => {
                                         setZoom(16);
                                         setUserLocation({ lat: latitude, lng: longitude });
                                         setIsLocating(false);
-                                        toast({ title: "موقعك الحالي" });
+                                        toast({ title: "تم تحديد موقعك" });
                                     }, () => {
                                         setIsLocating(false);
                                         toast({ title: "تعذر تحديد الموقع", variant: "destructive" });
@@ -506,18 +635,7 @@ const InteractiveMap = () => {
                                 }
                             }}
                         >
-                            {isLocating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Target className="w-5 h-5" />}
-                        </Button>
-                    </div>
-
-                    {/* Route Button (Right - Bottom) */}
-                    <div className="absolute bottom-8 right-4 z-[999]">
-                        <Button
-                            size="icon"
-                            className="h-12 w-12 rounded-full shadow-xl bg-white text-gray-700 hover:bg-gray-50"
-                            onClick={() => setIsRoutePlannerOpen(true)}
-                        >
-                            <Navigation className="w-6 h-6" />
+                            {isLocating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Target className="w-6 h-6" />}
                         </Button>
                     </div>
                 </>
@@ -628,38 +746,6 @@ const InteractiveMap = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Route Planner Dialog */}
-            <Dialog open={isRoutePlannerOpen} onOpenChange={setIsRoutePlannerOpen}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Planificar Ruta</DialogTitle></DialogHeader>
-                    <p className="text-sm text-gray-500">Selecciona los puntos de parada:</p>
-                    <div className="max-h-[300px] overflow-y-auto space-y-1">
-                        {savedLocations.map(loc => (
-                            <div key={loc.id} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${routePoints.find(p => p.id === loc.id) ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'}`}
-                                onClick={() => {
-                                    if (routePoints.find(p => p.id === loc.id)) setRoutePoints(prev => prev.filter(p => p.id !== loc.id));
-                                    else setRoutePoints(prev => [...prev, loc]);
-                                }}>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${routePoints.find(p => p.id === loc.id) ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
-                                    {routePoints.find(p => p.id === loc.id) && <div className="w-2 h-2 bg-white rounded-full" />}
-                                </div>
-                                <span className="text-sm font-medium">{loc.title}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <DialogFooter>
-                        <Button className="w-full bg-blue-600" onClick={() => {
-                            if (routePoints.length < 1) return;
-                            const destination = routePoints[routePoints.length - 1];
-                            const waypoints = routePoints.slice(0, -1).map(p => `${p.lat},${p.lng}`).join('|');
-                            const url = `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&waypoints=${waypoints}`;
-                            window.open(url, '_blank');
-                        }} disabled={routePoints.length === 0}>
-                            Ver Ruta en Google Maps
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

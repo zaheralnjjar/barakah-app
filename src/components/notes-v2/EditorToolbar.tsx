@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import React from 'react';
@@ -122,10 +123,10 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             {/* Folder Selection */}
             {onFolderChange && (
                 <>
-                    <div className="flex items-center min-w-[100px] max-w-[140px]">
+                    <div className={cn("flex items-center", isMobile ? "max-w-[90px]" : "min-w-[100px] max-w-[140px]")}>
                         <Select value={folderId || 'none'} onValueChange={(val) => onFolderChange(val === 'none' ? null : val)}>
-                            <SelectTrigger className="h-8 text-xs bg-gray-50 border-0 shadow-none hover:bg-gray-100 focus:ring-0 px-2 rounded-lg">
-                                <FolderOpen className="w-3.5 h-3.5 ml-1 text-gray-500" />
+                            <SelectTrigger className="h-8 text-[10px] sm:text-xs bg-gray-50 border-0 shadow-none hover:bg-gray-100 focus:ring-0 px-1.5 rounded-lg">
+                                <FolderOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-1 text-gray-500" />
                                 <SelectValue placeholder="المجلد" />
                             </SelectTrigger>
                             <SelectContent dir="rtl">
@@ -400,13 +401,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     </div>
                 )}
 
-                {/* MOBILE LAYOUT: 2 Rows (Stacked) */}
+                {/* MOBILE LAYOUT: 2 Rows (Stacked & Wrapped) */}
                 {isMobile && (
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 px-1">
+                    <div className="flex flex-col gap-1.5 p-1">
+                        <div className="flex items-center flex-wrap gap-1 pb-1.5 border-b border-gray-50">
                             {GroupFORMATTING}
                         </div>
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1.5 border-t border-gray-100 px-1">
+                        <div className="flex items-center flex-wrap gap-1 pt-1">
                             {GroupTOOLS}
                         </div>
                     </div>

@@ -13,8 +13,10 @@ This workflow builds the Android and Electron applications, pushes changes to Gi
    ```
 
 2. **Build Android (Mobile)**
-   Build the debug APK.
+   Build the debug APK. **CRITICAL**: Always build the web project and sync to Capacitor before running Gradle.
    ```bash
+   npm run build
+   npx cap sync android
    cd android
    ./gradlew assembleDebug
    cd ..

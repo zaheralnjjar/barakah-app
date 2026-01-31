@@ -90,13 +90,10 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
             <div className="p-4 h-full flex flex-col">
                 {/* Header Removed - Moved to Top Bar */}
 
-                {/* Content Area - 2 Independent Rows or Single Stacks */}
+                {/* Content Area - Single Stacks */}
                 <div className="flex flex-col h-full gap-4 pb-4 overflow-hidden">
                     {isMobile ? (
-                        /* Mobile: Single Vertical Axis with Horizontal Internal Scrolling? 
-                           Actually, user said "صف واحد بدلا من صفين" 
-                           So just show all folders in one scrollable list.
-                        */
+                        /* Mobile: Single Vertical Axis */
                         <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-4">
                             {folders.map(folder => (
                                 <div key={folder.id} className={`w-full h-[250px] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
@@ -133,81 +130,42 @@ export const FolderGrid: React.FC<FolderGridProps> = ({
                             ))}
                         </div>
                     ) : (
-                        <>
-                            {/* Row 1 */}
-                            <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
-                                {folders.filter((_, i) => i % 2 === 0).map(folder => (
-                                    <div key={folder.id} className={`snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
-                                        {isSelectionMode && (
-                                            <div
-                                                className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onToggleSelection?.(folder.id);
-                                                }}
-                                            >
-                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
-                                                    {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                                </div>
-                                            </div>
-                                        )}
-                                        <KanbanFolderColumn
-                                            folder={folder}
-                                            notes={notesByFolder[folder.id] || []}
-                                            onAddNote={() => onRequestCreateNote?.(folder.id)}
-                                            onEditFolder={(id) => setEditingFolderId(id)}
-                                            onDeleteFolder={() => deleteFolder(folder.id)}
-                                            onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
-                                            onClickHeader={onOpenFolder}
-                                            onEditNote={onOpenNote}
-                                            onDeleteNote={async (noteId) => {
-                                                if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
-                                                    await deleteNote(noteId);
-                                                    toast({ title: 'تم حذف الملاحظة' });
-                                                }
+                        /* Desktop: Single horizontal axis for all folders */
+                        <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1 pb-4">
+                            {folders.map(folder => (
+                                <div key={folder.id} className={`snap-start shrink-0 h-full w-[300px] lg:w-[calc(25%-12px)] min-w-[300px] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
+                                    {isSelectionMode && (
+                                        <div
+                                            className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onToggleSelection?.(folder.id);
                                             }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Row 2 */}
-                            <div className="flex-1 min-h-0 w-full overflow-x-auto flex gap-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent items-stretch px-1">
-                                {folders.filter((_, i) => i % 2 !== 0).map(folder => (
-                                    <div key={folder.id} className={`snap-start shrink-0 h-full w-[calc(25%-12px)] min-w-[300px] xl:min-w-[calc(25%-12px)] relative transition-all ${isSelectionMode && selectedIds.has(folder.id) ? 'ring-2 ring-emerald-500 rounded-xl transform scale-[0.98]' : ''}`}>
-                                        {isSelectionMode && (
-                                            <div
-                                                className="absolute inset-0 z-50 bg-black/5 rounded-xl cursor-pointer flex items-start justify-end p-3"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onToggleSelection?.(folder.id);
-                                                }}
-                                            >
-                                                <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
-                                                    {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                                                </div>
+                                        >
+                                            <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors bg-white ${selectedIds.has(folder.id) ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                                                {selectedIds.has(folder.id) && <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                                             </div>
-                                        )}
-                                        <KanbanFolderColumn
-                                            folder={folder}
-                                            notes={notesByFolder[folder.id] || []}
-                                            onAddNote={() => onRequestCreateNote?.(folder.id)}
-                                            onEditFolder={(id) => setEditingFolderId(id)}
-                                            onDeleteFolder={() => deleteFolder(folder.id)}
-                                            onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
-                                            onClickHeader={onOpenFolder}
-                                            onEditNote={onOpenNote}
-                                            onDeleteNote={async (noteId) => {
-                                                if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
-                                                    await deleteNote(noteId);
-                                                    toast({ title: 'تم حذف الملاحظة' });
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </>
+                                        </div>
+                                    )}
+                                    <KanbanFolderColumn
+                                        folder={folder}
+                                        notes={notesByFolder[folder.id] || []}
+                                        onAddNote={() => onRequestCreateNote?.(folder.id)}
+                                        onEditFolder={(id) => setEditingFolderId(id)}
+                                        onDeleteFolder={() => deleteFolder(folder.id)}
+                                        onNoteClick={(note) => onOpenNote ? onOpenNote(note) : onOpenFolder(folder.id)}
+                                        onClickHeader={onOpenFolder}
+                                        onEditNote={onOpenNote}
+                                        onDeleteNote={async (noteId) => {
+                                            if (confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) {
+                                                await deleteNote(noteId);
+                                                toast({ title: 'تم حذف الملاحظة' });
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

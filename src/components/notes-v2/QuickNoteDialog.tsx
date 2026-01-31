@@ -6,9 +6,10 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useFolders } from '@/hooks/useFolders';
 import { useNotesV2 } from '@/hooks/useNotesV2';
-import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2, X } from 'lucide-react';
+import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2, X, Check, ChevronDown } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,74 +87,151 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
         <div className="flex flex-col h-full bg-white sm:rounded-2xl overflow-hidden relative">
             {/* Header: Title & Categories */}
             <div className="flex flex-col border-b bg-gray-50 shrink-0">
-                {/* Row 1: Actions & Title */}
-                <div className="px-4 py-2 flex items-center justify-between gap-3">
-                    {/* Header Actions (Save/Cancel) */}
-                    <div className="flex items-center gap-2">
-                        <Button
-                            onClick={handleSave}
-                            variant="ghost"
-                            size="sm"
-                            className={cn("h-9 w-9 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-gray-300")}
-                            disabled={isLoading || (!title && !content)}
-                        >
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5.5 h-5.5" />}
-                        </Button>
-                        <Button
-                            onClick={onClose}
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                            <X className="w-5.5 h-5.5" />
-                        </Button>
-                    </div>
+                {isMobile ? (
+                    /* MOBILE: Single Row Header */
+                    <div className="px-3 py-2 flex items-center gap-2">
+                        {/* 1. Category Dropdown (Left Side) */}
+                        <div className="shrink-0">
+                            <DropdownMenu dir="rtl">
+                                <DropdownMenuTrigger asChild>
+                                    <button className={cn(
+                                        "flex items-center gap-1 px-2 py-1.5 rounded-lg border bg-white transition-all",
+                                        selectedCategory ? CATEGORIES.find(c => c.id === selectedCategory)?.color : "text-indigo-600"
+                                    )}>
+                                        {selectedCategory ? (
+                                            React.createElement(CATEGORIES.find(c => c.id === selectedCategory)!.icon, { className: "w-4 h-4" })
+                                        ) : (
+                                            <FileText className="w-4 h-4" />
+                                        )}
+                                        <ChevronDown className="w-3 h-3 opacity-40" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-40 p-1">
+                                    <DropdownMenuItem onClick={() => setSelectedCategory(null)} className="flex items-center gap-2 py-2">
+                                        <FileText className="w-4 h-4 text-indigo-600" />
+                                        <span>ملاحظة</span>
+                                    </DropdownMenuItem>
+                                    {CATEGORIES.map(cat => (
+                                        <DropdownMenuItem key={cat.id} onClick={() => setSelectedCategory(cat.id)} className="flex items-center gap-2 py-2">
+                                            <cat.icon className={cn("w-4 h-4", cat.color)} />
+                                            <span>{cat.label}</span>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
 
-                    {/* Title Input */}
-                    <div className="flex-1">
-                        <Input
-                            placeholder={selectedCategory
-                                ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
-                                : "عنوان الملاحظة..."}
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="bg-transparent border-transparent focus:bg-white focus:border-indigo-100 font-bold text-lg h-10 px-2 shadow-none text-right"
-                            dir="rtl"
-                            onFocus={() => handleFocus('title')}
-                        />
-                    </div>
-                </div>
+                        {/* 2. Title Input (Center - Fill Space) */}
+                        <div className="flex-1 min-w-0">
+                            <Input
+                                placeholder={selectedCategory
+                                    ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
+                                    : "عنوان الملاحظة..."}
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="bg-transparent border-transparent focus:bg-white focus:border-indigo-100 font-bold text-base h-9 px-2 shadow-none text-right"
+                                dir="rtl"
+                                onFocus={() => handleFocus('title')}
+                            />
+                        </div>
 
-                {/* Row 2: Categories (Mobile Only) or integrated */}
-                <div className="px-4 pb-2 flex items-center gap-1 overflow-x-auto no-scrollbar">
-                    {CATEGORIES.map(cat => (
-                        <button
-                            key={cat.id}
-                            onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
-                                selectedCategory === cat.id
-                                    ? `${cat.bg} ${cat.color} border-indigo-200 shadow-sm`
-                                    : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
-                            )}
-                        >
-                            <cat.icon className="w-3.5 h-3.5" />
-                            <span>{cat.label}</span>
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => setSelectedCategory(null)}
-                        className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
-                            !selectedCategory
-                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                                : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
-                        )}
-                    >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>ملاحظة</span>
-                    </button>
-                </div>
+                        {/* 3. Actions (Right Side) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <Button
+                                onClick={onClose}
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 w-9 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100"
+                            >
+                                <X className="w-5.5 h-5.5 text-red-500" />
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                    "h-9 w-9 p-0 rounded-full transition-all",
+                                    title || content ? "text-emerald-600 bg-emerald-50 shadow-sm active:bg-emerald-100" : "text-gray-300"
+                                )}
+                                disabled={isLoading || (!title && !content)}
+                            >
+                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-6 h-6" />}
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    /* DESKTOP (Legacy / Original) Two Row Layout */
+                    <>
+                        {/* Row 1: Actions & Title */}
+                        <div className="px-4 py-2 flex items-center justify-between gap-3">
+                            {/* Header Actions (Save/Cancel) */}
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    onClick={handleSave}
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn("h-9 w-9 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-gray-300")}
+                                    disabled={isLoading || (!title && !content)}
+                                >
+                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5.5 h-5.5" />}
+                                </Button>
+                                <Button
+                                    onClick={onClose}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 w-9 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                >
+                                    <X className="w-5.5 h-5.5" />
+                                </Button>
+                            </div>
+
+                            {/* Title Input */}
+                            <div className="flex-1">
+                                <Input
+                                    placeholder={selectedCategory
+                                        ? (CATEGORIES.find(c => c.id === selectedCategory)?.placeholder || "ماذا فعلت؟")
+                                        : "عنوان الملاحظة..."}
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="bg-transparent border-transparent focus:bg-white focus:border-indigo-100 font-bold text-lg h-10 px-2 shadow-none text-right"
+                                    dir="rtl"
+                                    onFocus={() => handleFocus('title')}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Row 2: Categories */}
+                        <div className="px-4 pb-2 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
+                                        selectedCategory === cat.id
+                                            ? `${cat.bg} ${cat.color} border-indigo-200 shadow-sm`
+                                            : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
+                                    )}
+                                >
+                                    <cat.icon className="w-3.5 h-3.5" />
+                                    <span>{cat.label}</span>
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setSelectedCategory(null)}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 border",
+                                    !selectedCategory
+                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
+                                )}
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>ملاحظة</span>
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Note Options (Folder & Color) - Integrated into Editor Toolbar now */}
