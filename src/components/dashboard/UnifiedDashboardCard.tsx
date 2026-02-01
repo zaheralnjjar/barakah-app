@@ -405,7 +405,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
         >
-            <CardContent className="p-4 relative h-full flex flex-col justify-center gap-1 z-10 pb-6"> {/* Added pb-6 for bottom progress bar space */}
+            <CardContent className="p-4 relative h-full flex flex-col justify-center gap-1 z-10 pb-2"> {/* Reduced padding */}
 
                 {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
@@ -448,67 +448,11 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                     </p>
                 </div>
 
-                {/* Row 3: Indicators - Progress - Button */}
-                <div className="flex items-center justify-between gap-2 w-full mt-auto">
-
-                    {/* Indicators (Dots) - Moved to bottom */}
-                    <div className="flex gap-1 shrink-0">
-                        {slides.map((_, idx) => (
-                            <div
-                                key={idx}
-                                className={cn(
-                                    "h-1.5 rounded-full transition-all duration-500",
-                                    idx === currentIndex ? "w-4 bg-white" : "w-1.5 bg-white/30"
-                                )}
-                            />
-                        ))}
-                    </div>
-
-                    {/* Progress Bar (if exists) - Optional inline visual */}
-                    {activeItem.progress !== undefined && (
-                        <span className="text-[10px] font-mono opacity-80 text-white">{activeItem.progress}%</span>
-                    )}
-
-                    {/* Navigation Arrows (Visible on hover) */}
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                            className={cn(
-                                "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
-                                activeItem.accentColor,
-                                activeItem.textColor
-                            )}
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                            className={cn(
-                                "rounded-full p-1.5 backdrop-blur-md border border-white/20 shadow-sm transition-all active:scale-95 hover:bg-white/20 shrink-0",
-                                activeItem.accentColor,
-                                activeItem.textColor
-                            )}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Progress Bar (Absolute Bottom) */}
-                {activeItem.progress !== undefined && (
-                    <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/10 backdrop-blur-sm">
-                        <div
-                            className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
-                            style={{ width: `${activeItem.progress}%` }}
-                        />
-                    </div>
-                )}
-
-                {/* Click Areas for Navigation */}
+                {/* Click Areas for Navigation - Kept for interaction without visuals */}
                 <div className="absolute inset-y-0 left-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
                 <div className="absolute inset-y-0 right-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
 
             </CardContent>
-        </Card>
+        </Card >
     );
 };
