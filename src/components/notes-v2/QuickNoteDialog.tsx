@@ -677,7 +677,7 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[700px] h-[85vh] p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden min-h-[400px]" dir="rtl" style={{ height: '85vh', maxHeight: '95vh', minHeight: '300px' }}>
+            <DialogContent className="sm:max-w-[700px] h-[85vh] p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden min-h-[400px] top-[5%] translate-y-0" dir="rtl" style={{ height: '85vh', maxHeight: '95vh', minHeight: '300px' }}>
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
                 </DialogHeader>

@@ -127,7 +127,6 @@ export const useShortcutExecution = (props: {
             case 'show_next_prayer': executeShortcut('info_prayer'); break; // Alias
 
             case 'info_tasks':
-            case 'show_tasks':
                 const tList = tasks.filter(t => t?.deadline === new Date().toISOString().split('T')[0] && t.progress < 100);
                 setShortcutResult({
                     id: actionId,
@@ -169,7 +168,6 @@ export const useShortcutExecution = (props: {
                 break;
 
             case 'shopping':
-            case 'show_shopping':
                 props.onOpenAddDialog('shopping');
                 break;
 
@@ -205,7 +203,6 @@ export const useShortcutExecution = (props: {
 
             case 'add_event_quick':
             case 'event':
-            case 'add_event':
                 props.onOpenAddDialog('appointment');
                 break;
 
@@ -259,11 +256,13 @@ export const useShortcutExecution = (props: {
                 break;
 
             // ===== إسلاميات (Islamic) =====
-            case 'islam_mushaf': window.open('https://quran.com/ar', '_blank'); break;
-            case 'open_mushaf': window.open('https://quran.com/ar', '_blank'); break; // Alias
+            case 'islam_mushaf':
+                window.open('https://quran.com/ar', '_blank');
+                break;
 
-            case 'islam_adhkar': window.open('https://www.duas.org/mobile/morning-evening-adhkar.html', '_blank'); break;
-            case 'open_adhkar': window.open('https://www.duas.org/mobile/morning-evening-adhkar.html', '_blank'); break; // Alias
+            case 'islam_adhkar':
+                window.open('https://www.duas.org/mobile/morning-evening-adhkar.html', '_blank');
+                break;
 
             case 'islam_tasbih':
             case 'open_tasbih':
@@ -277,7 +276,6 @@ export const useShortcutExecution = (props: {
 
             // ===== تذكيرات (Reminders) =====
             case 'timer_5':
-            case 'quick_timer_5':
             case 'remind_5':
                 toast({ title: '⏰ تذكير 5 دقائق', description: 'سأنبهك بعد 5 دقائق' });
                 setTimeout(() => { new Notification('⏰ انتهى الوقت!'); alert('⏰ انتهى وقت 5 دقائق'); }, 5 * 60000);
@@ -363,10 +361,6 @@ export const useShortcutExecution = (props: {
                 break;
             }
 
-            case 'copy_location': {
-                executeShortcut('share_location');
-                break;
-            }
 
             case 'copy_coords': {
                 if (navigator.geolocation) {

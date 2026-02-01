@@ -12,6 +12,12 @@ import { LocationsGridDialog } from '@/components/dashboard/LocationsGridDialog'
 import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { isAndroid } from '@/utils/platformDetection';
 import { useLongPress } from '@/hooks/useLongPress';
@@ -177,38 +183,59 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                     const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu) || (isLocation && showLocationMenu);
 
                     return (
-                        <div key={action.id} className="relative col-span-1">
-                            <QuickActionButton
-                                action={action}
-                                onClick={() => handleActionClick(action)}
-                                onLongPress={() => handleLongPress(action)}
-                            />
+                        <div key={action.id} className="relative col-span-1 aspect-square">
+                            <DropdownMenu open={isOpen} onOpenChange={(open) => {
+                                if (!open) {
+                                    if (isSettings) setShowSettingsMenu(false);
+                                    if (isEvent) setShowEventMenu(false);
+                                    if (isLocation) setShowLocationMenu(false);
+                                }
+                            }}>
+                                <DropdownMenuTrigger asChild>
+                                    <div className="w-full h-full"> {/* Wrapper for trigger */}
+                                        <QuickActionButton
+                                            action={action}
+                                            onClick={() => handleActionClick(action)}
+                                            onLongPress={() => handleLongPress(action)}
+                                        />
+                                    </div>
+                                </DropdownMenuTrigger>
 
-                            {/* Unified Floating Menu Logic */}
-                            {isOpen && (
-                                <div className="absolute top-14 left-0 z-50 flex flex-col gap-2 w-full min-w-[50px]">
-                                    {isSettings && [
-                                        { icon: Icons.Moon, action: () => { navigate('/prayer-times'); setShowSettingsMenu(false); }, color: 'bg-indigo-500 text-white shadow-indigo-200' },
-                                        { icon: Icons.Map, action: () => { navigate('/locations'); setShowSettingsMenu(false); }, color: 'bg-emerald-500 text-white shadow-emerald-200' },
-                                        { icon: Icons.Heart, action: () => { onOpenNewMuslims?.(); setShowSettingsMenu(false); }, color: 'bg-teal-500 text-white shadow-teal-200' },
-                                        { icon: Icons.GraduationCap, action: () => { navigate('/thesis'); setShowSettingsMenu(false); }, color: 'bg-blue-500 text-white shadow-blue-200' },
-                                        { icon: Icons.Command, action: () => { onOpenShortcuts?.(); setShowSettingsMenu(false); }, color: 'bg-purple-500 text-white shadow-purple-200' }
-                                    ].map((item, idx) => (
-                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
-                                            <item.icon className="w-5 h-5" />
-                                        </button>
-                                    ))}
-
-                                    {isEvent && [
-                                        { icon: CalendarPlus, action: () => { setShowEventMenu(false); onOpenAddDialog('appointment'); }, color: 'bg-orange-500 text-white shadow-orange-200' },
-                                        { icon: CheckSquare, action: () => { setShowEventMenu(false); onOpenAddDialog('task'); }, color: 'bg-blue-500 text-white shadow-blue-200' }
-                                    ].map((item, idx) => (
-                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
-                                            <item.icon className="w-5 h-5" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                                {/* Only render content if it has a menu, otherwise it's just a trigger for the action */}
+                                {(isSettings || isEvent) && (
+                                    <DropdownMenuContent className="w-56 z-[60]" align="start" sideOffset={5}>
+                                        {isSettings && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => { navigate('/prayer-times'); setShowSettingsMenu(false); }} className="gap-2">
+                                                    <Icons.Moon className="w-4 h-4 text-indigo-500" /> <span>أوقات الصلاة</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { navigate('/locations'); setShowSettingsMenu(false); }} className="gap-2">
+                                                    <Icons.Map className="w-4 h-4 text-emerald-500" /> <span>المواقع</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { onOpenNewMuslims?.(); setShowSettingsMenu(false); }} className="gap-2">
+                                                    <Icons.Heart className="w-4 h-4 text-teal-500" /> <span>المهتدين</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { navigate('/thesis'); setShowSettingsMenu(false); }} className="gap-2">
+                                                    <Icons.GraduationCap className="w-4 h-4 text-blue-500" /> <span>الأطروحة</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { onOpenShortcuts?.(); setShowSettingsMenu(false); }} className="gap-2">
+                                                    <Icons.Command className="w-4 h-4 text-purple-500" /> <span>الاختصارات</span>
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                        {isEvent && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }} className="gap-2">
+                                                    <CalendarPlus className="w-4 h-4 text-orange-500" /> <span>موعد</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }} className="gap-2">
+                                                    <CheckSquare className="w-4 h-4 text-blue-500" /> <span>مهمة</span>
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                )}
+                            </DropdownMenu>
                         </div>
                     );
                 })}
@@ -242,14 +269,13 @@ const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onCl
         <button
             {...handlers}
             className={cn(
-                "flex flex-col items-center justify-center p-1 rounded-xl transition-all active:scale-95 shadow-md w-full h-[60px] relative overflow-hidden",
-                action.color,
-                "border-b-2 border-black/10"
+                "flex flex-col items-center justify-center p-1 rounded-2xl transition-all active:scale-95 shadow-sm w-full h-full aspect-square relative overflow-hidden ring-1 ring-black/5",
+                action.color
             )}
         >
-            {action.icon ? <action.icon className="w-5 h-5 mb-0.5 shrink-0" /> : null}
-            <span className={cn("text-[10px] font-black tracking-tight leading-tight text-center w-full px-0.5 max-h-[2.4em] overflow-hidden")} style={{ fontFamily: 'Cairo, sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {action.label}
+            {action.icon ? <action.icon className="w-6 h-6 mb-1 shrink-0 opacity-90" /> : null}
+            <span className={cn("text-[10px] font-bold tracking-tight leading-3 text-center w-full px-0.5 line-clamp-1")}>
+                {action.actionId === 'sys_settings' ? 'إعدادات' : action.label}
             </span>
         </button>
     );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Navigation, Share2, Edit2, Trash2, CheckSquare, Plus, Globe, Search, X, Locate, Loader2 } from 'lucide-react';
@@ -28,6 +29,8 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
             return;
         }
 
+        toast({ title: "جاري تحديد الموقع...", description: "يرجى الانتظار قليلاً" });
+
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
@@ -35,21 +38,27 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
             let addressSearchStr = '';
 
             try {
+                // Fetch full address details including house_number
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&addressdetails=1`);
                 const data = await res.json();
                 if (data) {
                     addressStr = data.display_name;
                     const addr = data.address || {};
-                    const road = addr.road || addr.street || addr.pedestrian || '';
+                    // Prioritize specific address components
+                    const road = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
                     const number = addr.house_number || '';
 
                     let refinedStr = '';
-                    if (number) refinedStr = `${road} ${number}`;
-                    else {
+                    if (road) {
+                        refinedStr = number ? `${road} ${number}` : road;
+                    } else {
+                        // Fallback: Try to parse from display_name
                         const parts = (data.display_name || '').split(',');
-                        const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.includes(road));
-                        refinedStr = partWithNumber || road;
+                        // Find part with digits (likely street + number)
+                        const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.length < 30);
+                        refinedStr = partWithNumber?.trim() || parts[0]?.trim() || '';
                     }
+
                     addressSearchStr = refinedStr;
                 }
             } catch (e) {
@@ -61,15 +70,20 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
                 lat: lat,
                 lng: lng,
                 title: prev?.title || 'موقع جديد',
-                street_line: addressSearchStr,
+                street_line: addressSearchStr, // Auto-fill street/number
                 address: addressStr,
                 address_search: addressSearchStr,
                 url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
             }));
-            toast({ title: "تم تحديد موقعك وملء البيانات تلقائياً" });
+
+            toast({
+                title: "تم تحديد الموقع بنجاح",
+                description: addressSearchStr ? `تم ملء: ${addressSearchStr}` : "تم تحديث الإحداثيات"
+            });
+
         }, (err) => {
             toast({ title: "فشل تحديد الموقع", description: err.message, variant: "destructive" });
-        });
+        }, { enableHighAccuracy: true, timeout: 10000 });
     };
 
     useEffect(() => {
@@ -299,118 +313,44 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
 
                 {/* Edit Dialog */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
-                        <DialogHeader className="flex flex-row items-center justify-between border-b pb-2 mb-4 space-y-0">
-                            <DialogTitle className="text-right text-base font-bold">تعديل تفاصيل الموقع</DialogTitle>
-                            <div className="flex gap-2 shrink-0">
-                                <Button variant="outline" size="sm" onClick={() => setIsEditOpen(false)} className="h-8 text-xs">إلغاء</Button>
-                                <Button size="sm" onClick={handleSaveLocation} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700">
-                                    {editingResource?.id ? 'حفظ' : 'إضافة'}
-                                </Button>
-                            </div>
-                        </DialogHeader>
-
+                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0" dir="rtl">
                         {editingResource && (
-                            <div className="space-y-5">
-                                {/* Auto Locate Section - Most Important */}
-                                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-bold text-emerald-800">تحديد الموقع التلقائي</p>
-                                        <Locate className="w-4 h-4 text-emerald-600 animate-pulse" />
-                                    </div>
+                            <>
+                                <DialogHeader className="flex flex-row items-center gap-3 p-4 border-b bg-white sticky top-0 z-30 space-y-0">
                                     <Button
-                                        type="button"
-                                        variant="default"
-                                        onClick={handleLocateMe}
-                                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-95 transition-all"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsEditOpen(false)}
+                                        className="h-9 px-3 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 font-bold"
                                     >
-                                        <Locate className="w-5 h-5" />
-                                        تحديث الموقع الحالي الآن
+                                        إلغاء
                                     </Button>
-                                    <p className="text-[10px] text-emerald-600 text-center font-medium">سيتم ملء الشارع والرقم تلقائياً عند الضغط</p>
-                                </div>
 
-                                {/* Basic Info */}
-                                <div className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-500 pr-1">اسم الموقع</label>
+                                    <div className="flex-1 relative">
                                         <Input
                                             value={editingResource.title || ''}
                                             onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
-                                            className="text-right h-11 bg-gray-50 border-gray-200 focus:bg-white"
-                                            placeholder="مثلاً: البيت، العمل، المسجد..."
+                                            className="text-center h-10 bg-gray-50 border-gray-200 focus:bg-white font-bold text-sm"
+                                            placeholder="اسم الموقع (اختياري)"
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-gray-500 pr-1">الشارع ورقم المبنى (هام)</label>
-                                            <div className="relative">
-                                                <Input
-                                                    value={editingResource.street_line || ''}
-                                                    onChange={(e) => setEditingResource({ ...editingResource, street_line: e.target.value })}
-                                                    className={cn(
-                                                        "text-right h-11 bg-gray-50 border-gray-200 focus:bg-white pr-9",
-                                                        (!editingResource.street_line || !/\d/.test(editingResource.street_line)) && "border-amber-400 bg-amber-50"
-                                                    )}
-                                                    placeholder="مثلاً: شارع النيل، مبنى 12"
-                                                    dir="rtl"
-                                                />
-                                                <Navigation className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                                            </div>
-                                            {(!editingResource.street_line || !/\d/.test(editingResource.street_line)) && (
-                                                <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
-                                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                                    يرجى التأكد من كتابة رقم المبنى لضمان دقة الموقع
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <Button
+                                        onClick={handleSaveLocation}
+                                        className="h-9 px-4 text-sm bg-emerald-600 hover:bg-emerald-700 font-bold shrink-0"
+                                    >
+                                        {editingResource.id ? 'حفظ' : 'إضافة'}
+                                    </Button>
+                                </DialogHeader>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-500 pr-1">التصنيف</label>
-                                        <div className="grid grid-cols-5 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 max-h-40 overflow-y-auto">
-                                            {ICON_LIBRARY.map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    type="button"
-                                                    onClick={() => setEditingResource({ ...editingResource, category: item.id })}
-                                                    className={cn(
-                                                        "flex flex-col items-center justify-center p-1.5 rounded-lg transition-all border",
-                                                        (editingResource.category || 'other') === item.id
-                                                            ? "bg-white border-blue-400 shadow-sm ring-1 ring-blue-400"
-                                                            : "border-transparent hover:bg-white hover:border-gray-200"
-                                                    )}
-                                                >
-                                                    <div className={cn("p-1.5 rounded-full mb-1", item.bg, item.color)}>
-                                                        <item.icon className="w-4 h-4" />
-                                                    </div>
-                                                    <span className="text-[9px] font-medium text-gray-500 line-clamp-1">{item.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Full Address & Search (Secondary) */}
-                                <div className="pt-4 border-t border-gray-100 space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-bold text-gray-400 pr-1">العنوان الكامل (تلقائي)</label>
-                                        <Input
-                                            value={editingResource.address || ''}
-                                            readOnly
-                                            className="text-right text-[11px] bg-gray-50 border-none text-gray-500 h-auto py-2"
-                                            placeholder="يتم تحديده تلقائياً..."
-                                        />
-                                    </div>
-
+                                <div className="p-4 space-y-4">
+                                    {/* Manual Search Bar - NOW AT TOP */}
                                     <div className="space-y-1.5 relative">
-                                        <label className="text-xs font-bold text-gray-500 pr-1">بحث يدوي بالعنوان</label>
-                                        <div className="flex items-center gap-2 border rounded-xl px-3 bg-gray-50 focus-within:bg-white h-11 transition-colors">
+                                        <div className="flex items-center gap-2 border rounded-xl px-3 bg-gray-50 focus-within:bg-white h-11 transition-all shadow-sm">
                                             <Search className="w-4 h-4 text-gray-400 shrink-0" />
                                             <Input
-                                                className="border-0 bg-transparent focus-visible:ring-0 text-right px-0 h-full text-xs"
-                                                placeholder="ابحث عن مكان آخر..."
+                                                className="border-0 bg-transparent focus-visible:ring-0 text-right px-0 h-full text-sm font-medium"
+                                                placeholder="بحث سريع عن عنوان..."
                                                 value={editingResource.address_search || ''}
                                                 onChange={(e) => {
                                                     const query = e.target.value;
@@ -453,14 +393,99 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
                                                             } catch (e) { }
                                                         }, 500);
                                                         return () => clearTimeout(timer);
+                                                    } else {
+                                                        const resultsDiv = document.getElementById('dialog-search-results-list-settings');
+                                                        if (resultsDiv) resultsDiv.innerHTML = '';
                                                     }
                                                 }}
                                             />
                                         </div>
-                                        <div id="dialog-search-results-list-settings" className="absolute z-20 w-full bg-white border rounded-xl shadow-2xl max-h-60 overflow-y-auto mt-1 empty:hidden"></div>
+                                        <div id="dialog-search-results-list-settings" className="absolute z-[40] w-full bg-white border rounded-xl shadow-2xl max-h-60 overflow-y-auto mt-1 empty:hidden"></div>
+                                    </div>
+
+                                    {/* Action Tools Row */}
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleLocateMe}
+                                            className="flex-1 gap-2 h-11 bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl shadow-sm font-bold text-xs"
+                                        >
+                                            <Locate className="w-5 h-5" />
+                                            تحديد موقعي الآن
+                                        </Button>
+
+                                        <Popover modal={true}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    className="flex-1 gap-2 h-11 bg-white border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl shadow-sm font-bold text-xs"
+                                                >
+                                                    {(() => {
+                                                        const activeIcon = ICON_LIBRARY.find(i => i.id === (editingResource.category || 'other')) || ICON_LIBRARY[ICON_LIBRARY.length - 1];
+                                                        return <><activeIcon.icon className="w-5 h-5" /> التصنيف</>;
+                                                    })()}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-80 p-3" align="center">
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {ICON_LIBRARY.map((item) => (
+                                                        <button
+                                                            key={item.id}
+                                                            type="button"
+                                                            onClick={() => setEditingResource({ ...editingResource, category: item.id })}
+                                                            className={cn(
+                                                                "flex flex-col items-center justify-center p-2 rounded-xl transition-all border",
+                                                                (editingResource.category || 'other') === item.id
+                                                                    ? "bg-blue-50 border-blue-400 shadow-sm"
+                                                                    : "border-transparent hover:bg-gray-50 hover:border-gray-200"
+                                                            )}
+                                                        >
+                                                            <div className={cn("p-2 rounded-full mb-1", item.bg, item.color)}>
+                                                                <item.icon className="w-5 h-5" />
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-gray-600 line-clamp-1">{item.label}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+
+                                    {/* Data Fields */}
+                                    <div className="space-y-4 pt-2">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-500 pr-1">الشارع ورقم المبنى</label>
+                                            <div className="relative">
+                                                <Input
+                                                    value={editingResource.street_line || ''}
+                                                    onChange={(e) => setEditingResource({ ...editingResource, street_line: e.target.value })}
+                                                    className={cn(
+                                                        "text-right h-12 bg-gray-50 border-gray-200 rounded-xl focus:bg-white pr-10 font-bold",
+                                                        (!editingResource.street_line || !/\d/.test(editingResource.street_line)) && "border-amber-400 bg-amber-50"
+                                                    )}
+                                                    placeholder="مثلاً: شارع النيل، مبنى 12"
+                                                    dir="rtl"
+                                                />
+                                                <Navigation className="absolute right-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                                            </div>
+                                            {(!editingResource.street_line || !/\d/.test(editingResource.street_line)) && (
+                                                <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1.5 px-1 py-1 bg-amber-50/50 rounded-lg">
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    يرجى كتابة رقم المبنى لضمان دقة الموقع في الخريطة
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-400 pr-1">العنوان الكامل (عرض فقط)</label>
+                                            <div className="text-right text-[11px] bg-gray-50 rounded-xl p-3 text-gray-500 font-medium leading-relaxed border border-gray-100 italic min-h-[44px]">
+                                                {editingResource.address || 'يتم تحديده تلقائياً عند اختيار الموقع...'}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </DialogContent>
                 </Dialog>

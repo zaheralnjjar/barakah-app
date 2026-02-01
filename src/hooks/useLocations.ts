@@ -474,7 +474,14 @@ export const useLocations = () => {
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
-            if (session?.user) {
+            // Only attempt server delete if ID is a valid UUID
+            // This prevents "invalid input syntax" errors for local legacy IDs (timestamps, etc.)
+            // Track this ID as deleted to prevent immediate sync resurrection
+            recentlyDeletedIds.current.add(id);
+
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+            if (session?.user && isUUID) {
                 const { error } = await supabase.from('saved_locations')
                     .delete()
                     .eq('id', id)

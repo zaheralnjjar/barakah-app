@@ -318,19 +318,94 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
 
     const countdown = activeItem.meta ? getCountdown(activeItem.meta) : null;
 
+    // Touch Handling for Swipe
+    const touchStartX = React.useRef(0);
+    const touchStartY = React.useRef(0); // Add Y tracking for vertical swipe
+    const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+
+        // Start long press timer
+        longPressTimer.current = setTimeout(() => {
+            setIsPaused(true);
+        }, 500); // 500ms hold to pause
+    };
+
+    const onTouchMove = () => {
+        // If moving, cancel long press
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const onTouchEnd = (e: React.TouchEvent) => {
+        // Clear timer on release
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+            // If we were paused (held long enough), unpause
+            setIsPaused(false);
+        }
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+
+        // Calculate deltas
+        const diffX = touchStartX.current - touchEndX;
+        const diffY = touchStartY.current - touchEndY; // Positive = Swipe Up, Negative = Swipe Down
+
+        // Horizontal Swipe (Next/Prev Item)
+        if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX > 0) {
+                handleNext();
+            } else {
+                handlePrev();
+            }
+            return;
+        }
+
+        // Vertical Swipe (Change Type)
+        // Swipe Up (positive diffY) -> Next Type
+        // Swipe Down (negative diffY) -> Prev Type
+        if (Math.abs(diffY) > 50 && Math.abs(diffY) > Math.abs(diffX)) {
+            const currentType = activeItem.type;
+            let nextIndex = currentIndex;
+            let foundNewType = false;
+            const direction = diffY > 0 ? 1 : -1; // Up = +1 (Next), Down = -1 (Prev)
+            let checks = 0;
+
+            // Loop to find next item with DIFFERENT type
+            while (!foundNewType && checks < slides.length) {
+                nextIndex = (nextIndex + direction + slides.length) % slides.length;
+                if (slides[nextIndex].type !== currentType) {
+                    foundNewType = true;
+                }
+                checks++;
+            }
+
+            if (foundNewType) {
+                setCurrentIndex(nextIndex);
+            }
+        }
+    };
+
     return (
         <Card
             className={cn(
-                "w-full overflow-hidden border-0 shadow-xl rounded-[1.5rem] transition-all duration-700 bg-gradient-to-br min-h-[90px] relative group",
+                "w-full overflow-hidden border-0 shadow-xl rounded-[1.5rem] transition-all duration-700 bg-gradient-to-br min-h-[140px] relative group", // Increased height to 140px (approx 20% more than 110)
                 activeItem.gradient
             )}
             dir="rtl"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
-            onTouchStart={() => setIsPaused(true)}
-            onTouchEnd={() => setIsPaused(false)}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
         >
-            <CardContent className="p-3 relative h-full flex flex-col justify-center gap-1 z-10">
+            <CardContent className="p-4 relative h-full flex flex-col justify-center gap-1 z-10 pb-6"> {/* Added pb-6 for bottom progress bar space */}
 
                 {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
@@ -338,19 +413,17 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                 {/* row 1: Icon - Title - Countdown */}
                 <div className="flex items-center gap-2 w-full">
                     <div className={cn("p-1.5 rounded-xl backdrop-blur-md border border-white/10 shrink-0", activeItem.accentColor)}>
-                        <Icon className={cn("w-4 h-4", activeItem.textColor)} />
+                        <Icon className={cn("w-5 h-5", activeItem.textColor)} />
                     </div>
 
                     <div className="flex-1 min-w-0 flex items-center gap-2"
                         onClick={() => {
                             if (activeItem.data && onOpenEvent && (activeItem.type === 'task' || activeItem.type === 'appointment')) {
                                 onOpenEvent(activeItem.data);
-                            } else {
-                                handleNext();
                             }
                         }}
                     >
-                        <h2 className={cn("text-lg font-bold leading-tight truncate drop-shadow-sm", activeItem.textColor)}>
+                        <h2 className={cn("text-lg font-bold leading-tight line-clamp-2 drop-shadow-sm", activeItem.textColor)}>
                             {activeItem.title}
                         </h2>
                     </div>
@@ -368,39 +441,36 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                     )}
                 </div>
 
-                {/* Row 2: Indicators - Subtitle - Progress - Button */}
-                <div className="flex items-center justify-between gap-2 w-full mt-0.5">
+                {/* Row 2: Subtitle (Note Content) - Expanded */}
+                <div className="flex-1 w-full min-h-0 mt-1 mb-1">
+                    <p className={cn("text-[11px] leading-relaxed font-medium opacity-80 line-clamp-3 whitespace-pre-line", activeItem.textColor)}>
+                        {activeItem.subtitle}
+                    </p>
+                </div>
 
-                    {/* Dots + Subtitle Group */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <div className="flex gap-0.5 shrink-0">
-                            {slides.map((_, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "h-1 rounded-full transition-all duration-500",
-                                        idx === currentIndex ? "w-3 bg-white" : "w-1 bg-white/30"
-                                    )}
-                                />
-                            ))}
-                        </div>
-                        <p className={cn("text-xs font-medium opacity-80 truncate", activeItem.textColor)}>
-                            {activeItem.subtitle}
-                        </p>
+                {/* Row 3: Indicators - Progress - Button */}
+                <div className="flex items-center justify-between gap-2 w-full mt-auto">
+
+                    {/* Indicators (Dots) - Moved to bottom */}
+                    <div className="flex gap-1 shrink-0">
+                        {slides.map((_, idx) => (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    "h-1.5 rounded-full transition-all duration-500",
+                                    idx === currentIndex ? "w-4 bg-white" : "w-1.5 bg-white/30"
+                                )}
+                            />
+                        ))}
                     </div>
 
-                    {/* Progress Bar (if exists) */}
+                    {/* Progress Bar (if exists) - Optional inline visual */}
                     {activeItem.progress !== undefined && (
-                        <div className="w-16 h-1 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm shrink-0">
-                            <div
-                                className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
-                                style={{ width: `${activeItem.progress}%` }}
-                            />
-                        </div>
+                        <span className="text-[10px] font-mono opacity-80 text-white">{activeItem.progress}%</span>
                     )}
 
                     {/* Navigation Arrows (Visible on hover) */}
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
                         <button
                             onClick={(e) => { e.stopPropagation(); handlePrev(); }}
                             className={cn(
@@ -423,6 +493,16 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                         </button>
                     </div>
                 </div>
+
+                {/* Progress Bar (Absolute Bottom) */}
+                {activeItem.progress !== undefined && (
+                    <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/10 backdrop-blur-sm">
+                        <div
+                            className="h-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.4)] transition-all duration-1000 ease-out"
+                            style={{ width: `${activeItem.progress}%` }}
+                        />
+                    </div>
+                )}
 
                 {/* Click Areas for Navigation */}
                 <div className="absolute inset-y-0 left-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
