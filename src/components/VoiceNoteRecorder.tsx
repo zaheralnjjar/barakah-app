@@ -92,80 +92,75 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
     }, [isOpen]);
 
     const startRecording = useCallback(async () => {
-        // Reset manual stop flag - user is starting/resuming
+        // Reset manual stop flag
         manualStopRef.current = false;
 
-        // Capture current text as the starting point for this session
+        // Capture current text
         previousTranscriptRef.current = transcript;
 
         if (useNativeSpeech) {
-            // Use Native Capacitor Speech Recognition (Android/iOS)
-            // IMPORTANT: Android sends CUMULATIVE text in partialResults, not incremental!
             try {
                 setIsRecording(true);
                 setInterimTranscript('');
-                // Clear the last processed text for this session
                 lastProcessedTextRef.current = '';
 
-                // clean up any previous listeners to prevent duplicates
+                // clean up
                 await SpeechRecognition.removeAllListeners();
 
-                // Start listening with native plugin
+                // Start listening
                 await SpeechRecognition.start({
                     language: 'ar-SA',
-                    maxResults: 1, // Only get best match to reduce duplication
+                    maxResults: 1,
                     popup: false,
                     partialResults: true,
                 });
 
-                // Listen for partial results
-                // Android sends CUMULATIVE text, not incremental!!
+                // Correct cumulative logic for Native Android
                 SpeechRecognition.addListener('partialResults', (data: { matches: string[] }) => {
                     if (data.matches && data.matches.length > 0) {
                         const incomingText = data.matches[0].trim();
-
-                        // SKIP if identical to what we just processed (basic dedup)
-                        if (incomingText === lastProcessedTextRef.current) return;
-
-                        // SKIP if incoming is shorter than what we already have for this session (jitter)
-                        if (incomingText.length < lastProcessedTextRef.current.length) return;
-
-                        lastProcessedTextRef.current = incomingText;
+                        // On Android, matches[0] is often the FULL cumulative transcript for the session
                         setInterimTranscript(incomingText);
-
-                        // DO NOT update main transcript yet. Only show interim.
-                        // We will "commit" this interim text to the main transcript ONLY when we stop.
+                        lastProcessedTextRef.current = incomingText;
                     }
                 });
 
-                // Listen for listening state changes - auto-restart if not manually stopped
-                SpeechRecognition.addListener('listeningState', async (state: { status: string }) => {
+                SpeechRecognition.addListener('listeningState', (state: { status: string }) => {
                     if (state.status === 'stopped') {
-                        // COMMIT logic: When stopped, take the last interim and add to main.
+                        // Commit only when stopped
                         if (lastProcessedTextRef.current) {
                             setTranscript(prev => {
-                                const newVal = prev ? prev.trim() + ' ' + lastProcessedTextRef.current : lastProcessedTextRef.current;
-                                previousTranscriptRef.current = newVal;
-                                return newVal;
+                                const currentBase = previousTranscriptRef.current;
+                                const separator = currentBase ? ' ' : '';
+                                const NEW_TEXT = lastProcessedTextRef.current;
+
+                                // Basic similarity check: don't append if it's already there
+                                if (currentBase.endsWith(NEW_TEXT)) return currentBase;
+
+                                const combined = currentBase + separator + NEW_TEXT;
+                                previousTranscriptRef.current = combined;
+                                return combined;
                             });
-                            // Reset for next session
                             setInterimTranscript('');
                             lastProcessedTextRef.current = '';
                         }
 
                         if (!manualStopRef.current) {
-                            console.log('Native speech stopped, auto-restarting...');
-                            try {
-                                await SpeechRecognition.start({
-                                    language: 'ar-SA',
-                                    maxResults: 1,
-                                    popup: false,
-                                    partialResults: true,
-                                });
-                            } catch (e) {
-                                console.warn('Could not restart native speech:', e);
-                                setIsRecording(false);
-                            }
+                            // Delay restart to allow buffer clearing and avoid "echo"
+                            setTimeout(async () => {
+                                if (!manualStopRef.current) {
+                                    try {
+                                        await SpeechRecognition.start({
+                                            language: 'ar-SA',
+                                            maxResults: 1,
+                                            popup: false,
+                                            partialResults: true,
+                                        });
+                                    } catch (e) {
+                                        console.warn('Native restart failed:', e);
+                                    }
+                                }
+                            }, 300);
                         } else {
                             setIsRecording(false);
                         }
@@ -180,17 +175,20 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
             return;
         }
 
-        // Desktop/Web: Use Web Speech API
+        // Web Speech API
         try {
             await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (err) {
-            console.error('Microphone permission denied:', err);
-            toast({ title: 'عذراً، يجب السماح باستخدام الميكروفون', variant: 'destructive' });
+            toast({ title: 'يجب السماح باستخدام الميكروفون', variant: 'destructive' });
             return;
         }
 
         const WebSpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!WebSpeechRecognition) return;
+
+        if (recognitionRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+        }
 
         const recognition = new WebSpeechRecognition();
         recognition.lang = 'ar-SA';
@@ -201,64 +199,58 @@ const VoiceNoteRecorder: React.FC<VoiceNoteRecorderProps> = ({ isOpen, onClose, 
         recognition.onstart = () => {
             setIsRecording(true);
             setInterimTranscript('');
-            // Don't clear finalTranscriptRef - keep accumulated text
-            // Only reset processedResults for new session segments
-            processedResultsRef.current = new Set();
         };
 
+        // ROBUST WEB RESULT HANDLING
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-            let interimContent = '';
+            let finalForThisSession = '';
+            let interimForThisSession = '';
 
+            // Instead of just appending, we reconstruct the "new" part of the session
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const result = event.results[i];
                 const text = result[0].transcript;
-
                 if (result.isFinal) {
-                    setTranscript(prev => {
-                        const newText = prev ? `${prev} ${text}` : text;
-                        previousTranscriptRef.current = newText;
-                        return newText;
-                    });
+                    finalForThisSession += text;
                 } else {
-                    interimContent += text;
+                    interimForThisSession += text;
                 }
             }
-            setInterimTranscript(interimContent);
+
+            if (finalForThisSession) {
+                setTranscript(prev => {
+                    const cleanedFinal = finalForThisSession.trim();
+                    // Avoid duplicating if the browser sends the same final result twice
+                    if (prev.endsWith(cleanedFinal)) return prev;
+
+                    const combined = prev ? `${prev.trim()} ${cleanedFinal}` : cleanedFinal;
+                    previousTranscriptRef.current = combined;
+                    return combined;
+                });
+            }
+            setInterimTranscript(interimForThisSession);
         };
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             console.error('Speech recognition error:', event.error);
-            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                toast({ title: 'تم رفض الوصول للميكروفون', variant: 'destructive' });
-            }
+            if (event.error === 'network') toast({ title: 'مشكلة في الاتصال بالإنترنت' });
             setIsRecording(false);
         };
 
         recognition.onend = () => {
-            // Auto-restart if not manually stopped (handles silence timeout)
-            if (!manualStopRef.current && recognitionRef.current) {
-                console.log('Auto-restarting speech recognition...');
-                try {
-                    setTimeout(() => {
-                        if (recognitionRef.current && !manualStopRef.current) {
-                            recognitionRef.current.start();
-                        }
-                    }, 100);
-                } catch (e) {
-                    console.warn('Could not restart recognition:', e);
-                    setIsRecording(false);
-                }
+            if (!manualStopRef.current) {
+                setTimeout(() => {
+                    if (!manualStopRef.current) {
+                        try { recognition.start(); } catch (e) { }
+                    }
+                }, 300);
             } else {
                 setIsRecording(false);
             }
         };
 
         recognitionRef.current = recognition;
-        try {
-            recognition.start();
-        } catch (e) {
-            console.error("Failed to start recognition:", e);
-        }
+        try { recognition.start(); } catch (e) { }
     }, [transcript, toast, useNativeSpeech]);
 
     const stopRecording = useCallback(async () => {

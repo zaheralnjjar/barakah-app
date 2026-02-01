@@ -69,22 +69,6 @@ export const useShortcutExecution = (props: {
                 });
                 break;
 
-            case 'show_balance':
-                setShortcutResult({
-                    id: actionId,
-                    title: '💰 الرصيد المالي',
-                    content: `💳 الرصيد الحالي: ${(financeData?.current_balance_ars || 0).toLocaleString()} ARS\n💵 بالدولار: ${(financeData?.current_balance_usd || 0).toLocaleString()} USD\n📉 المتبقي اليومي: ${(dailyLimit || 0).toLocaleString()} ARS`
-                });
-                break;
-
-            case 'show_next_prayer':
-                const np = prayerTimes.find((p: any) => p.isNext);
-                setShortcutResult({
-                    id: actionId,
-                    title: '🕌 الصلاة القادمة',
-                    content: np ? `الصلاة: ${np.name}\nالوقت: ${np.time}\nمتبقي: ${timeUntilNext}` : 'تم أداء جميع الصلوات'
-                });
-                break;
 
             case 'show_medications':
                 // Simple list of all medications for now
@@ -157,12 +141,44 @@ export const useShortcutExecution = (props: {
                 setShortcutResult({
                     id: actionId,
                     title: '💰 الرصيد المالي',
-                    content: `💳 الرصيد: ${(financeData?.current_balance_ars || 0).toLocaleString()} ARS\n💵 بالدولار: ${(financeData?.current_balance_usd || 0).toLocaleString()} USD`
+                    content: `💳 الرصيد الحالي: ${(financeData?.current_balance_ars || 0).toLocaleString()} ARS\n💵 بالدولار: ${(financeData?.current_balance_usd || 0).toLocaleString()} USD\n📉 المتبقي اليومي: ${(dailyLimit || 0).toLocaleString()} ARS`
                 });
                 break;
 
-            case 'finance_summary': // Kept for backward compatibility
+            case 'finance_summary':
                 executeShortcut('info_daily');
+                break;
+
+            case 'loc_save_parking':
+            case 'save_parking':
+                if (props.onQuickParking) {
+                    props.onQuickParking();
+                } else {
+                    window.dispatchEvent(new CustomEvent('save-parking'));
+                }
+                break;
+
+            case 'loc_find_car':
+                window.dispatchEvent(new CustomEvent('find-parking'));
+                break;
+
+            case 'loc_share':
+            case 'copy_location':
+            case 'share_location':
+                executeShortcut('copy_coords');
+                break;
+
+            case 'shopping':
+            case 'show_shopping':
+                props.onOpenAddDialog('shopping');
+                break;
+
+            case 'save_location':
+                props.onOpenAddDialog('location');
+                break;
+
+            case 'open_map':
+                props.onNavigateToTab?.('map');
                 break;
 
             // ===== إجراءات سريعة (Quick Actions) =====
@@ -300,59 +316,6 @@ export const useShortcutExecution = (props: {
                 }
                 break;
 
-            case 'loc_save_parking':
-            case 'save_parking':
-                // Use the event to trigger parking save logic in DashboardLocations/Hook
-                window.dispatchEvent(new CustomEvent('save-parking'));
-                break;
-
-            case 'loc_find_car':
-                window.dispatchEvent(new CustomEvent('find-parking'));
-                break;
-
-            case 'loc_share':
-            case 'copy_location':
-                executeShortcut('copy_coords');
-                break;
-
-            case 'shopping':
-            case 'show_shopping':
-                props.onOpenAddDialog('shopping');
-                break;
-
-            case 'save_location':
-                props.onOpenAddDialog('location');
-                break;
-                // Keep quick save current for specific calls
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(async (pos) => {
-                        const name = prompt('اسم الموقع:', 'موقعي الحالي');
-                        if (!name) return;
-                        await supabase.from('saved_locations').insert({
-                            user_id: (await supabase.auth.getUser()).data.user?.id,
-                            name,
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude,
-                            type: 'general'
-                        });
-                        toast({ title: 'تم الحفظ', description: `تم حفظ ${name}` });
-                    });
-                }
-                break;
-            case 'open_map':
-                // Changed to open the Locations tab or dialog instead of Google Maps external link
-                props.onNavigateToTab?.('locations'); // Or props.onOpenAddDialog('location') depending on preference
-                break;
-            case 'save_parking':
-                // Ensure this opens the parking dialog if onQuickParking is implemented, otherwise the map
-                if (props.onQuickParking) {
-                    props.onQuickParking();
-                } else {
-                    // Fallback to triggering the global event which DashboardLocations listens to
-                    window.dispatchEvent(new CustomEvent('save-parking'));
-                }
-                break;
-
             case 'loc_shipping':
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -363,7 +326,7 @@ export const useShortcutExecution = (props: {
                             name,
                             latitude: pos.coords.latitude,
                             longitude: pos.coords.longitude,
-                            type: 'shipping' // Assuming 'shipping' is a valid type or generic enough
+                            type: 'shipping'
                         });
                         toast({ title: '📦 تم الحفظ', description: `تم حفظ ${name}` });
                     });
@@ -429,23 +392,6 @@ export const useShortcutExecution = (props: {
                 break;
             }
 
-            case 'finance_summary': {
-                const totalToday = financeData?.pending_expenses?.filter((tx: any) =>
-                    tx?.timestamp && new Date(tx.timestamp).toDateString() === new Date().toDateString()
-                ).reduce((acc: number, curr: any) => acc + (Number(curr?.amount) || 0), 0) || 0;
-
-                setShortcutResult({
-                    id: actionId,
-                    title: '💰 الملخص المالي اليومي',
-                    content: `المصاريف اليومية: ${(totalToday || 0).toLocaleString()} ARS\nالحد المتبقي: ${(dailyLimit || 0).toLocaleString()} ARS`
-                });
-                break;
-            }
-
-            case 'open_mushaf': window.open('https://quran.com', '_blank'); break;
-            case 'open_adhkar': window.open('https://www.duas.org/mobile/morning-evening-adhkar.html', '_blank'); break;
-            case 'open_tasbih': window.dispatchEvent(new CustomEvent('open-tasbih')); break;
-            case 'open_qibla': window.open('https://qiblafinder.withgoogle.com', '_blank'); break;
 
             default:
                 console.log('Unhandled shortcut:', actionId);

@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Navigation, Share2, Edit2, Trash2, CheckSquare, Plus, Globe, Search, X, Locate, Loader2 } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
-import { LocationIconPicker, getLocationIconComponent } from '@/components/LocationIconPicker';
+import { LocationIconPicker, getLocationIconComponent, ICON_LIBRARY } from '@/components/LocationIconPicker';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Share } from '@capacitor/share';
+import { cn } from '@/lib/utils';
 
 interface MapsSettingsDialogProps {
     open: boolean;
@@ -298,186 +299,167 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
 
                 {/* Edit Dialog */}
                 <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle className="text-right">تعديل الموقع</DialogTitle>
+                    <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
+                        <DialogHeader className="flex flex-row items-center justify-between border-b pb-2 mb-4 space-y-0">
+                            <DialogTitle className="text-right text-base font-bold">تعديل تفاصيل الموقع</DialogTitle>
+                            <div className="flex gap-2 shrink-0">
+                                <Button variant="outline" size="sm" onClick={() => setIsEditOpen(false)} className="h-8 text-xs">إلغاء</Button>
+                                <Button size="sm" onClick={handleSaveLocation} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700">
+                                    {editingResource?.id ? 'حفظ' : 'إضافة'}
+                                </Button>
+                            </div>
                         </DialogHeader>
+
                         {editingResource && (
-                            <div className="py-4 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold block text-right">اسم الموقع</label>
+                            <div className="space-y-5">
+                                {/* Auto Locate Section - Most Important */}
+                                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-bold text-emerald-800">تحديد الموقع التلقائي</p>
+                                        <Locate className="w-4 h-4 text-emerald-600 animate-pulse" />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="default"
+                                        onClick={handleLocateMe}
+                                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-95 transition-all"
+                                    >
+                                        <Locate className="w-5 h-5" />
+                                        تحديث الموقع الحالي الآن
+                                    </Button>
+                                    <p className="text-[10px] text-emerald-600 text-center font-medium">سيتم ملء الشارع والرقم تلقائياً عند الضغط</p>
+                                </div>
+
+                                {/* Basic Info */}
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-500 pr-1">اسم الموقع</label>
                                         <Input
                                             value={editingResource.title || ''}
                                             onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
-                                            className="text-right"
-                                            placeholder="المنزل، العمل... (اختياري)"
+                                            className="text-right h-11 bg-gray-50 border-gray-200 focus:bg-white"
+                                            placeholder="مثلاً: البيت، العمل، المسجد..."
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold block text-right mb-1">التصنيف</label>
-                                        <div className="w-full">
-                                            <LocationIconPicker
-                                                selectedIconId={editingResource.category || 'other'}
-                                                onSelect={(iconId) => setEditingResource({ ...editingResource, category: iconId })}
-                                            />
+
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-500 pr-1">الشارع ورقم المبنى (هام)</label>
+                                            <div className="relative">
+                                                <Input
+                                                    value={editingResource.street_line || ''}
+                                                    onChange={(e) => setEditingResource({ ...editingResource, street_line: e.target.value })}
+                                                    className={cn(
+                                                        "text-right h-11 bg-gray-50 border-gray-200 focus:bg-white pr-9",
+                                                        (!editingResource.street_line || !/\d/.test(editingResource.street_line)) && "border-amber-400 bg-amber-50"
+                                                    )}
+                                                    placeholder="مثلاً: شارع النيل، مبنى 12"
+                                                    dir="rtl"
+                                                />
+                                                <Navigation className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                                            </div>
+                                            {(!editingResource.street_line || !/\d/.test(editingResource.street_line)) && (
+                                                <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                    يرجى التأكد من كتابة رقم المبنى لضمان دقة الموقع
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-500 pr-1">التصنيف</label>
+                                        <div className="grid grid-cols-5 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100 max-h-40 overflow-y-auto">
+                                            {ICON_LIBRARY.map((item) => (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    onClick={() => setEditingResource({ ...editingResource, category: item.id })}
+                                                    className={cn(
+                                                        "flex flex-col items-center justify-center p-1.5 rounded-lg transition-all border",
+                                                        (editingResource.category || 'other') === item.id
+                                                            ? "bg-white border-blue-400 shadow-sm ring-1 ring-blue-400"
+                                                            : "border-transparent hover:bg-white hover:border-gray-200"
+                                                    )}
+                                                >
+                                                    <div className={cn("p-1.5 rounded-full mb-1", item.bg, item.color)}>
+                                                        <item.icon className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-[9px] font-medium text-gray-500 line-clamp-1">{item.label}</span>
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold block text-right">تفاصيل العنوان (الشارع، المبنى)</label>
-                                    <Input
-                                        value={editingResource.street_line || ''}
-                                        onChange={(e) => setEditingResource({ ...editingResource, street_line: e.target.value })}
-                                        className={`text-right ${(!editingResource.street_line || !/\d/.test(editingResource.street_line)) ? 'border-amber-400 bg-amber-50' : ''}`}
-                                        placeholder="شارع الملك فهد، مبنى 5..."
-                                        dir="rtl"
-                                    />
-                                    {(!editingResource.street_line || !/\d/.test(editingResource.street_line)) && (
-                                        <p className="text-[10px] text-amber-600 font-bold mt-1">⚠️ يرجى التأكد من كتابة رقم المبنى</p>
-                                    )}
-                                </div>
 
+                                {/* Full Address & Search (Secondary) */}
+                                <div className="pt-4 border-t border-gray-100 space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-gray-400 pr-1">العنوان الكامل (تلقائي)</label>
+                                        <Input
+                                            value={editingResource.address || ''}
+                                            readOnly
+                                            className="text-right text-[11px] bg-gray-50 border-none text-gray-500 h-auto py-2"
+                                            placeholder="يتم تحديده تلقائياً..."
+                                        />
+                                    </div>
 
-                                <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                    <p className="text-xs font-bold text-gray-500 mb-2">أدوات تحديد الموقع</p>
-
-                                    {/* Locate Me Button */}
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleLocateMe}
-                                        className="w-full gap-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 h-9 mb-2"
-                                    >
-                                        <Locate className="w-4 h-4" />
-                                        تحديد موقعي الحالي
-                                    </Button>
-
-                                    {/* Address Search (Auto) */}
                                     <div className="space-y-1.5 relative">
-                                        <label className="text-xs text-gray-500 block text-right">بحث بالعنوان (اسم الشارع، رقم المبنى)</label>
-                                        <div className="flex items-center gap-2 border rounded-md px-2 focus-within:ring-2 ring-blue-100 bg-white h-9">
+                                        <label className="text-xs font-bold text-gray-500 pr-1">بحث يدوي بالعنوان</label>
+                                        <div className="flex items-center gap-2 border rounded-xl px-3 bg-gray-50 focus-within:bg-white h-11 transition-colors">
                                             <Search className="w-4 h-4 text-gray-400 shrink-0" />
                                             <Input
                                                 className="border-0 bg-transparent focus-visible:ring-0 text-right px-0 h-full text-xs"
-                                                placeholder="اكتب 3 أحرف للبحث..."
+                                                placeholder="ابحث عن مكان آخر..."
                                                 value={editingResource.address_search || ''}
                                                 onChange={(e) => {
                                                     const query = e.target.value;
                                                     setEditingResource({ ...editingResource, address_search: query });
-
-                                                    // Trigger search after 3 chars
                                                     if (query.length >= 3) {
-                                                        const debounceTimer = setTimeout(async () => {
-                                                            const resultsDiv = document.getElementById('dialog-search-results-list-settings');
-                                                            if (resultsDiv) resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">جاري البحث...</div>';
+                                                        const resultsDiv = document.getElementById('dialog-search-results-list-settings');
+                                                        if (resultsDiv) resultsDiv.innerHTML = '<div class="p-4 text-xs text-center text-gray-400"><Loader2 class="w-4 h-4 animate-spin mx-auto mb-1"/>جاري البحث...</div>';
 
+                                                        const timer = setTimeout(async () => {
                                                             try {
                                                                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&accept-language=ar`);
                                                                 const data = await res.json();
-
                                                                 if (resultsDiv) {
-                                                                    if (data.length === 0) {
-                                                                        resultsDiv.innerHTML = '<div class="p-2 text-xs text-center text-gray-400">لا توجد نتائج</div>';
-                                                                    } else {
-                                                                        resultsDiv.innerHTML = '';
-                                                                        data.forEach((item: any) => {
-                                                                            const div = document.createElement('div');
-                                                                            div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b last:border-0 text-right text-xs';
-                                                                            div.innerHTML = `<div class="font-bold text-gray-700">${(item.display_name || '').split(',').slice(0, 2).join(',')}</div><div class="text-[10px] text-gray-400 truncate">${item.display_name}</div>`;
-                                                                            div.onclick = () => {
-                                                                                const lat = parseFloat(item.lat);
-                                                                                const lng = parseFloat(item.lon);
-                                                                                const addr = item.address || {};
-                                                                                const road = addr.road || addr.street || addr.pedestrian || '';
-                                                                                const number = addr.house_number || '';
-                                                                                const searchStr = road ? (number ? `${road} ${number}` : road) : item.display_name.split(',')[0];
-
-                                                                                setEditingResource(prev => ({
-                                                                                    ...prev,
-                                                                                    lat: lat,
-                                                                                    lng: lng,
-                                                                                    title: prev.title || '', // Keep existing title or empty
-                                                                                    street_line: searchStr, // Put detailed address here
-                                                                                    address: item.display_name,
-                                                                                    address_search: searchStr,
-                                                                                    url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-                                                                                }));
-                                                                                resultsDiv.innerHTML = '';
-                                                                            };
-                                                                            resultsDiv.appendChild(div);
-                                                                        });
-                                                                    }
+                                                                    resultsDiv.innerHTML = '';
+                                                                    if (data.length === 0) resultsDiv.innerHTML = '<div class="p-4 text-xs text-center text-gray-400">لا توجد نتائج</div>';
+                                                                    data.forEach((item: any) => {
+                                                                        const div = document.createElement('div');
+                                                                        div.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 text-right transition-colors';
+                                                                        div.innerHTML = `<div class="font-bold text-sm text-gray-700">${(item.display_name || '').split(',')[0]}</div><div class="text-[10px] text-gray-400 truncate">${item.display_name}</div>`;
+                                                                        div.onclick = () => {
+                                                                            const latP = parseFloat(item.lat);
+                                                                            const lngP = parseFloat(item.lon);
+                                                                            const addr = item.address || {};
+                                                                            const road = addr.road || addr.street || addr.pedestrian || '';
+                                                                            const num = addr.house_number || '';
+                                                                            const sStr = road ? (num ? `${road} ${num}` : road) : item.display_name.split(',')[0];
+                                                                            setEditingResource(prev => ({
+                                                                                ...prev,
+                                                                                lat: latP, lng: lngP,
+                                                                                street_line: sStr,
+                                                                                address: item.display_name,
+                                                                                address_search: sStr,
+                                                                                url: `https://www.google.com/maps/search/?api=1&query=${latP},${lngP}`
+                                                                            }));
+                                                                            resultsDiv.innerHTML = '';
+                                                                        };
+                                                                        resultsDiv.appendChild(div);
+                                                                    });
                                                                 }
-                                                            } catch (e) { console.error(e); }
+                                                            } catch (e) { }
                                                         }, 500);
-                                                    } else {
-                                                        const resultsDiv = document.getElementById('dialog-search-results-list-settings');
-                                                        if (resultsDiv) resultsDiv.innerHTML = '';
+                                                        return () => clearTimeout(timer);
                                                     }
                                                 }}
                                             />
                                         </div>
-                                        <div id="dialog-search-results-list-settings" className="absolute z-10 w-full bg-white border rounded shadow-lg max-h-40 overflow-y-auto mt-1 empty:hidden"></div>
-                                    </div>
-
-                                    {/* Link Parsing */}
-                                    <div className="space-y-1.5 pt-2 border-t border-gray-100 mt-2">
-                                        <label className="text-xs text-gray-500 block text-right">أو الصق رابط خرائط جوجل</label>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    const coords = parseGoogleMapsUrl(editingResource.url || '');
-                                                    if (coords) {
-                                                        setEditingResource({ ...editingResource, lat: coords.lat, lng: coords.lng });
-                                                        toast({ title: '✅ تم استخراج الإحداثيات' });
-                                                    } else {
-                                                        toast({ title: '❌ فشل الاستخراج', description: 'تأكد من الرابط', variant: 'destructive' });
-                                                    }
-                                                }}
-                                                className="bg-gray-200 hover:bg-gray-300 relative top-[1px]"
-                                            >
-                                                <Search className="w-4 h-4" />
-                                            </Button>
-                                            <Input
-                                                value={editingResource.url || ''}
-                                                onChange={(e) => setEditingResource({ ...editingResource, url: e.target.value })}
-                                                className="text-left text-xs h-9 bg-white"
-                                                placeholder="https://maps.google.com/..."
-                                                dir="ltr"
-                                            />
-                                        </div>
+                                        <div id="dialog-search-results-list-settings" className="absolute z-20 w-full bg-white border rounded-xl shadow-2xl max-h-60 overflow-y-auto mt-1 empty:hidden"></div>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border">
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-gray-500 block">Latitude</label>
-                                        <Input
-                                            type="number"
-                                            value={editingResource.lat || ''}
-                                            onChange={(e) => setEditingResource({ ...editingResource, lat: parseFloat(e.target.value) })}
-                                            dir="ltr"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-gray-500 block">Longitude</label>
-                                        <Input
-                                            type="number"
-                                            value={editingResource.lng || ''}
-                                            onChange={(e) => setEditingResource({ ...editingResource, lng: parseFloat(e.target.value) })}
-                                            dir="ltr"
-                                        />
-                                    </div>
-                                </div>
-
-                                <DialogFooter className="gap-2 pt-4">
-                                    <Button variant="outline" onClick={() => setIsEditOpen(false)}>إلغاء</Button>
-                                    <Button onClick={handleSaveLocation} className="bg-blue-600 hover:bg-blue-700">
-                                        {editingResource.id ? 'حفظ التعديلات' : 'إضافة الموقع'}
-                                    </Button>
-                                </DialogFooter>
                             </div>
                         )}
                     </DialogContent>
