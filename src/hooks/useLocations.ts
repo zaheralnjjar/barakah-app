@@ -15,6 +15,9 @@ export interface LocationFolder {
     user_id?: string;
 }
 
+// Global set to track deleted IDs across hook instances and prevent zombie resurrection (race conditions)
+const globalDeletedIds = new Set<string>();
+
 export interface SavedLocation {
     id: string;
     title: string;
@@ -94,7 +97,6 @@ export const useLocations = () => {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [session, setSession] = useState<any>(null);
-    const recentlyDeletedIds = useRef<Set<string>>(new Set()); // Track deleted IDs to prevent sync race conditions
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -124,7 +126,7 @@ export const useLocations = () => {
                 const merged = [...localData];
                 cloudData.forEach((cloudLoc: any) => {
                     // Skip if recently deleted (prevents race condition)
-                    if (recentlyDeletedIds.current.has(cloudLoc.id)) return;
+                    if (globalDeletedIds.has(cloudLoc.id)) return;
 
                     if (!merged.find(l => l.id === cloudLoc.id)) {
                         merged.push({
@@ -469,16 +471,15 @@ export const useLocations = () => {
     const deleteLocation = useCallback(async (id: string) => {
         const previousLocations = [...locations]; // Backup for rollback
         try {
+            // Track this ID as globally deleted immediately
+            globalDeletedIds.add(id);
+
             const updated = locations.filter(loc => loc.id !== id);
             setLocations(updated);
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
             // Only attempt server delete if ID is a valid UUID
-            // This prevents "invalid input syntax" errors for local legacy IDs (timestamps, etc.)
-            // Track this ID as deleted to prevent immediate sync resurrection
-            recentlyDeletedIds.current.add(id);
-
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
             if (session?.user && isUUID) {
@@ -494,35 +495,58 @@ export const useLocations = () => {
             toast({ title: '🗑️ تم حذف الموقع' });
         } catch (error: any) {
             console.error('Error deleting location:', error);
-            setLocations(previousLocations); // Revert on error
-            localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(previousLocations));
-            toast({
-                title: 'فشل الحذف',
-                description: 'تعذر حذف الموقع من الخادم',
-                variant: 'destructive'
-            });
+            // Don't revert immediately if it's just a network error, but for now we do to be safe
+            // However, for "zombie" issues, maybe we shouldn't revert local state if server fails? 
+            // Better to show error.
+            if (error.code !== 'PGRST116') { // Ignore "Row not found" or harmless errors
+                // revert if critical
+                // But if we revert, we must remove from globalDeletedIds
+                globalDeletedIds.delete(id);
+                setLocations(previousLocations);
+                localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(previousLocations));
+                toast({
+                    title: 'فشل الحذف',
+                    description: error.message || 'تعذر حذف الموقع من الخادم',
+                    variant: 'destructive'
+                });
+            }
         }
     }, [locations, toast, session]);
 
     // Bulk Delete
     const deleteLocations = useCallback(async (ids: string[]) => {
+        const previousLocations = [...locations];
         try {
+            // Track IDs as globally deleted
+            ids.forEach(id => globalDeletedIds.add(id));
+
             const updated = locations.filter(loc => !ids.includes(loc.id));
             setLocations(updated);
             localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(updated));
             localStorage.setItem('baraka_resources', JSON.stringify(updated));
 
             if (session?.user) {
-                await supabase.from('saved_locations')
+                const { error } = await supabase.from('saved_locations')
                     .delete()
                     .in('id', ids)
                     .eq('user_id', session.user.id);
+
+                if (error) throw error;
             }
 
             window.dispatchEvent(new Event('locations-updated'));
             toast({ title: `🗑️ تم حذف ${ids.length} مواقع` });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error deleting locations:', error);
+            // Revert
+            ids.forEach(id => globalDeletedIds.delete(id));
+            setLocations(previousLocations);
+            localStorage.setItem(LOCATIONS_STORAGE_KEY, JSON.stringify(previousLocations));
+            toast({
+                title: 'فشل الحذف الجماعي',
+                description: error.message || 'حدث خطأ أثناء الحذف',
+                variant: 'destructive'
+            });
         }
     }, [locations, toast, session]);
 

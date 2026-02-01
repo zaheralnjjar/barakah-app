@@ -232,7 +232,7 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
     return (
         <div className={cn(
-            "min-h-screen bg-transparent pb-32 animate-fade-in relative w-full max-w-[100vw] overflow-y-auto"
+            "min-h-screen bg-transparent pb-32 animate-fade-in relative w-full"
         )}>
             <DashboardHeader />
             <FlashlightOverlay />

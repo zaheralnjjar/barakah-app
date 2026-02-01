@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+// Drawer imports removed
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -662,26 +662,23 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         voiceTranscript
     };
 
-    if (isMobile) {
-        return (
-            <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DrawerContent className="bg-white max-h-[95vh] h-[90vh] flex flex-col p-0">
-                    <DrawerHeader className="sr-only">
-                        <DrawerTitle>ملاحظة جديدة</DrawerTitle>
-                    </DrawerHeader>
-                    <QuickNoteForm {...formProps} />
-                </DrawerContent>
-            </Drawer>
-        );
-    }
-
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[700px] h-[85vh] p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden min-h-[400px] top-[5%] translate-y-0" dir="rtl" style={{ height: '85vh', maxHeight: '95vh', minHeight: '300px' }}>
+            <DialogContent
+                className={cn(
+                    "p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden",
+                    // Mobile Styles
+                    isMobile ? "w-[95%] top-4 translate-y-0 rounded-[1.5rem]" :
+                        // Desktop Styles
+                        "sm:max-w-[700px] h-[85vh] top-[5%] translate-y-0"
+                )}
+                dir="rtl"
+                style={isMobile ? { minHeight: '300px', maxHeight: '85vh' } : { height: '85vh', maxHeight: '95vh', minHeight: '300px' }}
+            >
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
                 </DialogHeader>
-                <div className="h-full bg-white rounded-lg overflow-hidden flex flex-col">
+                <div className="h-full bg-white rounded-[1.5rem] overflow-hidden flex flex-col">
                     <QuickNoteForm {...formProps} />
                 </div>
             </DialogContent>

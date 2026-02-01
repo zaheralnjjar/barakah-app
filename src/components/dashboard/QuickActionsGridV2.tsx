@@ -177,32 +177,34 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                 {defaultActions.map((action) => {
                     const isSettings = action.actionId === 'sys_settings';
                     const isEvent = action.actionId === 'event';
-                    const isLocation = action.actionId === 'location';
-                    const isMyLocations = action.actionId === 'open_locations_grid';
 
-                    const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu) || (isLocation && showLocationMenu);
+                    // Only these have menus
+                    const hasMenu = isSettings || isEvent;
+                    const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu);
+
+                    const ButtonContent = (
+                        <div className="w-full h-full">
+                            <QuickActionButton
+                                action={action}
+                                onClick={() => handleActionClick(action)}
+                                onLongPress={() => handleLongPress(action)}
+                            />
+                        </div>
+                    );
 
                     return (
                         <div key={action.id} className="relative col-span-1 aspect-square">
-                            <DropdownMenu open={isOpen} onOpenChange={(open) => {
-                                if (!open) {
-                                    if (isSettings) setShowSettingsMenu(false);
-                                    if (isEvent) setShowEventMenu(false);
-                                    if (isLocation) setShowLocationMenu(false);
-                                }
-                            }}>
-                                <DropdownMenuTrigger asChild>
-                                    <div className="w-full h-full"> {/* Wrapper for trigger */}
-                                        <QuickActionButton
-                                            action={action}
-                                            onClick={() => handleActionClick(action)}
-                                            onLongPress={() => handleLongPress(action)}
-                                        />
-                                    </div>
-                                </DropdownMenuTrigger>
+                            {hasMenu ? (
+                                <DropdownMenu open={isOpen} onOpenChange={(open) => {
+                                    if (!open) {
+                                        if (isSettings) setShowSettingsMenu(false);
+                                        if (isEvent) setShowEventMenu(false);
+                                    }
+                                }}>
+                                    <DropdownMenuTrigger asChild>
+                                        {ButtonContent}
+                                    </DropdownMenuTrigger>
 
-                                {/* Only render content if it has a menu, otherwise it's just a trigger for the action */}
-                                {(isSettings || isEvent) && (
                                     <DropdownMenuContent className="w-56 z-[60]" align="start" sideOffset={5}>
                                         {isSettings && (
                                             <>
@@ -234,8 +236,10 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                                             </>
                                         )}
                                     </DropdownMenuContent>
-                                )}
-                            </DropdownMenu>
+                                </DropdownMenu>
+                            ) : (
+                                ButtonContent
+                            )}
                         </div>
                     );
                 })}
@@ -265,6 +269,8 @@ const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onCl
         onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd
     } : { onClick };
 
+    const isMobile = isAndroid();
+
     return (
         <button
             {...handlers}
@@ -273,8 +279,8 @@ const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onCl
                 action.color
             )}
         >
-            {action.icon ? <action.icon className="w-6 h-6 mb-1 shrink-0 opacity-90" /> : null}
-            <span className={cn("text-[10px] font-bold tracking-tight leading-3 text-center w-full px-0.5 line-clamp-1")}>
+            {action.icon ? <action.icon className={cn("mb-1 shrink-0 opacity-90", isMobile ? "w-6 h-6" : "w-9 h-9")} /> : null}
+            <span className={cn("font-bold tracking-tight leading-3 text-center w-full px-0.5 line-clamp-1", isMobile ? "text-[10px]" : "text-[11px]")}>
                 {action.actionId === 'sys_settings' ? 'إعدادات' : action.label}
             </span>
         </button>
