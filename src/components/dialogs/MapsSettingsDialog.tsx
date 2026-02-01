@@ -21,10 +21,62 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
     const [editingResource, setEditingResource] = useState<any | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    const handleLocateMe = () => {
+        if (!navigator.geolocation) {
+            toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            let addressStr = '';
+            let addressSearchStr = '';
+
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&addressdetails=1`);
+                const data = await res.json();
+                if (data) {
+                    addressStr = data.display_name;
+                    const addr = data.address || {};
+                    const road = addr.road || addr.street || addr.pedestrian || '';
+                    const number = addr.house_number || '';
+
+                    let refinedStr = '';
+                    if (number) refinedStr = `${road} ${number}`;
+                    else {
+                        const parts = (data.display_name || '').split(',');
+                        const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.includes(road));
+                        refinedStr = partWithNumber || road;
+                    }
+                    addressSearchStr = refinedStr;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            setEditingResource((prev: any) => ({
+                ...prev,
+                lat: lat,
+                lng: lng,
+                title: prev?.title || 'موقع جديد',
+                street_line: addressSearchStr,
+                address: addressStr,
+                address_search: addressSearchStr,
+                url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+            }));
+            toast({ title: "تم تحديد موقعك وملء البيانات تلقائياً" });
+        }, (err) => {
+            toast({ title: "فشل تحديد الموقع", description: err.message, variant: "destructive" });
+        });
+    };
+
     useEffect(() => {
         if (open && initialAddMode) {
             setEditingResource({ category: 'other', lat: 0, lng: 0 });
             setIsEditOpen(true);
+            // Phase 6: Automatic locate on open
+            handleLocateMe();
         }
     }, [open, initialAddMode]);
 
@@ -294,51 +346,7 @@ export function MapsSettingsDialog({ open, onOpenChange, initialAddMode }: MapsS
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => {
-                                            if (!navigator.geolocation) {
-                                                toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
-                                                return;
-                                            }
-                                            navigator.geolocation.getCurrentPosition(async (pos) => {
-                                                const lat = pos.coords.latitude;
-                                                const lng = pos.coords.longitude;
-                                                let addressStr = '';
-                                                let addressSearchStr = '';
-
-                                                try {
-                                                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar&addressdetails=1`);
-                                                    const data = await res.json();
-                                                    if (data) {
-                                                        addressStr = data.display_name;
-                                                        const addr = data.address || {};
-                                                        const road = addr.road || addr.street || addr.pedestrian || '';
-                                                        const number = addr.house_number || '';
-
-                                                        let refinedStr = '';
-                                                        if (number) refinedStr = `${road} ${number}`;
-                                                        else {
-                                                            const parts = (data.display_name || '').split(',');
-                                                            const partWithNumber = parts.find((p: string) => /\d/.test(p) && p.includes(road));
-                                                            refinedStr = partWithNumber || road;
-                                                        }
-                                                        addressSearchStr = refinedStr;
-                                                    }
-                                                } catch (e) { console.error(e); }
-
-                                                setEditingResource(prev => ({
-                                                    ...prev,
-                                                    lat: lat,
-                                                    lng: lng,
-                                                    // Don't overwrite title if it exists, or suggest generic name if empty
-                                                    title: prev.title || 'موقع جديد',
-                                                    street_line: addressSearchStr, // Put detailed Addess here
-                                                    address: addressStr, // Full raw address string
-                                                    address_search: addressSearchStr,
-                                                    url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-                                                }));
-                                                toast({ title: "تم تحديد موقعك وملء البيانات تلقائياً" });
-                                            });
-                                        }}
+                                        onClick={handleLocateMe}
                                         className="w-full gap-2 border-dashed border-emerald-500 text-emerald-700 hover:bg-emerald-50 h-9 mb-2"
                                     >
                                         <Locate className="w-4 h-4" />

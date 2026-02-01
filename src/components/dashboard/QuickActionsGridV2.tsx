@@ -9,6 +9,7 @@ import { getActionById } from '@/constants/actionDefinitions';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
 import { LocationsGridDialog } from '@/components/dashboard/LocationsGridDialog'; // Import new dialog
+import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -70,6 +71,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const [showLocationsGrid, setShowLocationsGrid] = useState(false); // New state for grid dialog
     const [showDailyReport, setShowDailyReport] = useState(false);
     const [showWeeklyReport, setShowWeeklyReport] = useState(false);
+    const [showMapsAddDialog, setShowMapsAddDialog] = useState(false);
 
     // Shortcut Execution
     const { executeShortcut } = useShortcutExecution({
@@ -135,7 +137,10 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
         if (isSettings) setShowSettingsMenu(!showSettingsMenu);
         else if (isEvent) setShowEventMenu(!showEventMenu);
-        else if (isLocation) setShowLocationMenu(!showLocationMenu);
+        else if (isLocation) {
+            // Direct "Add Location" workflow for Phase 6
+            setShowMapsAddDialog(true);
+        }
         else if (isMyLocations) setShowLocationsGrid(true);
         else if (action.id === 'loc_direct_detailed' || action.actionId === 'loc_direct_detailed') {
             window.dispatchEvent(new Event('open-location-shortcut-dialog'));
@@ -202,16 +207,6 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                                             <item.icon className="w-5 h-5" />
                                         </button>
                                     ))}
-
-                                    {isLocation && [
-                                        { icon: Map, action: () => { setShowLocationMenu(false); navigate('/locations'); }, color: 'bg-emerald-500 text-white shadow-emerald-200' },
-                                        { icon: MapPin, action: () => { setShowLocationMenu(false); setShowSavedLocations(true); }, color: 'bg-blue-500 text-white shadow-blue-200' },
-                                        { icon: Navigation, action: () => { setShowLocationMenu(false); onQuickParking?.(); }, color: 'bg-orange-500 text-white shadow-orange-200' }
-                                    ].map((item, idx) => (
-                                        <button key={idx} onClick={item.action} className={cn("flex items-center justify-center py-2 rounded-xl transition-all active:scale-95 shadow-md w-full border-b-2 border-black/10", item.color)}>
-                                            <item.icon className="w-5 h-5" />
-                                        </button>
-                                    ))}
                                 </div>
                             )}
                         </div>
@@ -222,6 +217,11 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
             <LocationsGridDialog open={showLocationsGrid} onOpenChange={setShowLocationsGrid} />
+            <MapsSettingsDialog
+                open={showMapsAddDialog}
+                onOpenChange={setShowMapsAddDialog}
+                initialAddMode={true}
+            />
         </div>
     );
 };

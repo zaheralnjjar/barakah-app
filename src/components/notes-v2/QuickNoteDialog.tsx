@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useFolders } from '@/hooks/useFolders';
 import { useNotesV2 } from '@/hooks/useNotesV2';
-import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2, X, Check, ChevronDown } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FileText, Save, FolderOpen, ZapOff, Briefcase, Heart, Users, Home, Activity, Mic, MicOff, Loader2, X, Check, ChevronDown, Clock, Timer } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -236,44 +237,98 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
 
             {/* Note Options (Folder & Color) - Integrated into Editor Toolbar now */}
 
-            {/* Activity Time Inputs */}
+            {/* Activity Time Inputs (Compact with Popovers) */}
             {selectedCategory && (
-                <div className="px-4 py-2 bg-red-50/30 flex items-center justify-end gap-2 shrink-0 border-b border-red-100 overflow-x-auto">
-                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-red-100 shrink-0">
-                        <span className="text-[10px] font-bold text-gray-400">المدة (د)</span>
-                        <Input
-                            type="number"
-                            min="0"
-                            value={duration}
-                            onChange={(e) => setDuration(e.target.value)}
-                            className="h-6 w-12 text-center border-0 p-0 text-sm focus-visible:ring-0"
-                        />
-                    </div>
+                <div className="px-4 py-1.5 bg-indigo-50/30 flex items-center justify-end gap-1 shrink-0 border-b border-indigo-100">
+                    {/* Duration Popover */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                    "h-8 flex items-center gap-1.5 px-2 rounded-lg transition-all",
+                                    duration ? "bg-white text-indigo-600 border border-indigo-100 shadow-sm" : "text-gray-400 hover:bg-white hover:text-indigo-500"
+                                )}
+                            >
+                                <Timer className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">
+                                    {duration ? `${duration} د` : "المدة"}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-32 p-3 rounded-xl shadow-xl border-indigo-100" side="bottom" align="center">
+                            <label className="text-[10px] font-bold text-gray-400 mb-1.5 block text-right">المدة (د)</label>
+                            <Input
+                                type="number"
+                                min="0"
+                                value={duration}
+                                onChange={(e) => setDuration(e.target.value)}
+                                className="h-9 text-center text-sm focus:ring-1 focus:ring-indigo-200"
+                                placeholder="0"
+                                autoFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
 
-                    <div className="w-px h-4 bg-red-200 mx-1 shrink-0" />
+                    <div className="w-px h-4 bg-indigo-200/50 mx-1 shrink-0" />
 
-                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-red-100">
-                        <span className="text-xs font-bold text-gray-400">من</span>
-                        <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-6 w-20 text-center border-0 p-0 text-sm focus-visible:ring-0" />
-                    </div>
-                    <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-red-100">
-                        <span className="text-xs font-bold text-gray-400">إلى</span>
-                        <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-6 w-20 text-center border-0 p-0 text-sm focus-visible:ring-0" />
-                    </div>
+                    {/* Time Range Popover */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className={cn(
+                                    "h-8 flex items-center gap-1.5 px-2 rounded-lg transition-all",
+                                    startTime || endTime ? "bg-white text-indigo-600 border border-indigo-100 shadow-sm" : "text-gray-400 hover:bg-white hover:text-indigo-500"
+                                )}
+                            >
+                                <Clock className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">
+                                    {startTime && endTime ? `${startTime} - ${endTime}` :
+                                        startTime ? `من ${startTime}` :
+                                            endTime ? `إلى ${endTime}` : "الوقت"}
+                                </span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-3 rounded-xl shadow-xl border-indigo-100" side="bottom" align="center">
+                            <div className="flex flex-col gap-3" dir="rtl">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 mb-1 block">من الساعة</label>
+                                    <Input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="h-9 text-center text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-400 mb-1 block">إلى الساعة</label>
+                                    <Input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="h-9 text-center text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
 
-                    <div className="w-px h-4 bg-red-200 mx-1 shrink-0" />
+                    <div className="w-px h-4 bg-indigo-200/50 mx-1 shrink-0" />
 
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <button
                                     onClick={isRecording ? stopRecording : startRecording}
-                                    className={`
-                                        w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300
-                                        ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 border border-red-100'}
-                                    `}
+                                    className={cn(
+                                        "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300",
+                                        isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 border border-red-100 shadow-sm'
+                                    )}
                                 >
-                                    <Mic className="w-3.5 h-3.5" />
+                                    <Mic className="w-4 h-4" />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-xs">

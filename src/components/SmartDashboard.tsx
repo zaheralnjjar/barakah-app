@@ -40,6 +40,7 @@ import QuickActionsGridV2 from './dashboard/QuickActionsGridV2';
 import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 
+import { ApproachingReminderBanner } from './dashboard/ApproachingReminderBanner';
 import { UnifiedDashboardCard } from './dashboard/UnifiedDashboardCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { DashboardLocations } from './dashboard/DashboardLocations';
@@ -241,6 +242,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
                 <div className={cn("flex flex-col gap-2", activeWidgets.length > 0 && 'lg:flex-row-reverse', !isAndroid() && "gap-1")}>
                     <div className={cn(activeWidgets.length > 0 ? 'w-full lg:w-[70%]' : 'w-full', "space-y-3")}>
                         <DashboardHeaderStrip />
+
+                        {/* Approaching Reminder Banner (Phase 7) */}
+                        <ApproachingReminderBanner />
 
                         {/* 1. Quick Access Grid (Top Priority) */}
                         <div className="mb-2">

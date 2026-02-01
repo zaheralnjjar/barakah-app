@@ -302,21 +302,38 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
     const GroupTOOLS = (
         <>
-            {/* Alignment Group */}
-            <div className="flex bg-gray-50 rounded-lg p-0.5" dir="ltr">
-                <Tooltip>
-                    <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'left' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignLeft className="w-4 h-4" /></button></TooltipTrigger>
-                    <TooltipContent>محاذاة لليسار</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'center' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignCenter className="w-4 h-4" /></button></TooltipTrigger>
-                    <TooltipContent>توسيط</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                    <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'right' }) ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}><AlignRight className="w-4 h-4" /></button></TooltipTrigger>
-                    <TooltipContent>محاذاة لليمين</TooltipContent>
-                </Tooltip>
-            </div>
+            {/* Alignment Group (Grouped into Popover) */}
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button className="flex items-center justify-center p-1.5 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors">
+                        {editor.isActive({ textAlign: 'center' }) ? <AlignCenter className="w-4 h-4 text-indigo-600" /> :
+                            editor.isActive({ textAlign: 'right' }) ? <AlignRight className="w-4 h-4 text-indigo-600" /> :
+                                editor.isActive({ textAlign: 'justify' }) ? <AlignJustify className="w-4 h-4 text-indigo-600" /> :
+                                    <AlignLeft className="w-4 h-4" />}
+                        <ChevronDown className="w-3 h-3 ml-0.5 opacity-50" />
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1 flex bg-gray-50 rounded-lg shadow-xl border-gray-100" align="start">
+                    <div className="flex bg-white rounded-md p-0.5 border border-gray-100">
+                        <Tooltip>
+                            <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'left' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignLeft className="w-4 h-4" /></button></TooltipTrigger>
+                            <TooltipContent>محاذاة لليسار</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'center' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignCenter className="w-4 h-4" /></button></TooltipTrigger>
+                            <TooltipContent>توسيط</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'right' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignRight className="w-4 h-4" /></button></TooltipTrigger>
+                            <TooltipContent>محاذاة لليمين</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'justify' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignJustify className="w-4 h-4" /></button></TooltipTrigger>
+                            <TooltipContent>ضبط النص (Justify)</TooltipContent>
+                        </Tooltip>
+                    </div>
+                </PopoverContent>
+            </Popover>
 
             <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 

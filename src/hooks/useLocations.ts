@@ -287,6 +287,11 @@ export const useLocations = () => {
         // Re-fetch basic info to ensure address field is set correctly if it wasn't passed in options
         let finalAddress = options?.address;
 
+        // Special handling for Phase 6: Prioritize street_line if provided (comes from manual input in Map)
+        if (!finalAddress && options?.street_line) {
+            finalAddress = options.street_line;
+        }
+
         if (!finalAddress) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`);
