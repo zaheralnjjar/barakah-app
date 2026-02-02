@@ -48,8 +48,8 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true, color: 'text-blue-600', activeBg: 'bg-blue-50' },
         { id: 'finance', label: 'المالية', icon: Calculator, color: 'text-green-600', activeBg: 'bg-green-50' },
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
+        { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50' },
         { id: 'notes-v2', label: 'الملاحظات', icon: StickyNote, color: 'text-amber-600', activeBg: 'bg-amber-50' },
-        { id: 'inbox', label: 'البريد', icon: Inbox, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
         { id: 'map', label: 'الخريطة', icon: Navigation, color: 'text-indigo-600', activeBg: 'bg-indigo-50' },
         { id: 'settings', label: 'الإعدادات', icon: Settings, color: 'text-gray-600', activeBg: 'bg-gray-50' },
     ];

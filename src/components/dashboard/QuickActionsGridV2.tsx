@@ -56,11 +56,9 @@ const ALL_QUICK_ACTIONS = [
         type: 'menu',
         menuItems: [
             { id: 'show_next_prayer', name: 'مواقيت الصلاة', icon: Moon },
-            { id: 'calendar_sync_settings', name: 'مزامنة التقويم', icon: Calendar },
             { id: 'goto_new_muslims', name: 'هداية', icon: Heart },
             { id: 'goto_thesis', name: 'أبحاث', icon: BookOpen },
             { id: 'open_shortcuts', name: 'الاختصارات', icon: Zap },
-            { id: 'toggle_clean_mode', name: 'وضع التركيز', icon: Sparkles }
         ]
     },
     // --- Web Only Below ---

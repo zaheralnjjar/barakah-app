@@ -25,7 +25,7 @@ const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خمي
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
 const CalendarSection: React.FC = () => {
-    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'grid3x3'>('daily');
+    const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'grid3x3'>('monthly');
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
 

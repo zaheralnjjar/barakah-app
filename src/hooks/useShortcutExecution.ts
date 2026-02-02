@@ -168,7 +168,7 @@ export const useShortcutExecution = (props: {
                 break;
 
             case 'shopping':
-                props.onOpenAddDialog('shopping');
+                executeShortcut('show_shopping');
                 break;
 
             case 'save_location':
