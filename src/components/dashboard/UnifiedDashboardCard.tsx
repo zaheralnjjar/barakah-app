@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { isAndroid } from '@/utils/platformDetection';
+import { CalendarService, CalendarEvent } from '@/services/CalendarService';
 
 interface UnifiedDashboardCardProps {
     onOpenAdd: (type: 'task' | 'appointment' | 'goal' | 'shopping' | 'project' | 'medication' | 'habit') => void;
@@ -39,7 +40,21 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
     const { appointments } = useAppointments();
     const { items: shoppingItems } = useShoppingList();
     const { habits } = useHabits();
+
     const { notes } = useNotesV2(); // Fetch notes to find favorites
+    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            // Always fetch events (Service handles Platform check/mock)
+            const now = new Date();
+            const start = now.getTime();
+            const end = new Date(now.setHours(23, 59, 59, 999)).getTime();
+            const events = await CalendarService.listEvents(start, end);
+            setCalendarEvents(events);
+        };
+        fetchEvents();
+    }, []);
 
     // 1. Data Preparation
     const slides = React.useMemo<SlideItem[]>(() => {
@@ -107,7 +122,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
         const standardItems: SlideItem[] = [];
         const today = new Date().toISOString().split('T')[0];
 
-        // Appointments
+        // Appointments (Internal & External)
         appointments
             .filter(a => a.date === today)
             .forEach(a => {
@@ -124,6 +139,22 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                     accentColor: "bg-white/20"
                 });
             });
+
+        // External Calendar Events
+        calendarEvents.forEach(ev => {
+            standardItems.push({
+                id: `cal-${ev.id}`,
+                type: 'appointment',
+                title: ev.title,
+                subtitle: ev.location || 'من تقويم الهاتف',
+                meta: format(new Date(ev.startDate), 'HH:mm'),
+                icon: Calendar,
+                data: ev,
+                gradient: "from-indigo-400 to-blue-500", // Distinct color for external events
+                textColor: "text-white",
+                accentColor: "bg-white/20"
+            });
+        });
 
         // Tasks (Due Today)
         tasks
@@ -437,7 +468,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                 <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
                 {/* row 1: Icon - Title - Countdown */}
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-2 w-full" onClick={() => onOpenCalendar && onOpenCalendar()}>
                     <div className={cn("p-1.5 rounded-xl backdrop-blur-md border border-white/10 shrink-0", activeItem.accentColor)}>
                         <Icon className={cn("w-5 h-5", activeItem.textColor)} />
                     </div>
@@ -481,22 +512,20 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
 
             </CardContent>
 
-            {/* Android Play/Pause Toggle Button - Outside CardContent for Exact Corner */}
-            {isAndroid() && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation(); // Prevent nav
-                        setIsPaused(!isPaused);
-                    }}
-                    className={cn(
-                        "absolute bottom-0 right-0 p-3 rounded-tl-2xl rounded-br-[1.5rem] backdrop-blur-md bg-white/5 border-t border-l border-white/10 z-30 transition-all active:scale-95 opacity-50 pointer-events-auto",
-                        activeItem.accentColor,
-                        activeItem.textColor
-                    )}
-                >
-                    {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
-                </button>
-            )}
+            {/* Play/Pause Toggle Button - Always Visible now */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent nav
+                    setIsPaused(!isPaused);
+                }}
+                className={cn(
+                    "absolute bottom-0 right-0 p-3 rounded-tl-2xl rounded-br-[1.5rem] backdrop-blur-md bg-white/5 border-t border-l border-white/10 z-30 transition-all active:scale-95 opacity-50 pointer-events-auto",
+                    activeItem.accentColor,
+                    activeItem.textColor
+                )}
+            >
+                {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+            </button>
 
         </Card >
     );

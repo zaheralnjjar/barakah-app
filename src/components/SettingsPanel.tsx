@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CalendarSettingsDialog } from './dialogs/CalendarSettingsDialog';
 import { Share } from '@capacitor/share';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -451,6 +452,7 @@ const SettingsPanel = () => {
     const [activeSection, setActiveSection] = useState<string | null>(null);
 
 
+    const [showCalendarSettings, setShowCalendarSettings] = useState(false);
     const [showShortcutsSettings, setShowShortcutsSettings] = useState(false);
     // showFABSettings removed
 
@@ -768,6 +770,9 @@ const SettingsPanel = () => {
                 </DialogContent>
             </Dialog>
 
+            {/* Calendar Settings Dialog (Overlay) */}
+            <CalendarSettingsDialog open={showCalendarSettings} onOpenChange={setShowCalendarSettings} />
+
             {/* Maps Dialog */}
             <MapsSettingsDialog
                 open={activeSection === 'maps'}
@@ -808,6 +813,24 @@ const SettingsPanel = () => {
                                         {t('sync.pullData')}
                                     </Button>
                                 </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Calendar Sync Settings */}
+                        <Card className="border-blue-100">
+                            <CardHeader>
+                                <CardTitle className="text-base">مزامنة التقويم المحلي</CardTitle>
+                                <CardDescription className="text-xs">اختيار التقويمات (Google, Samsung) للعرض في التطبيق</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button
+                                    onClick={() => setShowCalendarSettings(true)}
+                                    variant="outline"
+                                    className="w-full flex items-center justify-center gap-2"
+                                >
+                                    <CalendarIcon className="w-4 h-4" />
+                                    إعدادات مصادر التقويم
+                                </Button>
                             </CardContent>
                         </Card>
 

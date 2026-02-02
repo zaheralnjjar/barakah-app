@@ -18,6 +18,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/stores/useAppStore';
 import { playAlertSound } from '@/utils/alertSound';
+import { CalendarService, CalendarEvent } from '@/services/CalendarService';
 
 const DAYS_AR = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
 const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -25,6 +26,28 @@ const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'ما
 const CalendarSection: React.FC = () => {
     const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'grid3x3'>('daily');
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
+
+    // Fetch External Events on Month Change
+    useEffect(() => {
+        const fetchExternalEvents = async () => {
+            // Get start and end of current month view (including buffer days)
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const start = new Date(year, month - 1, 1).getTime(); // Previous month buffer
+            const end = new Date(year, month + 2, 0).getTime(); // Next month buffer
+
+            try {
+                console.log("Fetching calendar events for:", new Date(start), "to", new Date(end));
+                const events = await CalendarService.listEvents(start, end);
+                console.log("Fetched Events:", events.length);
+                setExternalEvents(events);
+            } catch (error) {
+                console.error("Failed to fetch calendar events:", error);
+            }
+        };
+        fetchExternalEvents();
+    }, [currentMonth]);
 
     // Listen for custom change-tab events
     useEffect(() => {
@@ -39,8 +62,46 @@ const CalendarSection: React.FC = () => {
         };
 
         window.addEventListener('change-tab', handleTabChange);
+
+        // Auto-Sync on App Resume
+        import('@capacitor/app').then(({ App }) => {
+            App.addListener('appStateChange', ({ isActive }) => {
+                if (isActive) {
+                    console.log('App resumed, refreshing calendar events...');
+                    // Re-trigger the fetch effect by invalidating or calling a refresh
+                    // Since fetch depends on [currentMonth], we can just re-run the fetch logic
+                    // For now, we'll force a state update or better, expose the fetch function.
+                    // simpler: just toggle a dummy state or dispatch an event that this component listens to?
+                    // Actually, let's just dispatch a custom event 'refresh-calendar-events' and listen to it in the main effect or here.
+                    window.dispatchEvent(new Event('refresh-calendar-events'));
+                }
+            });
+        });
+
         return () => window.removeEventListener('change-tab', handleTabChange);
     }, []);
+
+    // Effect to listen for refresh requests
+    useEffect(() => {
+        const handleRefresh = () => {
+            // Re-fetch logic
+            const fetchExternalEvents = async () => {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth();
+                const start = new Date(year, month - 1, 1).getTime();
+                const end = new Date(year, month + 2, 0).getTime();
+                try {
+                    const events = await CalendarService.listEvents(start, end);
+                    setExternalEvents(events);
+                } catch (error) {
+                    console.error("Failed to refresh calendar events:", error);
+                }
+            };
+            fetchExternalEvents();
+        };
+        window.addEventListener('refresh-calendar-events', handleRefresh);
+        return () => window.removeEventListener('refresh-calendar-events', handleRefresh);
+    }, [currentMonth]);
 
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -81,7 +142,21 @@ const CalendarSection: React.FC = () => {
         const dateTasks = tasks.filter(t => t.deadline === dateStr);
         const dateAppointments = appointments.filter(a => a.date === dateStr);
 
-        return { tasks: dateTasks, appointments: dateAppointments };
+        // Filter external events
+        // Note: CalendarEvent uses startTime (ms) or date strings? 
+        // Checking CalendarService.ts from context earlier: mapping result has 'startTime' and 'endTime' in ms usually, 
+        // but let's check the type definition or inference.
+        // The mock returned { title, startDate, endDate, allDay ... }
+        // Let's assume we need to match date string from timestamp
+
+        const dateExternal = externalEvents.filter(e => {
+            if (!e.startDate) return false;
+            const evtDate = new Date(e.startDate);
+            const evtDateStr = `${evtDate.getFullYear()}-${String(evtDate.getMonth() + 1).padStart(2, '0')}-${String(evtDate.getDate()).padStart(2, '0')}`;
+            return evtDateStr === dateStr;
+        });
+
+        return { tasks: dateTasks, appointments: dateAppointments, externalEvents: dateExternal };
     };
 
     // Generate calendar days
@@ -224,6 +299,17 @@ const CalendarSection: React.FC = () => {
 
                                 {/* Body (80%) Scrollable */}
                                 <div className="h-[80%] overflow-y-auto p-2 space-y-1 scrollbar-thin">
+                                    {data.externalEvents?.map(evt => (
+                                        <div key={evt.id} className="text-xs bg-cyan-50 text-cyan-700 p-1 rounded border border-cyan-100 flex items-center gap-1">
+                                            <span className="shrink-0">☁️</span>
+                                            <span className="truncate flex-1">{evt.title}</span>
+                                            {!evt.allDay && evt.startDate && (
+                                                <span className="text-[10px] opacity-75">
+                                                    {new Date(evt.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
                                     {data.appointments.map(apt => (
                                         <div key={apt.id} className="text-xs bg-orange-50 text-orange-700 p-1 rounded border border-orange-100 flex items-center gap-1">
                                             <span className="shrink-0">📍</span>
@@ -237,7 +323,7 @@ const CalendarSection: React.FC = () => {
                                             <span className="truncate flex-1">{task.title}</span>
                                         </div>
                                     ))}
-                                    {data.tasks.length === 0 && data.appointments.length === 0 && (
+                                    {data.tasks.length === 0 && data.appointments.length === 0 && (!data.externalEvents || data.externalEvents.length === 0) && (
                                         <p className="text-center text-xs text-gray-400 mt-4">لا توجد أنشطة</p>
                                     )}
                                 </div>
@@ -288,7 +374,7 @@ const CalendarSection: React.FC = () => {
                                 const dateStr = `${day.date.getFullYear()}-${String(day.date.getMonth() + 1).padStart(2, '0')}-${String(day.date.getDate()).padStart(2, '0')}`;
                                 const data = getDateData(dateStr);
                                 const isToday = dateStr === today;
-                                const hasItems = data.tasks.length > 0 || data.appointments.length > 0;
+                                const hasItems = data.tasks.length > 0 || data.appointments.length > 0 || (data.externalEvents && data.externalEvents.length > 0);
 
                                 // Long press handlers
                                 const handleTouchStart = (e: React.TouchEvent) => {
@@ -374,6 +460,11 @@ const CalendarSection: React.FC = () => {
                                         </div>
                                         {hasItems && (
                                             <div className="mt-1 space-y-0.5 max-h-[40px] overflow-hidden">
+                                                {data.externalEvents?.slice(0, 2).map(evt => (
+                                                    <div key={evt.id} className="text-[8px] bg-cyan-100 text-cyan-700 rounded px-1 truncate">
+                                                        ☁️ {evt.title}
+                                                    </div>
+                                                ))}
                                                 {data.appointments.slice(0, 2).map(apt => (
                                                     <div key={apt.id} className="text-[8px] bg-orange-100 text-orange-700 rounded px-1 truncate">
                                                         📅 {apt.title}
@@ -384,7 +475,7 @@ const CalendarSection: React.FC = () => {
                                                         ✅ {task.title}
                                                     </div>
                                                 ))}
-                                                {(data.appointments.length > 2 || data.tasks.length > 2) && (
+                                                {((data.appointments.length + data.tasks.length + (data.externalEvents?.length || 0)) > 2) && (
                                                     <div className="text-[7px] text-gray-400 text-center">+المزيد</div>
                                                 )}
                                             </div>
@@ -407,11 +498,22 @@ const CalendarSection: React.FC = () => {
                                     </h3>
                                     {(() => {
                                         const data = getDateData(selectedDate);
-                                        if (data.tasks.length === 0 && data.appointments.length === 0) {
+                                        if (data.tasks.length === 0 && data.appointments.length === 0 && (!data.externalEvents || data.externalEvents.length === 0)) {
                                             return <p className="text-sm text-gray-500">لا توجد أحداث في هذا اليوم</p>;
                                         }
                                         return (
                                             <div className="space-y-2">
+                                                {data.externalEvents?.map(evt => (
+                                                    <div key={evt.id} className="flex items-center gap-2 text-sm bg-cyan-50 p-2 rounded-lg border border-cyan-100">
+                                                        <span className="text-cyan-500">☁️</span>
+                                                        <span className="font-medium text-cyan-900">{evt.title}</span>
+                                                        {!evt.allDay && evt.startDate && (
+                                                            <span className="text-xs text-cyan-600 mr-auto">
+                                                                {new Date(evt.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
                                                 {data.appointments.map(apt => (
                                                     <div key={apt.id} className="flex items-center gap-2 text-sm bg-white p-2 rounded-lg">
                                                         <span className="text-orange-500">📍</span>
@@ -641,6 +743,32 @@ const CalendarSection: React.FC = () => {
                             }
                             return (
                                 <div className="space-y-3">
+                                    {/* External Events */}
+                                    {data.externalEvents && data.externalEvents.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-bold text-cyan-700 flex items-center">
+                                                <span className="ml-1">☁️</span> التقويم الخارجي
+                                            </h4>
+                                            {data.externalEvents.map(evt => (
+                                                <div key={evt.id} className="bg-cyan-50 border border-cyan-100 rounded-lg p-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-bold text-gray-800">{evt.title}</span>
+                                                        {!evt.allDay && evt.startDate && (
+                                                            <span className="text-xs bg-white px-2 py-1 rounded text-cyan-600 font-medium">
+                                                                {new Date(evt.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {evt.location && (
+                                                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                            <MapPin className="w-3 h-3 ml-1" /> {evt.location}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {/* Appointments */}
                                     {data.appointments.length > 0 && (
                                         <div className="space-y-2">

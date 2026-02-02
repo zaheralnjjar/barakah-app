@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
-import { useLocations } from '@/hooks/useLocations';
-import { useShortcutExecution } from '@/hooks/useShortcutExecution';
+import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { useFinance } from '@/hooks/useFinance';
+import { useQuickAccessCustomization } from '@/hooks/useQuickAccessCustomization';
 import { useSystemModes } from '@/hooks/useSystemModes';
-import { getActionById } from '@/constants/actionDefinitions';
-import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
-import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
-import { LocationsGridDialog } from '@/components/dashboard/LocationsGridDialog'; // Import new dialog
-import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
-import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid';
+import { isAndroid } from '@/utils/platformDetection';
+import {
+    Calendar, ListTodo, MapPin, Settings,
+    DollarSign, Mic, Wallet, Banknote, Moon, Timer, Clock,
+    Navigation, Save, User, Palette, Globe, Shield, Scale, ChevronDown, CheckSquare, CalendarPlus,
+    ShoppingCart, BookOpen, Search, Star, Zap, Sparkles, Plus, Heart
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     DropdownMenu,
@@ -19,13 +20,63 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { isAndroid } from '@/utils/platformDetection';
-import { useLongPress } from '@/hooks/useLongPress';
-import { FileText, ShoppingCart, MapPin, DollarSign, Sparkles, Timer, Search, LayoutGrid, Users, Settings, Pill, CheckSquare, Zap, CalendarPlus, Navigation, Link, Folder, Map } from 'lucide-react';
-import { ProductivityTicker } from './ProductivityTicker';
-import { SmartGridTicker } from './SmartGridTicker';
-import { DailyReportDialog, WeeklyReportDialog } from './ProductivityReportsDialogs';
-import * as Icons from 'lucide-react';
+import { SavedLocationsDialog } from '@/components/dashboard/SavedLocationsDialog';
+import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
+import { CalendarSettingsDialog } from '@/components/dialogs/CalendarSettingsDialog';
+import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
+
+// Detailed Actions Configuration
+const ALL_QUICK_ACTIONS = [
+    // 1. Events (Menu: Appointment / Task)
+    {
+        id: 'events_menu',
+        name: 'أحداث',
+        icon: Calendar,
+        color: 'bg-blue-500 text-white',
+        type: 'menu',
+        menuItems: [
+            { id: 'add_appointment', name: 'موعد', icon: Calendar },
+            { id: 'add_task', name: 'مهمة', icon: ListTodo }
+        ]
+    },
+    // 2. Timer
+    { id: 'start_pomodoro', name: 'مؤقت', icon: Timer, color: 'bg-orange-500 text-white' },
+    // 3. Expense
+    { id: 'add_expense', name: 'مصروف', icon: DollarSign, color: 'bg-red-500 text-white' },
+    // 4. Location (Opens List directly)
+    { id: 'list_locations', name: 'موقع', icon: MapPin, color: 'bg-emerald-500 text-white', type: 'location_action' },
+    // 5. Shopping (Click: Add, Long: List)
+    { id: 'shopping_action', name: 'تسوق', icon: ShoppingCart, color: 'bg-rose-500 text-white', type: 'shopping_action' },
+    // 6. Settings (Mobile) / Prayer (Web) - Placeholder, handled in logic
+    {
+        id: 'settings_menu', // Default, will be swapped on Web
+        name: 'إعدادات',
+        icon: Settings,
+        color: 'bg-blue-600 text-white',
+        type: 'menu',
+        menuItems: [
+            { id: 'show_next_prayer', name: 'مواقيت الصلاة', icon: Moon },
+            { id: 'calendar_sync_settings', name: 'مزامنة التقويم', icon: Calendar },
+            { id: 'goto_new_muslims', name: 'هداية', icon: Heart },
+            { id: 'goto_thesis', name: 'أبحاث', icon: BookOpen },
+            { id: 'open_shortcuts', name: 'الاختصارات', icon: Zap },
+            { id: 'toggle_clean_mode', name: 'وضع التركيز', icon: Sparkles }
+        ]
+    },
+    // --- Web Only Below ---
+    // 7. Hidayah
+    { id: 'goto_new_muslims', name: 'هداية', icon: Heart, color: 'bg-violet-500 text-white' },
+    // 8. Academic Search
+    { id: 'goto_thesis', name: 'أبحاث', icon: Search, color: 'bg-indigo-500 text-white' },
+    // 9. Custom 1
+    { id: 'custom_1', name: 'اختصار 1', icon: Star, color: 'bg-teal-500 text-white' },
+    // 10. Custom 2
+    { id: 'custom_2', name: 'اختصار 2', icon: Star, color: 'bg-cyan-500 text-white' },
+    // 11. Custom 3
+    { id: 'custom_3', name: 'اختصار 3', icon: Star, color: 'bg-sky-500 text-white' },
+    // 12. Custom 4
+    { id: 'custom_4', name: 'اختصار 4', icon: Star, color: 'bg-blue-400 text-white' }
+];
 
 interface QuickActionsGridV2Props {
     onOpenAddDialog: (type: 'appointment' | 'task' | 'location' | 'shopping' | 'note' | 'expense' | 'goal' | 'medication' | 'habit' | 'project') => void;
@@ -46,244 +97,223 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 }) => {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { gridShortcuts } = useCustomShortcuts();
-    const { locations } = useLocations();
-    const { modes } = useSystemModes();
-    const activeMode = modes.find(m => m.is_active);
+    const { nextPrayer, timeUntilNext } = usePrayerTimes();
+    const { financeData } = useFinance();
+    const { slots } = useQuickAccessCustomization(); // Added hook usage
 
-    const pinnedLocationsList = locations.filter(l => {
-        // If mode is active and has specific locations, only show those or prioritize them
-        if (activeMode && activeMode.location_ids.length > 0) {
-            return activeMode.location_ids.includes(l.id);
-        }
-        return l.category === 'pinned' || l.type === 'location';
-    });
-
-    // Filter shortcuts based on mode
-    // Filter shortcuts based on mode, fallback to global if mode has no shortcuts
-    const filteredGridShortcuts = React.useMemo(() => {
-        if (activeMode && activeMode.shortcut_ids && activeMode.shortcut_ids.length > 0) {
-            return gridShortcuts.filter(s => activeMode.shortcut_ids.includes(s.id));
-        }
-        return gridShortcuts;
-    }, [gridShortcuts, activeMode]);
-
-    // States
+    const [showActionResult, setShowActionResult] = useState<{ title: string; content: string } | null>(null);
+    const [showCalendarSettings, setShowCalendarSettings] = useState(false);
     const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
-    const [showEventMenu, setShowEventMenu] = useState(false);
-    const [showLocationMenu, setShowLocationMenu] = useState(false);
-    const [showSettingsMenu, setShowSettingsMenu] = useState(false);
     const [showSavedLocations, setShowSavedLocations] = useState(false);
-    const [showLocationsGrid, setShowLocationsGrid] = useState(false); // New state for grid dialog
-    const [showDailyReport, setShowDailyReport] = useState(false);
-    const [showWeeklyReport, setShowWeeklyReport] = useState(false);
     const [showMapsAddDialog, setShowMapsAddDialog] = useState(false);
 
-    // Shortcut Execution
-    const { executeShortcut } = useShortcutExecution({
-        onOpenAddDialog,
-        onOpenVoiceRecorder,
-        onOpenTimer,
-        onOpenNewMuslims,
-        onNavigateToTab,
-        onOpenSearch,
-        onOpenShortcuts: () => setShowShortcutsDialog(true),
-        onQuickParking
+    // Filter Logic
+    const isMobileView = isAndroid() || typeof window !== 'undefined' && window.innerWidth < 1024;
+
+    // Construct Displayed Actions
+    let displayedActions = ALL_QUICK_ACTIONS.map(action => {
+        // Map Custom Slots
+        if (action.id.startsWith('custom_')) {
+            const slot = slots.find(s => s.id === action.id);
+            if (slot && slot.type !== 'empty') {
+                return {
+                    ...action,
+                    name: slot.label || action.name,
+                };
+            }
+        }
+        return action;
     });
 
-    // Color map based on user screenshot
-    const colorMap: Record<string, string> = {
-        'timer': 'bg-orange-50/80 text-orange-700 border-orange-100',
-        'event': 'bg-purple-50/80 text-purple-700 border-purple-100',
-        'expense': 'bg-red-50/80 text-red-700 border-red-100',
-        'location': 'bg-green-50/80 text-green-700 border-green-100',
-        'shopping': 'bg-pink-50/80 text-pink-700 border-pink-100',
-        'note': 'bg-yellow-50/80 text-amber-700 border-yellow-100',
-        'open_academic': 'bg-indigo-50/80 text-indigo-700 border-indigo-100',
-        'open_tools': 'bg-emerald-50/80 text-emerald-700 border-emerald-100',
-        'show_new_muslims': 'bg-green-50/80 text-green-700 border-green-100',
-        'open_settings': isCleanMode
-            ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-200'
-            : 'bg-slate-100/80 text-slate-700 border-slate-200',
-    };
-
-    // Default actions fallback
-    const defaultActions = [
-        { id: 'event-default', label: 'حدث', color: 'bg-[#8B5CF6] text-white shadow-purple-200', actionId: 'event' },
-        { id: 'timer-default', label: 'مؤقت', color: 'bg-[#F97316] text-white shadow-orange-200', actionId: 'timer' },
-        { id: 'expense-default', label: 'مصروف', color: 'bg-[#EF4444] text-white shadow-red-200', actionId: 'expense' },
-        { id: 'location-default', label: 'موقع', color: 'bg-[#10B981] text-white shadow-emerald-200', actionId: 'location' },
-        { id: 'shopping-default', label: 'تسوق', color: 'bg-[#EC4899] text-white shadow-pink-200', actionId: 'shopping' },
-        { id: 'settings-default', label: 'إعدادات', color: 'bg-[#3B82F6] text-white shadow-blue-200', actionId: 'sys_settings' },
-    ];
-
-    // Close menus when clicking outside
-    const containerRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setShowSettingsMenu(false);
-                setShowEventMenu(false);
-                setShowLocationMenu(false);
-            }
+    if (isMobileView) {
+        // Mobile: Show first 6 (Settings is #6)
+        displayedActions = displayedActions.slice(0, 6);
+    } else {
+        // Web: Swap #6 (Settings) with Prayer
+        displayedActions[5] = {
+            id: 'show_next_prayer',
+            name: 'الصلاة',
+            icon: Moon,
+            color: 'bg-blue-600 text-white'
         };
+    }
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    const handleActionClick = (action: any) => {
-        const isSettings = action.actionId === 'sys_settings' || action.actionId === 'nav_settings' || action.actionId === 'open_settings' || action.actionId === 'settings';
-        const isEvent = action.actionId === 'event' || action.actionId === 'add_event';
-        const isLocation = action.actionId === 'location' || action.actionId === 'loc_save_current' || action.actionId === 'save_location_current';
-        const isMyLocations = action.actionId === 'open_locations_grid';
-
-        if (isSettings) setShowSettingsMenu(!showSettingsMenu);
-        else if (isEvent) setShowEventMenu(!showEventMenu);
-        else if (isLocation) {
-            // Direct "Add Location" workflow for Phase 6
-            setShowMapsAddDialog(true);
-        }
-        else if (isMyLocations) setShowLocationsGrid(true);
-        else if (action.id === 'loc_direct_detailed' || action.actionId === 'loc_direct_detailed') {
-            window.dispatchEvent(new Event('open-location-shortcut-dialog'));
-        }
-        else if (action.actionId) executeShortcut(action.actionId);
-    };
-
-    const handleLongPress = (action: any) => {
-        if (action.id === 'loc_direct_detailed' || action.actionId === 'loc_direct_detailed') {
-            // Planificar Ruta (Plan Route) -> Open Google Maps Directions
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}`;
-                    window.open(url, '_blank');
-                });
-            } else {
-                window.open('https://www.google.com/maps', '_blank');
+    const executeAction = (actionId: string) => {
+        // Check if custom slot first
+        if (actionId.startsWith('custom_')) {
+            const slot = slots.find(s => s.id === actionId);
+            if (!slot || slot.type === 'empty') {
+                setShowShortcutsDialog(true);
+                return;
             }
-            toast({ title: 'رسم المسار', description: 'جاري فتح الخرائط...' });
-        } else if (action.actionId === 'open_locations_grid') {
-            onQuickParking?.();
+
+            // Execute Slot Logic
+            if (slot.type === 'action' && slot.targetId) {
+                executeAction(slot.targetId);
+            } else if (slot.type === 'location' && slot.url) {
+                window.open(slot.url, '_blank');
+            } else if (slot.type === 'link' && slot.url) {
+                window.open(slot.url, '_blank');
+            }
+            return;
+        }
+
+        switch (actionId) {
+            case 'add_appointment': onOpenAddDialog('appointment'); break;
+            case 'add_task': onOpenAddDialog('task'); break;
+            case 'start_pomodoro': if (onOpenTimer) onOpenTimer(); break;
+            case 'add_expense': onOpenAddDialog('expense'); break;
+
+            // Location
+            case 'list_locations': setShowSavedLocations(true); break;
+            case 'save_parking': if (onQuickParking) onQuickParking(); break;
+
+            // Shopping
+            case 'shopping_add': onOpenAddDialog('shopping'); break;
+            case 'shopping_list': navigate('/notes-v2?folder=shopping'); break;
+
+            // Settings Menu Items
+            case 'show_next_prayer':
+                navigate('/prayer-times');
+                break;
+            case 'calendar_sync_settings':
+                setShowCalendarSettings(true);
+                break;
+            case 'goto_new_muslims':
+                if (onOpenNewMuslims) onOpenNewMuslims();
+                else navigate('/new-muslims'); // Adjust route if needed
+                break;
+            case 'goto_thesis':
+                navigate('/thesis');
+                break;
+            case 'open_shortcuts':
+                setShowShortcutsDialog(true);
+                break;
+            case 'toggle_clean_mode':
+                if (onToggleCleanMode) onToggleCleanMode();
+                break;
+
+            // Standard / Custom
+            case 'custom_1':
+            case 'custom_2':
+            case 'custom_3':
+            case 'custom_4':
+                // TODO: Check if assigned. For now, since they are static placeholders in this array, we treat them as unassigned or requiring management.
+                // User said: "If unassigned, open management directly."
+                // Since we don't have the dynamic assignment state here yet, we open the dialog.
+                setShowShortcutsDialog(true);
+                break;
+
+            default: break;
         }
     };
 
     return (
-        <div className="w-full relative" ref={containerRef}>
-            <div className={`grid grid-cols-${Math.min(defaultActions.length, 6)} gap-2 px-1`} dir="rtl">
-                {defaultActions.map((action) => {
-                    const isSettings = action.actionId === 'sys_settings';
-                    const isEvent = action.actionId === 'event';
+        <div className="w-full relative">
+            {/* Container: Grid on Large Screens, Flex Strip on Mobile */}
+            <div
+                className={cn(
+                    "w-full pt-2 pb-4 px-1",
+                    // Mobile: 6 Columns Grid (Fit to screen), Desktop: 12 Columns Grid
+                    isMobileView ? "grid grid-cols-6 gap-1.5 bg-gray-50/50 rounded-xl p-2" : "grid grid-cols-12 gap-3"
+                )}
+                dir="rtl"
+            >
+                {displayedActions.map((action) => {
+                    const Icon = action.icon;
+                    const hasMenu = action.type === 'menu';
 
-                    // Only these have menus
-                    const hasMenu = isSettings || isEvent;
-                    const isOpen = (isSettings && showSettingsMenu) || (isEvent && showEventMenu);
-
-                    const ButtonContent = (
-                        <div className="w-full h-full">
-                            <QuickActionButton
-                                action={action}
-                                onClick={() => handleActionClick(action)}
-                                onLongPress={() => handleLongPress(action)}
-                            />
-                        </div>
+                    // Button styling: remove min-w to allow grid to squeeze them
+                    const buttonClass = cn(
+                        "flex flex-col items-center justify-center w-full aspect-square rounded-xl shadow-sm active:scale-95 transition-all text-white p-0.5",
+                        action.color
                     );
 
-                    return (
-                        <div key={action.id} className="relative col-span-1 aspect-square">
-                            {hasMenu ? (
-                                <DropdownMenu open={isOpen} onOpenChange={(open) => {
-                                    if (!open) {
-                                        if (isSettings) setShowSettingsMenu(false);
-                                        if (isEvent) setShowEventMenu(false);
-                                    }
-                                }}>
-                                    <DropdownMenuTrigger asChild>
-                                        {ButtonContent}
-                                    </DropdownMenuTrigger>
+                    if (hasMenu && action.menuItems) {
+                        return (
+                            <DropdownMenu key={action.id}>
+                                <DropdownMenuTrigger asChild>
+                                    <button className={buttonClass}>
+                                        <div className="relative w-full h-full flex items-center justify-center">
+                                            <span className="text-[10px] md:text-sm font-bold whitespace-nowrap leading-tight text-center">{action.name}</span>
+                                            {/* Tiny indicator for menu */}
+                                            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 bg-white/40 rounded-full" />
+                                        </div>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="center" className="min-w-[160px]">
+                                    {action.menuItems.map((subItem: any) => {
+                                        const SubIcon = subItem.icon;
+                                        return (
+                                            <DropdownMenuItem key={subItem.id} onClick={() => executeAction(subItem.id)} className="gap-2 cursor-pointer text-right flex-row-reverse justify-between">
+                                                <span className="flex-1 text-right">{subItem.name}</span>
+                                                <SubIcon className="w-4 h-4 opacity-70" />
+                                            </DropdownMenuItem>
+                                        );
+                                    })}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        );
+                    }
 
-                                    <DropdownMenuContent className="w-56 z-[60]" align="start" sideOffset={5}>
-                                        {isSettings && (
-                                            <>
-                                                <DropdownMenuItem onClick={() => { navigate('/prayer-times'); setShowSettingsMenu(false); }} className="gap-2">
-                                                    <Icons.Moon className="w-4 h-4 text-indigo-500" /> <span>أوقات الصلاة</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { navigate('/locations'); setShowSettingsMenu(false); }} className="gap-2">
-                                                    <Icons.Map className="w-4 h-4 text-emerald-500" /> <span>المواقع</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { onOpenNewMuslims?.(); setShowSettingsMenu(false); }} className="gap-2">
-                                                    <Icons.Heart className="w-4 h-4 text-teal-500" /> <span>المهتدين</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { navigate('/thesis'); setShowSettingsMenu(false); }} className="gap-2">
-                                                    <Icons.GraduationCap className="w-4 h-4 text-blue-500" /> <span>الأطروحة</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { onOpenShortcuts?.(); setShowSettingsMenu(false); }} className="gap-2">
-                                                    <Icons.Command className="w-4 h-4 text-purple-500" /> <span>الاختصارات</span>
-                                                </DropdownMenuItem>
-                                            </>
-                                        )}
-                                        {isEvent && (
-                                            <>
-                                                <DropdownMenuItem onClick={() => { setShowEventMenu(false); onOpenAddDialog('appointment'); }} className="gap-2">
-                                                    <CalendarPlus className="w-4 h-4 text-orange-500" /> <span>موعد</span>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setShowEventMenu(false); onOpenAddDialog('task'); }} className="gap-2">
-                                                    <CheckSquare className="w-4 h-4 text-blue-500" /> <span>مهمة</span>
-                                                </DropdownMenuItem>
-                                            </>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            ) : (
-                                ButtonContent
-                            )}
-                        </div>
+                    if (action.id === 'shopping_action') {
+                        return (
+                            <DropdownMenu key={action.id}>
+                                <DropdownMenuTrigger asChild>
+                                    <button className={buttonClass}>
+                                        <span className="text-[10px] md:text-sm font-bold whitespace-nowrap leading-tight text-center">{action.name}</span>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => onOpenAddDialog('shopping')} className="justify-end gap-2">
+                                        <span>إضافة غرض</span>
+                                        <Plus className="w-4 h-4" />
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate('/notes-v2?folder=shopping')} className="justify-end gap-2">
+                                        <span>عرض القائمة</span>
+                                        <ListTodo className="w-4 h-4" />
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )
+                    }
+
+                    return (
+                        <button
+                            key={action.id}
+                            onClick={() => executeAction(action.id)}
+                            className={buttonClass}
+                        >
+                            <span className="text-[10px] md:text-sm font-bold whitespace-nowrap leading-tight text-center">{action.name}</span>
+                        </button>
                     );
                 })}
             </div>
 
+            {/* Result Dialog */}
+            <Dialog open={showActionResult !== null} onOpenChange={() => setShowActionResult(null)}>
+                <DialogContent className="sm:max-w-sm bg-white/95 backdrop-blur text-right" dir="rtl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <Scale className="w-5 h-5" />
+                            {showActionResult?.title}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="bg-gray-50 rounded-xl p-4 text-center text-lg font-medium leading-relaxed text-gray-800 border border-gray-100 whitespace-pre-line">
+                        {showActionResult?.content}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <CalendarSettingsDialog open={showCalendarSettings} onOpenChange={setShowCalendarSettings} />
             <ShortcutsSettingsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
             <SavedLocationsDialog open={showSavedLocations} onOpenChange={setShowSavedLocations} />
-            <LocationsGridDialog open={showLocationsGrid} onOpenChange={setShowLocationsGrid} />
             <MapsSettingsDialog
                 open={showMapsAddDialog}
                 onOpenChange={setShowMapsAddDialog}
                 initialAddMode={true}
             />
         </div>
-    );
-};
-
-const QuickActionButton = ({ action, onClick, onLongPress }: { action: any, onClick: () => void, onLongPress?: () => void }) => {
-    const { onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd } = useLongPress({
-        onClick,
-        onLongPress: onLongPress || (() => { }),
-        ms: 600
-    });
-
-    // If no long press handler is provided, use standard onclick for better responsiveness
-    const handlers = onLongPress ? {
-        onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd
-    } : { onClick };
-
-    const isMobile = isAndroid();
-
-    return (
-        <button
-            {...handlers}
-            className={cn(
-                "flex flex-col items-center justify-center p-1 rounded-2xl transition-all active:scale-95 shadow-sm w-full h-full aspect-square relative overflow-hidden ring-1 ring-black/5",
-                action.color
-            )}
-        >
-            {action.icon ? <action.icon className={cn("mb-1 shrink-0 opacity-90", isMobile ? "w-6 h-6" : "w-9 h-9")} /> : null}
-            <span className={cn("font-bold tracking-tight leading-3 text-center w-full px-0.5 line-clamp-1", isMobile ? "text-[10px]" : "text-[11px]")}>
-                {action.actionId === 'sys_settings' ? 'إعدادات' : action.label}
-            </span>
-        </button>
     );
 };
 

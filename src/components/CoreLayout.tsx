@@ -119,6 +119,8 @@ const CoreLayout = () => {
         // But to be safe, I'll add specific close events if I know they exist.
         // For now, `global-nav-change` is the standard "I am moving away" signal.
 
+        // setActiveTab(tabId); // Moved down to specific handlers to avoid setting invalid tabs
+
         // Handle "Reset/Jump to Root" Logic
         if (activeTab === tabId) {
             if (tabId === 'notes-v2') {
@@ -138,16 +140,27 @@ const CoreLayout = () => {
         setActiveTab(tabId);
         window.dispatchEvent(new CustomEvent('global-nav-change', { detail: { tabId } }));
 
-        if (tabId === 'calendar') {
+        if (tabId === 'calendar' || tabId === 'calendar-monthly') {
+            setActiveTab('calendar');
             navigate('/');
             setTimeout(() => {
                 window.dispatchEvent(new CustomEvent('change-tab', { detail: 'calendar-monthly' }));
             }, 50);
+        } else if (tabId === 'calendar-weekly') {
+            setActiveTab('calendar');
+            navigate('/');
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('change-tab', { detail: 'calendar-weekly' }));
+            }, 50);
         } else if (tabId === 'notes-v2') {
             navigate('/notes-v2');
         } else if (tabId === 'dashboard') {
+            setActiveTab('dashboard');
             navigate('/');
         } else {
+            setActiveTab(tabId);
+            window.dispatchEvent(new CustomEvent('global-nav-change', { detail: { tabId } }));
+
             if (location.pathname !== '/') {
                 navigate('/');
             }

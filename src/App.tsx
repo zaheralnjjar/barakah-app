@@ -46,6 +46,8 @@ import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 import { LocationShortcutListener } from "@/components/LocationShortcutListener";
 import { ShortcutDialogs } from "@/components/dashboard/ShortcutDialogs";
 
+
+
 const queryClient = new QueryClient();
 
 // Deep Link Handler Component
@@ -252,6 +254,10 @@ const App = () => {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+
+
+
+
 
             {/* Global FAB - Show everywhere on mobile */}
             {(isAndroid() || window.innerWidth < 1024) && (

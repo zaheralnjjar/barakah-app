@@ -62,7 +62,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
         pressTimer.current = setTimeout(() => {
             isLongPress.current = true;
             if (navigator.vibrate) navigator.vibrate(50);
-            if (onLongPress) onLongPress(id);
+            // Action is handled in handleEnd to prevent conflict
         }, 500);
     };
 
@@ -77,8 +77,9 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
             } else if (item.id === 'settings') {
                 // Force sync when long pressing settings
                 window.dispatchEvent(new Event('trigger-cloud-sync'));
+                window.dispatchEvent(new Event('refresh-calendar-events'));
             } else if (item.id === 'productivity' && onLongPress) {
-                onLongPress('calendar');
+                onLongPress('calendar-monthly');
             }
         }
         setTimeout(() => {
@@ -158,6 +159,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                 <div className="flex-1 flex flex-col items-center gap-1">
                     {navItems.map((item) => <NavIcon key={item.id} item={item} />)}
                 </div>
+
 
                 {/* Add Note Button - Fixed Sidebar Item (Replaces FAB) */}
                 <Tooltip>

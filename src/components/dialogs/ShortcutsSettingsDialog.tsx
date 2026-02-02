@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useShortcuts } from '@/hooks/useShortcuts';
 import { useCustomShortcuts } from '@/hooks/useCustomShortcuts';
 import { useLocations } from '@/hooks/useLocations';
-import { MapPin, Plus, Trash2, Sparkles, Navigation, Edit, Link, Phone, Zap, Layers } from 'lucide-react';
+import { useQuickAccessCustomization } from '@/hooks/useQuickAccessCustomization';
+import { MapPin, Plus, Trash2, Sparkles, Navigation, Edit, Link, Phone, Zap, Layers, LayoutGrid, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ShortcutCustomizerDialog } from './ShortcutCustomizerDialog';
 import type { CustomShortcut } from '@/types/shortcuts';
@@ -23,6 +24,10 @@ interface ShortcutsSettingsDialogProps {
 
 export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = ({ open, onOpenChange }) => {
     const { toast } = useToast();
+
+    // Quick Access Customization Hook
+    const { slots, updateSlot, resetSlot } = useQuickAccessCustomization();
+    const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
 
     // Custom shortcuts (new system for everything now)
     const {
@@ -63,8 +68,8 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                 // Standardized Reverse Geocoding
                 if (!newLocName) {
                     setIsLoadingLocation(true);
-                    const name = await reverseGeocodeLimit(pos.coords.latitude, pos.coords.longitude);
-                    setNewLocName(name);
+                    const result = await reverseGeocodeLimit(pos.coords.latitude, pos.coords.longitude);
+                    setNewLocName(result.name || result.details);
                     setIsLoadingLocation(false);
                 } else {
                     setIsLoadingLocation(false);
@@ -140,10 +145,11 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
 
                 <Tabs defaultValue="custom" className="flex-1 flex flex-col overflow-hidden">
                     <div className="px-4 pt-2">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="custom">اختصاراتي</TabsTrigger>
                             <TabsTrigger value="locations">المواقع</TabsTrigger>
                             <TabsTrigger value="shortcuts">الوظائف</TabsTrigger>
+                            <TabsTrigger value="strip" className="text-blue-700 data-[state=active]:bg-blue-50">تخصيص الشريط</TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -380,15 +386,135 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                             })}
                         </div>
                     </TabsContent>
-                </Tabs>
+                    {/* === STRIP CUSTOMIZATION TAB === */}
+                    <TabsContent value="strip" className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                            <h4 className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                                <LayoutGrid className="w-4 h-4" />
+                                تخصيص الشريط السريع
+                            </h4>
+                            <p className="text-xs text-blue-600 mt-1">
+                                اختر المكان الذي تريد تخصيصه، ثم اختر الوظيفة أو الموقع له.
+                            </p>
+                        </div>
+
+                        {/* Slots Selector */}
+                        <div className="grid grid-cols-4 gap-2 mb-6">
+                            {slots.map((slot) => (
+                                <button
+                                    key={slot.id}
+                                    onClick={() => setSelectedSlotId(slot.id)}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all aspect-square relative",
+                                        selectedSlotId === slot.id
+                                            ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 ring-offset-1'
+                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                    )}
+                                >
+                                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-1 text-white text-xs font-bold", slot.color)}>
+                                        {slot.id.replace('custom_', '')}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-center line-clamp-1 w-full text-gray-700">
+                                        {slot.type === 'empty' ? 'فارغ' : slot.label}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {selectedSlotId && (
+                            <div className="space-y-4 border-t pt-4 animate-in fade-in slide-in-from-bottom-2">
+                                <div className="flex items-center justify-between">
+                                    <h5 className="text-sm font-bold text-gray-800">
+                                        تخصيص: <span className="text-emerald-600">مكان {selectedSlotId.replace('custom_', '')}</span>
+                                    </h5>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-red-500 hover:bg-red-50 h-8"
+                                        onClick={() => resetSlot(selectedSlotId)}
+                                    >
+                                        <Trash2 className="w-3 h-3 ml-1" />
+                                        تفريغ
+                                    </Button>
+                                </div>
+
+                                {/* Label Editor */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold text-gray-600">الاسم الظاهر</label>
+                                    <Input
+                                        value={slots.find(s => s.id === selectedSlotId)?.label || ''}
+                                        onChange={(e) => updateSlot(selectedSlotId, { label: e.target.value })}
+                                        placeholder="اسم الاختصار"
+                                        className="h-8 text-xs font-bold text-right border-gray-300 focus-visible:ring-emerald-500"
+                                    />
+                                </div>
+
+                                <Tabs defaultValue="actions" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 h-8">
+                                        <TabsTrigger value="actions" className="text-xs">الوظائف</TabsTrigger>
+                                        <TabsTrigger value="locations" className="text-xs">المواقع</TabsTrigger>
+                                        {/* <TabsTrigger value="link" className="text-xs">رابط</TabsTrigger> */}
+                                    </TabsList>
+
+                                    <TabsContent value="actions" className="mt-2 space-y-2 h-[200px] overflow-y-auto pr-1">
+                                        {AVAILABLE_ACTIONS.map(action => (
+                                            <button
+                                                key={action.id}
+                                                onClick={() => updateSlot(selectedSlotId, {
+                                                    type: 'action',
+                                                    targetId: action.id,
+                                                    label: action.name,
+                                                })}
+                                                className={cn(
+                                                    "w-full flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors text-right",
+                                                    slots.find(s => s.id === selectedSlotId)?.targetId === action.id ? "bg-emerald-50 border-emerald-500" : "border-gray-100"
+                                                )}
+                                            >
+                                                <action.icon className="w-4 h-4 text-gray-500" />
+                                                <span className="text-xs font-medium">{action.name}</span>
+                                                {slots.find(s => s.id === selectedSlotId)?.targetId === action.id && <Check className="w-4 h-4 text-emerald-600 mr-auto" />}
+                                            </button>
+                                        ))}
+                                    </TabsContent>
+
+                                    <TabsContent value="locations" className="mt-2 space-y-2 h-[200px] overflow-y-auto pr-1">
+                                        {locations.map(loc => (
+                                            <button
+                                                key={loc.id}
+                                                onClick={() => updateSlot(selectedSlotId, {
+                                                    type: 'location',
+                                                    targetId: loc.id,
+                                                    label: loc.title,
+                                                    url: loc.address
+                                                })}
+                                                className={cn(
+                                                    "w-full flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors text-right",
+                                                    slots.find(s => s.id === selectedSlotId)?.targetId === loc.id ? "bg-emerald-50 border-emerald-500" : "border-gray-100"
+                                                )}
+                                            >
+                                                <MapPin className="w-4 h-4 text-emerald-600" />
+                                                <div className="text-right flex-1">
+                                                    <p className="text-xs font-medium">{loc.title}</p>
+                                                    <p className="text-[10px] text-gray-400 truncate">{loc.address}</p>
+                                                </div>
+                                                {slots.find(s => s.id === selectedSlotId)?.targetId === loc.id && <Check className="w-4 h-4 text-emerald-600" />}
+                                            </button>
+                                        ))}
+                                        {locations.length === 0 && <p className="text-xs text-gray-400 text-center py-4">لا توجد مواقع محفوظة</p>}
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        )}
+                    </TabsContent>
+                </Tabs >
 
                 <div className="p-3 border-t bg-gray-50 flex justify-end">
                     <Button onClick={() => onOpenChange(false)}>إغلاق</Button>
                 </div>
-            </DialogContent>
+            </DialogContent >
 
             {/* Shortcut Customizer Dialog */}
-            <ShortcutCustomizerDialog
+            < ShortcutCustomizerDialog
                 open={showCustomizerDialog}
                 onOpenChange={(open) => {
                     setShowCustomizerDialog(open);
@@ -396,7 +522,7 @@ export const ShortcutsSettingsDialog: React.FC<ShortcutsSettingsDialogProps> = (
                 }}
                 editingShortcut={editingShortcut}
             />
-        </Dialog>
+        </Dialog >
     );
 };
 
