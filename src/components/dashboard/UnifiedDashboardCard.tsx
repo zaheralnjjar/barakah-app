@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, CheckSquare, ShoppingCart, Target, ChevronLeft, Plus, Clock, ChevronRight, Heart } from 'lucide-react';
+import { Calendar, CheckSquare, ShoppingCart, Target, ChevronLeft, Plus, Clock, ChevronRight, Heart, Play, Pause } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useShoppingList } from '@/hooks/useShoppingList';
@@ -9,6 +9,7 @@ import { useNotesV2 } from '@/hooks/useNotesV2';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { isAndroid } from '@/utils/platformDetection';
 
 interface UnifiedDashboardCardProps {
     onOpenAdd: (type: 'task' | 'appointment' | 'goal' | 'shopping' | 'project' | 'medication' | 'habit') => void;
@@ -276,6 +277,10 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
+    // Refs for navigation logic
+    const lastTapRef = React.useRef(0);
+    const clickTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
     // Reset index safely
     useEffect(() => {
         if (currentIndex >= slides.length) {
@@ -395,7 +400,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
     return (
         <Card
             className={cn(
-                "w-full overflow-hidden border-0 shadow-xl rounded-[1.5rem] transition-all duration-700 bg-gradient-to-br min-h-[140px] relative group", // Increased height to 140px (approx 20% more than 110)
+                "w-full overflow-hidden border-0 shadow-xl rounded-[1.5rem] transition-all duration-700 bg-gradient-to-br min-h-[115px] relative group", // Reverted to more compact height
                 activeItem.gradient
             )}
             dir="rtl"
@@ -404,8 +409,29 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            onClick={(e) => {
+                // Handle navigation: Single Tap -> Next, Double Tap -> Prev
+                // We use a small timeout to distinguish single vs double tap
+                // Note buttons/interactive elements must e.stopPropagation()
+                const now = Date.now();
+                const DOUBLE_TAP_DELAY = 300;
+
+                if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+                    // Double Tap detected
+                    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+                    handlePrev();
+                    lastTapRef.current = 0; // Reset
+                } else {
+                    // Single Tap Candidate
+                    lastTapRef.current = now;
+                    clickTimeoutRef.current = setTimeout(() => {
+                        handleNext();
+                        clickTimeoutRef.current = null;
+                    }, DOUBLE_TAP_DELAY);
+                }
+            }}
         >
-            <CardContent className="p-4 relative h-full flex flex-col justify-center gap-1 z-10 pb-2"> {/* Reduced padding */}
+            <CardContent className="p-4 relative h-full flex flex-col justify-center gap-1 z-10 pb-2 pointer-events-none"> {/* Disable pointer events on container, re-enable on children */}
 
                 {/* Background Decor */}
                 <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
@@ -416,14 +442,15 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                         <Icon className={cn("w-5 h-5", activeItem.textColor)} />
                     </div>
 
-                    <div className="flex-1 min-w-0 flex items-center gap-2"
-                        onClick={() => {
+                    <div className="flex-1 min-w-0 flex items-center gap-2 pointer-events-auto cursor-pointer"
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent nav
                             if (activeItem.data && onOpenEvent && (activeItem.type === 'task' || activeItem.type === 'appointment')) {
                                 onOpenEvent(activeItem.data);
                             }
                         }}
                     >
-                        <h2 className={cn("text-lg font-bold leading-tight line-clamp-2 drop-shadow-sm", activeItem.textColor)}>
+                        <h2 className={cn("text-base font-bold leading-tight line-clamp-2 drop-shadow-sm", activeItem.textColor)}>
                             {activeItem.title}
                         </h2>
                     </div>
@@ -443,16 +470,34 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
 
                 {/* Row 2: Subtitle (Note Content) - Expanded */}
                 <div className="flex-1 w-full min-h-0 mt-1 mb-1">
-                    <p className={cn("text-[11px] leading-relaxed font-medium opacity-80 line-clamp-3 whitespace-pre-line", activeItem.textColor)}>
+                    <p className={cn("text-[10.5px] leading-relaxed font-medium opacity-80 line-clamp-3 whitespace-pre-line", activeItem.textColor)}>
                         {activeItem.subtitle}
                     </p>
                 </div>
 
-                {/* Click Areas for Navigation - Kept for interaction without visuals */}
-                <div className="absolute inset-y-0 left-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} />
-                <div className="absolute inset-y-0 right-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} />
+                {/* Remove old click areas as we use main card click */}
+                {/* <div className="absolute inset-y-0 left-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handleNext(); }} /> */}
+                {/* <div className="absolute inset-y-0 right-0 w-8 z-0" onClick={(e) => { e.stopPropagation(); handlePrev(); }} /> */}
 
             </CardContent>
+
+            {/* Android Play/Pause Toggle Button - Outside CardContent for Exact Corner */}
+            {isAndroid() && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation(); // Prevent nav
+                        setIsPaused(!isPaused);
+                    }}
+                    className={cn(
+                        "absolute bottom-0 right-0 p-3 rounded-tl-2xl rounded-br-[1.5rem] backdrop-blur-md bg-white/5 border-t border-l border-white/10 z-30 transition-all active:scale-95 opacity-50 pointer-events-auto",
+                        activeItem.accentColor,
+                        activeItem.textColor
+                    )}
+                >
+                    {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                </button>
+            )}
+
         </Card >
     );
 };
