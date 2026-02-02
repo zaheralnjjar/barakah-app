@@ -16,6 +16,11 @@ const config: CapacitorConfig = {
     plugins: {
         SpeechRecognition: {
             // Android-specific settings
+        },
+        GoogleAuth: {
+            scopes: ["profile", "email", "https://www.googleapis.com/auth/tasks"],
+            serverClientId: "323985160877-n3e36e3e3e3e3e3e3e3e3e3e3e.apps.googleusercontent.com", // Placeholder: User will need to replace this
+            forceCodeForRefreshToken: true,
         }
     },
 };

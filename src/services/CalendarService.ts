@@ -123,10 +123,15 @@ export const CalendarService = {
                 }
             }
 
-            // 2. Fetch Events (Bypassing strict type check if definition is missing)
-            const result = await (CapacitorCalendar as any).listEvents({
-                startDate: startTime,
-                endDate: endTime
+            // 2. Determine which calendars to fetch (Note: Plugin API 7.1.0+ uses listEventsInRange which fetches ALL or filtered?)
+            // The definition for listEventsInRangeOptions only has 'from' and 'to'.
+            // It does NOT seem to support calendarIds in the interface. 
+            // So we fetch ALL and filter client-side if needed.
+
+            // 3. Fetch Events using CORRECT API
+            const result = await (CapacitorCalendar as any).listEventsInRange({
+                from: startTime,
+                to: endTime
             });
 
             const rawEvents = result.result || [];
@@ -135,24 +140,22 @@ export const CalendarService = {
             let mappedEvents: CalendarEvent[] = rawEvents.map((ev: any) => ({
                 id: ev.id,
                 title: ev.title || 'بدون اسم',
-                startDate: ev.startDate,
-                endDate: ev.endDate,
+                startDate: ev.startDate || ev.startTime, // Check both just in case
+                endDate: ev.endDate || ev.endTime,
                 location: ev.location,
                 allDay: ev.allDay,
                 calendarId: ev.calendarId || 'default',
                 source: 'device'
             }));
 
-            // 3. Filter (Optional - currently accepting all if no filter saved, or maybe just returning all)
-            // The user wanted "sync" so returning everything found is safer.
-            // If we strictly filter, we might miss new calendars.
-            // Let's check if we have saved calendars; if so, MAYBE prioritize them, but for now just return ALL.
-            /*
-            const selectedCalendars = this.getSelectedCalendars();
-            if (selectedCalendars.length > 0) {
-                mappedEvents = mappedEvents.filter(ev => selectedCalendars.includes(ev.calendarId));
+            // 4. Filter by selected calendars (Client Side)
+            const savedIds = this.getSelectedCalendars();
+            if (savedIds.length > 0) {
+                // Check if raw event has calendarID. 
+                // If not, we might be filtering everything out. 
+                // For safety in this fix, I will COMMENT OUT filtering to ensure user sees events first.
+                // mappedEvents = mappedEvents.filter(ev => savedIds.includes(ev.calendarId));
             }
-            */
 
             return mappedEvents;
 

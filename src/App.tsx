@@ -45,6 +45,8 @@ import { useState } from 'react';
 import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
 import { LocationShortcutListener } from "@/components/LocationShortcutListener";
 import { ShortcutDialogs } from "@/components/dashboard/ShortcutDialogs";
+import { NotificationManager } from './services/NotificationManager';
+
 
 
 
@@ -165,6 +167,8 @@ const App = () => {
   // Watch sync removed - watch app deleted
   // Initialize keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Initialize Notification Listener
 
   // Global QuickNote Dialog handling
   const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);

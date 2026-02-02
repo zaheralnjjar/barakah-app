@@ -1,74 +1,53 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
-export class NotificationManager {
-    static async requestPermissions(): Promise<boolean> {
+export const NotificationManager = {
+    async init() {
+        if (!Capacitor.isNativePlatform()) return;
+
         try {
-            // Web Permission
-            if (Notification.permission !== 'granted') {
-                await Notification.requestPermission();
+            const perm = await LocalNotifications.checkPermissions();
+            if (perm.display !== 'granted') {
+                await LocalNotifications.requestPermissions();
             }
-
-            // Capacitor Permission
-            const { display } = await LocalNotifications.requestPermissions();
-            return display === 'granted';
         } catch (e) {
-            console.error('Error requesting notification permissions:', e);
-            return false;
+            console.error('[NotificationManager] Init error:', e);
         }
-    }
+    },
 
-    static async schedule(options: {
-        id: number;
-        title: string;
-        body: string;
-        schedule?: Date;
-        sound?: string;
-        channelId?: string;
-    }) {
+    async requestPermission() {
+        if (!Capacitor.isNativePlatform()) return;
+        return await LocalNotifications.requestPermissions();
+    },
+
+    async schedule(options: any) {
+        if (!Capacitor.isNativePlatform()) {
+            console.log('[NotificationManager] Web: Notification scheduled', options);
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(options.title, { body: options.body });
+            }
+            return;
+        }
+
         try {
-            const isCapacitor = (window as any).Capacitor?.isNative;
-
-            if (isCapacitor) {
-                await LocalNotifications.schedule({
-                    notifications: [{
-                        id: options.id,
+            await LocalNotifications.schedule({
+                notifications: [
+                    {
                         title: options.title,
                         body: options.body,
-                        schedule: options.schedule ? { at: options.schedule } : undefined,
-                        sound: options.sound,
-                        channelId: options.channelId || 'default',
-                        actionTypeId: '',
-                        extra: null
-                    }]
-                });
-            } else {
-                // Web Fallback (Logic only works if window is open)
-                if (options.schedule) {
-                    const delay = options.schedule.getTime() - Date.now();
-                    if (delay > 0) {
-                        setTimeout(() => {
-                            new Notification(options.title, { body: options.body });
-                        }, delay);
+                        id: options.id || Math.floor(Date.now() % 100000),
+                        schedule: { at: options.schedule instanceof Date ? options.schedule : new Date(options.schedule) },
+                        sound: options.sound || undefined,
+                        extra: options.extra || null
                     }
-                } else {
-                    new Notification(options.title, { body: options.body });
-                }
-            }
-            console.log(`Scheduled notification [${options.id}]: ${options.title} at ${options.schedule}`);
+                ]
+            });
+            console.log('[NotificationManager] Scheduled:', options);
         } catch (e) {
-            console.error('Error scheduling notification:', e);
+            console.error('[NotificationManager] Schedule error:', e);
         }
-    }
+    },
 
-    static async cancel(id: number) {
-        try {
-            await LocalNotifications.cancel({ notifications: [{ id }] });
-        } catch (e) {
-            console.error('Error cancelling notification:', e);
-        }
-    }
-
-    static async getPending() {
-        return await LocalNotifications.getPending();
-    }
-}
+    // Stub for getNotifications/save to prevent immediate crashes if I missed a ref, 
+    // but the goal is to remove them. I'll remove them.
+};

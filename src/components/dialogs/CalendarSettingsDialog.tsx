@@ -70,7 +70,45 @@ export const CalendarSettingsDialog: React.FC<CalendarSettingsDialogProps> = ({ 
         onOpenChange(false);
         // Force reload of dashboard events? 
         // Ideally prompt user or trigger strict reload.
-        window.location.reload(); // Hard reload to verify changes immediately for now
+        window.dispatchEvent(new Event('refresh-calendar-events'));
+    };
+
+    const handleDebug = async () => {
+        try {
+            const perm = await CalendarService.checkPermission();
+
+            // 1. List Calendars
+            const calendars = await CalendarService.listCalendars();
+            const calList = calendars.map(c => `${c.title} (ID:${c.id})`).join('\n');
+
+            alert(`Permission: ${perm}\n\nCalendars Found (${calendars.length}):\n${calList || 'None'}`);
+
+            if (calendars.length === 0) {
+                alert('No calendars found! This explains 0 events.');
+                return;
+            }
+
+            // 2. Fetch Events
+            const now = new Date();
+            const end = new Date();
+            end.setDate(end.getDate() + 30);
+
+            // Fetch All
+            const events = await CalendarService.listEvents(now.getTime(), end.getTime());
+
+            // Analyze source
+            const bySource = events.reduce((acc, ev) => {
+                acc[ev.calendarId] = (acc[ev.calendarId] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+            const analysis = Object.entries(bySource).map(([id, count]) => `${id}: ${count}`).join('\n');
+
+            alert(`Events Result:\nTotal: ${events.length}\nBy Calendar:\n${analysis || 'None'}`);
+            console.log('Debug Events:', events);
+
+        } catch (e) {
+            alert(`Debug Error: ${e}`);
+        }
     };
 
     return (
@@ -119,14 +157,19 @@ export const CalendarSettingsDialog: React.FC<CalendarSettingsDialogProps> = ({ 
                     )}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t mt-2">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        إلغاء
+                <div className="flex justify-between pt-2 border-t mt-2">
+                    <Button variant="ghost" className="text-xs text-gray-400" onClick={handleDebug}>
+                        فحص الاتصال (Debug)
                     </Button>
-                    <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-                        <Save className="w-4 h-4" />
-                        حفظ التغييرات
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => onOpenChange(false)}>
+                            إلغاء
+                        </Button>
+                        <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                            <Save className="w-4 h-4" />
+                            حفظ التغييرات
+                        </Button>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>

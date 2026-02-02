@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, CalendarDays } from 'lucide-react';
+import { Calendar as CalendarIcon, Edit, Share2, Trash2, ChevronDown, ChevronUp, Layers, Clock, PieChart as PieChartIcon, CheckSquare, ChevronLeft, ChevronRight, Pill, Flame, Square, CheckSquare2, Moon, ShoppingCart, CalendarDays, RefreshCw, Cloud } from 'lucide-react';
 import { MainTask, SubTask } from '@/hooks/useTasks';
 import { Appointment } from '@/hooks/useAppointments';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import WeeklyCalendar from '@/components/WeeklyCalendar';
 import { playAlertSound } from '@/utils/alertSound';
+import { googleTasksService } from '@/services/GoogleTasksService';
 
 
 
@@ -40,6 +41,7 @@ interface TaskSectionProps {
         stop: () => void;
         format: () => string;
     };
+    onSyncWithGoogle: () => Promise<void>;
 }
 
 export const TaskSection: React.FC<TaskSectionProps> = ({
@@ -47,8 +49,9 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
     onEditTask, onDeleteTask, onShareTask,
     onDeleteAppointment,
     onAddSubtask, onToggleSubtask, onDeleteSubtask,
-    pomodoro
+    pomodoro, onSyncWithGoogle
 }) => {
+    const [isSyncing, setIsSyncing] = useState(false);
     const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -700,9 +703,37 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 
                     {/* Tasks & Projects */}
                     <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-                        <h3 className="font-bold text-gray-800 flex items-center gap-2 sticky top-0 bg-white z-10 py-2 border-b">
-                            <PieChartIcon className="w-5 h-5 text-purple-600" />
-                            المهام والمشاريع الحالية
+                        <h3 className="font-bold text-gray-800 flex items-center justify-between sticky top-0 bg-white z-10 py-2 border-b">
+                            <div className="flex items-center gap-2">
+                                <PieChartIcon className="w-5 h-5 text-purple-600" />
+                                المهام والمشاريع الحالية
+                            </div>
+                            <Button
+                                onClick={async () => {
+                                    const isEnabled = localStorage.getItem('google_tasks_sync_enabled') === 'true';
+                                    if (!isEnabled) {
+                                        await googleTasksService.login();
+                                        localStorage.setItem('google_tasks_sync_enabled', 'true');
+                                    }
+                                    setIsSyncing(true);
+                                    try {
+                                        await onSyncWithGoogle();
+                                    } finally {
+                                        setIsSyncing(false);
+                                    }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                className={`h-7 px-2 text-xs flex items-center gap-1 ${localStorage.getItem('google_tasks_sync_enabled') === 'true' ? 'text-blue-600 border-blue-200 bg-blue-50' : ''}`}
+                                disabled={isSyncing}
+                            >
+                                {isSyncing ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <Cloud className="w-3 h-3" />
+                                )}
+                                {localStorage.getItem('google_tasks_sync_enabled') === 'true' ? 'مزامنة' : 'ربط Google'}
+                            </Button>
                         </h3>
 
                         {tasks.map(task => (

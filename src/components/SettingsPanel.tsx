@@ -68,6 +68,8 @@ const PrayerManager = React.lazy(() => import('@/components/PrayerManager'));
 import { useSystemModes } from '@/hooks/useSystemModes';
 import { SystemModeEditorDialog } from '@/components/dialogs/SystemModeEditorDialog';
 import { MapsSettingsDialog } from '@/components/dialogs/MapsSettingsDialog';
+import { googleTasksService } from '@/services/GoogleTasksService';
+import { Cloud } from 'lucide-react';
 // FABSettingsDialog Removed
 
 
@@ -116,6 +118,7 @@ const SettingsPanel = () => {
     // Routine Activation State
     const [activatingRoutine, setActivatingRoutine] = useState<any>(null);
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
+    const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
 
     // Advanced System Modes State
     const { modes, toggleMode, deleteMode } = useSystemModes();
@@ -910,6 +913,59 @@ const SettingsPanel = () => {
                                             مزامنة جميع الجداول
                                         </>
                                     )}
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        {/* Google Tasks Sync */}
+                        <Card className="border-blue-100">
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Cloud className="w-5 h-5 text-blue-600" />
+                                    مزامنة Google Tasks
+                                </CardTitle>
+                                <CardDescription className="text-xs">مزامنة قائمة التسوق والمهام مع Google Tasks</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-sm font-medium">مزامنة تلقائية</Label>
+                                        <p className="text-[10px] text-gray-500">مزامنة كل 30 ثانية عند فتح التطبيق</p>
+                                    </div>
+                                    <Switch
+                                        checked={localStorage.getItem('google_tasks_sync_enabled') === 'true'}
+                                        onCheckedChange={(val) => {
+                                            localStorage.setItem('google_tasks_sync_enabled', val.toString());
+                                            // Force re-render of settings panel state if needed or just rely on localStorage
+                                            toast({ title: val ? "تم تفعيل المزامنة" : "تم إيقاف المزامنة" });
+                                        }}
+                                    />
+                                </div>
+                                <Button
+                                    onClick={async () => {
+                                        try {
+                                            const isEnabled = localStorage.getItem('google_tasks_sync_enabled') === 'true';
+                                            if (!isEnabled) {
+                                                await googleTasksService.login();
+                                                localStorage.setItem('google_tasks_sync_enabled', 'true');
+                                            }
+                                            setIsSyncingGoogle(true);
+                                            await googleTasksService.syncShoppingList();
+                                            await googleTasksService.syncTasks();
+                                            toast({ title: "تمت المزامنة بنجاح" });
+                                        } catch (error) {
+                                            console.error('Google Tasks manual sync failed:', error);
+                                            toast({ title: "فشلت المزامنة", variant: "destructive" });
+                                        } finally {
+                                            setIsSyncingGoogle(false);
+                                        }
+                                    }}
+                                    disabled={isSyncingGoogle}
+                                    variant="outline"
+                                    className="w-full flex items-center justify-center gap-2"
+                                >
+                                    {isSyncingGoogle ? <RefreshCw className="w-4 h-4 animate-spin text-blue-600" /> : <RefreshCw className="w-4 h-4 text-blue-600" />}
+                                    بدء المزامنة اليدوية
                                 </Button>
                             </CardContent>
                         </Card>

@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ShoppingCart, Plus, Trash2, Edit, Share2, GripVertical, Calendar, Clock } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Edit, Share2, GripVertical, Calendar, Clock, RefreshCw, Cloud } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useShoppingList, ShoppingItem } from '@/hooks/useShoppingList';
+import { googleTasksService } from '@/services/GoogleTasksService';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 
@@ -143,14 +144,35 @@ const SortableShoppingItem: React.FC<SortableItemProps> = ({
 };
 
 const ShoppingList = () => {
-    const { items, loading, addItem, updateItem, deleteItem, toggleItem, reorderItems } = useShoppingList();
+    const { items, loading, addItem, updateItem, deleteItem, toggleItem, reorderItems, syncWithGoogle } = useShoppingList();
     const [newItem, setNewItem] = useState('');
     const [newQuantity, setNewQuantity] = useState(1);
     const [newUnit, setNewUnit] = useState<'kg' | 'unit' | 'liter' | 'gram'>('unit');
     const [newDeadline, setNewDeadline] = useState('');
     const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
     const [showDeadlineInput, setShowDeadlineInput] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const { toast } = useToast();
+
+    const handleGoogleSync = async () => {
+        setIsSyncing(true);
+        try {
+            const isEnabled = localStorage.getItem('google_tasks_sync_enabled') === 'true';
+            if (!isEnabled) {
+                // First time setup - Login
+                await googleTasksService.login();
+                localStorage.setItem('google_tasks_sync_enabled', 'true');
+            }
+            await googleTasksService.syncShoppingList();
+            await syncWithGoogle(); // Trigger hook-level sync
+            toast({ title: 'تمت المزامنة', description: 'تمت المزامنة مع Google Tasks بنجاح' });
+        } catch (err) {
+            console.error(err);
+            toast({ title: 'خطأ في المزامنة', description: 'لم نتمكن من الاتصال بـ Google', variant: 'destructive' });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     // Drag and Drop Sensors
     const sensors = useSensors(
@@ -249,6 +271,20 @@ const ShoppingList = () => {
                             </div>
                         </div>
                         <div className="flex gap-1.5">
+                            <Button
+                                onClick={handleGoogleSync}
+                                variant="outline"
+                                size="sm"
+                                className={`h-7 px-2 text-xs flex items-center gap-1 ${localStorage.getItem('google_tasks_sync_enabled') === 'true' ? 'text-blue-600 border-blue-200 bg-blue-50' : ''}`}
+                                disabled={isSyncing}
+                            >
+                                {isSyncing ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <Cloud className="w-3 h-3" />
+                                )}
+                                {localStorage.getItem('google_tasks_sync_enabled') === 'true' ? 'مزامنة' : 'ربط Google'}
+                            </Button>
                             <Button
                                 onClick={() => {
                                     const listText = items

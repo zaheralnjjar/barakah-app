@@ -771,6 +771,7 @@ const LogisticsManager = () => {
                   onAddSubtask={taskHook.addSubtask}
                   onToggleSubtask={taskHook.toggleSubtask}
                   onDeleteSubtask={taskHook.deleteSubtask}
+                  onSyncWithGoogle={taskHook.syncWithGoogle}
                   pomodoro={{
                     active: pomodoro.pomodoroActive,
                     time: pomodoro.pomodoroTime,

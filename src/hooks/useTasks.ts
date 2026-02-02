@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Preferences } from '@capacitor/preferences';
 import { supabase } from '@/integrations/supabase/client';
+import { googleTasksService } from '@/services/GoogleTasksService';
+import { useCallback } from 'react';
 
 export interface SubTask {
     id: string;
@@ -310,6 +312,24 @@ export const useTasks = () => {
         return tasks.filter(t => t.linkedAppointmentId === appointmentId);
     };
 
+    const syncWithGoogle = useCallback(async () => {
+        const isEnabled = localStorage.getItem('google_tasks_sync_enabled') === 'true';
+        if (!isEnabled) return;
+
+        try {
+            await googleTasksService.syncTasks();
+            await loadTasks(); // Refresh local state after sync
+        } catch (err) {
+            console.error('Google Tasks Sync failed', err);
+        }
+    }, [loadTasks]);
+
+    // Periodically sync if enabled
+    useEffect(() => {
+        const interval = setInterval(syncWithGoogle, 30000); // Every 30s
+        return () => clearInterval(interval);
+    }, [syncWithGoogle]);
+
     return {
         tasks,
         setTasks,
@@ -325,6 +345,7 @@ export const useTasks = () => {
         getPreparatoryTasks,
         getLinkedTasks,
         refreshTasks: loadTasks,
+        syncWithGoogle
     };
 };
 

@@ -46,14 +46,27 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
 
     useEffect(() => {
         const fetchEvents = async () => {
-            // Always fetch events (Service handles Platform check/mock)
-            const now = new Date();
-            const start = now.getTime();
-            const end = new Date(now.setHours(23, 59, 59, 999)).getTime();
-            const events = await CalendarService.listEvents(start, end);
-            setCalendarEvents(events);
+            try {
+                // Fetch next 7 days for the dashboard
+                const now = new Date();
+                const start = now.getTime();
+                const end = new Date();
+                end.setDate(end.getDate() + 7);
+
+                console.log('Dashboard fetching events from', now, 'to', end);
+                const events = await CalendarService.listEvents(start, end.getTime());
+                console.log('Dashboard found events:', events.length);
+                setCalendarEvents(events);
+            } catch (e) {
+                console.error("Dashboard Fetch Error", e);
+            }
         };
         fetchEvents();
+
+        // Listen for refresh triggers
+        const handleRefresh = () => fetchEvents();
+        window.addEventListener('refresh-calendar-events', handleRefresh);
+        return () => window.removeEventListener('refresh-calendar-events', handleRefresh);
     }, []);
 
     // 1. Data Preparation
@@ -63,27 +76,17 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
         const favNotes = notes.filter(n => n.is_favorite);
 
         favNotes.forEach(note => {
-            // Advanced Parsing: Handle bullet points (- or *) and numbered lists (1.)
-            // Logic:
-            // 1. Split by newline
-            // 2. Filter empty lines
-            // 3. Check if line starts with a marker. If so, strip it.
-            // 4. Ensure line length is reasonable (> 3 chars) to avoid noise.
-
-            const rawLines = note.content.replace(/<[^>]*>?/gm, '\n').split('\n'); // Replace BRs with newlines first
+            const rawLines = note.content.replace(/<[^>]*>?/gm, '\n').split('\n');
             const validItems: string[] = [];
 
             rawLines.forEach(line => {
                 const trimmed = line.trim();
                 if (!trimmed) return;
-
-                // Regex for list markers:
                 const listMatch = trimmed.match(/^([-*•]|\d+[\.)])\s+(.*)/);
 
                 if (listMatch) {
-                    validItems.push(listMatch[2].trim()); // Push the content part
+                    validItems.push(listMatch[2].trim());
                 } else if (trimmed.length > 5) {
-                    // Also accept non-list lines if they look like substantial sentences
                     validItems.push(trimmed);
                 }
             });
@@ -103,7 +106,6 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
                     });
                 });
             } else {
-                // If just title
                 favoriteSlides.push({
                     id: `fav-${note.id}`,
                     type: 'goals',
@@ -142,15 +144,20 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
 
         // External Calendar Events
         calendarEvents.forEach(ev => {
+            const eventDate = new Date(ev.startDate);
+            const isToday = eventDate.toDateString() === new Date().toDateString();
+            const timeStr = format(eventDate, 'HH:mm');
+            const dateStr = format(eventDate, 'EEE d', { locale: arSA });
+
             standardItems.push({
                 id: `cal-${ev.id}`,
                 type: 'appointment',
                 title: ev.title,
-                subtitle: ev.location || 'من تقويم الهاتف',
-                meta: format(new Date(ev.startDate), 'HH:mm'),
+                subtitle: isToday ? (ev.location || 'اليوم') : `${dateStr} - ${ev.location || ''}`,
+                meta: isToday ? timeStr : `${dateStr} ${timeStr}`,
                 icon: Calendar,
                 data: ev,
-                gradient: "from-indigo-400 to-blue-500", // Distinct color for external events
+                gradient: "from-indigo-400 to-blue-500",
                 textColor: "text-white",
                 accentColor: "bg-white/20"
             });
@@ -303,7 +310,7 @@ export const UnifiedDashboardCard: React.FC<UnifiedDashboardCardProps> = ({ onOp
         }
 
         return finalSlides;
-    }, [tasks, appointments, shoppingItems, habits, notes]); // Added 'notes' to dependency array
+    }, [tasks, appointments, shoppingItems, habits, notes, calendarEvents]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);

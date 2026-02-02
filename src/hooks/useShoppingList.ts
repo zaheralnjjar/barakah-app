@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { googleTasksService } from '@/services/GoogleTasksService';
 
 export interface ShoppingItem {
     id: string;
@@ -161,6 +162,24 @@ export const useShoppingList = () => {
         // For now, we just save local.
     };
 
+    const syncWithGoogle = useCallback(async () => {
+        const isEnabled = localStorage.getItem('google_tasks_sync_enabled') === 'true';
+        if (!isEnabled) return;
+
+        try {
+            await googleTasksService.syncShoppingList();
+            await fetchItems(); // Refresh local state after sync
+        } catch (err) {
+            console.error('Google Tasks Sync failed', err);
+        }
+    }, [fetchItems]);
+
+    // Periodically sync if enabled
+    useEffect(() => {
+        const interval = setInterval(syncWithGoogle, 30000); // Every 30s
+        return () => clearInterval(interval);
+    }, [syncWithGoogle]);
+
     return {
         items,
         loading,
@@ -168,6 +187,7 @@ export const useShoppingList = () => {
         updateItem,
         deleteItem,
         toggleItem,
-        reorderItems
+        reorderItems,
+        syncWithGoogle
     };
 };

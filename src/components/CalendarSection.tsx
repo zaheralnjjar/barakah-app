@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3, Bell, Pill, DollarSign, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { CalendarDays, List, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Moon, Sun, Sunset, Star, Plus, ClipboardList, Clock, MapPin, X, Printer, Grid3X3, Bell, Pill, DollarSign, CheckCircle, AlertTriangle, Loader2, Settings } from 'lucide-react';
 
 // Lazy Load Components to prevent circular deps and reduce bundle size
 const PrintOptionsDialog = lazy(() => import('@/components/PrintOptionsDialog'));
@@ -12,6 +12,7 @@ const WeeklyCalendar = lazy(() => import('@/components/WeeklyCalendar'));
 
 import { useTasks } from '@/hooks/useTasks';
 import { useAppointments } from '@/hooks/useAppointments';
+import { CalendarSettingsDialog } from '@/components/dialogs/CalendarSettingsDialog';
 import { useHabits } from '@/hooks/useHabits';
 import { useMedications } from '@/hooks/useMedications';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -92,6 +93,8 @@ const CalendarSection: React.FC = () => {
                 const end = new Date(year, month + 2, 0).getTime();
                 try {
                     const events = await CalendarService.listEvents(start, end);
+                    console.log('CalendarSection fetched:', events.length);
+                    // alert(`Fetched ${events.length} events for main view`); // Uncomment for extreme debug
                     setExternalEvents(events);
                 } catch (error) {
                     console.error("Failed to refresh calendar events:", error);
@@ -109,6 +112,7 @@ const CalendarSection: React.FC = () => {
     // Quick add popup state
     const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
     const [viewAllDate, setViewAllDate] = useState<string | null>(null);
+    const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
     // Refs for long press handling
     const pressTimer = React.useRef<NodeJS.Timeout | null>(null);
@@ -208,7 +212,41 @@ const CalendarSection: React.FC = () => {
             <div className="sticky top-0 z-50 bg-background/95 backdrop-blur pb-2 pt-2 -mx-4 px-4 border-b mb-4">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم</h1>
+                    <h1 className="text-sm arabic-title text-primary font-bold">📅 التقويم ({externalEvents.length})</h1>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            onClick={async () => {
+                                try {
+                                    // Use exact same logic as Debug Button to isolate issue
+                                    const now = new Date();
+                                    const end = new Date();
+                                    end.setDate(end.getDate() + 30);
+
+                                    alert(`Refreshing UI...\nStart: ${now.toLocaleDateString()}\nEnd: ${end.toLocaleDateString()}`);
+
+                                    const events = await CalendarService.listEvents(now.getTime(), end.getTime());
+                                    alert(`UI Fetch Result: ${events.length} events`);
+
+                                    setExternalEvents(events);
+                                } catch (e) {
+                                    alert(`UI Fetch Error: ${e}`);
+                                }
+                            }}
+                        >
+                            تحديث (Debug)
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={() => setShowSettingsDialog(true)}
+                        >
+                            <Settings className="w-5 h-5" />
+                        </Button>
+                    </div>
                 </div>
 
 
@@ -821,6 +859,12 @@ const CalendarSection: React.FC = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Calendar Settings Dialog */}
+            <CalendarSettingsDialog
+                open={showSettingsDialog}
+                onOpenChange={setShowSettingsDialog}
+            />
         </div >
     );
 };

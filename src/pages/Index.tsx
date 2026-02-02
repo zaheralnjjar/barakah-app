@@ -26,7 +26,6 @@ import InitializationWizard from '@/components/InitializationWizard';
 import SmartDashboard from '@/components/SmartDashboard';
 import AuthForm from '@/components/AuthForm';
 import AppointmentManager from '@/components/AppointmentManager';
-import ShoppingList from '@/components/ShoppingList';
 import DailyCalendar from '@/components/DailyCalendar';
 
 import SideNavBar from '@/components/SideNavBar';
@@ -408,9 +407,8 @@ const Index = () => {
                 <AppointmentManager />
               </TabsContent>
 
-              <TabsContent value="shopping" className="animate-fade-in data-[state=active]:block">
-                <ShoppingList />
-              </TabsContent>
+
+
 
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
                 <ErrorBoundary>
