@@ -5,6 +5,7 @@ import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useFinance } from '@/hooks/useFinance';
 import { useQuickAccessCustomization } from '@/hooks/useQuickAccessCustomization';
 import { useSystemModes } from '@/hooks/useSystemModes';
+import { useShoppingList } from '@/hooks/useShoppingList';
 import { isAndroid } from '@/utils/platformDetection';
 import {
     Calendar, ListTodo, MapPin, Settings,
@@ -97,6 +98,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
     const { toast } = useToast();
     const { nextPrayer, timeUntilNext } = usePrayerTimes();
     const { financeData } = useFinance();
+    const { items: shoppingItems } = useShoppingList();
     const { slots } = useQuickAccessCustomization(); // Added hook usage
 
     const [showActionResult, setShowActionResult] = useState<{ title: string; content: string } | null>(null);
@@ -168,7 +170,14 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
 
             // Shopping
             case 'shopping_add': onOpenAddDialog('shopping'); break;
-            case 'shopping_list': navigate('/notes-v2?folder=shopping'); break;
+            case 'shopping_list': {
+                const sList = (shoppingItems || []).filter((i: any) => i && !i.completed).slice(0, 10);
+                setShowActionResult({
+                    title: '🛒 قائمة التسوق',
+                    content: sList.length ? sList.map((i: any) => `• ${i?.text || i?.name || 'صنف'}`).join('\n') : 'القائمة فارغة'
+                });
+                break;
+            }
 
             // Settings Menu Items
             case 'show_next_prayer':
@@ -267,7 +276,7 @@ export const QuickActionsGridV2: React.FC<QuickActionsGridV2Props> = ({
                                         <span>إضافة غرض</span>
                                         <Plus className="w-4 h-4" />
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => navigate('/notes-v2?folder=shopping')} className="justify-end gap-2">
+                                    <DropdownMenuItem onClick={() => executeAction('shopping_list')} className="justify-end gap-2">
                                         <span>عرض القائمة</span>
                                         <ListTodo className="w-4 h-4" />
                                     </DropdownMenuItem>
