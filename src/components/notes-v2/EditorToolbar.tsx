@@ -77,6 +77,10 @@ interface EditorToolbarProps {
     zoom?: number;
     onZoomChange?: (newZoom: number) => void;
 
+    // Focus Mode Integration
+    isFocusMode?: boolean;
+    onToggleFocusMode?: () => void;
+
     isMobile?: boolean;
 }
 
@@ -116,6 +120,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onInsertTracker,
     zoom = 100,
     onZoomChange,
+    isFocusMode = false,
+    onToggleFocusMode,
     isMobile = false
 }) => {
     if (!editor) return null;
@@ -451,7 +457,24 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     <TooltipContent side="bottom" sideOffset={5}>تصدير الملاحظة</TooltipContent>
                 </Tooltip>
 
-                {/* Removed Focus Mode Button */}
+                {onToggleFocusMode && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={onToggleFocusMode}
+                                className={cn(
+                                    "p-1.5 rounded-lg transition-all",
+                                    isFocusMode ? "bg-indigo-100 text-indigo-600" : "hover:bg-gray-100 text-gray-600"
+                                )}
+                            >
+                                {isFocusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" sideOffset={5}>
+                            {isFocusMode ? 'إنهاء وضع التركيز' : 'وضع التركيز'}
+                        </TooltipContent>
+                    </Tooltip>
+                )}
 
                 <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 

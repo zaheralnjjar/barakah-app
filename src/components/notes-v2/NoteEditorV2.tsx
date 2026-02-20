@@ -127,6 +127,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const [zoom, setZoom] = useState(100); // Zoom percentage (50-130)
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
+    const [isFocusMode, setIsFocusMode] = useState(false);
     const [editorHeight, setEditorHeight] = useState(600);
 
     const editor = useEditor({
@@ -396,7 +397,9 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     return (
         <div className={cn(
             "flex flex-col overflow-hidden border border-white shadow-xl transition-all duration-500",
-            "h-full rounded-3xl bg-slate-50/50",
+            isFocusMode
+                ? "fixed inset-0 z-[100] h-screen w-screen rounded-none bg-white p-4 md:p-8"
+                : "h-full rounded-3xl bg-slate-50/50",
             !isMobile && "mx-auto" // Center on Desktop
         )}
             style={{ width: isMobile ? '100%' : `${editorWidth}` }}
@@ -417,6 +420,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             onBackgroundColorChange={onBackgroundColorChange}
                             isRecording={isRecording}
                             onRecordingClick={onRecordingClick}
+                            isFocusMode={isFocusMode}
+                            onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
                             onInsertTracker={handleInsertTracker}
                             zoom={zoom}
                             onZoomChange={handleZoomChange}
@@ -492,11 +497,11 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         className={cn(
                             "bg-white rounded-2xl shadow-sm border border-gray-100 p-0 transition-all duration-300 origin-top",
                             pageRuling ? 'ruled-paper' : '',
-                            "min-h-full"
+                            isFocusMode ? "max-w-4xl mx-auto shadow-2xl ring-1 ring-black/5" : "min-h-full"
                         )}
                         style={(() => {
                             const baseStyle: React.CSSProperties = {
-                                minHeight: `${editorHeight}px`,
+                                minHeight: isFocusMode ? '100%' : `${editorHeight}px`,
                                 maxWidth: '1000px',
                                 margin: '0 auto',
                                 transform: `scale(${zoom / 100})`,
