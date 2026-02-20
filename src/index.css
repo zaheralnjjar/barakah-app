@@ -678,6 +678,11 @@ html {
 }
 
 /* Tiptap / ProseMirror Editor Styles */
+.ProseMirror {
+  position: relative;
+  min-height: 100px;
+}
+
 .ProseMirror ul {
   list-style-type: disc;
   padding-right: 1.5rem;

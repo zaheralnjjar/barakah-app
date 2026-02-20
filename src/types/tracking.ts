@@ -1,5 +1,5 @@
 // Basic Tracker Definition
-export type TrackerType = 'numeric' | 'boolean' | 'scale' | 'checklist' | 'select' | 'mood' | 'time_range';
+export type TrackerType = 'numeric' | 'boolean' | 'scale' | 'checklist' | 'select' | 'mood' | 'time_range' | 'time';
 
 export interface TrackerFolder {
     id: string;
@@ -51,6 +51,7 @@ export interface CreateTrackerDTO {
         options?: string[];
         goal?: number;
         unit?: string;
+        step?: number;
         chart_type?: string;
     };
 }

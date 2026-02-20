@@ -32,13 +32,9 @@ import {
     Mic,
     MicOff,
     Save,
-    Sparkles,
-    Settings2,
-    Plus,
-    Activity
+    Activity,
+    Square
 } from 'lucide-react';
-import { TEMPLATES } from '../smart-templates/constants';
-import { Template } from '../smart-templates/types';
 import {
     Popover,
     PopoverContent,
@@ -67,8 +63,7 @@ interface EditorToolbarProps {
     isRecording?: boolean;
     onRecordingClick?: () => void;
 
-    onInsertSmartTemplate?: (template: Template) => void;
-    onOpenSmartTemplateDesigner?: () => void;
+
 
     // Tracker Integration
     onInsertTracker?: () => void;
@@ -108,8 +103,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onBackgroundColorChange,
     isRecording,
     onRecordingClick,
-    onInsertSmartTemplate,
-    onOpenSmartTemplateDesigner,
+
     onInsertTracker,
     isMobile = false
 }) => {
@@ -385,46 +379,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <TooltipContent side="bottom" sideOffset={5}>القوالب الجاهزة</TooltipContent>
             </Tooltip>
 
-            {/* Smart Templates Dropdown */}
-            {onInsertSmartTemplate && (
-                <Popover>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <PopoverTrigger asChild>
-                                <button className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600">
-                                    <Sparkles className="w-4 h-4" />
-                                </button>
-                            </PopoverTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={5}>قوالب ذكية</TooltipContent>
-                    </Tooltip>
-                    <PopoverContent className="w-56 p-1 rounded-xl shadow-xl border-gray-100" align="start">
-                        <div className="max-h-[300px] overflow-y-auto custom-scrollbar flex flex-col gap-1 p-1">
-                            <div className="px-2 py-1 text-xs font-bold text-gray-400">القوالب الذكية</div>
-                            {TEMPLATES.filter(t => t.isVisible !== false).map((template) => (
-                                <button
-                                    key={template.id}
-                                    onClick={() => onInsertSmartTemplate(template)}
-                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-indigo-50 text-right transition-colors group w-full"
-                                >
-                                    <div className="p-1 bg-gray-100 rounded group-hover:bg-white text-gray-600">
-                                        <template.icon size={14} />
-                                    </div>
-                                    <span className="text-sm text-gray-700 font-medium truncate">{template.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="h-px bg-gray-100 my-1" />
-                        <button
-                            onClick={onOpenSmartTemplateDesigner}
-                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-right w-full text-indigo-600"
-                        >
-                            <Settings2 size={14} />
-                            <span className="text-xs font-bold">إدارة / مصمم القوالب</span>
-                        </button>
-                    </PopoverContent>
-                </Popover>
-            )}
+
 
             {/* Tracker Button */}
             {onInsertTracker && (
@@ -437,6 +392,21 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     <TooltipContent side="bottom" sideOffset={5}>إدراج متتبع</TooltipContent>
                 </Tooltip>
             )}
+
+            {/* Text Box Button */}
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <button
+                        onClick={() => (editor as any).chain().focus().insertTextBox().run()}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"
+                    >
+                        <Square className="w-4 h-4" />
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={5}>إدراج مربع نص</TooltipContent>
+            </Tooltip>
+
+            <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
             {/* Mic & Export Actions */}
             <div className="flex items-center gap-1 mr-auto lg:mr-0">

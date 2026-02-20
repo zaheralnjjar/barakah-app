@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Layers, Check, ChevronLeft, ArrowRight, Plus, X } from "lucide-react";
 import { trackingService } from "@/services/trackingService";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TRACKER_BUNDLES, TrackerBundle } from "@/data/trackerBundles";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,9 +12,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateTrackerDTO } from "@/types/tracking";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FolderPlus } from "lucide-react";
 
 // Additional templates for custom bundles
-const TRACKER_TEMPLATES: (CreateTrackerDTO & { id: string })[] = [
+// Additional templates for custom bundles
+const TRACKER_TEMPLATES: (CreateTrackerDTO & { id: string } | any)[] = [
     { id: 'water', name: "شرب الماء", type: "numeric", icon: "💧", color: "#3B82F6", settings: { unit: "لتر", goal: "2", step: "0.25" } },
     { id: 'prayer', name: "الصلوات الخمس", type: "checklist", icon: "🕌", color: "#10B981", settings: { options: "الفجر\nالظهر\nالعصر\nالمغرب\nالعشاء" } },
     { id: 'quran', name: "قراءة القرآن", type: "numeric", icon: "📖", color: "#F59E0B", settings: { unit: "صفحة", goal: "20" } },
@@ -42,7 +45,17 @@ export function TrackerBundlesDialog() {
     const [customDesc, setCustomDesc] = useState("");
     const [customSelectedTemplateIds, setCustomSelectedTemplateIds] = useState<string[]>([]);
 
+    // Folder Selection State
+    const [targetFolderId, setTargetFolderId] = useState<string>("none");
+    const [newFolderName, setNewFolderName] = useState("");
+    const [isNewFolderMode, setIsNewFolderMode] = useState(false);
+
     const queryClient = useQueryClient();
+
+    const { data: folders } = useQuery({
+        queryKey: ['tracker-folders'],
+        queryFn: trackingService.getFolders
+    });
 
     const handleBundleClick = (bundle: TrackerBundle) => {
         setSelectedBundle(bundle);
@@ -72,6 +85,9 @@ export function TrackerBundlesDialog() {
         setCustomName("");
         setCustomDesc("");
         setCustomSelectedTemplateIds([]);
+        setTargetFolderId("none");
+        setNewFolderName("");
+        setIsNewFolderMode(false);
     };
 
     const handleCreateTrackers = async (trackersList: CreateTrackerDTO[]) => {
@@ -79,17 +95,28 @@ export function TrackerBundlesDialog() {
         setLoading(true);
 
         try {
+            let finalFolderId: string | undefined = targetFolderId === "none" ? undefined : targetFolderId;
+
+            // Create new folder if needed
+            if (isNewFolderMode && newFolderName.trim()) {
+                const folder = await trackingService.createFolder(newFolderName.trim());
+                if (folder) {
+                    finalFolderId = folder.id;
+                }
+            }
+
             const promises = trackersList.map(trackerDef =>
                 trackingService.createTracker({
                     ...trackerDef,
+                    folder_id: finalFolderId,
                     settings: {
                         ...trackerDef.settings,
                         goal: Number(trackerDef.settings?.goal) || undefined,
                         min: Number(trackerDef.settings?.min) || undefined,
                         max: Number(trackerDef.settings?.max) || undefined,
                         step: Number(trackerDef.settings?.step) || undefined,
-                        options: typeof trackerDef.settings?.options === 'string'
-                            ? trackerDef.settings.options.split('\n')
+                        options: typeof (trackerDef.settings as any)?.options === 'string'
+                            ? (trackerDef.settings as any).options.split('\n')
                             : trackerDef.settings?.options
                     } as any
                 })
@@ -99,6 +126,7 @@ export function TrackerBundlesDialog() {
 
             toast.success(`تم إضافة ${trackersList.length} متتبعات بنجاح!`);
             queryClient.invalidateQueries({ queryKey: ["trackers"] });
+            queryClient.invalidateQueries({ queryKey: ["tracker-folders"] });
             setOpen(false);
             resetState();
         } catch (error) {
@@ -304,6 +332,64 @@ export function TrackerBundlesDialog() {
                         </div>
                     )}
                 </div>
+
+                {/* Folder Selection Section */}
+                {(selectedBundle || isCreatingCustom) && (
+                    <div className="border-t pt-4 px-1 mt-auto">
+                        <Label className="mb-2 block text-sm font-medium text-gray-700">المجلد المستهدف</Label>
+                        <div className="flex gap-2 items-start">
+                            {isNewFolderMode ? (
+                                <div className="flex-1 flex gap-2">
+                                    <Input
+                                        placeholder="اسم المجلد الجديد"
+                                        value={newFolderName}
+                                        onChange={(e) => setNewFolderName(e.target.value)}
+                                        className="text-right"
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsNewFolderMode(false)}
+                                        title="إلغاء المجلد الجديد"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex gap-2">
+                                    <Select value={targetFolderId} onValueChange={(val) => {
+                                        if (val === 'new_folder_action') {
+                                            setIsNewFolderMode(true);
+                                            setTargetFolderId("none");
+                                        } else {
+                                            setTargetFolderId(val);
+                                        }
+                                    }}>
+                                        <SelectTrigger className="flex-row-reverse w-full">
+                                            <SelectValue placeholder="اختر مجلد (اختياري)" />
+                                        </SelectTrigger>
+                                        <SelectContent dir="rtl">
+                                            <SelectItem value="none">بدون مجلد (الرئيسية)</SelectItem>
+                                            {folders?.map(folder => (
+                                                <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                                            ))}
+                                            <div className="h-px bg-gray-100 my-1" />
+                                            <SelectItem value="new_folder_action" className="text-indigo-600 font-medium">
+                                                <div className="flex items-center gap-2">
+                                                    <FolderPlus className="w-4 h-4" />
+                                                    مجلد جديد...
+                                                </div>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                        {isNewFolderMode && (
+                            <p className="text-xs text-indigo-600 mt-1 mr-1">سيتم إنشاء المجلد وإضافة المتتبعات إليه.</p>
+                        )}
+                    </div>
+                )}
 
                 <DialogFooter className="mt-4 sm:justify-start gap-2 border-t pt-4">
                     <Button type="button" variant="outline" onClick={() => setOpen(false)}>

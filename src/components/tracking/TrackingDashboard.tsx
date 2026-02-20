@@ -7,7 +7,8 @@ import { TrackerCard } from "./TrackerCard";
 import { AddEntryDialog } from "./AddEntryDialog";
 import { TrackerDetailsDialog } from "./TrackerDetailsDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderPlus, Folder } from "lucide-react";
+import { Plus, FolderPlus, Folder, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tracker, TrackerFolder } from "@/types/tracking";
 import { TrackingReportDialog } from "./TrackingReportDialog";
@@ -17,6 +18,14 @@ export function TrackingDashboard() {
     const queryClient = useQueryClient();
     const [entryDialogTracker, setEntryDialogTracker] = useState<Tracker | null>(null);
     const [detailsTracker, setDetailsTracker] = useState<Tracker | null>(null);
+    const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+
+    const toggleFolder = (folderId: string) => {
+        setCollapsedFolders(prev => ({
+            ...prev,
+            [folderId]: !prev[folderId]
+        }));
+    };
 
     // Bulk Delete State
     const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -170,40 +179,67 @@ export function TrackingDashboard() {
                             if (folderTrackers.length === 0 && !isSelectionMode) return null; // Hide empty folders unless valid reason? Or maybe show them to allow adding? Let's show empty for now logic-wise but users might prefer hiding. Let's show if user wants to manage. But for now, if empty maybe hide to reduce clutter unless logic requires. Actually, let's SHOW them so user can see they exist and maybe drag/drop later? For now, render.
 
                             return (
-                                <section key={folder.id} className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-200">
-                                            <Folder className="w-5 h-5 text-indigo-500" />
-                                            {folder.name}
-                                            <span className="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                                                {folderTrackers.length}
-                                            </span>
-                                        </h2>
-                                        {/* Optional: Add folder actions (rename/delete) here */}
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteFolder(folder.id)}>
-                                            <span className="sr-only">Delete</span>
-                                            &times;
-                                        </Button>
+                                <Collapsible
+                                    key={folder.id}
+                                    open={!collapsedFolders[folder.id]}
+                                    onOpenChange={() => toggleFolder(folder.id)}
+                                    className="space-y-4"
+                                >
+                                    <div className="flex items-center justify-between group">
+                                        <div className="flex items-center gap-2">
+                                            <CollapsibleTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="p-1 h-auto hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg -ml-1">
+                                                    <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${collapsedFolders[folder.id] ? "-rotate-90" : ""}`} />
+                                                </Button>
+                                            </CollapsibleTrigger>
+                                            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 dark:text-gray-200 cursor-pointer" onClick={() => toggleFolder(folder.id)}>
+                                                <Folder className="w-5 h-5 text-indigo-500" />
+                                                {folder.name}
+                                                <span className="text-sm font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                                                    {folderTrackers.length}
+                                                </span>
+                                            </h2>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <CreateTrackerDialog defaultFolderId={folder.id}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0 text-gray-400 hover:text-indigo-600"
+                                                    title="أضف متتبع لهذا المجلد"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                </Button>
+                                            </CreateTrackerDialog>
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-red-500" onClick={() => handleDeleteFolder(folder.id)}>
+                                                <span className="sr-only">Delete</span>
+                                                &times;
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {folderTrackers.map(tracker => (
-                                            <TrackerCardWrapper
-                                                key={tracker.id}
-                                                tracker={tracker}
-                                                onOpenEntry={() => setEntryDialogTracker(tracker)}
-                                                onOpenDetails={() => setDetailsTracker(tracker)}
-                                                isSelectionMode={isSelectionMode}
-                                                isSelected={selectedTrackers.has(tracker.id)}
-                                                onToggleSelection={() => toggleTrackerSelection(tracker.id)}
-                                            />
-                                        ))}
-                                        {folderTrackers.length === 0 && (
-                                            <div className="col-span-full py-8 text-center text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-sm">
-                                                مجلد فارغ
-                                            </div>
-                                        )}
-                                    </div>
-                                </section>
+
+                                    <CollapsibleContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
+                                            {folderTrackers.map(tracker => (
+                                                <TrackerCardWrapper
+                                                    key={tracker.id}
+                                                    tracker={tracker}
+                                                    onOpenEntry={() => setEntryDialogTracker(tracker)}
+                                                    onOpenDetails={() => setDetailsTracker(tracker)}
+                                                    isSelectionMode={isSelectionMode}
+                                                    isSelected={selectedTrackers.has(tracker.id)}
+                                                    onToggleSelection={() => toggleTrackerSelection(tracker.id)}
+                                                />
+                                            ))}
+                                            {folderTrackers.length === 0 && (
+                                                <div className="col-span-full py-8 text-center text-gray-400 border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-sm">
+                                                    مجلد فارغ
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
                             );
                         })}
 
@@ -227,6 +263,20 @@ export function TrackingDashboard() {
                                             onToggleSelection={() => toggleTrackerSelection(tracker.id)}
                                         />
                                     ))}
+
+                                    {/* Add New Tracker Card (Visible only when not in selection mode) */}
+                                    {!isSelectionMode && (
+                                        <CreateTrackerDialog>
+                                            <button className="group relative flex flex-col items-center justify-center w-full h-[180px] rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-primary hover:bg-primary/5 transition-all duration-300">
+                                                <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
+                                                    <Plus className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
+                                                </div>
+                                                <span className="mt-4 text-sm font-bold text-gray-500 group-hover:text-primary transition-colors">
+                                                    متتبع جديد
+                                                </span>
+                                            </button>
+                                        </CreateTrackerDialog>
+                                    )}
                                 </div>
                             </section>
                         )}

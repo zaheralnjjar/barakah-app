@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
     name: z.string().min(1, "الاسم مطلوب"),
-    type: z.enum(["numeric", "scale", "boolean", "select", "checklist", "mood", "time_range"] as const),
+    type: z.enum(["numeric", "scale", "boolean", "select", "checklist", "mood", "time_range", "time"] as const),
     icon: z.string().optional(),
     color: z.string().optional(),
     folder_id: z.string().optional(),
@@ -52,6 +52,7 @@ const formSchema = z.object({
 
 interface CreateTrackerDialogProps {
     children?: React.ReactNode;
+    defaultFolderId?: string;
 }
 
 const PRESET_COLORS = [
@@ -60,7 +61,7 @@ const PRESET_COLORS = [
     "#F43F5E", "#64748B"
 ];
 
-export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
+export function CreateTrackerDialog({ children, defaultFolderId }: CreateTrackerDialogProps) {
     const [open, setOpen] = useState(false);
     const queryClient = useQueryClient();
 
@@ -76,10 +77,24 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
             type: "numeric",
             icon: "⚡️",
             color: "#3B82F6",
-            folder_id: "none",
+            folder_id: defaultFolderId || "none",
             settings: {},
         },
     });
+
+    // Reset form when opening, to ensure defaultFolderId is respected if it changes or form was dirty
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                name: "",
+                type: "numeric",
+                icon: "⚡️",
+                color: "#3B82F6",
+                folder_id: defaultFolderId || "none",
+                settings: {},
+            });
+        }
+    }, [open, defaultFolderId, form]);
 
     const selectedType = form.watch("type");
 

@@ -6,7 +6,7 @@ import {
     Smile, Activity, Clock, Shield, Award, Gift, Image,
     MapPin, Phone, Mail, Link, Hash, Flag, Zap
 } from 'lucide-react';
-import { Template } from '../components/smart-templates/types';
+import { Template } from '@/types/note-templates';
 
 export const STATIC_TEMPLATES: Template[] = [
     // --- 1. Islamic / Religious (10) ---
@@ -15,7 +15,7 @@ export const STATIC_TEMPLATES: Template[] = [
         name: 'جدول ختم القرآن',
         description: 'تتبع تقدمك في ختمة القرآن الكريم.',
         icon: Book,
-        category: 'إسلامي',
+        category: 'عام',
         type: 'simple',
         content: `
             <div class="template-container" style="border: 2px solid #10b981; border-radius: 12px; padding: 16px; background: #ecfdf5;">
@@ -35,7 +35,7 @@ export const STATIC_TEMPLATES: Template[] = [
         name: 'أذكار الصباح والمساء',
         description: 'قائمة مرجعية للأذكار اليومية.',
         icon: Sun,
-        category: 'إسلامي',
+        category: 'عام',
         type: 'simple',
         content: `
             <div style="background: #fffbeb; padding: 15px; border-radius: 10px; border-right: 4px solid #f59e0b;">
@@ -60,7 +60,7 @@ export const STATIC_TEMPLATES: Template[] = [
         name: 'سنن يوم الجمعة',
         description: 'تذكير بسنن الجمعة المباركة.',
         icon: Star,
-        category: 'إسلامي',
+        category: 'عام',
         type: 'simple',
         content: `
             <div style="background: #eff6ff; padding: 15px; border-radius: 12px; text-align: center;">

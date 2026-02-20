@@ -9,11 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileText, LayoutTemplate, Plus, Grid2X2, Maximize, Smartphone, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TEMPLATES as SMART_TEMPLATES } from '../smart-templates/constants';
 import { STATIC_TEMPLATES } from '@/data/generated_templates';
-import { Template } from '../smart-templates/types';
 import { cn } from '@/lib/utils';
-import { generateSmartHtml } from '../smart-templates/constants';
+
 
 interface TemplatesGalleryProps {
     isOpen: boolean;
@@ -23,35 +21,24 @@ interface TemplatesGalleryProps {
 
 // Combine all templates
 const ALL_TEMPLATES = [
-    ...SMART_TEMPLATES.map(t => ({ ...t, isSmart: true })),
     ...STATIC_TEMPLATES
 ];
 
 // Extract categories
-const CATEGORIES = Array.from(new Set(ALL_TEMPLATES.map(t => t.category || 'عام')));
+const CATEGORIES = Array.from(new Set(ALL_TEMPLATES.map((t: any) => t.category || 'عام')));
 
 export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onClose, onSelectTemplate }) => {
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
     const [sizeStep, setSizeStep] = useState(false);
 
     const filteredTemplates = selectedCategory === 'all'
         ? ALL_TEMPLATES
         : ALL_TEMPLATES.filter(t => t.category === selectedCategory);
 
-    const handleTemplateClick = (template: Template) => {
-        if (template.type === 'smart-json') {
-            // Smart templates usually handle their own sizing or are block-based, 
-            // but for now let's treat them as needing size selection if they output HTML.
-            // Actually smart templates are inserted via a special handler usually, 
-            // but for this gallery we might want to insert their DEFAULT Output HTML if available.
-            // For now, let's open size dialog for all.
-            setSelectedTemplate(template);
-            setSizeStep(true);
-        } else {
-            setSelectedTemplate(template);
-            setSizeStep(true);
-        }
+    const handleTemplateClick = (template: any) => {
+        setSelectedTemplate(template);
+        setSizeStep(true);
     };
 
     const handleConfirmSize = (size: 'small' | 'medium' | 'large') => {
@@ -61,12 +48,6 @@ export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onCl
 
         if (typeof selectedTemplate.content === 'string') {
             content = selectedTemplate.content;
-        } else if (selectedTemplate.type === 'smart-json') {
-            // For smart templates here, we generate a preview or empty structure
-            // In a real scenario, this might trigger the SmartFormRenderer
-            // But the user asked for "Templates" in the general sense.
-            // Let's generate the HTML from default values if possible
-            content = generateSmartHtml(selectedTemplate, {});
         }
 
         // Apply Size Wrapper
@@ -219,10 +200,7 @@ export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onCl
                                         <h3 className="font-bold text-gray-800 dark:text-gray-200 text-sm mb-1 line-clamp-1 group-hover:text-indigo-600">{template.name}</h3>
                                         <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{template.description}</p>
 
-                                        {/* Tag */}
-                                        <span className="absolute top-4 left-4 text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-gray-400">
-                                            {template.category}
-                                        </span>
+
                                     </button>
                                 ))}
                             </div>

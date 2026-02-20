@@ -16,12 +16,9 @@ import jsPDF from 'jspdf';
 import { generateGenericWord } from '@/utils/wordGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { useRef } from 'react';
-import SmartFormRenderer from '../smart-templates/SmartFormRenderer';
-import { Template } from '../smart-templates/types';
-import { TEMPLATES } from '../smart-templates/constants';
-import { Layout } from 'lucide-react';
-import { SmartTemplateNode } from './extensions/SmartTemplateNode';
+
 import { TrackerEmbed } from './extensions/TrackerEmbed';
+import { TextBoxExtension } from './extensions/TextBoxExtension';
 import { TrackerSelectionDialog } from './TrackerSelectionDialog';
 
 const FontSize = Extension.create({
@@ -127,12 +124,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
 
-    // Smart Templates State
-    const [smartTemplateMode, setSmartTemplateMode] = useState<{
-        isOpen: boolean;
-        template: Template | null;
-        initialBlocks?: any[];
-    }>({ isOpen: false, template: null });
+
 
     const editor = useEditor({
         extensions: [
@@ -148,7 +140,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 multicolor: true,
             }),
             Image,
-            SmartTemplateNode,
+
             TrackerEmbed,
         ],
         content: initialContent || '',
@@ -220,57 +212,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }).run();
     };
 
-    const handleInsertSmartTemplate = (template: Template) => {
-        setSmartTemplateMode({
-            isOpen: true,
-            template: template,
-            initialBlocks: undefined
-        });
-        setShowTemplates(false);
-    };
 
-    const handleOpenSmartTemplateDesigner = () => {
-        const blankTemplate: Template = {
-            id: 'custom-designer',
-            name: 'تصميم مخصص',
-            description: 'صمم قالبك الخاص',
-            content: '',
-            icon: Layout,
-            type: 'smart-json'
-        };
-        handleInsertSmartTemplate(blankTemplate);
-    };
-
-    const handleSmartTemplateConfirm = (html: string, config?: any[]) => {
-        if (!editor) return;
-
-        if (config && config.length > 0) {
-            // Use JSON insertion to directly inject the node components
-            // This is safer than string insertion because it bypasses the parser
-            // relying on the schema definitions we fixed in SmartTemplateNode
-            editor.chain().focus()
-                .insertContent({
-                    type: 'smartTemplateNode',
-                    attrs: {
-                        html: html, // Pass raw HTML string, let NodeView handle it
-                        config: config,
-                        isFloating: false,
-                        width: 100
-                    }
-                })
-                .insertContent('<p></p>') // Add a paragraph after so the user can continue typing easily
-                .run();
-        } else {
-            editor.chain().focus().insertContent(html).run();
-        }
-
-        // Force update to ensure the parent component saves the changes essentially immediately
-        setTimeout(() => {
-            if (editor) onUpdate(editor.getHTML());
-        }, 100);
-
-        setSmartTemplateMode({ isOpen: false, template: null });
-    };
 
     const handleExport = async (type: 'image' | 'pdf' | 'word' | 'text') => {
         if (!editor) return;
@@ -354,8 +296,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             onBackgroundColorChange={onBackgroundColorChange}
                             isRecording={isRecording}
                             onRecordingClick={onRecordingClick}
-                            onInsertSmartTemplate={handleInsertSmartTemplate}
-                            onOpenSmartTemplateDesigner={handleOpenSmartTemplateDesigner}
+
                             onInsertTracker={handleInsertTracker}
                         />
                     </div>
@@ -385,30 +326,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         } else {
                             editor.chain().focus('end').run();
                         }
-                    } else {
-                        // Check for Smart Template Edit Click
-                        const target = e.target as HTMLElement;
-                        const itemsContainer = target.closest('.smart-layout-container');
-                        if (itemsContainer) {
-                            const configStr = itemsContainer.getAttribute('data-smart-template-config');
-                            if (configStr) {
-                                try {
-                                    const blocks = JSON.parse(decodeURIComponent(configStr));
-                                    const templateName = blocks[0]?.templateName || 'Custom';
-                                    const template = TEMPLATES.find(t => t.name === templateName) || {
-                                        id: 'restored', name: templateName, description: '', content: '', icon: Layout, type: 'smart-json'
-                                    };
 
-                                    setSmartTemplateMode({
-                                        isOpen: true,
-                                        template: template as Template,
-                                        initialBlocks: blocks
-                                    });
-                                } catch (e) {
-                                    console.error("Failed to parse smart template config", e);
-                                }
-                            }
-                        }
                     }
                 }}
             >
@@ -470,8 +388,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             onBackgroundColorChange={onBackgroundColorChange}
                             isRecording={isRecording}
                             onRecordingClick={onRecordingClick}
-                            onInsertSmartTemplate={handleInsertSmartTemplate}
-                            onOpenSmartTemplateDesigner={handleOpenSmartTemplateDesigner}
+
                         />
                     </div>
                 </div>
@@ -483,14 +400,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 onSelectTemplate={handleSelectTemplate}
             />
 
-            {smartTemplateMode.isOpen && smartTemplateMode.template && (
-                <SmartFormRenderer
-                    template={smartTemplateMode.template}
-                    onConfirm={handleSmartTemplateConfirm}
-                    onCancel={() => setSmartTemplateMode({ isOpen: false, template: null })}
-                    initialBlocks={smartTemplateMode.initialBlocks}
-                />
-            )}
+
 
             <TrackerSelectionDialog
                 isOpen={showTrackerDialog}
