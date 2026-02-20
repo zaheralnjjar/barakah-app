@@ -11,16 +11,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import EmojiPicker from "emoji-picker-react";
 import { trackingService } from "@/services/trackingService";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { TrackerType } from "@/types/tracking";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
     name: z.string().min(1, "الاسم مطلوب"),
-    type: z.enum(["numeric", "scale", "boolean", "text", "time", "select", "checklist", "mood", "time_range"] as const),
+    type: z.enum(["numeric", "scale", "boolean", "select", "checklist", "mood", "time_range"] as const),
     icon: z.string().optional(),
     color: z.string().optional(),
+    folder_id: z.string().optional(),
     settings: z.object({
         min: z.string().optional(), // Inputs are strings initially
         max: z.string().optional(),
@@ -29,6 +30,7 @@ const formSchema = z.object({
         goal: z.string().optional(),
         options: z.string().optional(), // Newline separated for input
         allowCustom: z.string().optional(), // Checkbox state
+        chart_type: z.string().optional(),
     }).optional(),
 });
 
@@ -62,6 +64,11 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
     const [open, setOpen] = useState(false);
     const queryClient = useQueryClient();
 
+    const { data: folders } = useQuery({
+        queryKey: ['tracker-folders'],
+        queryFn: trackingService.getFolders
+    });
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -69,6 +76,7 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
             type: "numeric",
             icon: "⚡️",
             color: "#3B82F6",
+            folder_id: "none",
             settings: {},
         },
     });
@@ -89,6 +97,9 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
             if (values.settings?.allowCustom) {
                 processedSettings.allowCustom = values.settings.allowCustom === 'true';
             }
+            if (values.settings?.chart_type) {
+                processedSettings.chart_type = values.settings.chart_type;
+            }
 
             console.log("Creating tracker with values:", values);
             console.log("Processed settings:", processedSettings);
@@ -98,6 +109,7 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
                 type: values.type,
                 icon: values.icon,
                 color: values.color,
+                folder_id: values.folder_id === "none" ? undefined : values.folder_id,
                 settings: processedSettings,
             });
 
@@ -167,6 +179,31 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
                             />
                         </div>
 
+                        {/* Folder Selection */}
+                        <FormField
+                            control={form.control}
+                            name="folder_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>المجلد</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="flex-row-reverse">
+                                                <SelectValue placeholder="اختر المجلد (اختياري)" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent dir="rtl">
+                                            <SelectItem value="none">بدون مجلد</SelectItem>
+                                            {folders?.map(folder => (
+                                                <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         {/* Type */}
                         <FormField
                             control={form.control}
@@ -185,8 +222,6 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
                                             <SelectItem value="scale">مقياس (1-5، 1-10)</SelectItem>
                                             <SelectItem value="boolean">نعم/لا (إنجاز)</SelectItem>
                                             <SelectItem value="select">قائمة اختيار (خيارات محددة)</SelectItem>
-                                            <SelectItem value="time">وقت (مدة)</SelectItem>
-                                            <SelectItem value="text">نص (ملاحظات)</SelectItem>
                                             <SelectItem value="mood">الحالة المزاجية (وجوه تعبيرية)</SelectItem>
                                             <SelectItem value="time_range">نطاق زمني (من - إلى)</SelectItem>
                                         </SelectContent>
@@ -260,6 +295,31 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
                                     </>
                                 )}
                             </div>
+                        )}
+
+                        {(selectedType === 'numeric' || selectedType === 'scale') && (
+                            <FormField
+                                control={form.control}
+                                name="settings.chart_type"
+                                render={({ field }) => (
+                                    <FormItem className="mt-4">
+                                        <FormLabel>نوع الرسم البياني</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value || "area"}>
+                                            <FormControl>
+                                                <SelectTrigger className="flex-row-reverse">
+                                                    <SelectValue placeholder="اختر نوع الرسم" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent dir="rtl">
+                                                <SelectItem value="area">مساحة (Area Chart) - الافتراضي</SelectItem>
+                                                <SelectItem value="bar">أعمدة (Bar Chart)</SelectItem>
+                                                <SelectItem value="line">خط (Line Chart)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         )}
 
                         {(selectedType === 'select' || selectedType === 'checklist') && (
@@ -338,6 +398,6 @@ export function CreateTrackerDialog({ children }: CreateTrackerDialogProps) {
                     </form>
                 </Form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

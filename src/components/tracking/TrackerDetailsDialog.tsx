@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tracker, TrackerEntry } from "@/types/tracking";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from "recharts";
+import { Area, AreaChart, Bar, BarChart, Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from "recharts";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -88,22 +88,44 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                         <div className="flex-1 h-[80px] w-full relative">
                             {miniChartData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={miniChartData}>
-                                        <defs>
-                                            <linearGradient id={`grad-mini-${tracker.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={tracker.color || "#000"} stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor={tracker.color || "#000"} stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <Area
-                                            type="monotone"
-                                            dataKey="value"
-                                            stroke={tracker.color || "#000"}
-                                            strokeWidth={2}
-                                            fill={`url(#grad-mini-${tracker.id})`}
-                                            animationDuration={1000}
-                                        />
-                                    </AreaChart>
+                                    {(!tracker.settings?.chart_type || tracker.settings.chart_type === 'area') ? (
+                                        <AreaChart data={miniChartData}>
+                                            <defs>
+                                                <linearGradient id={`grad-mini-${tracker.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={tracker.color || "#000"} stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor={tracker.color || "#000"} stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <Area
+                                                type="monotone"
+                                                dataKey="value"
+                                                stroke={tracker.color || "#000"}
+                                                strokeWidth={2}
+                                                fill={`url(#grad-mini-${tracker.id})`}
+                                                animationDuration={1000}
+                                            />
+                                        </AreaChart>
+                                    ) : tracker.settings.chart_type === 'bar' ? (
+                                        <BarChart data={miniChartData}>
+                                            <Bar
+                                                dataKey="value"
+                                                fill={tracker.color || "#000"}
+                                                radius={[4, 4, 0, 0]}
+                                                animationDuration={1000}
+                                            />
+                                        </BarChart>
+                                    ) : (
+                                        <LineChart data={miniChartData}>
+                                            <Line
+                                                type="monotone"
+                                                dataKey="value"
+                                                stroke={tracker.color || "#000"}
+                                                strokeWidth={2}
+                                                dot={{ r: 3, fill: tracker.color || "#000" }}
+                                                animationDuration={1000}
+                                            />
+                                        </LineChart>
+                                    )}
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="h-full w-full flex items-center justify-center text-gray-300 text-sm italic border rounded-xl border-dashed">

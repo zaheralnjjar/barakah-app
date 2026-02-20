@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CreateEntryDTO, CreateTrackerDTO, Tracker, TrackerEntry } from "@/types/tracking";
+import { CreateEntryDTO, CreateTrackerDTO, Tracker, TrackerEntry, TrackerFolder } from "@/types/tracking";
 
 export const trackingService = {
     // Get all active trackers for the user
@@ -31,7 +31,8 @@ export const trackingService = {
                 icon: dto.icon,
                 color: dto.color,
                 settings: dto.settings || {},
-                order_index: 999
+                order_index: 999,
+                folder_id: dto.folder_id
             })
             .select()
             .single();
@@ -93,7 +94,7 @@ export const trackingService = {
                 icon: updates.icon,
                 color: updates.color,
                 settings: updates.settings,
-                // Add any other fields that can be updated
+                folder_id: updates.folder_id
             })
             .eq('id', id)
             .select()
@@ -104,4 +105,49 @@ export const trackingService = {
     },
 
 
+    // Folders
+    async getFolders(): Promise<TrackerFolder[]> {
+        const { data, error } = await supabase
+            .from('tracker_folders')
+            .select('*')
+            .order('order_index', { ascending: true });
+
+        if (error) throw error;
+        return data as TrackerFolder[];
+    },
+
+    async createFolder(name: string): Promise<TrackerFolder> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data, error } = await supabase
+            .from('tracker_folders')
+            .insert({ name, user_id: user.id })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as TrackerFolder;
+    },
+
+    async updateFolder(id: string, name: string): Promise<TrackerFolder> {
+        const { data, error } = await supabase
+            .from('tracker_folders')
+            .update({ name })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as TrackerFolder;
+    },
+
+    async deleteFolder(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('tracker_folders')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
 };

@@ -2,13 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tracker, CreateTrackerDTO } from "@/types/tracking";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 import { trackingService } from "@/services/trackingService";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 const formSchema = z.object({
@@ -16,11 +17,15 @@ const formSchema = z.object({
         message: "يجب أن يكون اسم المتتبع حرفين على الأقل.",
     }),
     icon: z.string().optional(),
+    folder_id: z.string().optional(),
     color: z.string().optional(),
     goal: z.string().optional(),
     unit: z.string().optional(),
     min: z.string().optional(),
     max: z.string().optional(),
+    settings: z.object({
+        chart_type: z.string().optional(),
+    }).optional()
 });
 
 interface EditTrackerDialogProps {
@@ -32,12 +37,18 @@ interface EditTrackerDialogProps {
 export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDialogProps) {
     const queryClient = useQueryClient();
 
+    const { data: folders } = useQuery({
+        queryKey: ['tracker-folders'],
+        queryFn: trackingService.getFolders
+    });
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: tracker.name,
             icon: tracker.icon,
             color: tracker.color,
+            folder_id: tracker.folder_id || "none",
             goal: tracker.settings.goal?.toString(),
             unit: tracker.settings.unit,
             min: tracker.settings.min?.toString(),
@@ -52,6 +63,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                 name: tracker.name,
                 icon: tracker.icon,
                 color: tracker.color,
+                folder_id: tracker.folder_id || "none",
                 goal: tracker.settings.goal?.toString(),
                 unit: tracker.settings.unit,
                 min: tracker.settings.min?.toString(),
@@ -66,6 +78,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                 name: values.name,
                 icon: values.icon,
                 color: values.color,
+                folder_id: values.folder_id === "none" ? null : values.folder_id,
                 type: tracker.type, // Type usually shouldn't change easily as it breaks history
                 settings: {
                     ...tracker.settings,
@@ -73,6 +86,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                     unit: values.unit,
                     min: values.min ? Number(values.min) : undefined,
                     max: values.max ? Number(values.max) : undefined,
+                    chart_type: values.settings?.chart_type,
                 }
             };
 
@@ -112,6 +126,30 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                             )}
                         />
 
+                        <FormField
+                            control={form.control}
+                            name="folder_id"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>المجلد</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className="flex-row-reverse">
+                                                <SelectValue placeholder="اختر المجلد" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent dir="rtl">
+                                            <SelectItem value="none">بدون مجلد</SelectItem>
+                                            {folders?.map(folder => (
+                                                <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         <div className="grid grid-cols-2 gap-4">
                             <FormField
                                 control={form.control}
@@ -145,7 +183,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                         </div>
 
                         {/* Conditional Settings based on what's relevant. For simplicity, showing Goal/Unit for numeric/time */}
-                        {(tracker.type === 'numeric' || tracker.type === 'time' || tracker.type === 'scale') && (
+                        {(tracker.type === 'numeric' || tracker.type === 'scale') && (
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -178,12 +216,37 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                             </div>
                         )}
 
+                        {(tracker.type === 'numeric' || tracker.type === 'scale') && (
+                            <FormField
+                                control={form.control}
+                                name="settings.chart_type"
+                                render={({ field }) => (
+                                    <FormItem className="mt-4">
+                                        <FormLabel>نوع الرسم البياني</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={tracker.settings?.chart_type || "area"}>
+                                            <FormControl>
+                                                <SelectTrigger className="flex-row-reverse">
+                                                    <SelectValue placeholder="اختر نوع الرسم" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent dir="rtl">
+                                                <SelectItem value="area">مساحة (Area Chart) - الافتراضي</SelectItem>
+                                                <SelectItem value="bar">أعمدة (Bar Chart)</SelectItem>
+                                                <SelectItem value="line">خط (Line Chart)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
                         <DialogFooter>
                             <Button type="submit">حفظ التغييرات</Button>
                         </DialogFooter>
                     </form>
                 </Form>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

@@ -1,36 +1,42 @@
-export type TrackerType = 'numeric' | 'scale' | 'boolean' | 'text' | 'time' | 'select' | 'checklist' | 'mood' | 'time_range';
+// Basic Tracker Definition
+export type TrackerType = 'numeric' | 'boolean' | 'scale' | 'checklist' | 'select' | 'mood' | 'time_range';
+
+export interface TrackerFolder {
+    id: string;
+    user_id: string;
+    name: string;
+    order_index: number;
+    created_at?: string;
+}
 
 export interface Tracker {
     id: string;
     user_id: string;
     name: string;
+    type: TrackerType;
     icon?: string;
     color?: string;
-    type: TrackerType;
-    settings: {
-        min?: number;
-        max?: number;
-        options?: string[]; // For select/scale types
-        step?: number;
-        unit?: string;
-        goal?: number;
-    };
     order_index: number;
+    folder_id?: string | null;
     is_archived: boolean;
-    created_at: string;
+    settings: {
+        goal?: number; // For numeric/scale
+        unit?: string; // e.g. "cups", "km"
+        min?: number; // Scale min
+        max?: number; // Scale max
+        options?: string[]; // For select/checklist
+        chart_type?: string; // "line", "bar", "area", "pie"
+    };
+    created_at?: string;
 }
 
 export interface TrackerEntry {
     id: string;
     tracker_id: string;
-    user_id: string;
-    value: number | null;
-    data?: any; // For select (text value), or multi-select
+    value: number;
     date: string;
     note?: string;
-    created_at: string;
-    // Join fields
-    tracker?: Tracker;
+    data?: any; // For flexible data (e.g. prompt answers)
 }
 
 export interface CreateTrackerDTO {
@@ -38,7 +44,15 @@ export interface CreateTrackerDTO {
     type: TrackerType;
     icon?: string;
     color?: string;
-    settings?: any;
+    folder_id?: string;
+    settings?: {
+        min?: number;
+        max?: number;
+        options?: string[];
+        goal?: number;
+        unit?: string;
+        chart_type?: string;
+    };
 }
 
 export interface CreateEntryDTO {
