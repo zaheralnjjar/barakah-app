@@ -33,7 +33,9 @@ import {
     MicOff,
     Save,
     Activity,
-    Square
+    Square,
+    Maximize,
+    Minimize
 } from 'lucide-react';
 import {
     Popover,
@@ -67,6 +69,8 @@ interface EditorToolbarProps {
 
     // Tracker Integration
     onInsertTracker?: () => void;
+    isFocusMode?: boolean;
+    onToggleFocusMode?: () => void;
 
     isMobile?: boolean;
 }
@@ -105,6 +109,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onRecordingClick,
 
     onInsertTracker,
+    isFocusMode = false,
+    onToggleFocusMode,
     isMobile = false
 }) => {
     if (!editor) return null;
@@ -439,6 +445,23 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={5}>تصدير الملاحظة</TooltipContent>
                 </Tooltip>
+
+                {onToggleFocusMode && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={onToggleFocusMode}
+                                className={cn(
+                                    "p-1.5 rounded-lg transition-all",
+                                    isFocusMode ? "bg-indigo-100 text-indigo-600 shadow-inner" : "hover:bg-gray-100 text-gray-600"
+                                )}
+                            >
+                                {isFocusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" sideOffset={5}>{isFocusMode ? 'خروج من وضع التركيز' : 'وضع التركيز'}</TooltipContent>
+                    </Tooltip>
+                )}
             </div>
         </>
     );

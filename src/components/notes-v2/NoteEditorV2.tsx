@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { ResizableBox } from 'react-resizable';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -16,6 +17,7 @@ import jsPDF from 'jspdf';
 import { generateGenericWord } from '@/utils/wordGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { useRef } from 'react';
+import { cn } from '@/lib/utils';
 
 import { TrackerEmbed } from './extensions/TrackerEmbed';
 import { TextBoxExtension } from './extensions/TextBoxExtension';
@@ -123,6 +125,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const [showTemplates, setShowTemplates] = useState(false);
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
+    const [isFocusMode, setIsFocusMode] = useState(false);
+    const [editorHeight, setEditorHeight] = useState(600);
 
 
 
@@ -281,7 +285,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 rounded-3xl overflow-hidden border border-white shadow-xl">
+        <div className={cn(
+            "flex flex-col rounded-3xl overflow-hidden border border-white shadow-xl transition-all duration-500",
+            isFocusMode
+                ? "fixed inset-0 z-[100] h-screen w-screen rounded-none bg-white p-4 md:p-8"
+                : "h-full bg-slate-50/50"
+        )}>
+            {isFocusMode && (
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-3xl -z-10" />
+            )}
             {/* Toolbar Section - Top Position */}
             {toolbarPosition === 'top' && (
                 <div className="px-4 pt-4 pb-2 bg-gradient-to-b from-white/80 to-transparent flex items-start gap-2 shrink-0 z-10">
@@ -297,7 +309,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             onBackgroundColorChange={onBackgroundColorChange}
                             isRecording={isRecording}
                             onRecordingClick={onRecordingClick}
-
+                            isFocusMode={isFocusMode}
+                            onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
                             onInsertTracker={handleInsertTracker}
                         />
                     </div>
@@ -331,47 +344,68 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     }
                 }}
             >
-                <div
-                    className={`bg-white min-h-full rounded-2xl shadow-sm border border-gray-100 p-0 transition-all duration-300 ${pageRuling ? 'ruled-paper' : ''}`}
-                    style={(() => {
-                        if (pageBackground) {
-                            let bgImage = pageBackground;
-                            let bgSize = 'cover';
-                            let bgRepeat = 'no-repeat';
-
-                            try {
-                                if (pageBackground.startsWith('{')) {
-                                    const parsed = JSON.parse(pageBackground);
-                                    bgImage = parsed.image;
-                                    bgSize = parsed.size || 'cover';
-                                    bgRepeat = parsed.repeat || 'no-repeat';
-                                }
-                            } catch (e) {
-                            }
-
-                            return {
-                                backgroundImage: bgImage,
-                                backgroundSize: bgSize,
-                                backgroundAttachment: 'local',
-                                backgroundRepeat: bgRepeat,
-                                minHeight: '1000px'
-                            };
-                        } else if (pageRuling) {
-                            return {
-                                backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
-                                backgroundAttachment: 'local',
-                                lineHeight: '32px',
-                                paddingTop: '4px'
-                            };
-                        }
-                        // Default: Use backgroundColor prop if no specific page background/ruling
-                        return {
-                            backgroundColor: backgroundColor
-                        };
-                    })()}
+                <ResizableBox
+                    width={Infinity}
+                    height={editorHeight}
+                    axis="y"
+                    onResizeStop={(_e, { size }) => setEditorHeight(size.height)}
+                    minConstraints={[100, 300]}
+                    maxConstraints={[Infinity, 2000]}
+                    resizeHandles={['s']}
+                    handle={
+                        <div className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group/resize z-20">
+                            <div className="w-12 h-1 bg-gray-200 rounded-full transition-colors group-hover/resize:bg-indigo-400" />
+                        </div>
+                    }
                 >
-                    <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
-                </div>
+                    <div
+                        className={cn(
+                            "bg-white rounded-2xl shadow-sm border border-gray-100 p-0 transition-all duration-300",
+                            pageRuling ? 'ruled-paper' : '',
+                            isFocusMode ? "max-w-4xl mx-auto shadow-2xl ring-1 ring-black/5" : "min-h-full"
+                        )}
+                        style={(() => {
+                            if (pageBackground) {
+                                let bgImage = pageBackground;
+                                let bgSize = 'cover';
+                                let bgRepeat = 'no-repeat';
+
+                                try {
+                                    if (pageBackground.startsWith('{')) {
+                                        const parsed = JSON.parse(pageBackground);
+                                        bgImage = parsed.image;
+                                        bgSize = parsed.size || 'cover';
+                                        bgRepeat = parsed.repeat || 'no-repeat';
+                                    }
+                                } catch (e) {
+                                }
+
+                                return {
+                                    backgroundImage: bgImage,
+                                    backgroundSize: bgSize,
+                                    backgroundAttachment: 'local',
+                                    backgroundRepeat: bgRepeat,
+                                    minHeight: isFocusMode ? '100%' : `${editorHeight}px`
+                                };
+                            } else if (pageRuling) {
+                                return {
+                                    backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
+                                    backgroundAttachment: 'local',
+                                    lineHeight: '32px',
+                                    paddingTop: '4px',
+                                    minHeight: isFocusMode ? '100%' : `${editorHeight}px`
+                                };
+                            }
+                            // Default: Use backgroundColor prop if no specific page background/ruling
+                            return {
+                                backgroundColor: backgroundColor,
+                                minHeight: isFocusMode ? '100%' : `${editorHeight}px`
+                            };
+                        })()}
+                    >
+                        <EditorContent editor={editor} className="min-h-full [&_.ProseMirror]:min-h-[400px]" />
+                    </div>
+                </ResizableBox>
             </div>
 
             {/* Toolbar Section - Bottom Position (Sticky) */}
