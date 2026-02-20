@@ -1,4 +1,4 @@
-# Static Assets to Ignore
+# Static Assets to Ignore (Local Only)
 android/
 android-notes/
 android-newmuslims/
@@ -9,6 +9,5 @@ release/
 # Environment & Cache
 .env*
 node_modules/
-dist/
-dist-notes/
 .DS_Store
+# DO NOT ignore dist/ here as it might interfere with Vercel's detection
