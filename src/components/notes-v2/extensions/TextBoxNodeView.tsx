@@ -22,7 +22,10 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const borderColor = node.attrs.borderColor || '#e2e8f0';
     const borderWidth = node.attrs.borderWidth || 1;
     const borderStyle = node.attrs.borderStyle || 'solid';
-
+    const baseWidth = node.attrs.baseWidth || 400;
+    const scale = width / baseWidth;
+    const editorZoom = (editor.storage as any).textBox?.zoom || 100;
+    const dragScale = editorZoom / 100;
     const handleDrag = (_e: any, data: any) => {
         // We update attributes only on stop to prevent lag
         // But visuals should be smooth
@@ -35,7 +38,8 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
         updateAttributes({ x: data.x, y: data.y });
     };
 
-    const handleResize = (_e: any, { size }: any) => {
+    const handleResize = (e: any, { size }: any) => {
+        e.stopPropagation();
         updateAttributes({ width: size.width, height: size.height });
     };
 
@@ -46,19 +50,21 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 left: 0,
                 top: 0,
                 width: width,
-                height: 0, // Wrapper itself shouldn't take space/block others
-                // transform moved to Draggable
+                height: 0,
+                direction: 'ltr', // Force LTR for coordinate consistency
             }}
         >
             <Draggable
                 handle=".drag-handle"
-                position={{ x, y }} // Controlled mode for precision
+                position={{ x, y }}
                 onStop={handleStop}
-                bounds="parent" // Optional: keep inside editor
+                onDrag={(e) => e.stopPropagation()}
+                scale={dragScale}
+                bounds="parent"
             >
                 <div
                     className={cn(
-                        "absolute group transition-shadow rounded-lg",
+                        "absolute group transition-shadow rounded-lg overflow-visible",
                         selected ? "ring-2 ring-indigo-500 ring-offset-2" : "",
                         isHovered ? "shadow-lg" : "shadow-sm"
                     )}
@@ -74,7 +80,17 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                         maxConstraints={[800, 1000]}
                         resizeHandles={['se']}
                         handle={
-                            <div className="absolute bottom-0 right-0 p-1 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                            <div
+                                className="absolute bottom-0 right-0 p-1 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    // Reset to default A4 or auto-calc based on content
+                                    // For now, let's reset to a "standard" size that adapts
+                                    updateAttributes({ width: 400, height: 560 });
+                                }}
+                            >
                                 <Maximize2 size={12} className="text-gray-400 rotate-90" />
                             </div>
                         }
@@ -86,6 +102,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                 borderColor,
                                 borderWidth: `${borderWidth}px`,
                                 borderStyle,
+                                direction: 'rtl', // Content remains RTL
                             }}
                         >
                             {/* Toolbar / Drag Handle (Visible on Hover/Select) */}
@@ -96,17 +113,17 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                 )}
                             >
                                 <GripVertical size={12} className="text-gray-400" />
-
-                                <div className="flex items-center gap-1">
-                                    {/* Style Settings */}
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {/* Style Settings Popover */}
+                                    {/* ... rest of the toolbar content remains same ... */}
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <button className="p-0.5 hover:bg-gray-200 rounded text-gray-500">
                                                 <Palette size={12} />
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-64 p-3" align="end">
-                                            <div className="space-y-3" dir="rtl">
+                                        <PopoverContent className="w-64 p-3" align="end" dir="rtl">
+                                            <div className="space-y-3">
                                                 <h4 className="font-bold text-xs text-gray-500">تخصيص الصندوق</h4>
 
                                                 {/* Background Color */}
@@ -158,8 +175,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                                                     borderStyle === s.id ? "bg-white shadow-sm text-indigo-600" : "text-gray-500"
                                                                 )}
                                                                 style={{ borderBottomWidth: 2, borderBottomStyle: s.border as any }}
-                                                            >
-                                                            </button>
+                                                            />
                                                         ))}
                                                     </div>
                                                 </div>
@@ -179,14 +195,27 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                         </PopoverContent>
                                     </Popover>
 
-                                    <button onClick={deleteNode} className="p-0.5 hover:bg-red-100 hover:text-red-500 rounded text-gray-500">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); deleteNode(); }}
+                                        className="p-0.5 hover:bg-red-100 hover:text-red-500 rounded text-gray-500"
+                                    >
                                         <X size={12} />
                                     </button>
                                 </div>
                             </div>
 
                             {/* Editor Content Area */}
-                            <NodeViewContent className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto" />
+                            <div
+                                style={{
+                                    transform: `scale(${scale})`,
+                                    transformOrigin: 'top left', // Better scaling anchor
+                                    width: `${baseWidth}px`,
+                                    height: `${height / scale}px`,
+                                }}
+                                className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto"
+                            >
+                                <NodeViewContent className="min-h-full" />
+                            </div>
                         </div>
                     </ResizableBox>
                 </div>

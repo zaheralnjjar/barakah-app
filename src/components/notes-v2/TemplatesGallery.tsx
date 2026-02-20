@@ -187,6 +187,14 @@ export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onCl
                                 {filteredTemplates.map((template, idx) => (
                                     <button
                                         key={idx}
+                                        draggable
+                                        onDragStart={(e) => {
+                                            const item = {
+                                                type: 'template',
+                                                content: template.content,
+                                            };
+                                            e.dataTransfer.setData('application/x-barakah-item', JSON.stringify(item));
+                                        }}
                                         onClick={() => handleTemplateClick(template)}
                                         className="group relative flex flex-col items-start text-right bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-4 hover:shadow-xl hover:border-indigo-300 transition-all duration-300"
                                     >

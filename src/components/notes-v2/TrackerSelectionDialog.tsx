@@ -165,6 +165,20 @@ function TrackerItem({ tracker, isSelected, onToggle }: { tracker: Tracker, isSe
     return (
         <div
             onClick={onToggle}
+            draggable
+            onDragStart={(e) => {
+                const item = {
+                    type: 'tracker',
+                    trackers: [{
+                        id: tracker.id,
+                        label: tracker.name,
+                        type: tracker.type,
+                        color: tracker.color,
+                        icon: tracker.icon
+                    }]
+                };
+                e.dataTransfer.setData('application/x-barakah-item', JSON.stringify(item));
+            }}
             className={cn(
                 "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all",
                 isSelected

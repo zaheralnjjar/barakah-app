@@ -178,7 +178,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                             onMouseUp={() => {
                                 if (pressTimer.current) clearTimeout(pressTimer.current);
                                 if (!isLongPress.current) {
-                                    onAddNote();
+                                    navigate('/notes-v2', { state: { createNew: true } });
                                 }
                                 setTimeout(() => { isLongPress.current = false; }, 100);
                             }}
@@ -197,7 +197,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                             onTouchEnd={() => {
                                 if (pressTimer.current) clearTimeout(pressTimer.current);
                                 if (!isLongPress.current) {
-                                    onAddNote();
+                                    navigate('/notes-v2', { state: { createNew: true } });
                                 }
                                 setTimeout(() => { isLongPress.current = false; }, 100);
                             }}

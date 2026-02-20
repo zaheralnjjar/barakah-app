@@ -35,7 +35,10 @@ import {
     Activity,
     Square,
     Maximize,
-    Minimize
+    Minimize,
+    ZoomIn,
+    ZoomOut,
+    Search
 } from 'lucide-react';
 import {
     Popover,
@@ -69,8 +72,10 @@ interface EditorToolbarProps {
 
     // Tracker Integration
     onInsertTracker?: () => void;
-    isFocusMode?: boolean;
-    onToggleFocusMode?: () => void;
+
+    // Zoom Integration
+    zoom?: number;
+    onZoomChange?: (newZoom: number) => void;
 
     isMobile?: boolean;
 }
@@ -109,8 +114,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onRecordingClick,
 
     onInsertTracker,
-    isFocusMode = false,
-    onToggleFocusMode,
+    zoom = 100,
+    onZoomChange,
     isMobile = false
 }) => {
     if (!editor) return null;
@@ -446,22 +451,60 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     <TooltipContent side="bottom" sideOffset={5}>تصدير الملاحظة</TooltipContent>
                 </Tooltip>
 
-                {onToggleFocusMode && (
+                {/* Removed Focus Mode Button */}
+
+                <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+
+                {/* Zoom Controls */}
+                <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-100">
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <button
-                                onClick={onToggleFocusMode}
-                                className={cn(
-                                    "p-1.5 rounded-lg transition-all",
-                                    isFocusMode ? "bg-indigo-100 text-indigo-600 shadow-inner" : "hover:bg-gray-100 text-gray-600"
-                                )}
+                                onClick={() => onZoomChange?.(zoom - 10)}
+                                className="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-500"
                             >
-                                {isFocusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                                <ZoomOut size={14} />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={5}>{isFocusMode ? 'خروج من وضع التركيز' : 'وضع التركيز'}</TooltipContent>
+                        <TooltipContent side="bottom">تصغير</TooltipContent>
                     </Tooltip>
-                )}
+
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <button className="px-1.5 py-0.5 text-[10px] font-bold text-gray-600 hover:text-indigo-600 transition-colors">
+                                {Math.round(zoom)}%
+                            </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-20 p-1" align="center">
+                            <div className="flex flex-col gap-0.5">
+                                {[130, 110, 100, 90, 80, 70, 50].map(z => (
+                                    <button
+                                        key={z}
+                                        onClick={() => onZoomChange?.(z)}
+                                        className={cn(
+                                            "px-2 py-1 text-[10px] text-center rounded hover:bg-gray-100",
+                                            zoom === z ? "bg-indigo-50 text-indigo-600 font-bold" : "text-gray-600"
+                                        )}
+                                    >
+                                        {z}%
+                                    </button>
+                                ))}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={() => onZoomChange?.(zoom + 10)}
+                                className="p-1 hover:bg-white hover:shadow-sm rounded transition-all text-gray-500"
+                            >
+                                <ZoomIn size={14} />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">تكبير</TooltipContent>
+                    </Tooltip>
+                </div>
             </div>
         </>
     );

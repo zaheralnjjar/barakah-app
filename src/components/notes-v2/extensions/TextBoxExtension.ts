@@ -1,11 +1,20 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
+import { DOMParser } from '@tiptap/pm/model';
 import { TextBoxNodeView } from './TextBoxNodeView';
+
+interface InsertTextBoxOptions {
+    content?: any;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+}
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         textBox: {
-            insertTextBox: () => ReturnType;
+            insertTextBox: (options?: InsertTextBoxOptions) => ReturnType;
         };
     }
 }
@@ -28,10 +37,13 @@ export const TextBoxExtension = Node.create({
                 default: 0,
             },
             width: {
-                default: 300,
+                default: 400,
+            },
+            baseWidth: {
+                default: 400,
             },
             height: {
-                default: 200,
+                default: 560,
             },
             backgroundColor: {
                 default: '#ffffff',
@@ -66,14 +78,27 @@ export const TextBoxExtension = Node.create({
 
     addCommands() {
         return {
-            insertTextBox: () => ({ commands }) => {
+            insertTextBox: (options: InsertTextBoxOptions = {}) => ({ commands, editor }) => {
+                const { content, ...attributes } = options;
+
+                let parsedContent = content;
+                if (typeof content === 'string') {
+                    const element = document.createElement('div');
+                    element.innerHTML = content;
+                    parsedContent = DOMParser.fromSchema(editor.schema).parse(element).toJSON().content;
+                }
+
                 return commands.insertContent({
                     type: this.name,
                     attrs: {
-                        x: 0,
-                        y: 0,
+                        x: attributes.x ?? 50,
+                        y: attributes.y ?? 150,
+                        width: attributes.width ?? 400,
+                        height: attributes.height ?? 560,
+                        baseWidth: attributes.width ?? 400,
+                        ...attributes,
                     },
-                    content: [
+                    content: parsedContent || [
                         {
                             type: 'paragraph',
                             content: [{ type: 'text', text: 'اكتب هنا...' }]

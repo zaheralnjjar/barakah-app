@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { SidebarTree } from '@/components/notes-v2/SidebarTree';
 import { FolderGrid } from '@/components/notes-v2/FolderGrid';
 import { NoteList } from '@/components/notes-v2/NoteList';
@@ -51,8 +52,9 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
     // If viewMode is 'list' (notes) -> notes
     const selectionType = viewMode === 'grid' ? 'folder' : 'note';
 
-    const { deleteNote } = useNotesV2(activeFolderId);
+    const { deleteNote, createNote } = useNotesV2(activeFolderId);
     const { deleteFolder } = useFolders();
+    const location = useLocation();
 
     const handleToggleSelection = (id: string) => {
         const newSet = new Set(selectedItems);
@@ -114,6 +116,22 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
         if (saved) setSettings(JSON.parse(saved));
         else setSettings(prev => ({ ...prev, showFolderGridInitial: true }));
     }, []);
+
+    // Handle initial intent (e.g. create new note from sidebar)
+    useEffect(() => {
+        const createNewIntent = (location.state as any)?.createNew;
+        if (createNewIntent) {
+            const createAndOpen = async () => {
+                const newNote = await createNote({});
+                if (newNote) {
+                    handleSelectNote(newNote);
+                }
+            };
+            createAndOpen();
+            // Clear state to avoid re-creation on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
 
     // Save Settings
     const handleUpdateSettings = (key: string, value: boolean) => {
@@ -446,6 +464,7 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     {viewMode === 'editor' && activeNote && (
                         <div className="h-full w-full animate-in slide-in-from-bottom-4 duration-500">
                             <NoteEditorV2
+                                isMobile={isMobile}
                                 initialContent={activeNote.content}
                                 onUpdate={async (c) => {
                                     setIsSaving(true);
