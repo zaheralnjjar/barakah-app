@@ -6,7 +6,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "VITE_ENABLE_ROUTE_MESSAGING=true vite",
-    "build": "vite build",
+    "build": "vite build && echo '--- Build Directory Structure ---' && ls -la dist && echo '--- End of Build Summary ---'",
     "build:dev": "VITE_ENABLE_ROUTE_MESSAGING=true vite build --mode development --sourcemap",
     "build:map": "VITE_ENABLE_ROUTE_MESSAGING=true vite build --sourcemap",
     "build:newmuslims": "vite build --config vite.config.newmuslims.ts",
