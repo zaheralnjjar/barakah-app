@@ -13,14 +13,9 @@ declare module '@tiptap/core' {
 export const TextBoxExtension = Node.create({
     name: 'textBox',
     group: 'block',
-    atom: true, // It's an atom because it manages its own content rendering via NodeViewContent? No, if it has content it shouldn't be atom?
-    // Actually, if we use NodeViewContent, it shouldn't be an atom in the strict sense of "no content", 
-    // but drag/drop wrappers often behave like atoms in flow. 
-    // However, draggable nodes with editable content usually are NOT atoms.
-    // Let's try atom: false (default for block) but verify draggable behavior.
-
-    content: 'block+', // Can contain other blocks
-    draggable: true, // Tiptap draggable handler? We utilize react-draggable, so maybe set false to avoid conflict?
+    atom: false,
+    content: 'block+',
+    draggable: false,
     // If we use React Draggable, we might want Tiptap to IGNORE its own drag logic for this node 
     // or we use a drag handle distinct from Tiptap's.
 

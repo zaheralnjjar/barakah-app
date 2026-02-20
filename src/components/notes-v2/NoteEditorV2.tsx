@@ -142,6 +142,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             Image,
 
             TrackerEmbed,
+            TextBoxExtension,
         ],
         content: initialContent || '',
         editable,
