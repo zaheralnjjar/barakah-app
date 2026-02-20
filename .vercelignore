@@ -1,0 +1,14 @@
+# Static Assets to Ignore
+android/
+android-notes/
+android-newmuslims/
+electron/
+release/
+*.apk
+
+# Environment & Cache
+.env*
+node_modules/
+dist/
+dist-notes/
+.DS_Store
