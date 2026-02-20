@@ -220,13 +220,7 @@ export const useShortcutExecution = (props: {
 
             case 'sys_calc':
                 // Simple implementation or open system calculator link
-                const eq = prompt('حاسبة سريعة: أدخل المعادلة (مثال: 5*10)');
-                if (eq) {
-                    try {
-                        const res = eval(eq); // Safe enough for local user input calculator
-                        alert(`النتيجة: ${res}`);
-                    } catch (e) { alert('معادلة غير صحيحة'); }
-                }
+                toast({ title: 'الحاسبة', description: 'سيتم إضافة الحاسبة المتقدمة قريباً' });
                 break;
 
             case 'sys_clean':
