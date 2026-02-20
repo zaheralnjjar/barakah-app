@@ -18,7 +18,7 @@
     "preview": "vite preview",
     "preview:dev": "npm run build:dev && npm run preview",
     "test:edge-functions": "cd supabase/edge_function && deno task test",
-    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:8080 && electron .\"",
+    "electron:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:5173 && electron .\"",
     "electron:build": "vite build && electron-builder"
   },
   "dependencies": {
@@ -82,6 +82,7 @@
     "@tiptap/starter-kit": "^3.17.0",
     "@types/file-saver": "^2.0.7",
     "@types/leaflet": "^1.9.21",
+    "adm-zip": "^0.5.16",
     "arabic-reshaper": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -104,6 +105,7 @@
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
+    "react-draggable": "^4.5.0",
     "react-grid-layout": "^2.1.0",
     "react-hook-form": "^7.53.0",
     "react-hotkeys-hook": "^5.2.1",
@@ -139,7 +141,7 @@
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",
-    "electron": "^39.2.7",
+    "electron": "^39.6.1",
     "electron-builder": "^26.0.12",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",

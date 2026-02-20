@@ -31,8 +31,14 @@ import {
     Eraser,
     Mic,
     MicOff,
-    Save
+    Save,
+    Sparkles,
+    Settings2,
+    Plus,
+    Activity
 } from 'lucide-react';
+import { TEMPLATES } from '../smart-templates/constants';
+import { Template } from '../smart-templates/types';
 import {
     Popover,
     PopoverContent,
@@ -60,6 +66,12 @@ interface EditorToolbarProps {
     // Voice Recording Integration
     isRecording?: boolean;
     onRecordingClick?: () => void;
+
+    onInsertSmartTemplate?: (template: Template) => void;
+    onOpenSmartTemplateDesigner?: () => void;
+
+    // Tracker Integration
+    onInsertTracker?: () => void;
 
     isMobile?: boolean;
 }
@@ -96,6 +108,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onBackgroundColorChange,
     isRecording,
     onRecordingClick,
+    onInsertSmartTemplate,
+    onOpenSmartTemplateDesigner,
+    onInsertTracker,
     isMobile = false
 }) => {
     if (!editor) return null;
@@ -173,7 +188,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </PopoverContent>
                     </Popover>
                 </TooltipTrigger>
-                <TooltipContent>نوع الخط</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>نوع الخط</TooltipContent>
             </Tooltip>
 
             {/* Font Size */}
@@ -208,7 +223,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </PopoverContent>
                     </Popover>
                 </TooltipTrigger>
-                <TooltipContent>حجم الخط</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>حجم الخط</TooltipContent>
             </Tooltip>
 
             {/* Text Color */}
@@ -239,7 +254,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </PopoverContent>
                     </Popover>
                 </TooltipTrigger>
-                <TooltipContent>لون النص</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>لون النص</TooltipContent>
             </Tooltip>
 
             {/* Highlight */}
@@ -271,7 +286,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </PopoverContent>
                     </Popover>
                 </TooltipTrigger>
-                <TooltipContent>تمييز النص</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>تمييز النص</TooltipContent>
             </Tooltip>
 
             {/* Background Color Picker */}
@@ -293,7 +308,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                 />
                             </div>
                         </TooltipTrigger>
-                        <TooltipContent>لون خلفية الصفحة</TooltipContent>
+                        <TooltipContent side="bottom" sideOffset={5}>لون خلفية الصفحة</TooltipContent>
                     </Tooltip>
                 </>
             )}
@@ -317,19 +332,19 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     <div className="flex bg-white rounded-md p-0.5 border border-gray-100">
                         <Tooltip>
                             <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'left' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignLeft className="w-4 h-4" /></button></TooltipTrigger>
-                            <TooltipContent>محاذاة لليسار</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={5}>محاذاة لليسار</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'center' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignCenter className="w-4 h-4" /></button></TooltipTrigger>
-                            <TooltipContent>توسيط</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={5}>توسيط</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'right' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignRight className="w-4 h-4" /></button></TooltipTrigger>
-                            <TooltipContent>محاذاة لليمين</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={5}>محاذاة لليمين</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                             <TooltipTrigger asChild><button onClick={() => editor.chain().focus().setTextAlign('justify').run()} className={`p-1.5 rounded-md ${editor.isActive({ textAlign: 'justify' }) ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}><AlignJustify className="w-4 h-4" /></button></TooltipTrigger>
-                            <TooltipContent>ضبط النص (Justify)</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={5}>ضبط النص (Justify)</TooltipContent>
                         </Tooltip>
                     </div>
                 </PopoverContent>
@@ -348,11 +363,11 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <PopoverContent className="w-auto p-1 flex bg-gray-50 rounded-lg" align="start">
                     <Tooltip>
                         <TooltipTrigger asChild><button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded-lg ${editor.isActive('bulletList') ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}><List className="w-4 h-4" /></button></TooltipTrigger>
-                        <TooltipContent>قائمة نقطية</TooltipContent>
+                        <TooltipContent side="bottom" sideOffset={5}>قائمة نقطية</TooltipContent>
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild><button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded-lg ${editor.isActive('orderedList') ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-600'}`}><ListOrdered className="w-4 h-4" /></button></TooltipTrigger>
-                        <TooltipContent>قائمة رقمية</TooltipContent>
+                        <TooltipContent side="bottom" sideOffset={5}>قائمة رقمية</TooltipContent>
                     </Tooltip>
                 </PopoverContent>
             </Popover>
@@ -362,13 +377,66 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             {/* Insertions */}
             <Tooltip>
                 <TooltipTrigger asChild><button onClick={addTimeSeparator} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><Clock className="w-4 h-4" /></button></TooltipTrigger>
-                <TooltipContent>إضافة فاصل زمني</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>إضافة فاصل زمني</TooltipContent>
             </Tooltip>
 
             <Tooltip>
                 <TooltipTrigger asChild><button onClick={onOpenTemplates} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600"><LayoutTemplate className="w-4 h-4" /></button></TooltipTrigger>
-                <TooltipContent>القوالب الجاهزة</TooltipContent>
+                <TooltipContent side="bottom" sideOffset={5}>القوالب الجاهزة</TooltipContent>
             </Tooltip>
+
+            {/* Smart Templates Dropdown */}
+            {onInsertSmartTemplate && (
+                <Popover>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                                <button className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600">
+                                    <Sparkles className="w-4 h-4" />
+                                </button>
+                            </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" sideOffset={5}>قوالب ذكية</TooltipContent>
+                    </Tooltip>
+                    <PopoverContent className="w-56 p-1 rounded-xl shadow-xl border-gray-100" align="start">
+                        <div className="max-h-[300px] overflow-y-auto custom-scrollbar flex flex-col gap-1 p-1">
+                            <div className="px-2 py-1 text-xs font-bold text-gray-400">القوالب الذكية</div>
+                            {TEMPLATES.filter(t => t.isVisible !== false).map((template) => (
+                                <button
+                                    key={template.id}
+                                    onClick={() => onInsertSmartTemplate(template)}
+                                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-indigo-50 text-right transition-colors group w-full"
+                                >
+                                    <div className="p-1 bg-gray-100 rounded group-hover:bg-white text-gray-600">
+                                        <template.icon size={14} />
+                                    </div>
+                                    <span className="text-sm text-gray-700 font-medium truncate">{template.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="h-px bg-gray-100 my-1" />
+                        <button
+                            onClick={onOpenSmartTemplateDesigner}
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-right w-full text-indigo-600"
+                        >
+                            <Settings2 size={14} />
+                            <span className="text-xs font-bold">إدارة / مصمم القوالب</span>
+                        </button>
+                    </PopoverContent>
+                </Popover>
+            )}
+
+            {/* Tracker Button */}
+            {onInsertTracker && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button onClick={onInsertTracker} className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600">
+                            <Activity className="w-4 h-4" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={5}>إدراج متتبع</TooltipContent>
+                </Tooltip>
+            )}
 
             {/* Mic & Export Actions */}
             <div className="flex items-center gap-1 mr-auto lg:mr-0">
@@ -379,7 +447,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                 {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent>{isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}</TooltipContent>
+                        <TooltipContent side="bottom" sideOffset={5}>{isRecording ? 'إيقاف التسجيل' : 'تسجيل صوتي'}</TooltipContent>
                     </Tooltip>
                 )}
 
@@ -399,7 +467,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             </PopoverContent>
                         </Popover>
                     </TooltipTrigger>
-                    <TooltipContent>تصدير الملاحظة</TooltipContent>
+                    <TooltipContent side="bottom" sideOffset={5}>تصدير الملاحظة</TooltipContent>
                 </Tooltip>
             </div>
         </>

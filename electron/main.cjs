@@ -19,7 +19,7 @@ function createWindow() {
     const isDev = process.env.NODE_ENV === 'development';
 
     if (isDev) {
-        win.loadURL('http://localhost:8080'); // Default Vite port
+        win.loadURL('http://localhost:5173'); // Default Vite port
     } else {
         win.loadFile(path.join(__dirname, '../dist/index.html'));
     }

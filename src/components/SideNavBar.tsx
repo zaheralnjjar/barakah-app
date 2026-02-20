@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap, StickyNote, Plus, Navigation, Inbox } from 'lucide-react';
+import { Calculator, Briefcase, Calendar, Home, Moon, MapPin, Settings, Send, LayoutGrid, GraduationCap, StickyNote, Plus, Navigation, Inbox, Activity } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { EditorModalV2 } from './notes-v2/EditorModalV2';
@@ -47,6 +47,7 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
     const navItems = [
         { id: 'dashboard', label: 'الرئيسية', icon: Home, isHome: true, color: 'text-blue-600', activeBg: 'bg-blue-50' },
         { id: 'finance', label: 'المالية', icon: Calculator, color: 'text-green-600', activeBg: 'bg-green-50' },
+        { id: 'tracking', label: 'المتابعة', icon: Activity, color: 'text-pink-600', activeBg: 'bg-pink-50' },
         { id: 'productivity', label: 'الإنتاجية', icon: Briefcase, color: 'text-orange-600', activeBg: 'bg-orange-50' },
         { id: 'calendar', label: 'التقويم', icon: Calendar, color: 'text-purple-600', activeBg: 'bg-purple-50' },
         { id: 'notes-v2', label: 'الملاحظات', icon: StickyNote, color: 'text-amber-600', activeBg: 'bg-amber-50' },

@@ -95,6 +95,8 @@ const CoreLayout = () => {
     useEffect(() => {
         if (location.pathname === '/notes-v2') {
             setActiveTab('notes-v2');
+        } else if (location.pathname === '/tracking') {
+            setActiveTab('tracking');
         } else if (location.pathname === '/' && activeTab === 'notes-v2') {
             setActiveTab('dashboard');
         }
@@ -154,6 +156,8 @@ const CoreLayout = () => {
             }, 50);
         } else if (tabId === 'notes-v2') {
             navigate('/notes-v2');
+        } else if (tabId === 'tracking') {
+            navigate('/tracking');
         } else if (tabId === 'dashboard') {
             setActiveTab('dashboard');
             navigate('/');
@@ -207,7 +211,7 @@ const CoreLayout = () => {
                 onAddAppointment={handleAddAppointment}
                 onAddDistraction={handleAddDistraction}
             />
-            <div className={`flex-1 w-full h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-16 pr-0' : 'pb-20'}`}>
+            <div className={`flex-1 w-full h-full overflow-y-auto overflow-x-hidden transition-all duration-300 ${!isMobile ? 'mr-20 pr-4' : 'pb-20'}`}>
                 <Outlet context={{ activeTab, setActiveTab }} />
             </div>
 

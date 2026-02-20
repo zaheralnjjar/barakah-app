@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotesLayoutV2 from "./pages/notes-v2/Index";
+import TrackingPage from "./pages/TrackingPage";
 import NotesOnlyView from "./components/notes-app/NotesOnlyView";
 
 import NotFound from "./pages/NotFound";
@@ -240,6 +241,7 @@ const App = () => {
                 <Route path="/diagnostic" element={<DiagnosticPage />} />
                 <Route path="/prayer-times" element={<PrayerTimes />} />
                 <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/tracking" element={<TrackingPage />} />
 
                 {/* Thesis Manager Routes - Now inside CoreLayout for SideNavBar */}
                 <Route path="/thesis" element={<ThesisLayout><ThesisNavigator /></ThesisLayout>} />

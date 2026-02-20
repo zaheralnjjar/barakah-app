@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -7,8 +7,13 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, LayoutTemplate, Plus } from 'lucide-react';
+import { FileText, LayoutTemplate, Plus, Grid2X2, Maximize, Smartphone, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { TEMPLATES as SMART_TEMPLATES } from '../smart-templates/constants';
+import { STATIC_TEMPLATES } from '@/data/generated_templates';
+import { Template } from '../smart-templates/types';
+import { cn } from '@/lib/utils';
+import { generateSmartHtml } from '../smart-templates/constants';
 
 interface TemplatesGalleryProps {
     isOpen: boolean;
@@ -16,234 +21,214 @@ interface TemplatesGalleryProps {
     onSelectTemplate: (content: string, type?: 'text' | 'background') => void;
 }
 
-// --- Paper Definitions ---
-const paperStyles = [
-    {
-        category: 'موصى به (Recommended)',
-        items: [
-            { id: 'plain', title: 'سادة (Plain)', bg: 'white', content: 'none' },
-            { id: 'lined_s', title: 'مسطر صغير (Lined S)', bg: 'white', content: 'repeating-linear-gradient(transparent, transparent 20px, #e5e7eb 20px, #e5e7eb 21px)' },
-            { id: 'lined_m', title: 'مسطر وسط (Lined M)', bg: 'white', content: 'repeating-linear-gradient(transparent, transparent 30px, #e5e7eb 30px, #e5e7eb 31px)' },
-            { id: 'grid_s', title: 'مربعات (Grid S)', bg: 'white', content: 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)', size: '20px 20px' },
-        ]
-    },
-    {
-        category: 'Lined Note Paper',
-        items: [
-            { id: 'lined_l', title: 'مسطر كبير (Lined L)', bg: 'white', content: 'repeating-linear-gradient(transparent, transparent 40px, #e5e7eb 40px, #e5e7eb 41px)' },
-            { id: 'margin_single', title: 'هامش (Single Margin)', bg: 'white', content: 'linear-gradient(90deg, transparent 40px, #fca5a5 40px, #fca5a5 41px, transparent 41px), repeating-linear-gradient(transparent, transparent 30px, #e5e7eb 30px, #e5e7eb 31px)' },
-            { id: 'fancy_blue', title: 'مسطر أزرق (Blue Lined)', bg: '#eff6ff', content: 'repeating-linear-gradient(transparent, transparent 30px, #bfdbfe 30px, #bfdbfe 31px)' },
-        ]
-    },
-    {
-        category: 'Squared Grid Paper',
-        items: [
-            { id: 'grid_m', title: 'شبكة وسط (Grid M)', bg: 'white', content: 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)', size: '30px 30px' },
-            { id: 'grid_l', title: 'شبكة كبيرة (Grid L)', bg: 'white', content: 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)', size: '40px 40px' },
-            { id: 'dotted', title: 'منقط (Dotted)', bg: 'white', content: 'radial-gradient(#94a3b8 1px, transparent 1px)', size: '20px 20px' },
-        ]
-    }
+// Combine all templates
+const ALL_TEMPLATES = [
+    ...SMART_TEMPLATES.map(t => ({ ...t, isSmart: true })),
+    ...STATIC_TEMPLATES
 ];
 
-// --- Template Definitions ---
-const templateCategories = [
-    {
-        category: 'Planner Layouts & Organizers',
-        items: [
-            {
-                id: 'daily',
-                title: 'Daily Plan',
-                previewColor: 'bg-rose-50',
-                content: `<div class="p-4 bg-rose-50 rounded-lg border border-rose-100">
-                    <h2 class="text-center text-rose-800 mb-4 font-bold border-b border-rose-200 pb-2">📅 التخطيط اليومي</h2>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white p-3 rounded shadow-sm">
-                            <h3 class="font-bold text-rose-600 mb-2">🎯 الأهداف الرئيسية</h3>
-                             <ul data-type="taskList"><li data-type="taskItem"></li></ul>
-                        </div>
-                        <div class="bg-white p-3 rounded shadow-sm">
-                            <h3 class="font-bold text-rose-600 mb-2">📝 ملاحظات</h3>
-                            <p></p>
-                        </div>
-                    </div>
-                </div>`
-            },
-            {
-                id: 'weekly',
-                title: 'Weekly Plan',
-                previewColor: 'bg-indigo-50',
-                content: `<div class="p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                    <h2 class="text-center text-indigo-800 mb-4 font-bold">🗓️ الأسبوع</h2>
-                    <div class="grid grid-cols-7 gap-2">
-                        <div class="bg-white p-2 rounded text-center border">السبت</div>
-                        <div class="bg-white p-2 rounded text-center border">الأحد</div>
-                        <div class="bg-white p-2 rounded text-center border">الاثنين</div>
-                        <div class="bg-white p-2 rounded text-center border">الثلاثاء</div>
-                        <div class="bg-white p-2 rounded text-center border">الأربعاء</div>
-                        <div class="bg-white p-2 rounded text-center border">الخميس</div>
-                        <div class="bg-white p-2 rounded text-center border">الجمعة</div>
-                    </div>
-                </div>`
-            }
-        ]
-    },
-    {
-        category: 'Designs (Back to School / Floral)',
-        items: [
-            {
-                id: 'school_1',
-                title: 'Back to School',
-                type: 'background',
-                previewColor: 'bg-amber-50',
-                content: 'linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%)',
-                // Using simple gradients as "Image" backgrounds require actual assets. 
-                // We'll simulate with CSS.
-            },
-            {
-                id: 'floral_1',
-                title: 'Floral Pink',
-                type: 'background',
-                previewColor: 'bg-pink-50',
-                content: 'repeating-linear-gradient(45deg, #fdf2f8 0px, #fdf2f8 10px, #fce7f3 10px, #fce7f3 20px)'
-            },
-            {
-                id: 'dark_mode',
-                title: 'Dark Blue',
-                type: 'background',
-                previewColor: 'bg-slate-800',
-                content: '#1e293b' // Dark background
-            }
-        ]
-    }
-];
+// Extract categories
+const CATEGORIES = Array.from(new Set(ALL_TEMPLATES.map(t => t.category || 'عام')));
 
 export const TemplatesGallery: React.FC<TemplatesGalleryProps> = ({ isOpen, onClose, onSelectTemplate }) => {
-    const [selectedTemplate, setSelectedTemplate] = React.useState<any>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [sizeStep, setSizeStep] = useState(false);
 
-    const handleTemplateClick = (item: any) => {
-        // If it's a paper style (CSS gradient), it's always background, no need to ask?
-        // Or should we allow "Text" (which would be weird)?
-        // User specifically said "Templates have text option or pdf design option".
-        // Paper styles are usually backgrounds. Let's keep paper styles as is (direct apply).
-        // Only for "Templates" tab items, we ask.
-        setSelectedTemplate(item);
+    const filteredTemplates = selectedCategory === 'all'
+        ? ALL_TEMPLATES
+        : ALL_TEMPLATES.filter(t => t.category === selectedCategory);
+
+    const handleTemplateClick = (template: Template) => {
+        if (template.type === 'smart-json') {
+            // Smart templates usually handle their own sizing or are block-based, 
+            // but for now let's treat them as needing size selection if they output HTML.
+            // Actually smart templates are inserted via a special handler usually, 
+            // but for this gallery we might want to insert their DEFAULT Output HTML if available.
+            // For now, let's open size dialog for all.
+            setSelectedTemplate(template);
+            setSizeStep(true);
+        } else {
+            setSelectedTemplate(template);
+            setSizeStep(true);
+        }
     };
 
-    const confirmSelection = (mode: 'text' | 'background') => {
+    const handleConfirmSize = (size: 'small' | 'medium' | 'large') => {
         if (!selectedTemplate) return;
 
-        if (mode === 'text') {
-            onSelectTemplate(selectedTemplate.content, 'text');
-        } else {
-            // Background Mode
-            // If content is HTML, we convert to SVG foreignObject data URI to use as background image
-            let bgImage = selectedTemplate.content;
-            let bgSize = 'cover';
-            let bgRepeat = 'no-repeat';
+        let content = '';
 
-            if (selectedTemplate.content.trim().startsWith('<div')) {
-                // Convert HTML to SVG Data URI
-                // We need to escape # characters in valid SVG data URIs
-                const svgWidth = 800; // A4 approx width in pixels at standard DPI? or just generic
-                const svgHeight = 1100; // A4 ratio
-                const htmlContent = selectedTemplate.content
-                    .replace(/#/g, '%23') // Escape hex colors
-                    .replace(/"/g, "'"); // Replace double quotes with single (simple hack, better via encoding)
-
-                // Better encoding:
-                const encodedHtml = encodeURIComponent(selectedTemplate.content);
-
-                bgImage = `data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-size:14px; color:black; height:100%;">${encodedHtml}</div></foreignObject></svg>`;
-                bgSize = 'contain';
-                bgRepeat = 'no-repeat';
-            } else if (selectedTemplate.type === 'background') {
-                // It's already a background (gradient or image)
-                bgImage = selectedTemplate.content;
-                bgSize = selectedTemplate.size || 'auto';
-                bgRepeat = 'repeat';
-            }
-
-            const payload = JSON.stringify({
-                image: bgImage,
-                size: bgSize,
-                repeat: bgRepeat
-            });
-            onSelectTemplate(payload, 'background');
+        if (typeof selectedTemplate.content === 'string') {
+            content = selectedTemplate.content;
+        } else if (selectedTemplate.type === 'smart-json') {
+            // For smart templates here, we generate a preview or empty structure
+            // In a real scenario, this might trigger the SmartFormRenderer
+            // But the user asked for "Templates" in the general sense.
+            // Let's generate the HTML from default values if possible
+            content = generateSmartHtml(selectedTemplate, {});
         }
 
+        // Apply Size Wrapper
+        let wrappedContent = content;
+        if (size === 'small') {
+            wrappedContent = `<div style="max-width: 300px; margin: 10px auto;">${content}</div>`;
+        } else if (size === 'medium') {
+            wrappedContent = `<div style="max-width: 600px; margin: 10px auto;">${content}</div>`;
+        } else {
+            wrappedContent = `<div style="width: 100%; margin: 10px 0;">${content}</div>`;
+        }
+
+        onSelectTemplate(wrappedContent, 'text');
+        handleClose();
+    };
+
+    const handleClose = () => {
         setSelectedTemplate(null);
+        setSizeStep(false);
         onClose();
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => { if (!open) setSelectedTemplate(null); onClose(); }}>
-            <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-0 shadow-2xl rounded-3xl">
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+            <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 overflow-hidden bg-white dark:bg-zinc-900 border-0 shadow-2xl rounded-3xl" dir="rtl">
+
                 {/* Header */}
-                <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shadow-sm z-10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
-                            <LayoutTemplate className="w-6 h-6" />
+                <div className="bg-white dark:bg-zinc-900 border-b border-gray-100 dark:border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <LayoutTemplate className="w-5 h-5" />
                         </div>
                         <div>
-                            <DialogTitle className="text-lg font-bold text-gray-800">معرض القوالب</DialogTitle>
-                            <p className="text-xs text-gray-500">اختر نوع الورق أو القالب المناسب</p>
+                            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-gray-100">معرض القوالب</DialogTitle>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">اختر القالب المناسب لملاحظاتك</p>
                         </div>
                     </div>
-                    <Button onClick={() => onClose()} variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:text-red-500">
+                    <Button onClick={handleClose} variant="ghost" className="rounded-full w-8 h-8 p-0">
                         <Plus className="w-5 h-5 rotate-45" />
                     </Button>
                 </div>
 
-                <div className="flex-1 flex flex-col w-full overflow-hidden">
-                    <div className="flex-1 p-0 m-0 overflow-y-auto bg-slate-50/50 custom-scrollbar">
-                        <div className="p-8 space-y-8">
-                            {paperStyles.map((cat, idx) => (
-                                <div key={idx} className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1 h-6 bg-amber-400 rounded-full" />
-                                        <h3 className="font-bold text-gray-700 text-lg">{cat.category}</h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {cat.items.map(item => (
-                                            <button
-                                                key={item.id}
-                                                onClick={() => {
-                                                    const payload = item.content === 'none' ? '' : JSON.stringify({
-                                                        image: item.content,
-                                                        size: item.size || 'auto',
-                                                        repeat: 'repeat'
-                                                    });
-                                                    onSelectTemplate(payload, 'background');
-                                                    onClose();
-                                                }}
-                                                className="group flex flex-col items-center gap-2"
-                                            >
-                                                <div className="w-full aspect-[4/5] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-indigo-300">
-                                                    <div className="w-full h-full opacity-70" style={{ backgroundColor: item.bg, backgroundImage: item.content === 'none' ? 'none' : item.content, backgroundSize: item.size || 'auto' }} />
-                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/10 transition-opacity">
-                                                        <span className="bg-white text-gray-900 text-xs px-3 py-1 rounded-full shadow font-medium">استخدام</span>
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-600 group-hover:text-indigo-600">{item.title}</span>
-                                            </button>
-                                        ))}
-                                    </div>
+                {/* Main Content */}
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Sidebar Categories */}
+                    <div className="w-48 bg-gray-50 dark:bg-zinc-900/50 border-l border-gray-100 dark:border-zinc-800 overflow-y-auto p-4 space-y-1 hidden md:block">
+                        <button
+                            onClick={() => setSelectedCategory('all')}
+                            className={cn(
+                                "w-full text-right px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2",
+                                selectedCategory === 'all'
+                                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
+                            )}
+                        >
+                            الكل
+                        </button>
+                        <div className="text-xs font-semibold text-gray-400 mb-2 px-2 mt-4">التصنيفات</div>
+                        {CATEGORIES.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={cn(
+                                    "w-full text-right px-3 py-2 rounded-lg text-sm transition-colors",
+                                    selectedCategory === cat
+                                        ? "bg-white shadow-sm text-gray-900 font-bold dark:bg-zinc-800 dark:text-gray-100"
+                                        : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
+                                )}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Templates Grid */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-zinc-950/50">
+                        {sizeStep && selectedTemplate ? (
+                            <div className="h-full flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-300">
+                                <h3 className="text-2xl font-bold mb-8 text-gray-800 dark:text-gray-200">اختر حجم القالب</h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl px-4">
+                                    {/* Small */}
+                                    <button
+                                        onClick={() => handleConfirmSize('small')}
+                                        className="flex flex-col items-center gap-4 group"
+                                    >
+                                        <div className="w-full aspect-[3/4] bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-200 dark:border-zinc-700 shadow-sm flex items-center justify-center p-8 transition-all group-hover:border-indigo-500 group-hover:shadow-xl group-hover:-translate-y-2">
+                                            <div className="w-1/2 h-1/3 bg-gray-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-zinc-700" />
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 flex items-center justify-center gap-2">
+                                                <Smartphone className="w-4 h-4" /> صغير (Small)
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">مناسب للهواتف والملاحظات الجانبية</p>
+                                        </div>
+                                    </button>
+
+                                    {/* Medium */}
+                                    <button
+                                        onClick={() => handleConfirmSize('medium')}
+                                        className="flex flex-col items-center gap-4 group"
+                                    >
+                                        <div className="w-full aspect-[3/4] bg-white dark:bg-zinc-900 rounded-2xl border-2 border-indigo-100 dark:border-indigo-900/30 shadow-md ring-4 ring-indigo-50 dark:ring-indigo-900/10 flex items-center justify-center p-8 transition-all group-hover:border-indigo-500 group-hover:shadow-xl group-hover:-translate-y-2">
+                                            <div className="w-3/4 h-1/2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border-2 border-dashed border-indigo-200 dark:border-indigo-800" />
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-indigo-700 dark:text-indigo-400 group-hover:text-indigo-600 flex items-center justify-center gap-2">
+                                                <Grid2X2 className="w-4 h-4" /> متوسط (Medium)
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">الحجم القياسي، مناسب لمعظم الاستخدامات</p>
+                                        </div>
+                                    </button>
+
+                                    {/* Large */}
+                                    <button
+                                        onClick={() => handleConfirmSize('large')}
+                                        className="flex flex-col items-center gap-4 group"
+                                    >
+                                        <div className="w-full aspect-[3/4] bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-200 dark:border-zinc-700 shadow-sm flex items-center justify-center p-4 transition-all group-hover:border-indigo-500 group-hover:shadow-xl group-hover:-translate-y-2">
+                                            <div className="w-full h-full bg-gray-50 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-zinc-700" />
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="font-bold text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 flex items-center justify-center gap-2">
+                                                <Monitor className="w-4 h-4" /> كامل (Full Width)
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">يأخذ عرض الصفحة بالكامل</p>
+                                        </div>
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+
+                                <Button variant="ghost" onClick={() => setSizeStep(false)} className="mt-12">
+                                    رجوع للقائمة
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {filteredTemplates.map((template, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleTemplateClick(template)}
+                                        className="group relative flex flex-col items-start text-right bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-4 hover:shadow-xl hover:border-indigo-300 transition-all duration-300"
+                                    >
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-colors",
+                                            "bg-gray-50 text-gray-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-zinc-800 dark:text-gray-400 dark:group-hover:bg-indigo-900/30 dark:group-hover:text-indigo-400"
+                                        )}>
+                                            {template.icon ? <template.icon size={24} strokeWidth={1.5} /> : <FileText size={24} />}
+                                        </div>
+
+                                        <h3 className="font-bold text-gray-800 dark:text-gray-200 text-sm mb-1 line-clamp-1 group-hover:text-indigo-600">{template.name}</h3>
+                                        <p className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{template.description}</p>
+
+                                        {/* Tag */}
+                                        <span className="absolute top-4 left-4 text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-gray-400">
+                                            {template.category}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
-
-
-                {!selectedTemplate && (
-                    <div className="bg-white border-t p-4 flex justify-between items-center">
-                        <p className="text-xs text-gray-400">يمكنك إنشاء قوالب خاصة بك قريباً...</p>
-                        <Button className="bg-indigo-600 text-white hover:bg-indigo-700">
-                            <Plus className="w-4 h-4 ml-2" />
-                            إنشاء (Create)
-                        </Button>
-                    </div>
-                )}
             </DialogContent>
         </Dialog>
     );

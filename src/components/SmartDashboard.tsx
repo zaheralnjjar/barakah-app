@@ -41,6 +41,7 @@ import { CustomShortcutsGrid } from '@/components/shortcuts/CustomShortcutsGrid'
 import { ShortcutsSettingsDialog } from '@/components/dialogs/ShortcutsSettingsDialog';
 
 import { ApproachingReminderBanner } from './dashboard/ApproachingReminderBanner';
+import { TrackingSummaryStrip } from './tracking/TrackingSummaryStrip';
 import { UnifiedDashboardCard } from './dashboard/UnifiedDashboardCard';
 import { DashboardShopping } from './dashboard/widgets/DashboardShopping';
 import { DashboardLocations } from './dashboard/DashboardLocations';
@@ -245,6 +246,9 @@ const SmartDashboard: React.FC<SmartDashboardProps> = ({ onNavigateToTab, onOpen
 
                         {/* Approaching Reminder Banner (Phase 7) */}
                         <ApproachingReminderBanner />
+
+                        {/* Tracker Summary Strip (Charts) */}
+                        <TrackingSummaryStrip />
 
                         {/* 1. Quick Access Grid (Top Priority) */}
                         <div className="mb-2">
