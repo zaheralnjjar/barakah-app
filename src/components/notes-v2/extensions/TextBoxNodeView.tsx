@@ -24,6 +24,14 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const borderStyle = node.attrs.borderStyle || 'solid';
 
     const handleDrag = (_e: any, data: any) => {
+        // We update attributes only on stop to prevent lag
+        // But visuals should be smooth
+    };
+
+    const handleStop = (_e: any, data: any) => {
+        // data.x/y is the delta from the start of this drag if position is {0,0}
+        // or the total relative to parent if uncontrolled.
+        // Let's use it as total offset from (0,0) of the parent since we use absolute wrapper.
         updateAttributes({ x: data.x, y: data.y });
     };
 
@@ -37,26 +45,20 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
             style={{
                 left: 0,
                 top: 0,
-                transform: `translate(${x}px, ${y}px)`,
-                width: width, // Wrapper needs width too?
+                width: width,
+                height: 0, // Wrapper itself shouldn't take space/block others
+                // transform moved to Draggable
             }}
         >
             <Draggable
                 handle=".drag-handle"
-                position={{ x: 0, y: 0 }} // We manage position via wrapper transform usually in Tiptap node views for absolute? 
-                // Actually, NodeViewWrapper is usually flow content. 
-                // For Floating, we might want to bypass NodeViewWrapper's default relative positioning or use it differently.
-                // Standard Tiptap way for floating: use `node-view-content` inside but the wrapper is the container.
-                // If we want "Free Floating" anywhere on screen, we need to ensure the parent editor has `relative` and this has `absolute`.
-                // Let's assume standard Draggable usage updating x/y which are then applied to the wrapper or the element.
-                // Correct approach for Tiptap Absolutes: attributes x/y translate the element.
-                // Draggable natively uses transform. We should sync that to attributes.
-                onStop={handleDrag}
-            // allowAnyClick={false}
+                position={{ x, y }} // Controlled mode for precision
+                onStop={handleStop}
+                bounds="parent" // Optional: keep inside editor
             >
                 <div
                     className={cn(
-                        "relative group transition-shadow",
+                        "absolute group transition-shadow rounded-lg",
                         selected ? "ring-2 ring-indigo-500 ring-offset-2" : "",
                         isHovered ? "shadow-lg" : "shadow-sm"
                     )}
