@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewContent, NodeViewProps } from '@tiptap/react';
 import Draggable from 'react-draggable';
-import { ResizableBox } from 'react-resizable';
-import { GripVertical, X, Palette, Maximize2, MoreHorizontal } from 'lucide-react';
+import { GripVertical, X, Palette, Maximize2, MoreHorizontal, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import 'react-resizable/css/styles.css';
 
 export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const { node, updateAttributes, deleteNode, selected, editor } = props;
@@ -17,13 +15,13 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     // Attributes
     const x = node.attrs.x || 0;
     const y = node.attrs.y || 0;
-    const width = node.attrs.width || 300;
-    const height = node.attrs.height || 200;
+    const width = node.attrs.width || 794;
+    const height = node.attrs.height || 1123;
     const backgroundColor = node.attrs.backgroundColor || '#ffffff';
     const borderColor = node.attrs.borderColor || '#e2e8f0';
     const borderWidth = node.attrs.borderWidth || 1;
     const borderStyle = node.attrs.borderStyle || 'solid';
-    const baseWidth = node.attrs.baseWidth || 400;
+    const baseWidth = node.attrs.baseWidth || 794;
     const scale = width / baseWidth;
     const editorZoom = (editor.storage as any).textBox?.zoom || 100;
     const dragScale = editorZoom / 100;
@@ -102,8 +100,21 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                 <GripVertical size={14} />
                             </div>
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                {/* New Page Button */}
+                                <button
+                                    onClick={() => {
+                                        editor.chain().focus().insertTextBox({
+                                            x: x,
+                                            y: y + height + 50,
+                                        }).run();
+                                    }}
+                                    className="p-0.5 hover:bg-gray-200 rounded text-gray-500"
+                                    title="صفحة جديدة"
+                                >
+                                    <FilePlus size={12} />
+                                </button>
+
                                 {/* Style Settings Popover */}
-                                {/* ... rest of the toolbar content remains same ... */}
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <button className="p-0.5 hover:bg-gray-200 rounded text-gray-500">
