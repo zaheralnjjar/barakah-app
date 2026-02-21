@@ -3,12 +3,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import React from 'react';
 import { Editor } from '@tiptap/react';
+import { Button } from '@/components/ui/button';
 import {
     Type,
     Palette,
     Clock,
     ChevronDown,
     Minus,
+    Plus,
     LayoutTemplate,
     AlignLeft,
     AlignCenter,
@@ -38,7 +40,10 @@ import {
     Minimize,
     ZoomIn,
     ZoomOut,
-    Search
+    Search,
+    FilePlus,
+    ArrowRight,
+    X
 } from 'lucide-react';
 import {
     Popover,
@@ -56,6 +61,7 @@ interface EditorToolbarProps {
     editor: Editor | null;
     onOpenTemplates?: () => void;
     onExport?: (type: 'image' | 'pdf' | 'word' | 'text') => void;
+    onClose?: () => void;
 
     // External Controls Integration
     folderId?: string | null;
@@ -67,8 +73,8 @@ interface EditorToolbarProps {
     // Voice Recording Integration
     isRecording?: boolean;
     onRecordingClick?: () => void;
-
-
+    voiceTranscript?: string;
+    toolbarPosition?: 'top' | 'bottom';
 
     // Tracker Integration
     onInsertTracker?: () => void;
@@ -76,6 +82,7 @@ interface EditorToolbarProps {
     // Zoom Integration
     zoom?: number;
     onZoomChange?: (newZoom: number) => void;
+    onSearchClick?: () => void;
 
     // Focus Mode Integration
     isFocusMode?: boolean;
@@ -85,15 +92,27 @@ interface EditorToolbarProps {
 }
 
 const fontFamilies = [
-    { name: 'Default', value: 'Inter' },
-    { name: 'Amiri', value: 'Amiri' },
-    { name: 'Cairo', value: 'Cairo' },
-    { name: 'Tajawal', value: 'Tajawal' },
-    { name: 'Arial', value: 'Arial' },
-    { name: 'Courier New', value: 'Courier New' },
-    { name: 'Georgia', value: 'Georgia' },
-    { name: 'Times New Roman', value: 'Times New Roman' },
-    { name: 'Verdana', value: 'Verdana' },
+    { name: 'Default', value: 'Inter', category: 'Global' },
+    // Modern Fonts
+    { name: 'Cairo', value: 'Cairo', category: 'عصرية' },
+    { name: 'Tajawal', value: 'Tajawal', category: 'عصرية' },
+    { name: 'Almarai', value: 'Almarai', category: 'عصرية' },
+    { name: 'Readex Pro', value: 'Readex Pro', category: 'عصرية' },
+    // Classic Fonts
+    { name: 'Amiri', value: 'Amiri', category: 'كلاسيكية' },
+    { name: 'Noto Naskh', value: 'Noto Naskh Arabic', category: 'كلاسيكية' },
+    { name: 'El Messiri', value: 'El Messiri', category: 'كلاسيكية' },
+    { name: 'Lateef', value: 'Lateef', category: 'كلاسيكية' },
+    { name: 'Scheherazade', value: 'Scheherazade New', category: 'كلاسيكية' },
+    { name: 'Harmattan', value: 'Harmattan', category: 'كلاسيكية' },
+    // Handwritten Fonts
+    { name: 'Aref Ruqaa', value: 'Aref Ruqaa', category: 'يدوية' },
+    { name: 'Kalam', value: 'Kalam', category: 'يدوية' },
+    { name: 'Caveat', value: 'Caveat', category: 'يدوية' },
+    // Standard System Fonts
+    { name: 'Arial', value: 'Arial', category: 'النظام' },
+    { name: 'Courier New', value: 'Courier New', category: 'النظام' },
+    { name: 'Times New Roman', value: 'Times New Roman', category: 'النظام' },
 ];
 
 const colors = [
@@ -122,7 +141,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onZoomChange,
     isFocusMode = false,
     onToggleFocusMode,
-    isMobile = false
+    isMobile = false,
+    onClose,
+    onSearchClick
 }) => {
     if (!editor) return null;
 
@@ -131,7 +152,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         const day = now.getDate();
-        // @ts-expect-error type missing
         const month = months[now.getMonth()];
         const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -178,23 +198,35 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                 <ChevronDown className="w-3 h-3 opacity-50" />
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-48 p-1 rounded-xl shadow-xl border-gray-100" align="start">
-                            <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
-                                {fontFamilies.map((font) => (
-                                    <button
-                                        key={font.value}
-                                        onClick={() => editor.chain().focus().setFontFamily(font.value).run()}
-                                        className={`
-                                            flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
-                                            ${editor.isActive('textStyle', { fontFamily: font.value })
-                                                ? 'bg-emerald-50 text-emerald-600 font-bold'
-                                                : 'hover:bg-gray-50 text-gray-700'}
-                                        `}
-                                        style={{ fontFamily: font.value }}
-                                    >
-                                        {font.name}
-                                    </button>
-                                ))}
+                        <PopoverContent className="w-56 p-1 rounded-xl shadow-xl border-gray-100" align="start">
+                            <div className="flex flex-col gap-0.5 max-h-[350px] overflow-y-auto barakah-scrollbar">
+                                {['عصرية', 'كلاسيكية', 'يدوية', 'النظام', 'Global'].map((category) => {
+                                    const categoryFonts = fontFamilies.filter(f => f.category === category);
+                                    if (categoryFonts.length === 0) return null;
+
+                                    return (
+                                        <div key={category} className="mb-2 last:mb-0">
+                                            <div className="px-3 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50/50 mb-1">
+                                                {category}
+                                            </div>
+                                            {categoryFonts.map((font) => (
+                                                <button
+                                                    key={font.value}
+                                                    onClick={() => editor.chain().focus().setFontFamily(font.value).run()}
+                                                    className={`
+                                                        w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
+                                                        ${editor.isActive('textStyle', { fontFamily: font.value })
+                                                            ? 'bg-emerald-50 text-emerald-600 font-bold'
+                                                            : 'hover:bg-gray-50 text-gray-700'}
+                                                    `}
+                                                    style={{ fontFamily: font.value }}
+                                                >
+                                                    {font.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </PopoverContent>
                     </Popover>
@@ -214,7 +246,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                 </span>
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-16 p-1 rounded-xl shadow-xl border-gray-100 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        <PopoverContent className="w-16 p-1 rounded-xl shadow-xl border-gray-100 max-h-[200px] overflow-y-auto barakah-scrollbar">
                             <div className="flex flex-col gap-0.5" dir="rtl">
                                 {Array.from({ length: 21 }, (_, i) => 10 + i).map((size) => (
                                     <button
@@ -423,10 +455,45 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <TooltipContent side="bottom" sideOffset={5}>إدراج مربع نص</TooltipContent>
             </Tooltip>
 
+            {/* New Page Button */}
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <button
+                        onClick={() => (editor as any).chain().focus().insertTextBox({
+                            width: 794,
+                            height: 1123,
+                            baseWidth: 794,
+                        }).run()}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600"
+                    >
+                        <FilePlus className="w-4 h-4" />
+                    </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={5}>إضافة صفحة جديدة</TooltipContent>
+            </Tooltip>
+
             <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
             {/* Mic & Export Actions */}
             <div className="flex items-center gap-1 mr-auto lg:mr-0">
+                {onClose && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onClose}
+                                className="h-8 w-8 sm:h-9 sm:w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl shrink-0"
+                            >
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 rtl:rotate-0" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">خروج من المحرر</TooltipContent>
+                    </Tooltip>
+                )}
+
+                <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />
+
                 {onRecordingClick && (
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -475,6 +542,20 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         </TooltipContent>
                     </Tooltip>
                 )}
+
+                <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button
+                            onClick={onSearchClick}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-all"
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">البحث والاستبدال</TooltipContent>
+                </Tooltip>
 
                 <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 

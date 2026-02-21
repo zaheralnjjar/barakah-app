@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from "@tanstack/react-query";
 import { trackingService } from "@/services/trackingService";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,10 +6,16 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tracker, TrackerEntry } from "@/types/tracking";
 import { cn } from "@/lib/utils";
-import { TrendingUp, CheckCircle2, Activity } from "lucide-react";
+import { TrendingUp, CheckCircle2, Activity, Plus } from "lucide-react";
 import { format, subDays, isSameDay } from "date-fns";
+import { AddEntryDialog } from "./AddEntryDialog";
+import { TrackerDetailsDialog } from "./TrackerDetailsDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function TrackingSummaryStrip() {
+    const [entryDialogTracker, setEntryDialogTracker] = useState<Tracker | null>(null);
+    const [detailsTracker, setDetailsTracker] = useState<Tracker | null>(null);
+
     const { data: trackers, isLoading: isLoadingTrackers } = useQuery({
         queryKey: ['trackers'],
         queryFn: trackingService.getTrackers
@@ -26,16 +32,41 @@ export function TrackingSummaryStrip() {
             <ScrollArea className="w-full whitespace-nowrap rounded-xl border border-gray-100 bg-white/50 backdrop-blur-sm shadow-sm">
                 <div className="flex w-max space-x-2 space-x-reverse p-2">
                     {trackers.map(tracker => (
-                        <TrackerMiniCard key={tracker.id} tracker={tracker} />
+                        <TrackerMiniCard
+                            key={tracker.id}
+                            tracker={tracker}
+                            onClick={() => setDetailsTracker(tracker)}
+                        />
                     ))}
                 </div>
                 <ScrollBar orientation="horizontal" />
             </ScrollArea>
+
+            {/* Dialogs */}
+            {detailsTracker && (
+                <TrackerDetailsDialogWrapper
+                    tracker={detailsTracker}
+                    open={!!detailsTracker}
+                    onOpenChange={(open) => !open && setDetailsTracker(null)}
+                    onAddEntry={() => {
+                        setEntryDialogTracker(detailsTracker);
+                        setDetailsTracker(null);
+                    }}
+                />
+            )}
+
+            {entryDialogTracker && (
+                <AddEntryDialog
+                    open={!!entryDialogTracker}
+                    onOpenChange={(open) => !open && setEntryDialogTracker(null)}
+                    tracker={entryDialogTracker}
+                />
+            )}
         </div>
     );
 }
 
-function TrackerMiniCard({ tracker }: { tracker: Tracker }) {
+function TrackerMiniCard({ tracker, onClick }: { tracker: Tracker, onClick: () => void }) {
     // Fetch history for this tracker specifically for the sparkline
     const { data: history } = useQuery({
         queryKey: ['tracker-history', tracker.id],
@@ -63,9 +94,10 @@ function TrackerMiniCard({ tracker }: { tracker: Tracker }) {
     return (
         <div className="inline-block w-[140px] h-[80px] mr-2 first:mr-0">
             <div className={cn(
-                "h-full w-full rounded-lg border-2 p-2 flex flex-col justify-between transition-all hover:scale-[1.02]",
+                "h-full w-full rounded-lg border-2 p-2 flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer",
                 isCompletedToday ? "bg-opacity-10 border-opacity-50" : "bg-white border-transparent hover:border-gray-200"
             )}
+                onClick={onClick}
                 style={{
                     backgroundColor: isCompletedToday ? `${color}10` : 'white',
                     borderColor: isCompletedToday ? color : undefined
@@ -104,5 +136,22 @@ function TrackerMiniCard({ tracker }: { tracker: Tracker }) {
                 </div>
             </div>
         </div>
+    )
+}
+
+function TrackerDetailsDialogWrapper({ tracker, open, onOpenChange, onAddEntry }: { tracker: Tracker, open: boolean, onOpenChange: (open: boolean) => void, onAddEntry: () => void }) {
+    const { data: entries } = useQuery({
+        queryKey: ['tracker-entries', tracker.id],
+        queryFn: () => trackingService.getHistory(tracker.id, 90)
+    });
+
+    return (
+        <TrackerDetailsDialog
+            tracker={tracker}
+            entries={entries || []}
+            open={open}
+            onOpenChange={onOpenChange}
+            onAddEntry={onAddEntry}
+        />
     )
 }

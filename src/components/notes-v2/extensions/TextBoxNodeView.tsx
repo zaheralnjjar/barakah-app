@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewContent, NodeViewProps } from '@tiptap/react';
 import Draggable from 'react-draggable';
 import { ResizableBox } from 'react-resizable';
-import { GripVertical, X, Palette, Maximize2, MoreHorizontal } from 'lucide-react';
+import { GripVertical, X, Palette, Maximize2, MoreHorizontal, Layers, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
@@ -24,6 +24,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const borderWidth = node.attrs.borderWidth || 1;
     const borderStyle = node.attrs.borderStyle || 'solid';
     const baseWidth = node.attrs.baseWidth || 150;
+    const zIndex = node.attrs.zIndex || 10;
     const scale = width / baseWidth;
     const editorZoom = (editor.storage as any).textBox?.zoom || 100;
     const dragScale = editorZoom / 100;
@@ -58,7 +59,8 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 top: 0,
                 width: width,
                 height: 0,
-                direction: 'ltr', // Force LTR for coordinate consistency
+                zIndex: zIndex,
+                direction: 'ltr',
             }}
         >
             <Draggable
@@ -182,37 +184,76 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                     </PopoverContent>
                                 </Popover>
 
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); deleteNode(); }}
-                                    className="p-0.5 hover:bg-red-100 hover:text-red-500 rounded text-gray-500"
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => updateAttributes({ zIndex: zIndex + 1 })}
+                                    className="h-7 w-7 text-gray-500 hover:text-indigo-600 rounded-md"
                                 >
-                                    <X size={12} />
-                                </button>
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => updateAttributes({ zIndex: Math.max(1, zIndex - 1) })}
+                                    className="h-7 w-7 text-gray-500 hover:text-indigo-600 rounded-md"
+                                >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                </Button>
+
+                                <div className="w-px h-4 bg-gray-100 mx-1" />
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => deleteNode()}
+                                    className="h-7 w-7 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </Button>
                             </div>
                         </div>
 
                         {/* Editor Content Area */}
-                        <ResizableBox
-                            width={width}
-                            height={height}
-                            onResizeStop={handleResize}
-                            minConstraints={[50, 20]} // Allow going down to 20px
-                            maxConstraints={[1000, 2000]}
-                            resizeHandles={['se', 'e', 's', 'sw', 'w', 'nw', 'n', 'ne']}
-                        >
-                            <div
-                                style={{
-                                    transform: `scale(${scale})`,
-                                    transformOrigin: 'top right', // Content alignment in RTL
-                                    width: `${baseWidth}px`,
-                                    height: 'auto',
-                                    minHeight: `${height / scale}px`,
+                        <div className={cn("relative", (isHovered || selected) ? "ring-1 ring-black/5 rounded-lg" : "")}>
+                            <ResizableBox
+                                width={width}
+                                height={height}
+                                onResizeStop={handleResize}
+                                minConstraints={[50, 40]} // Allow going down to 40px
+                                maxConstraints={[1000, 2000]}
+                                resizeHandles={['s', 'e', 'se']}
+                                handle={(handleAxis, ref) => {
+                                    // Only show handles when selected or hovered
+                                    if (!isHovered && !selected) return <div ref={ref} className="hidden" />;
+
+                                    let classes = "absolute bg-white border border-gray-300 shadow-sm z-[60] flex items-center justify-center transition-colors ";
+                                    if (handleAxis === 's') classes += "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-3 cursor-s-resize hover:border-indigo-500 hover:bg-indigo-50 rounded-full";
+                                    if (handleAxis === 'se') classes += "bottom-0 right-0 translate-x-1/2 translate-y-1/2 w-4 h-4 cursor-se-resize hover:border-indigo-500 hover:bg-indigo-50 rounded-full";
+                                    if (handleAxis === 'e') classes += "top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-3 h-8 cursor-e-resize hover:border-indigo-500 hover:bg-indigo-50 rounded-full";
+
+                                    return (
+                                        <div ref={ref} className={classes} onMouseDown={(e) => { e.stopPropagation(); }}>
+                                            {handleAxis === 's' && <div className="w-3 border-t border-b border-gray-400 h-[3px] opacity-70" />}
+                                            {handleAxis === 'e' && <div className="h-3 border-l border-r border-gray-400 w-[3px] opacity-70" />}
+                                        </div>
+                                    );
                                 }}
-                                className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto"
                             >
-                                <NodeViewContent className="min-h-full" />
-                            </div>
-                        </ResizableBox>
+                                <div
+                                    style={{
+                                        transform: `scale(${scale})`,
+                                        transformOrigin: 'top right', // Content alignment in RTL
+                                        width: `${baseWidth}px`,
+                                        height: 'auto',
+                                        minHeight: `${height / scale}px`,
+                                    }}
+                                    className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto"
+                                >
+                                    <NodeViewContent className="min-h-full" />
+                                </div>
+                            </ResizableBox>
+                        </div>
                     </div>
                 </div>
             </Draggable>

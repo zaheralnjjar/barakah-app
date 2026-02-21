@@ -88,23 +88,28 @@ export const TextBoxExtension = Node.create({
                     parsedContent = DOMParser.fromSchema(editor.schema).parse(element).toJSON().content;
                 }
 
-                return commands.insertContent({
-                    type: this.name,
-                    attrs: {
-                        x: attributes.x ?? 50,
-                        y: attributes.y ?? 150,
-                        width: attributes.width ?? 150,
-                        height: attributes.height ?? 50,
-                        baseWidth: attributes.width ?? 150,
-                        ...attributes,
+                return commands.insertContent([
+                    {
+                        type: this.name,
+                        attrs: {
+                            x: attributes.x ?? 50,
+                            y: attributes.y ?? 150,
+                            width: attributes.width ?? 150,
+                            height: attributes.height ?? 50,
+                            baseWidth: attributes.width ?? 150,
+                            ...attributes,
+                        },
+                        content: parsedContent || [
+                            {
+                                type: 'paragraph',
+                                content: [{ type: 'text', text: 'اكتب هنا...' }]
+                            }
+                        ]
                     },
-                    content: parsedContent || [
-                        {
-                            type: 'paragraph',
-                            content: [{ type: 'text', text: 'اكتب هنا...' }]
-                        }
-                    ]
-                });
+                    {
+                        type: 'paragraph'
+                    }
+                ]);
             },
         };
     },

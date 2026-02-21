@@ -3,6 +3,8 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Move, GripHorizontal, Unlock, Lock, GripVertical } from 'lucide-react';
+import { ResizableBox } from 'react-resizable';
+import 'react-resizable/css/styles.css';
 
 const SmartTemplateComponent = (props: any) => {
     const { node, updateAttributes, selected, getPos } = props;
@@ -84,21 +86,27 @@ const SmartTemplateComponent = (props: any) => {
         });
     };
 
+    const boxWidth = node.attrs.width || 400;
+    const boxHeight = node.attrs.height || 200;
+    const baseWidth = node.attrs.baseWidth || 400;
+    const scale = boxWidth / baseWidth;
+
+    const handleResize = (e: any, { size }: any) => {
+        e.stopPropagation();
+        updateAttributes({ width: size.width, height: size.height });
+    };
+
     return (
         <NodeViewWrapper
             ref={contentRef}
-            className={`smart-template-node-view group ${selected ? 'selected' : ''}`}
+            className={`smart-template-node-view group ${selected ? 'selected ring-2 ring-indigo-500 ring-offset-2' : ''}`}
             data-drag-handle=""
             style={{
                 position: isFloating ? 'absolute' : 'relative',
                 left: isFloating ? `${left}px` : 'auto',
                 top: isFloating ? `${top}px` : 'auto',
                 zIndex: isFloating ? 50 : 1, // Higher z-index when floating
-                width: width ? `${width}%` : '100%',
-                maxWidth: '100%',
                 transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
-                outline: selected ? '2px solid #3b82f6' : 'none',
-                outlineOffset: '2px',
                 borderRadius: '8px',
                 userSelect: 'none' // Prevent text selection inside while dragging setup
             }}
@@ -128,25 +136,49 @@ const SmartTemplateComponent = (props: any) => {
                 </button>
             </div>
 
-            {/* Render the actual Smart Template Content */}
-            {/* We must wrap this in a div that handles the HTML injection */}
-            {/* Render the actual Smart Template Content */}
-            {/* Re-create the container that parseHTML stripped away, to preserve layout and click handler access */}
-            <div
-                className="smart-layout-container"
-                data-smart-template-config={encodeURIComponent(JSON.stringify(config || []))}
-                style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'flex-start',
-                    gap: '0px',
-                    width: width ? `${width}%` : '100%',
-                    pointerEvents: isDragging ? 'none' : 'auto',
-                    minHeight: '100px'
-                }}
-            >
-                {/* Inner content from template */}
-                <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: html }} />
+            {/* Render the actual Smart Template Content wrapped in ResizableBox */}
+            <div className="relative">
+                <ResizableBox
+                    width={boxWidth}
+                    height={boxHeight}
+                    onResizeStop={handleResize}
+                    minConstraints={[100, 50]}
+                    maxConstraints={[2000, 4000]}
+                    resizeHandles={['se']}
+                    handle={(handleAxis, ref) => {
+                        if (!selected) return <div ref={ref} className="hidden" />;
+                        return (
+                            <div
+                                ref={ref}
+                                className="absolute bottom-0 right-0 w-4 h-4 bg-white border border-gray-300 shadow-sm z-[60] flex items-center justify-center cursor-se-resize hover:border-indigo-500 hover:bg-indigo-50 rounded-br-lg rounded-tl-lg pointer-events-auto"
+                                style={{ transform: 'translate(50%, 50%)' }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                            >
+                                <div className="w-1.5 h-1.5 border-r border-b border-gray-400" />
+                            </div>
+                        );
+                    }}
+                >
+                    <div
+                        className="smart-layout-container outline-none"
+                        data-smart-template-config={encodeURIComponent(JSON.stringify(config || []))}
+                        style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'flex-start',
+                            gap: '0px',
+                            width: `${baseWidth}px`,
+                            height: 'auto',
+                            minHeight: `${boxHeight / scale}px`,
+                            pointerEvents: isDragging ? 'none' : 'auto',
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top right'
+                        }}
+                    >
+                        {/* Inner content from template */}
+                        <div className="w-full h-full pointer-events-none" dangerouslySetInnerHTML={{ __html: html }} />
+                    </div>
+                </ResizableBox>
             </div>
         </NodeViewWrapper>
     );

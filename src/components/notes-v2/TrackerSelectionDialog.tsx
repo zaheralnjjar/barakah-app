@@ -73,12 +73,25 @@ export const TrackerSelectionDialog: React.FC<TrackerSelectionDialogProps> = ({ 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[425px]" dir="rtl">
-                {/* Header ... */}
-                <DialogHeader>
+                <DialogHeader className="flex flex-row items-center justify-between border-b pb-4">
                     <DialogTitle className="text-right flex items-center gap-2">
                         <Activity className="w-5 h-5 text-indigo-600" />
                         اختر المتتبعات
                     </DialogTitle>
+                    <div className="flex items-center gap-2 mr-auto pl-4">
+                        <Button type="button" variant="secondary" onClick={onClose} size="sm">
+                            إلغاء
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleConfirm}
+                            disabled={selectedTrackerIds.length === 0}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                            size="sm"
+                        >
+                            إدراج ({selectedTrackerIds.length})
+                        </Button>
+                    </div>
                 </DialogHeader>
 
                 <div className="py-4">
@@ -143,21 +156,8 @@ export const TrackerSelectionDialog: React.FC<TrackerSelectionDialogProps> = ({ 
                     </div>
                 </div>
 
-                <DialogFooter className="sm:justify-start gap-2">
-                    <Button type="button" variant="secondary" onClick={onClose}>
-                        إلغاء
-                    </Button>
-                    <Button
-                        type="button"
-                        onClick={handleConfirm}
-                        disabled={selectedTrackerIds.length === 0}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                    >
-                        إدراج ({selectedTrackerIds.length})
-                    </Button>
-                </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };
 
