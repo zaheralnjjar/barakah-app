@@ -670,10 +670,10 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
                     // Mobile Styles
                     isMobile ? "w-[95%] top-4 translate-y-0 rounded-[1.5rem]" :
                         // Desktop Styles
-                        "sm:max-w-[700px] h-[85vh] top-[5%] translate-y-0"
+                        "sm:max-w-[80vw] w-[80vw] h-[80vh] top-[10%] translate-y-0"
                 )}
                 dir="rtl"
-                style={isMobile ? { minHeight: '300px', maxHeight: '85vh' } : { height: '85vh', maxHeight: '95vh', minHeight: '300px' }}
+                style={isMobile ? { minHeight: '300px', maxHeight: '85vh' } : { height: '80vh', maxHeight: '95vh', minHeight: '500px' }}
             >
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
