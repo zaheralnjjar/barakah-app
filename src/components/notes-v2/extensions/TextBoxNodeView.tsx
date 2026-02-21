@@ -26,15 +26,21 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const scale = width / baseWidth;
     const editorZoom = (editor.storage as any).textBox?.zoom || 100;
     const dragScale = editorZoom / 100;
+
+    // Local state for smooth dragging
+    const [dragPos, setDragPos] = useState({ x, y });
+
+    // Sync if Tiptap state changes externally
+    useEffect(() => {
+        setDragPos({ x, y });
+    }, [x, y]);
+
     const handleDrag = (_e: any, data: any) => {
-        // We update attributes only on stop to prevent lag
-        // But visuals should be smooth
+        setDragPos({ x: data.x, y: data.y });
     };
 
     const handleStop = (_e: any, data: any) => {
-        // data.x/y is the delta from the start of this drag if position is {0,0}
-        // or the total relative to parent if uncontrolled.
-        // Let's use it as total offset from (0,0) of the parent since we use absolute wrapper.
+        setDragPos({ x: data.x, y: data.y });
         updateAttributes({ x: data.x, y: data.y });
     };
 
@@ -56,9 +62,9 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
         >
             <Draggable
                 handle=".drag-handle"
-                position={{ x, y }}
+                position={dragPos}
                 onStop={handleStop}
-                onDrag={(e) => e.stopPropagation()}
+                onDrag={handleDrag}
                 scale={dragScale}
             >
                 <div
