@@ -333,7 +333,18 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             StickerExtension,
             SmartTemplateNode,
         ],
-        content: initialContent || '<div data-type="page"><p></p></div>',
+        content: (() => {
+            if (initialContent && initialContent !== '<p></p>') {
+                if (initialContent.includes('data-type="page"')) {
+                    return initialContent;
+                }
+                const fillPs = Array(35).fill('<p></p>').join('');
+                return `<div data-type="page">${initialContent}${fillPs}</div>`;
+            }
+            // New empty note — fill with paragraphs
+            const fillPs = Array(35).fill('<p></p>').join('');
+            return `<div data-type="page">${fillPs}</div>`;
+        })(),
         editable,
         onUpdate: ({ editor }) => {
             onUpdate(editor.getHTML());
