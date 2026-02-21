@@ -60,7 +60,6 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 onStop={handleStop}
                 onDrag={(e) => e.stopPropagation()}
                 scale={dragScale}
-                bounds="parent"
             >
                 <div
                     className={cn(
@@ -108,8 +107,8 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                             {/* Toolbar / Drag Handle (Visible on Hover/Select) */}
                             <div
                                 className={cn(
-                                    "drag-handle h-6 w-full cursor-move flex items-center justify-between px-2 transition-opacity bg-gray-50/80 backdrop-blur-sm border-b border-gray-100/50",
-                                    (isHovered || selected) ? "opacity-100" : "opacity-0"
+                                    "drag-handle h-8 min-h-[32px] w-full cursor-move flex items-center justify-between px-2 transition-opacity bg-gray-50 border-b border-gray-100",
+                                    (isHovered || selected) ? "opacity-100" : "opacity-30 hover:opacity-100"
                                 )}
                             >
                                 <GripVertical size={12} className="text-gray-400" />
