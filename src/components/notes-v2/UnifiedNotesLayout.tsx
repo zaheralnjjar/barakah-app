@@ -134,6 +134,24 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
         }
     }, [location.state]);
 
+    // Listen for global 'open-quick-note' to create and open inline editor
+    useEffect(() => {
+        const handleOpenQuickNote = async (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            const folderId = detail?.folderId || activeFolderId || null;
+            try {
+                const newNote = await createNote({ folder_id: folderId });
+                if (newNote) {
+                    handleSelectNote(newNote);
+                }
+            } catch (err) {
+                console.error('Error creating note from quick-note event:', err);
+            }
+        };
+        window.addEventListener('open-quick-note', handleOpenQuickNote);
+        return () => window.removeEventListener('open-quick-note', handleOpenQuickNote);
+    }, [activeFolderId]);
+
     // Save Settings
     const handleUpdateSettings = (key: string, value: boolean) => {
         const newSettings = { ...settings, [key]: value };
@@ -481,12 +499,15 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                 autoInsertSeparator={settings.autoInsertSeparator}
                                 isBookmarked={false}
                                 onToggleBookmark={async () => {
-                                    // Feature not available in quick_notes
                                     toast({ title: 'غير متوفر', description: 'الإشارات المرجعية غير مدعومة حالياً' });
                                 }}
                                 onClose={() => {
                                     setActiveNote(null);
                                     setViewMode(settings.showFolderGridInitial ? 'grid' : 'list');
+                                }}
+                                noteCategory={activeNote.tags?.[0] || null}
+                                onCategoryChange={async (cat) => {
+                                    await updateNote({ id: activeNote.id, updates: { tags: cat ? [cat] : [] } });
                                 }}
                             />
                         </div>

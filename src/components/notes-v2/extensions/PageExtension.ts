@@ -19,6 +19,10 @@ export const PageExtension = Node.create({
             footer: {
                 default: null,
             },
+            _settingsVersion: {
+                default: 0,
+                rendered: false,
+            },
         };
     },
 

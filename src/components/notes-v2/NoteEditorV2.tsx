@@ -43,6 +43,11 @@ import {
     FileDown,
     RotateCcw,
     Settings2,
+    ZapOff,
+    Briefcase,
+    Heart,
+    Users,
+    Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,6 +143,8 @@ interface NoteEditorV2Props {
     isMobile?: boolean;
     onClose?: () => void;
     onSearchClick?: () => void;
+    noteCategory?: string | null;
+    onCategoryChange?: (category: string | null) => void;
 }
 
 export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
@@ -158,13 +165,17 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     toolbarPosition = 'top',
     isMobile = false,
     onClose,
-    onSearchClick
+    onSearchClick,
+    noteCategory: initialCategory,
+    onCategoryChange,
 }) => {
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
     const [showTemplates, setShowTemplates] = useState(false);
     const [zoom, setZoom] = useState(100);
-    const [pageRuling, setPageRuling] = useState(false);
+    const [pageLayout, setPageLayout] = useState<'blank' | 'ruled' | 'dotted'>('blank');
+    const [rulingSpacing, setRulingSpacing] = useState(32); // px between lines/dots
+    const [noteCategory, setNoteCategory] = useState<string | null>(initialCategory || null);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [replaceTerm, setReplaceTerm] = useState('');
@@ -173,6 +184,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     // Page settings
     const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
     const [pageMargin, setPageMargin] = useState(20); // mm
+    const [pageBorder, setPageBorder] = useState<'none' | 'simple' | 'double' | 'dashed' | 'thick' | 'decorative'>('none');
 
     const getSuggestionItems = ({ query }: { query: string }) => {
         return [
@@ -222,6 +234,11 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 icon: <Square size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).insertTextBox().run();
+                    setTimeout(() => {
+                        const boxes = document.querySelectorAll('[data-type="textBox"]');
+                        const lastBox = boxes[boxes.length - 1];
+                        if (lastBox) lastBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
                 },
             },
             {
@@ -261,6 +278,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             content: fillParagraphs
                         })
                         .run();
+
+                    // Scroll the new page into center of view
+                    setTimeout(() => {
+                        const pages = document.querySelectorAll('.page-node-view');
+                        const lastPage = pages[pages.length - 1];
+                        if (lastPage) {
+                            lastPage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }, 100);
                 },
             },
             {
@@ -365,16 +391,32 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             }
             if ((editor.storage as any).page) {
                 (editor.storage as any).page.zoom = zoom;
-                (editor.storage as any).page.ruling = pageRuling;
+                (editor.storage as any).page.layout = pageLayout;
+                (editor.storage as any).page.rulingSpacing = rulingSpacing;
                 (editor.storage as any).page.background = pageBackground;
                 (editor.storage as any).page.backgroundColor = backgroundColor;
                 (editor.storage as any).page.orientation = orientation;
                 (editor.storage as any).page.margin = pageMargin;
+                (editor.storage as any).page.border = pageBorder;
             }
-            // Force re-render of page nodes when settings change
-            editor.view.dispatch(editor.view.state.tr);
+            // Force re-render of ALL page nodes by updating a dummy attribute
+            const { tr } = editor.state;
+            let modified = false;
+            editor.state.doc.descendants((node, pos) => {
+                if (node.type.name === 'page') {
+                    tr.setNodeMarkup(pos, undefined, {
+                        ...node.attrs,
+                        _settingsVersion: Date.now(),
+                    });
+                    modified = true;
+                }
+                return true;
+            });
+            if (modified) {
+                editor.view.dispatch(tr);
+            }
         }
-    }, [zoom, pageRuling, pageBackground, backgroundColor, orientation, pageMargin, editor]);
+    }, [zoom, pageLayout, rulingSpacing, pageBackground, backgroundColor, orientation, pageMargin, pageBorder, editor]);
 
     const calculateNextTextBoxPosition = () => {
         if (!editor) return { x: 80, y: 150 };
@@ -428,10 +470,32 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         setZoom(Math.max(50, Math.min(130, newZoom)));
     };
 
-    // Helper: find insertion position INSIDE the last page node
+    // Helper: find insertion position - prefer cursor position, fallback to end of last page
     const getInsertPosInsidePage = (): number => {
         if (!editor) return 0;
-        const { doc } = editor.state;
+        const { doc, selection } = editor.state;
+
+        // First, try to use the current cursor position
+        const cursorPos = selection.$anchor.pos;
+
+        // Check if cursor is inside a page node
+        let isInsidePage = false;
+        doc.descendants((node, pos) => {
+            if (node.type.name === 'page') {
+                const endPos = pos + node.nodeSize;
+                if (cursorPos >= pos && cursorPos <= endPos) {
+                    isInsidePage = true;
+                }
+            }
+            return true;
+        });
+
+        if (isInsidePage) {
+            // Insert at cursor position
+            return cursorPos;
+        }
+
+        // Fallback: end of last page
         let lastPagePos = -1;
         let lastPageNode: any = null;
         doc.descendants((node, pos) => {
@@ -442,7 +506,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             return true;
         });
         if (lastPagePos >= 0 && lastPageNode) {
-            // Insert just before the closing of the page node
             return lastPagePos + lastPageNode.nodeSize - 1;
         }
         // Fallback: end of document
@@ -456,6 +519,46 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             handleZoomChange(zoom - delta * 0.5);
         }
     };
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const mod = e.metaKey || e.ctrlKey;
+            if (!mod) return;
+
+            switch (e.key) {
+                case '=':
+                case '+':
+                    e.preventDefault();
+                    handleZoomChange(zoom + 10);
+                    break;
+                case '-':
+                    e.preventDefault();
+                    handleZoomChange(zoom - 10);
+                    break;
+                case '0':
+                    e.preventDefault();
+                    handleZoomChange(100);
+                    break;
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    // Content auto-saves on change, show toast
+                    toast({ title: '✅ تم الحفظ تلقائياً' });
+                    break;
+                case 'f':
+                case 'F':
+                    if (!e.shiftKey) {
+                        e.preventDefault();
+                        setShowSearch(prev => !prev);
+                    }
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [zoom]);
 
     useEffect(() => {
         if (editor && initialContent && autoInsertSeparator) {
@@ -509,7 +612,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         if (!editor) return;
         if (type === 'background') {
             setPageBackground(content);
-            setPageRuling(false);
+            setPageLayout('blank');
         } else {
             const insertPos = getInsertPosInsidePage();
             editor.chain().focus().insertContentAt(insertPos, {
@@ -518,6 +621,9 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     html: content,
                     left: 0,
                     top: 0,
+                    width: 400,
+                    baseWidth: 400,
+                    height: 200,
                     isFloating: false
                 }
             }).run();
@@ -544,6 +650,12 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 }
             }).run();
         });
+        // Scroll to the inserted element
+        setTimeout(() => {
+            const trackerEls = document.querySelectorAll('[data-type="trackerEmbed"]');
+            const lastEl = trackerEls[trackerEls.length - 1];
+            if (lastEl) lastEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     };
 
     const handleAddPage = () => {
@@ -567,6 +679,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 content: fillParagraphs
             })
             .run();
+
+        // Scroll the new page into center of view
+        setTimeout(() => {
+            const pages = document.querySelectorAll('.page-node-view');
+            const lastPage = pages[pages.length - 1];
+            if (lastPage) lastPage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     };
 
     const handleExport = async (type: 'image' | 'pdf' | 'word' | 'text') => {
@@ -616,10 +735,54 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }
     };
 
+    const CATEGORIES = [
+        { id: 'distraction', label: 'تشتت', icon: ZapOff, color: 'text-red-500', bg: 'bg-red-50', activeBg: 'bg-red-500' },
+        { id: 'work', label: 'عمل', icon: Briefcase, color: 'text-blue-500', bg: 'bg-blue-50', activeBg: 'bg-blue-500' },
+        { id: 'dawah', label: 'دعوة', icon: Heart, color: 'text-green-500', bg: 'bg-green-50', activeBg: 'bg-green-500' },
+        { id: 'social', label: 'اجتماعي', icon: Users, color: 'text-purple-500', bg: 'bg-purple-50', activeBg: 'bg-purple-500' },
+        { id: 'family', label: 'عائلة', icon: Home, color: 'text-orange-500', bg: 'bg-orange-50', activeBg: 'bg-orange-500' },
+    ];
+
+    const handleCategoryChange = (catId: string | null) => {
+        setNoteCategory(catId);
+        onCategoryChange?.(catId);
+    };
+
     return (
         <div className="h-full w-full flex flex-col bg-slate-100 overflow-hidden" dir="rtl">
-            {/* Top toolbar */}
-            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-[20] shadow-sm relative">
+            {/* Category strip */}
+            <div className="bg-white border-b border-gray-100 px-3 py-1 flex items-center gap-1 overflow-x-auto shrink-0 z-[21]" onMouseDown={e => e.preventDefault()}>
+                <button
+                    onClick={() => handleCategoryChange(null)}
+                    className={cn(
+                        "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 border",
+                        !noteCategory
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                            : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
+                    )}
+                >
+                    <FileText className="w-3 h-3" />
+                    <span>ملاحظة</span>
+                </button>
+                {CATEGORIES.map(cat => (
+                    <button
+                        key={cat.id}
+                        onClick={() => handleCategoryChange(noteCategory === cat.id ? null : cat.id)}
+                        className={cn(
+                            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 border",
+                            noteCategory === cat.id
+                                ? `${cat.activeBg} text-white border-transparent shadow-sm`
+                                : `bg-white ${cat.color} border-gray-100 hover:${cat.bg}`
+                        )}
+                    >
+                        <cat.icon className="w-3 h-3" />
+                        <span>{cat.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Top toolbar - onMouseDown preventDefault keeps text selection */}
+            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-[20] shadow-sm relative" onMouseDown={e => { if ((e.target as HTMLElement).closest('input, select, [role="slider"]')) return; e.preventDefault(); }}>
                 <div className="flex-1 overflow-x-auto overflow-y-visible pb-1" style={{ scrollbarWidth: 'thin' }}>
                     <EditorToolbar
                         editor={editor}
@@ -706,18 +869,83 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                 </div>
                             </div>
 
-                            {/* Ruling */}
-                            <div className="flex items-center justify-between">
-                                <label className="text-[10px] text-gray-400">خطوط مسطرة</label>
-                                <button
-                                    onClick={() => setPageRuling(!pageRuling)}
-                                    className={cn(
-                                        "w-9 h-5 rounded-full transition-colors flex items-center px-0.5",
-                                        pageRuling ? "bg-indigo-500 justify-end" : "bg-gray-300 justify-start"
-                                    )}
-                                >
-                                    <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-                                </button>
+                            {/* Page Layout */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">تخطيط الصفحة</label>
+                                <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
+                                    {([
+                                        { id: 'blank' as const, label: 'فارغ', icon: '☐' },
+                                        { id: 'ruled' as const, label: 'مسطر', icon: '☰' },
+                                        { id: 'dotted' as const, label: 'نقطي', icon: '⠿' },
+                                    ]).map(lt => (
+                                        <button
+                                            key={lt.id}
+                                            onClick={() => setPageLayout(lt.id)}
+                                            className={cn(
+                                                "flex-1 h-7 rounded text-[10px] flex items-center justify-center gap-0.5",
+                                                pageLayout === lt.id ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            <span className="text-sm">{lt.icon}</span>
+                                            {lt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Spacing - only shown when layout is not blank */}
+                            {pageLayout !== 'blank' && (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-gray-400">تباعد {pageLayout === 'ruled' ? 'السطور' : 'النقاط'} ({rulingSpacing}px)</label>
+                                    <Slider
+                                        value={[rulingSpacing]}
+                                        min={16}
+                                        max={64}
+                                        step={2}
+                                        onValueChange={([val]) => setRulingSpacing(val)}
+                                    />
+                                    <div className="flex gap-1 mt-1">
+                                        {[{ label: 'ضيق', val: 20 }, { label: 'عادي', val: 32 }, { label: 'واسع', val: 48 }].map(p => (
+                                            <button
+                                                key={p.val}
+                                                onClick={() => setRulingSpacing(p.val)}
+                                                className={cn(
+                                                    "flex-1 h-6 text-[10px] rounded",
+                                                    rulingSpacing === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                                )}
+                                            >
+                                                {p.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Page Border */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">حدود الصفحة</label>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {([
+                                        { id: 'none' as const, label: 'بدون', preview: 'border-transparent' },
+                                        { id: 'simple' as const, label: 'بسيط', preview: 'border-gray-400' },
+                                        { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
+                                        { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
+                                        { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
+                                        { id: 'decorative' as const, label: 'زخرفي', preview: 'border-indigo-400 border-double border-[3px]' },
+                                    ]).map(b => (
+                                        <button
+                                            key={b.id}
+                                            onClick={() => setPageBorder(b.id)}
+                                            className={cn(
+                                                "h-10 rounded flex flex-col items-center justify-center gap-0.5 transition-all",
+                                                pageBorder === b.id ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            <div className={cn("w-5 h-6 rounded-sm border-2", b.preview)} />
+                                            <span className="text-[8px] text-gray-500">{b.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </PopoverContent>

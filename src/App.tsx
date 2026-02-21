@@ -43,7 +43,7 @@ import LocationsPage from "@/pages/LocationsPage";
 import { MultiActionFAB } from '@/components/MultiActionFAB';
 import { isAndroid } from '@/utils/platformDetection';
 import { useState } from 'react';
-import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
+// QuickNoteDialog removed - notes now open inline in UnifiedNotesLayout
 import { LocationShortcutListener } from "@/components/LocationShortcutListener";
 import { ShortcutDialogs } from "@/components/dashboard/ShortcutDialogs";
 import { NotificationManager } from './services/NotificationManager';
@@ -171,30 +171,32 @@ const App = () => {
 
   // Initialize Notification Listener
 
-  // Global QuickNote Dialog handling
-  const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
-  const [quickNoteTag, setQuickNoteTag] = useState<string | undefined>(undefined);
-  const [quickNoteFolder, setQuickNoteFolder] = useState<string | null>(null);
-  const [quickNoteAutoRecord, setQuickNoteAutoRecord] = useState(false);
-  const [quickNoteMode, setQuickNoteMode] = useState<'note' | 'activity'>('note');
+  // Global QuickNote - now handled by UnifiedNotesLayout inline (no dialog)
 
   useEffect(() => {
     const handleOpenQuickNote = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setQuickNoteTag(detail?.tag || (detail?.type === 'brain_dump' ? 'تفريغ' : undefined));
-      setQuickNoteFolder(detail?.folderId || null);
-      setQuickNoteAutoRecord(detail?.autoStartRecording || false);
-      setQuickNoteMode(detail?.mode || 'note');
-      setIsQuickNoteOpen(true);
+      // Skip if this event was re-dispatched after navigation (meant for UnifiedNotesLayout)
+      if (detail?._fromNav) return;
+      // Navigate to notes page - UnifiedNotesLayout will handle creating the note
+      const currentHash = window.location.hash;
+      if (!currentHash.includes('notes-v2')) {
+        // Navigate to notes-v2 first, then re-dispatch after a short delay
+        window.location.hash = '#/notes-v2';
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { ...detail, _fromNav: true } }));
+        }, 500);
+      }
+      // If already on notes-v2, the UnifiedNotesLayout listener handles it
     };
 
     const handleOpenDistraction = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      // Distraction Logic
-      setQuickNoteMode('activity');
-      setQuickNoteFolder(null);
-      setQuickNoteAutoRecord(false);
-      setIsQuickNoteOpen(true);
+      // Navigate to notes and create a distraction note
+      window.location.hash = '#/notes-v2';
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', tag: 'تشتت' } }));
+      }, 500);
     };
 
     window.addEventListener('open-quick-note', handleOpenQuickNote);
@@ -277,15 +279,6 @@ const App = () => {
               />
             )}
 
-            {/* Global Note Dialog for Voice/Quick Notes */}
-            <QuickNoteDialog
-              isOpen={isQuickNoteOpen}
-              onClose={() => setIsQuickNoteOpen(false)}
-              defaultTag={quickNoteTag}
-              initialMode={quickNoteMode}
-              initialFolderId={quickNoteFolder}
-              autoStartRecording={quickNoteAutoRecord}
-            />
           </HashRouter>
         </ErrorBoundary>
       </TooltipProvider>

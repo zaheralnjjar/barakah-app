@@ -78,6 +78,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
 
     // Keep controls visible when hovered, selected, OR when a popover is open
     const showControls = isHovered || selected || popoverOpen;
+    const [isDragging, setIsDragging] = useState(false);
 
     return (
         <NodeViewWrapper
@@ -87,22 +88,27 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 top: 0,
                 width: width,
                 height: 0,
-                zIndex: zIndex,
+                zIndex: isDragging ? 9999 : zIndex,
                 direction: 'ltr',
             }}
         >
             <Draggable
                 nodeRef={nodeRef}
-                handle=".drag-handle"
+                handle=".drag-zone"
                 position={dragPos}
-                onStop={handleStop}
+                onStart={() => setIsDragging(true)}
+                onStop={(e, data) => { setIsDragging(false); handleStop(e, data); }}
                 onDrag={handleDrag}
                 scale={dragScale}
             >
                 <div
                     ref={nodeRef}
-                    className="absolute group overflow-visible"
-                    style={{ paddingTop: '40px', marginTop: '-40px' }}
+                    className={cn("absolute group overflow-visible", isDragging && "ring-2 ring-indigo-400/50 rounded-lg")}
+                    style={{
+                        paddingTop: '40px',
+                        marginTop: '-40px',
+                        willChange: isDragging ? 'transform' : 'auto',
+                    }}
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                 >
@@ -111,11 +117,12 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                         contentEditable={false}
                         onMouseEnter={handleMouseEnter}
                         className={cn(
-                            "absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
+                            "drag-zone absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all cursor-grab active:cursor-grabbing",
+                            isDragging && "shadow-xl bg-indigo-50 border-indigo-300",
                             showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
                         )}
                     >
-                        <div className="drag-handle cursor-move p-1 hover:bg-gray-100 rounded text-gray-400">
+                        <div className="p-1 text-gray-400">
                             <GripVertical size={14} />
                         </div>
 

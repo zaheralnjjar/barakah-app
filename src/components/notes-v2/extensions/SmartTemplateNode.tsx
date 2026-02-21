@@ -85,14 +85,14 @@ const SmartTemplateComponent = (props: any) => {
         });
     };
 
-    const boxWidth = node.attrs.width || 400;
+    const boxWidth = node.attrs.width || node.attrs.baseWidth || 400;
     const boxHeight = node.attrs.height || 200;
     const baseWidth = node.attrs.baseWidth || 400;
-    const scale = boxWidth / baseWidth;
+    const scale = Math.max(0.1, boxWidth / baseWidth);
 
     const handleResize = (e: any, { size }: any) => {
         e.stopPropagation();
-        updateAttributes({ width: size.width, height: size.height });
+        updateAttributes({ width: Math.max(50, size.width), height: Math.max(30, size.height) });
     };
 
     const showControls = selected || false;
@@ -330,9 +330,9 @@ export const SmartTemplateNode = Node.create({
                 }),
             },
             width: {
-                default: 100,
+                default: 400,
                 renderHTML: (attributes) => ({
-                    style: `width: ${attributes.width}%`,
+                    style: `width: ${attributes.width}px`,
                 }),
             },
             height: {

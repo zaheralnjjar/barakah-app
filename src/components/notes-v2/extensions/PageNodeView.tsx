@@ -23,11 +23,13 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
     // Values from storage
     const storage = (editor.storage as any).page || {};
     const zoom = storage.zoom || 100;
-    const pageRuling = storage.ruling || false;
+    const pageLayout = storage.layout || 'blank'; // 'blank' | 'ruled' | 'dotted'
+    const rulingSpacing = storage.rulingSpacing || 32;
     const pageBackground = storage.background || null;
     const backgroundColor = storage.backgroundColor || '#ffffff';
     const orientation = storage.orientation || 'portrait';
     const margin = storage.margin ?? 20;
+    const pageBorder = storage.border || 'none';
 
     // A4 dimensions in px (at 96dpi: 210mm ≈ 794px, 297mm ≈ 1123px)
     const pageWidthPx = orientation === 'portrait' ? 794 : 1123;
@@ -37,6 +39,38 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
     // The rendered dimensions after scale
     const renderedWidth = pageWidthPx * scale;
     const renderedHeight = pageHeightPx * scale;
+
+    // Generate background based on layout type
+    const getLayoutBackground = (): React.CSSProperties => {
+        const sp = rulingSpacing;
+        if (pageLayout === 'ruled') {
+            return {
+                backgroundImage: `repeating-linear-gradient(transparent, transparent ${sp - 1}px, #d1d5db40 ${sp - 1}px, #d1d5db40 ${sp}px)`,
+                backgroundAttachment: 'local',
+                lineHeight: `${sp}px`,
+            };
+        }
+        if (pageLayout === 'dotted') {
+            return {
+                backgroundImage: `radial-gradient(circle, #c0c4cc 0.8px, transparent 0.8px)`,
+                backgroundSize: `${sp}px ${sp}px`,
+                backgroundAttachment: 'local',
+            };
+        }
+        return {};
+    };
+
+    // Generate border style
+    const getBorderStyle = (): React.CSSProperties => {
+        switch (pageBorder) {
+            case 'simple': return { border: '2px solid #9ca3af' };
+            case 'double': return { border: '4px double #6b7280' };
+            case 'dashed': return { border: '2px dashed #9ca3af' };
+            case 'thick': return { border: '4px solid #4b5563' };
+            case 'decorative': return { border: '4px double #6366f1', boxShadow: 'inset 0 0 0 4px #ffffff, inset 0 0 0 6px #a5b4fc' };
+            default: return {};
+        }
+    };
 
     return (
         <NodeViewWrapper
@@ -58,8 +92,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                 {/* The actual A4 page */}
                 <div
                     className={cn(
-                        "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-gray-200/80 transition-colors duration-300 relative",
-                        pageRuling ? 'ruled-paper' : '',
+                        "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-colors duration-300 relative",
+                        pageBorder === 'none' && "border border-gray-200/80",
                     )}
                     style={(() => {
                         const baseStyle: React.CSSProperties = {
@@ -92,13 +126,6 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                                 backgroundAttachment: 'local',
                                 backgroundRepeat: bgRepeat,
                             };
-                        } else if (pageRuling) {
-                            return {
-                                ...baseStyle,
-                                backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
-                                backgroundAttachment: 'local',
-                                lineHeight: '32px',
-                            };
                         }
                         return baseStyle;
                     })()}
@@ -119,7 +146,18 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         <span>{new Date().toLocaleDateString('ar-SA')}</span>
                     </div>
 
-                    <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl mt-6 min-h-[200px]" />
+                    {/* Inner bordered area (borders inside margins) */}
+                    <div
+                        style={{
+                            ...getBorderStyle(),
+                            ...getLayoutBackground(),
+                            minHeight: '95%',
+                            padding: pageBorder !== 'none' ? '8px' : '0',
+                            marginTop: '20px',
+                        }}
+                    >
+                        <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl min-h-[200px]" />
+                    </div>
 
                     {/* Footer */}
                     <div

@@ -48,7 +48,7 @@ import { DashboardLocations } from './dashboard/DashboardLocations';
 import { DashboardParking } from './dashboard/widgets/DashboardParking';
 import { GlobalSearchDialog } from './GlobalSearchDialog';
 import { MasterAgenda } from './dashboard/MasterAgenda';
-import { QuickNoteDialog } from '@/components/notes-v2/QuickNoteDialog';
+// QuickNoteDialog removed - notes now open inline
 import { ParkingFloatingWidget } from './dashboard/ParkingFloatingWidget';
 import { Badge } from '@/components/ui/badge';
 import { getActionById, AVAILABLE_ACTIONS } from '@/constants/actionDefinitions';

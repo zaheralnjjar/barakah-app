@@ -6,7 +6,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tracker, TrackerEntry } from "@/types/tracking";
 import { cn } from "@/lib/utils";
-import { TrendingUp, CheckCircle2, Activity, Plus } from "lucide-react";
+import { TrendingUp, CheckCircle2, Activity, Plus, Settings } from "lucide-react";
 import { format, subDays, isSameDay } from "date-fns";
 import { AddEntryDialog } from "./AddEntryDialog";
 import { TrackerDetailsDialog } from "./TrackerDetailsDialog";
@@ -15,6 +15,25 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 export function TrackingSummaryStrip() {
     const [entryDialogTracker, setEntryDialogTracker] = useState<Tracker | null>(null);
     const [detailsTracker, setDetailsTracker] = useState<Tracker | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
+
+    // Load visible trackers from localStorage
+    const [hiddenTrackerIds, setHiddenTrackerIds] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('dashboard-hidden-trackers');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+
+    const toggleTrackerVisibility = (trackerId: string) => {
+        setHiddenTrackerIds(prev => {
+            const next = prev.includes(trackerId)
+                ? prev.filter(id => id !== trackerId)
+                : [...prev, trackerId];
+            localStorage.setItem('dashboard-hidden-trackers', JSON.stringify(next));
+            return next;
+        });
+    };
 
     const { data: trackers, isLoading: isLoadingTrackers } = useQuery({
         queryKey: ['trackers'],
@@ -27,20 +46,73 @@ export function TrackingSummaryStrip() {
 
     if (!trackers || trackers.length === 0) return null;
 
+    const visibleTrackers = trackers.filter(t => !hiddenTrackerIds.includes(t.id));
+
     return (
         <div className="w-full mb-3 animate-in fade-in slide-in-from-top-4 duration-700">
             <ScrollArea className="w-full whitespace-nowrap rounded-xl border border-gray-100 bg-white/50 backdrop-blur-sm shadow-sm">
                 <div className="flex w-max space-x-2 space-x-reverse p-2">
-                    {trackers.map(tracker => (
+                    {visibleTrackers.map(tracker => (
                         <TrackerMiniCard
                             key={tracker.id}
                             tracker={tracker}
                             onClick={() => setDetailsTracker(tracker)}
                         />
                     ))}
+                    {/* Settings toggle button */}
+                    <div className="inline-flex items-center justify-center w-[36px] h-[80px] shrink-0">
+                        <button
+                            onClick={() => setShowSettings(!showSettings)}
+                            className={cn(
+                                "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                                showSettings
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-gray-100 hover:bg-gray-200 text-gray-400"
+                            )}
+                            title="إدارة المتتبعات"
+                        >
+                            <Settings className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                 </div>
                 <ScrollBar orientation="horizontal" />
             </ScrollArea>
+
+            {/* Tracker visibility settings */}
+            {showSettings && (
+                <div className="mt-2 p-3 bg-white rounded-xl border border-gray-100 shadow-md animate-in slide-in-from-top-2 duration-200" dir="rtl">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-gray-600">إدارة المتتبعات المعروضة</span>
+                        <button
+                            onClick={() => setShowSettings(false)}
+                            className="text-[10px] text-gray-400 hover:text-gray-600"
+                        >
+                            إغلاق ✕
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {trackers.map(tracker => {
+                            const isVisible = !hiddenTrackerIds.includes(tracker.id);
+                            return (
+                                <button
+                                    key={tracker.id}
+                                    onClick={() => toggleTrackerVisibility(tracker.id)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                                        isVisible
+                                            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                            : "bg-gray-50 border-gray-200 text-gray-400"
+                                    )}
+                                >
+                                    <span className="text-sm">{tracker.icon}</span>
+                                    <span className="truncate">{tracker.name}</span>
+                                    {isVisible && <CheckCircle2 className="w-3 h-3 mr-auto text-emerald-500" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Dialogs */}
             {detailsTracker && (

@@ -62,6 +62,8 @@ interface QuickNoteFormProps {
     duration: string;
     setDuration: (val: string) => void;
     voiceTranscript: string;
+    isMaximized: boolean;
+    setIsMaximized: (val: boolean) => void;
 }
 
 const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
@@ -75,7 +77,8 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
     isRecording, startRecording, stopRecording,
     onClose, handleSave, isLoading,
     folders, duration, setDuration,
-    voiceTranscript, isMobile
+    voiceTranscript, isMobile,
+    isMaximized, setIsMaximized
 }) => {
     // Track where to insert text
     const lastFocusedField = useRef<'title' | 'content'>('title');
@@ -165,25 +168,49 @@ const QuickNoteForm: React.FC<QuickNoteFormProps> = ({
                     <>
                         {/* Row 1: Actions & Title */}
                         <div className="px-4 py-2 flex items-center justify-between gap-3">
-                            {/* Header Actions (Save/Cancel) */}
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    onClick={handleSave}
-                                    variant="ghost"
-                                    size="sm"
-                                    className={cn("h-9 w-9 p-0 rounded-full", title || content ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-gray-300")}
-                                    disabled={isLoading || (!title && !content)}
-                                >
-                                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5.5 h-5.5" />}
-                                </Button>
-                                <Button
-                                    onClick={onClose}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-9 w-9 p-0 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                >
-                                    <X className="w-5.5 h-5.5" />
-                                </Button>
+                            {/* macOS Traffic Light Buttons */}
+                            <div className="flex items-center gap-1.5">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={isLoading || (!title && !content)}
+                                            className={cn(
+                                                "w-[14px] h-[14px] rounded-full transition-all flex items-center justify-center group relative",
+                                                title || content ? "bg-[#2ac940] hover:bg-[#22b838] shadow-sm" : "bg-gray-300"
+                                            )}
+                                        >
+                                            {isLoading ? (
+                                                <Loader2 className="w-2 h-2 animate-spin text-white" />
+                                            ) : (
+                                                <span className="text-[8px] text-green-900 opacity-0 group-hover:opacity-100 font-bold">⤺</span>
+                                            )}
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">حفظ</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={() => setIsMaximized(!isMaximized)}
+                                            className="w-[14px] h-[14px] rounded-full bg-[#febc2e] hover:bg-[#e5a829] transition-all flex items-center justify-center group shadow-sm"
+                                        >
+                                            <span className="text-[8px] text-yellow-900 opacity-0 group-hover:opacity-100 font-bold">−</span>
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">{isMaximized ? 'تصغير' : 'تكبير'}</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={onClose}
+                                            className="w-[14px] h-[14px] rounded-full bg-[#ff5f57] hover:bg-[#e5453e] transition-all flex items-center justify-center group shadow-sm"
+                                        >
+                                            <span className="text-[8px] text-red-900 opacity-0 group-hover:opacity-100 font-bold">✕</span>
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-xs">إغلاق</TooltipContent>
+                                </Tooltip>
                             </div>
 
                             {/* Title Input */}
@@ -384,6 +411,7 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
     const [color, setColor] = useState('#FFFFFF');
     const [isMobile, setIsMobile] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isMaximized, setIsMaximized] = useState(false);
 
     // Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -659,21 +687,24 @@ export const QuickNoteDialog: React.FC<QuickNoteDialogProps> = ({ isOpen, onClos
         duration: durationInput,
         setDuration: handleDurationChange,
         onFieldFocus: (field: 'title' | 'content') => focusedFieldRef.current = field,
-        voiceTranscript
+        voiceTranscript,
+        isMaximized, setIsMaximized
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent
                 className={cn(
-                    "p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden",
+                    "p-0 flex flex-col bg-transparent border-none shadow-2xl resize-y overflow-hidden transition-all duration-300",
                     // Mobile Styles
                     isMobile ? "w-[95%] top-4 translate-y-0 rounded-[1.5rem]" :
                         // Desktop Styles
-                        "sm:max-w-[90vw] w-[90vw] h-[90vh] top-[5%] translate-y-0"
+                        isMaximized
+                            ? "sm:max-w-[100vw] w-[100vw] h-[100vh] top-0 left-0 translate-x-0 translate-y-0 rounded-none"
+                            : "sm:max-w-[90vw] w-[90vw] h-[90vh] top-[5%] translate-y-0"
                 )}
                 dir="rtl"
-                style={isMobile ? { minHeight: '300px', maxHeight: '85vh' } : { height: '80vh', maxHeight: '95vh', minHeight: '500px' }}
+                style={isMobile ? { minHeight: '300px', maxHeight: '85vh' } : isMaximized ? { height: '100vh', maxHeight: '100vh' } : { height: '80vh', maxHeight: '95vh', minHeight: '500px' }}
             >
                 <DialogHeader className="sr-only">
                     <DialogTitle>ملاحظة جديدة</DialogTitle>
