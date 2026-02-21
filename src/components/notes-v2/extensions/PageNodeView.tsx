@@ -29,26 +29,46 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
     const orientation = storage.orientation || 'portrait';
     const margin = storage.margin ?? 20;
 
-    const pageWidth = orientation === 'portrait' ? '210mm' : '297mm';
-    const pageHeight = orientation === 'portrait' ? '297mm' : '210mm';
+    // A4 dimensions in px (at 96dpi: 210mm ≈ 794px, 297mm ≈ 1123px)
+    const pageWidthPx = orientation === 'portrait' ? 794 : 1123;
+    const pageHeightPx = orientation === 'portrait' ? 1123 : 794;
+    const scale = zoom / 100;
+
+    // The rendered dimensions after scale
+    const renderedWidth = pageWidthPx * scale;
+    const renderedHeight = pageHeightPx * scale;
 
     return (
-        <NodeViewWrapper className="page-node-view relative mb-8 last:mb-0 first:mt-0 flex justify-center">
-            <div className="flex flex-col items-center">
-                {/* Page container */}
+        <NodeViewWrapper
+            className="page-node-view flex justify-center"
+            style={{
+                // Reserve exact space for the scaled page + gap
+                width: '100%',
+                marginBottom: '40px',
+                paddingTop: '0px',
+            }}
+        >
+            <div
+                style={{
+                    width: `${renderedWidth}px`,
+                    minHeight: `${renderedHeight}px`,
+                    position: 'relative',
+                }}
+            >
+                {/* The actual A4 page */}
                 <div
                     className={cn(
-                        "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-gray-200/80 transition-all duration-300 origin-top flex flex-col relative",
+                        "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-gray-200/80 transition-colors duration-300 relative",
                         pageRuling ? 'ruled-paper' : '',
-                        "max-w-full"
                     )}
                     style={(() => {
                         const baseStyle: React.CSSProperties = {
-                            transform: `scale(${zoom / 100})`,
+                            width: `${pageWidthPx}px`,
+                            minHeight: `${pageHeightPx}px`,
                             padding: `${margin}mm`,
                             backgroundColor: backgroundColor,
-                            width: pageWidth,
-                            minHeight: pageHeight,
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top center',
                         };
 
                         if (pageBackground) {
@@ -78,7 +98,6 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                                 backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, #e5e7eb 31px, #e5e7eb 32px)',
                                 backgroundAttachment: 'local',
                                 lineHeight: '32px',
-                                paddingTop: `${margin}mm`,
                             };
                         }
                         return baseStyle;
@@ -86,7 +105,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                 >
                     {/* Header */}
                     <div
-                        className="absolute top-3 border-b border-gray-100/80 pb-1 flex justify-between text-[10px] text-gray-400 font-medium z-10"
+                        contentEditable={false}
+                        className="absolute top-2 border-b border-gray-100/80 pb-1 flex justify-between text-[10px] text-gray-400 font-medium z-10 select-none"
                         style={{ left: `${margin}mm`, right: `${margin}mm` }}
                     >
                         <input
@@ -99,11 +119,12 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         <span>{new Date().toLocaleDateString('ar-SA')}</span>
                     </div>
 
-                    <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl mt-4" />
+                    <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl mt-6 min-h-[200px]" />
 
                     {/* Footer */}
                     <div
-                        className="absolute bottom-3 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[10px] text-gray-400 font-medium z-10"
+                        contentEditable={false}
+                        className="absolute bottom-2 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[10px] text-gray-400 font-medium z-10 select-none"
                         style={{ left: `${margin}mm`, right: `${margin}mm` }}
                     >
                         <span>صفحة {pageNumber}</span>

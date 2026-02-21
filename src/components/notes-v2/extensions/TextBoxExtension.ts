@@ -78,7 +78,7 @@ export const TextBoxExtension = Node.create({
 
     addCommands() {
         return {
-            insertTextBox: (options: InsertTextBoxOptions = {}) => ({ commands, editor }) => {
+            insertTextBox: (options: InsertTextBoxOptions = {}) => ({ commands, editor, chain }) => {
                 const { content, ...attributes } = options;
 
                 let parsedContent = content;
@@ -88,28 +88,45 @@ export const TextBoxExtension = Node.create({
                     parsedContent = DOMParser.fromSchema(editor.schema).parse(element).toJSON().content;
                 }
 
-                return commands.insertContent([
-                    {
-                        type: this.name,
-                        attrs: {
-                            x: attributes.x ?? 50,
-                            y: attributes.y ?? 150,
-                            width: attributes.width ?? 150,
-                            height: attributes.height ?? 50,
-                            baseWidth: attributes.width ?? 150,
-                            ...attributes,
-                        },
-                        content: parsedContent || [
-                            {
-                                type: 'paragraph',
-                                content: [{ type: 'text', text: 'اكتب هنا...' }]
-                            }
-                        ]
-                    },
-                    {
-                        type: 'paragraph'
+                // Find the last page node and insert inside it
+                const { doc } = editor.state;
+                let lastPagePos = -1;
+                let lastPageNode: any = null;
+                doc.descendants((node, pos) => {
+                    if (node.type.name === 'page') {
+                        lastPagePos = pos;
+                        lastPageNode = node;
                     }
-                ]);
+                    return true;
+                });
+
+                // Position just before the closing of the page node
+                const insertPos = (lastPagePos >= 0 && lastPageNode)
+                    ? lastPagePos + lastPageNode.nodeSize - 1
+                    : doc.content.size;
+
+                return chain()
+                    .focus()
+                    .insertContentAt(insertPos, [
+                        {
+                            type: this.name,
+                            attrs: {
+                                x: attributes.x ?? 50,
+                                y: attributes.y ?? 50,
+                                width: attributes.width ?? 200,
+                                height: attributes.height ?? 60,
+                                baseWidth: attributes.width ?? 200,
+                                ...attributes,
+                            },
+                            content: parsedContent || [
+                                {
+                                    type: 'paragraph',
+                                    content: [{ type: 'text', text: 'اكتب هنا...' }]
+                                }
+                            ]
+                        },
+                    ])
+                    .run();
             },
         };
     },

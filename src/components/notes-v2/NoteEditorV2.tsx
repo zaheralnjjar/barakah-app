@@ -250,9 +250,16 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     editor.chain().focus().deleteRange(range).run();
                     const { doc } = editor.state;
                     const insertPos = doc.content.size;
+
+                    // Create ~35 empty paragraphs to fill the A4 page
+                    const fillParagraphs = Array(35).fill(0).map(() => ({ type: 'paragraph' }));
+
                     editor.chain()
                         .focus()
-                        .insertContentAt(insertPos, { type: 'page', content: [{ type: 'paragraph' }] })
+                        .insertContentAt(insertPos, {
+                            type: 'page',
+                            content: fillParagraphs
+                        })
                         .run();
                 },
             },
@@ -359,35 +366,76 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     }, [zoom, pageRuling, pageBackground, backgroundColor, orientation, pageMargin, editor]);
 
     const calculateNextTextBoxPosition = () => {
-        if (!editor) return { x: 50, y: 150 };
+        if (!editor) return { x: 80, y: 150 };
+
+        const PAGE_WIDTH = orientation === 'portrait' ? 794 : 1123;
+        const PAGE_HEIGHT = orientation === 'portrait' ? 1123 : 794;
+        const MARGIN_PX = pageMargin * 3.78; // convert mm to px roughly
+
         const nodes: any[] = [];
         editor.state.doc.descendants((node) => {
-            if (node.type.name === 'textBox') {
+            if (node.type.name === 'textBox' || node.type.name === 'trackerEmbed' || node.type.name === 'smartTemplateNode') {
                 nodes.push(node.attrs);
             }
             return true;
         });
-        const MARGIN = 40;
-        const BOX_WIDTH = 400;
-        const ROW_HEIGHT = 300;
-        const EDITOR_HEIGHT = 800;
+
+        const DEFAULT_WIDTH = 200;
+        const DEFAULT_HEIGHT = 80;
+        const GAP = 20;
 
         if (nodes.length === 0) {
-            return { x: MARGIN, y: EDITOR_HEIGHT - ROW_HEIGHT - MARGIN };
+            return { x: MARGIN_PX + 20, y: MARGIN_PX + 100 };
         }
-        nodes.sort((a, b) => b.y - a.y || a.x - b.x);
-        const lastNode = nodes[0];
-        let nextX = lastNode.x + lastNode.width + MARGIN;
-        let nextY = lastNode.y;
-        if (nextX + BOX_WIDTH > 1000) {
-            nextX = MARGIN;
-            nextY = lastNode.y - ROW_HEIGHT - MARGIN;
+
+        // Find bottom-most node
+        const lastNode = [...nodes].sort((a, b) => (b.y + (b.height || DEFAULT_HEIGHT)) - (a.y + (a.height || DEFAULT_HEIGHT)))[0];
+
+        let nextX = lastNode.x;
+        let nextY = lastNode.y + (lastNode.height || DEFAULT_HEIGHT) + GAP;
+
+        // Ensure within page bounds
+        if (nextY + DEFAULT_HEIGHT > PAGE_HEIGHT - MARGIN_PX) {
+            nextX = lastNode.x + (lastNode.width || DEFAULT_WIDTH) + GAP;
+            nextY = MARGIN_PX + 100;
+
+            // If right side exceeded, wrap to next column or start over with small offset
+            if (nextX + DEFAULT_WIDTH > PAGE_WIDTH - MARGIN_PX) {
+                nextX = MARGIN_PX + 20 + (nodes.length * 15) % 100;
+                nextY = MARGIN_PX + 100 + (nodes.length * 15) % 100;
+            }
         }
-        return { x: nextX, y: Math.max(0, nextY) };
+
+        // Final safety check to keep inside page
+        nextX = Math.max(MARGIN_PX, Math.min(nextX, PAGE_WIDTH - DEFAULT_WIDTH - MARGIN_PX));
+        nextY = Math.max(MARGIN_PX, Math.min(nextY, PAGE_HEIGHT - DEFAULT_HEIGHT - MARGIN_PX));
+
+        return { x: nextX, y: nextY };
     };
 
     const handleZoomChange = (newZoom: number) => {
         setZoom(Math.max(50, Math.min(130, newZoom)));
+    };
+
+    // Helper: find insertion position INSIDE the last page node
+    const getInsertPosInsidePage = (): number => {
+        if (!editor) return 0;
+        const { doc } = editor.state;
+        let lastPagePos = -1;
+        let lastPageNode: any = null;
+        doc.descendants((node, pos) => {
+            if (node.type.name === 'page') {
+                lastPagePos = pos;
+                lastPageNode = node;
+            }
+            return true;
+        });
+        if (lastPagePos >= 0 && lastPageNode) {
+            // Insert just before the closing of the page node
+            return lastPagePos + lastPageNode.nodeSize - 1;
+        }
+        // Fallback: end of document
+        return doc.content.size;
     };
 
     const handleWheel = (e: React.WheelEvent) => {
@@ -408,10 +456,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     useEffect(() => {
         if (editor && initialContent && initialContent !== editor.getHTML()) {
             if (initialContent === '<p></p>' && editor.isEmpty) return;
-            const finalContent = initialContent.includes('data-type="page"')
-                ? initialContent
-                : `<div data-type="page">${initialContent}</div>`;
-            editor.commands.setContent(finalContent);
+            if (initialContent.includes('data-type="page"')) {
+                editor.commands.setContent(initialContent);
+            } else {
+                // Wrap in page — build fill paragraphs as HTML
+                const fillPs = Array(35).fill('<p></p>').join('');
+                const finalContent = `<div data-type="page">${initialContent}${fillPs}</div>`;
+                editor.commands.setContent(finalContent);
+            }
         }
     }, [initialContent, editor]);
 
@@ -448,14 +500,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             setPageBackground(content);
             setPageRuling(false);
         } else {
-            const { x, y } = coords || calculateNextTextBoxPosition();
-            editor.chain().focus().insertContentAt(editor.state.doc.content.size, {
+            const insertPos = getInsertPosInsidePage();
+            editor.chain().focus().insertContentAt(insertPos, {
                 type: 'smartTemplateNode',
                 attrs: {
                     html: content,
-                    left: x,
-                    top: y,
-                    isFloating: true
+                    left: 0,
+                    top: 0,
+                    isFloating: false
                 }
             }).run();
         }
@@ -470,15 +522,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const handleTrackerSelect = (trackers: { id: string; label: string; type: string; color?: string; icon?: string }[], coords?: { x: number; y: number }) => {
         if (!editor || trackers.length === 0) return;
         trackers.forEach((tracker, index) => {
-            const { x, y } = coords || calculateNextTextBoxPosition();
-            const offsetX = coords ? x : x + (index * 20);
-            const offsetY = coords ? y : y + (index * 20);
-            editor.chain().focus().insertContentAt(editor.state.doc.content.size, {
+            const insertPos = getInsertPosInsidePage();
+            editor.chain().focus().insertContentAt(insertPos, {
                 type: 'trackerEmbed',
                 attrs: {
                     trackers: [tracker],
-                    x: offsetX,
-                    y: offsetY,
+                    x: 0,
+                    y: 0,
                     displayMode: 'chip'
                 }
             }).run();
@@ -495,12 +545,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             return true;
         });
 
+        // Create ~35 empty paragraphs to fill the A4 page
+        const fillParagraphs = Array(35).fill(0).map(() => ({ type: 'paragraph' }));
+
         editor.chain()
             .focus()
             .insertContentAt(doc.content.size, {
                 type: 'page',
                 attrs: { pageNumber: pageCount + 1 },
-                content: [{ type: 'paragraph' }]
+                content: fillParagraphs
             })
             .run();
     };
@@ -553,10 +606,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 overflow-hidden">
+        <div className="h-full w-full flex flex-col bg-slate-100 overflow-hidden" dir="rtl">
             {/* Top toolbar */}
-            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-10 shadow-sm">
-                <div className="flex-1 overflow-x-auto barakah-scrollbar pb-1">
+            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-[20] shadow-sm relative">
+                <div className="flex-1 overflow-x-auto overflow-y-visible pb-1" style={{ scrollbarWidth: 'thin' }}>
                     <EditorToolbar
                         editor={editor}
                         onExport={handleExport}

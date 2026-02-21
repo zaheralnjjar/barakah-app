@@ -180,7 +180,9 @@ const TrackerNodeView = (props: NodeViewProps) => {
     const displayMode = node.attrs.displayMode || 'chip';
 
     const [isHovered, setIsHovered] = useState(false);
+    const [popoverOpen, setPopoverOpen] = useState(false);
     const nodeRef = useRef<HTMLDivElement>(null);
+    const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const x = node.attrs.x || 0;
     const y = node.attrs.y || 0;
@@ -201,6 +203,20 @@ const TrackerNodeView = (props: NodeViewProps) => {
         updateAttributes({ x: data.x, y: data.y });
     };
 
+    useEffect(() => {
+        return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
+    }, []);
+
+    const handleMouseEnter = () => {
+        if (hoverTimeout.current) { clearTimeout(hoverTimeout.current); hoverTimeout.current = null; }
+        setIsHovered(true);
+    };
+
+    const handleMouseLeave = () => {
+        if (popoverOpen) return;
+        hoverTimeout.current = setTimeout(() => setIsHovered(false), 300);
+    };
+
     const width = node.attrs.width || 280;
 
     const handleResize = (e: any, { size }: any) => {
@@ -210,7 +226,7 @@ const TrackerNodeView = (props: NodeViewProps) => {
 
     if (!trackers || trackers.length === 0) return null;
 
-    const showControls = isHovered || selected;
+    const showControls = isHovered || selected || popoverOpen;
 
     return (
         <NodeViewWrapper className="absolute z-10" style={{ left: 0, top: 0, direction: 'ltr' }}>
@@ -225,14 +241,16 @@ const TrackerNodeView = (props: NodeViewProps) => {
                 <div
                     ref={nodeRef}
                     className="group relative overflow-visible"
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
+                    style={{ paddingTop: '36px', marginTop: '-36px' }}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                 >
                     {/* Mini toolbar */}
                     <div
                         contentEditable={false}
+                        onMouseEnter={handleMouseEnter}
                         className={cn(
-                            "absolute -top-8 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
+                            "absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
                             showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
                         )}
                     >
@@ -248,7 +266,7 @@ const TrackerNodeView = (props: NodeViewProps) => {
                         </button>
 
                         {/* Color/border customization */}
-                        <Popover>
+                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                             <PopoverTrigger asChild>
                                 <button className="p-1 hover:bg-gray-100 rounded text-gray-500" onClick={(e) => e.stopPropagation()}>
                                     <Palette size={13} />

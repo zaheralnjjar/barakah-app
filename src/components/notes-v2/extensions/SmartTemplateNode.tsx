@@ -97,7 +97,23 @@ const SmartTemplateComponent = (props: any) => {
 
     const showControls = selected || false;
     const [isHovered, setIsHovered] = useState(false);
-    const controlsVisible = showControls || isHovered;
+    const [popoverOpen, setPopoverOpen] = useState(false);
+    const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+    const controlsVisible = showControls || isHovered || popoverOpen;
+
+    useEffect(() => {
+        return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
+    }, []);
+
+    const handleMouseEnter = () => {
+        if (hoverTimeout.current) { clearTimeout(hoverTimeout.current); hoverTimeout.current = null; }
+        setIsHovered(true);
+    };
+
+    const handleMouseLeave = () => {
+        if (popoverOpen) return;
+        hoverTimeout.current = setTimeout(() => setIsHovered(false), 300);
+    };
 
     return (
         <NodeViewWrapper
@@ -111,18 +127,21 @@ const SmartTemplateComponent = (props: any) => {
                 zIndex: isFloating ? 50 : 1,
                 transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
                 borderRadius: '8px',
-                userSelect: 'none'
+                userSelect: 'none',
+                paddingTop: '36px',
+                marginTop: '-36px',
             }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
         >
             {/* Mini toolbar */}
             <div
                 className={cn(
-                    "absolute -top-8 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
+                    "absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
                     controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
                 )}
                 contentEditable={false}
+                onMouseEnter={handleMouseEnter}
             >
                 <div
                     onMouseDown={handleMouseDown}
@@ -143,7 +162,7 @@ const SmartTemplateComponent = (props: any) => {
                 </button>
 
                 {/* Color/border customization */}
-                <Popover>
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                     <PopoverTrigger asChild>
                         <button className="p-1 hover:bg-gray-100 rounded text-gray-500" onClick={(e) => e.stopPropagation()}>
                             <Palette size={13} />

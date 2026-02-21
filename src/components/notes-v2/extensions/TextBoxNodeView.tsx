@@ -21,7 +21,9 @@ const BORDER_COLORS = [
 export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const { node, updateAttributes, deleteNode, selected, editor } = props;
     const [isHovered, setIsHovered] = useState(false);
+    const [popoverOpen, setPopoverOpen] = useState(false);
     const nodeRef = useRef<HTMLDivElement>(null);
+    const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Attributes
     const x = node.attrs.x || 0;
@@ -44,6 +46,22 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
         setDragPos({ x, y });
     }, [x, y]);
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
+    }, []);
+
+    const handleMouseEnter = () => {
+        if (hoverTimeout.current) { clearTimeout(hoverTimeout.current); hoverTimeout.current = null; }
+        setIsHovered(true);
+    };
+
+    const handleMouseLeave = () => {
+        if (popoverOpen) return; // Never hide while popover is open
+        // Delay hiding to allow mouse to move to toolbar
+        hoverTimeout.current = setTimeout(() => setIsHovered(false), 300);
+    };
+
     const handleDrag = (_e: any, data: any) => {
         setDragPos({ x: data.x, y: data.y });
     };
@@ -58,7 +76,8 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
         updateAttributes({ width: size.width, height: size.height });
     };
 
-    const showControls = isHovered || selected;
+    // Keep controls visible when hovered, selected, OR when a popover is open
+    const showControls = isHovered || selected || popoverOpen;
 
     return (
         <NodeViewWrapper
@@ -83,14 +102,16 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 <div
                     ref={nodeRef}
                     className="absolute group overflow-visible"
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
+                    style={{ paddingTop: '40px', marginTop: '-40px' }}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                 >
                     {/* Floating mini-toolbar — Word style */}
                     <div
                         contentEditable={false}
+                        onMouseEnter={handleMouseEnter}
                         className={cn(
-                            "absolute -top-9 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
+                            "absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
                             showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
                         )}
                     >
@@ -100,7 +121,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
 
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-0.5">
                             {/* Style popover */}
-                            <Popover>
+                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                                 <PopoverTrigger asChild>
                                     <button className="p-1 hover:bg-gray-100 rounded text-gray-500">
                                         <Palette size={13} />
