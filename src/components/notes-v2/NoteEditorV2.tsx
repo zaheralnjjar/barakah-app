@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
-import { ResizableBox } from 'react-resizable';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -40,7 +39,10 @@ import {
     LayoutTemplate,
     Palette,
     FileText,
-    X
+    X,
+    FileDown,
+    RotateCcw,
+    Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +53,8 @@ import { generateGenericWord } from '@/utils/wordGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useRef } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
 
 import { TrackerEmbed } from './extensions/TrackerEmbed';
 import { TextBoxExtension } from './extensions/TextBoxExtension';
@@ -123,12 +127,10 @@ interface NoteEditorV2Props {
     isBookmarked?: boolean;
     onToggleBookmark?: () => void;
     backgroundColor?: string;
-    // New Props for Layout Integration
     onBackgroundColorChange?: (color: string) => void;
     folderId?: string | null;
     onFolderChange?: (id: string | null) => void;
     folders?: any[];
-    // Voice Recording Integration
     isRecording?: boolean;
     onRecordingClick?: () => void;
     voiceTranscript?: string;
@@ -161,15 +163,16 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
     const [showTemplates, setShowTemplates] = useState(false);
-    const [editorWidth, setEditorWidth] = useState<number | string>('100%');
-    const [zoom, setZoom] = useState(100); // Zoom percentage (50-130)
+    const [zoom, setZoom] = useState(100);
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
-    const [isFocusMode, setIsFocusMode] = useState(true); // Default to full screen
-    const [editorHeight, setEditorHeight] = useState(600);
     const [searchTerm, setSearchTerm] = useState('');
     const [replaceTerm, setReplaceTerm] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+
+    // Page settings
+    const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+    const [pageMargin, setPageMargin] = useState(20); // mm
 
     const getSuggestionItems = ({ query }: { query: string }) => {
         return [
@@ -191,7 +194,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             },
             {
                 title: 'قائمة مهام',
-                description: 'مهمة قابلة للتحديد (الربط بالمهام)',
+                description: 'مهمة قابلة للتحديد',
                 icon: <CheckSquare size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).toggleTaskList().run();
@@ -215,7 +218,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             },
             {
                 title: 'مربع نص',
-                description: 'نص عائم يمكن تحريكه (Textbox)',
+                description: 'نص عائم يمكن تحريكه',
                 icon: <Square size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).insertTextBox().run();
@@ -232,7 +235,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             },
             {
                 title: 'قالب جاهز',
-                description: 'إدراج تخطيط جاهز للبركة',
+                description: 'إدراج تخطيط جاهز',
                 icon: <LayoutTemplate size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).run();
@@ -245,22 +248,11 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 icon: <FilePlus size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).run();
-                    const { selection, doc } = editor.state;
-                    const currentPos = selection.$from.pos;
-                    let insertPos = doc.content.size;
-
-                    // Find the end of the current 'page' node
-                    doc.descendants((node, pos) => {
-                        if (node.type.name === 'page' && pos <= currentPos && pos + node.nodeSize > currentPos) {
-                            insertPos = pos + node.nodeSize;
-                            return false;
-                        }
-                        return true;
-                    });
-
+                    const { doc } = editor.state;
+                    const insertPos = doc.content.size;
                     editor.chain()
                         .focus()
-                        .insertContentAt(insertPos, { type: 'page', content: [] })
+                        .insertContentAt(insertPos, { type: 'page', content: [{ type: 'paragraph' }] })
                         .run();
                 },
             },
@@ -270,7 +262,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 icon: <Palette size={18} />,
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).run();
-                    // Insert a default sticker for demo
                     editor.commands.insertContent({
                         type: 'sticker',
                         attrs: {
@@ -284,7 +275,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     };
 
     const getNoteSuggestionItems = ({ query }: { query: string }) => {
-        // Mock data for notes/files
         return [
             { title: 'ملاحظة: خطة رمضان', icon: <FileText size={16} />, command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).insertContent('[[خطة رمضان]]').run() },
             { title: 'ملف: أذكار الصباح', icon: <Bookmark size={16} />, command: ({ editor, range }: any) => editor.chain().focus().deleteRange(range).insertContent('[[أذكار الصباح]]').run() },
@@ -336,20 +326,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             StickerExtension,
             SmartTemplateNode,
         ],
-        content: initialContent || '<div data-type="page"></div>',
+        content: initialContent || '<div data-type="page"><p></p></div>',
         editable,
         onUpdate: ({ editor }) => {
             onUpdate(editor.getHTML());
-
-            // Basic Auto-Pagination logic: If content is getting very long and doesn't end with a page
-            const { selection } = editor.state;
-            const pos = selection.$to.pos;
-            const docSize = editor.state.doc.content.size;
-
-            if (pos > docSize - 10 && docSize > 2000) {
-                // If we are near the end and doc is large, maybe suggest/auto-add a page if needed
-                // But for now, we leave it manual via Slash Command to avoid flickering
-            }
         },
         editorProps: {
             attributes: {
@@ -359,7 +339,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         },
     });
 
-    // Sync zoom and ruling to extension storage
+    // Sync zoom, ruling, orientation, margin to extension storage
     useEffect(() => {
         if (editor) {
             if ((editor.storage as any).textBox) {
@@ -370,14 +350,16 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 (editor.storage as any).page.ruling = pageRuling;
                 (editor.storage as any).page.background = pageBackground;
                 (editor.storage as any).page.backgroundColor = backgroundColor;
+                (editor.storage as any).page.orientation = orientation;
+                (editor.storage as any).page.margin = pageMargin;
             }
+            // Force re-render of page nodes when settings change
+            editor.view.dispatch(editor.view.state.tr);
         }
-    }, [zoom, pageRuling, pageBackground, backgroundColor, editor]);
+    }, [zoom, pageRuling, pageBackground, backgroundColor, orientation, pageMargin, editor]);
 
-    // Helper to calculate position for new text boxes (Bottom-Up Stacking)
     const calculateNextTextBoxPosition = () => {
         if (!editor) return { x: 50, y: 150 };
-
         const nodes: any[] = [];
         editor.state.doc.descendants((node) => {
             if (node.type.name === 'textBox') {
@@ -385,30 +367,22 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             }
             return true;
         });
-
-        // Current editor height (estimation or fixed limit)
-        const EDITOR_HEIGHT = 800; // Standard view area
-        const ROW_HEIGHT = 300;
-        const BOX_WIDTH = 400;
         const MARGIN = 40;
+        const BOX_WIDTH = 400;
+        const ROW_HEIGHT = 300;
+        const EDITOR_HEIGHT = 800;
 
         if (nodes.length === 0) {
             return { x: MARGIN, y: EDITOR_HEIGHT - ROW_HEIGHT - MARGIN };
         }
-
-        // Sort by Y (descending) then X (ascending)
         nodes.sort((a, b) => b.y - a.y || a.x - b.x);
-
         const lastNode = nodes[0];
         let nextX = lastNode.x + lastNode.width + MARGIN;
         let nextY = lastNode.y;
-
-        // If it exceeds width, move up a row
-        if (nextX + BOX_WIDTH > 1000) { // Assume 1000px max width for stacking
+        if (nextX + BOX_WIDTH > 1000) {
             nextX = MARGIN;
             nextY = lastNode.y - ROW_HEIGHT - MARGIN;
         }
-
         return { x: nextX, y: Math.max(0, nextY) };
     };
 
@@ -416,7 +390,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         setZoom(Math.max(50, Math.min(130, newZoom)));
     };
 
-    // Handle trackpad pinch (ctrl + wheel)
     const handleWheel = (e: React.WheelEvent) => {
         if (e.ctrlKey) {
             e.preventDefault();
@@ -425,46 +398,25 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }
     };
 
-    // Update width on isMobile change
-    useEffect(() => {
-        if (isMobile) {
-            setEditorWidth(window.innerWidth - 32);
-        } else {
-            setEditorWidth('70%'); // Keep it as a percentage for desktop
-        }
-    }, [isMobile]);
-
-
-
-    // Auto-insert separator logic
     useEffect(() => {
         if (editor && initialContent && autoInsertSeparator) {
             const isNewNote = !initialContent || initialContent === '<p></p>';
-            if (!isNewNote) {
-                // Logic to insert separator if needed
-            }
+            if (!isNewNote) { /* Logic to insert separator if needed */ }
         }
     }, [editor, initialContent, autoInsertSeparator]);
 
-    // Sync external content changes
     useEffect(() => {
         if (editor && initialContent && initialContent !== editor.getHTML()) {
             if (initialContent === '<p></p>' && editor.isEmpty) return;
-
-            // Ensure content has at least one page
             const finalContent = initialContent.includes('data-type="page"')
                 ? initialContent
                 : `<div data-type="page">${initialContent}</div>`;
-
             editor.commands.setContent(finalContent);
         }
     }, [initialContent, editor]);
 
-    // Insert voice transcript at current position
     useEffect(() => {
         if (editor && voiceTranscript) {
-            // Check if we should insert into a text box if we want EVERYTHING in text boxes?
-            // The user only specified heart/templates/trackers.
             editor.commands.insertContent(voiceTranscript + ' ');
         }
     }, [voiceTranscript, editor]);
@@ -472,7 +424,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         const rect = e.currentTarget.getBoundingClientRect();
-        // Adjust for zoom and scroll
         const x = (e.clientX - rect.left) / (zoom / 100);
         const y = (e.clientY - rect.top) / (zoom / 100);
 
@@ -518,13 +469,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     const handleTrackerSelect = (trackers: { id: string; label: string; type: string; color?: string; icon?: string }[], coords?: { x: number; y: number }) => {
         if (!editor || trackers.length === 0) return;
-
         trackers.forEach((tracker, index) => {
             const { x, y } = coords || calculateNextTextBoxPosition();
-            // Slightly offset each tracker if multiple are added at once
             const offsetX = coords ? x : x + (index * 20);
             const offsetY = coords ? y : y + (index * 20);
-
             editor.chain().focus().insertContentAt(editor.state.doc.content.size, {
                 type: 'trackerEmbed',
                 attrs: {
@@ -537,11 +485,28 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         });
     };
 
+    const handleAddPage = () => {
+        if (!editor) return;
+        const { doc } = editor.state;
+        // Count existing pages to set page number
+        let pageCount = 0;
+        doc.descendants((node) => {
+            if (node.type.name === 'page') pageCount++;
+            return true;
+        });
 
+        editor.chain()
+            .focus()
+            .insertContentAt(doc.content.size, {
+                type: 'page',
+                attrs: { pageNumber: pageCount + 1 },
+                content: [{ type: 'paragraph' }]
+            })
+            .run();
+    };
 
     const handleExport = async (type: 'image' | 'pdf' | 'word' | 'text') => {
         if (!editor) return;
-
         try {
             if (type === 'text') {
                 const text = editor.getText();
@@ -553,29 +518,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 link.click();
                 URL.revokeObjectURL(url);
                 toast({ title: 'تم تصدير الملف النصي' });
-            } else if (type === 'word') {
-                const json = editor.getJSON();
-                // ... (word logic)
             } else if (type === 'pdf' || type === 'image') {
                 const element = editorRef.current;
                 if (element) {
-                    // Use actual background color for export
-                    // Use pageBackground (image) if set, otherwise prop backgroundColor
-                    let exportBg = backgroundColor;
-                    if (pageBackground && !pageBackground.startsWith('{')) {
-                        // If it's a simple color string in pageBackground? 
-                        // Actually pageBackground usually stores image URL/gradient.
-                        // If pageBackground is set, html2canvas should capture the background image/style naturally from the element style.
-                        // But we also need to tell html2canvas the 'backgroundColor' option.
-                        // If transparent, it defaults to black in some versions or white.
-                        // If we pass null, it uses transparent.
-                        exportBg = '#ffffff'; // Default to white if complex background to verify
-                    }
-
                     // @ts-ignore
                     const canvas = await html2canvas(element, {
                         scale: 2,
-                        backgroundColor: pageBackground ? null : backgroundColor, // Use transparent if bg image exists, else color
+                        backgroundColor: pageBackground ? null : backgroundColor,
                         useCORS: true
                     } as any);
 
@@ -587,11 +536,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         toast({ title: 'تم تصدير الصورة' });
                     } else {
                         const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        const pdf = new jsPDF(orientation === 'landscape' ? 'l' : 'p', 'mm', 'a4');
                         const pdfWidth = pdf.internal.pageSize.getWidth();
                         const imgProps = pdf.getImageProperties(imgData);
                         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
                         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                         pdf.save(`Note-${Date.now()}.pdf`);
                         toast({ title: 'تم تصدير ملف PDF' });
@@ -605,58 +553,116 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     };
 
     return (
-        <div className={cn(
-            "flex flex-col overflow-hidden transition-all duration-300 w-full h-full",
-            isFocusMode ? "fixed inset-0 z-[100] bg-white p-4 md:p-8" : "bg-white"
-        )}
-        >
-            {/* Removed Focus Mode Background */}
-            {/* Toolbar Section - Top Position */}
-            {toolbarPosition === 'top' && (
-                <div className="px-4 pt-4 pb-2 bg-gradient-to-b from-white/80 to-transparent flex items-start gap-2 shrink-0 z-10">
-                    <div className="flex-1 overflow-x-auto barakah-scrollbar pb-2">
-                        <EditorToolbar
-                            editor={editor}
-                            onExport={handleExport}
-                            onOpenTemplates={() => setShowTemplates(true)}
-                            folderId={folderId}
-                            onFolderChange={onFolderChange}
-                            folders={folders}
-                            backgroundColor={backgroundColor}
-                            onBackgroundColorChange={onBackgroundColorChange}
-                            isRecording={isRecording}
-                            onRecordingClick={onRecordingClick}
-                            isFocusMode={isFocusMode}
-                            onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
-                            onInsertTracker={handleInsertTracker}
-                            zoom={zoom}
-                            onZoomChange={handleZoomChange}
-                            onClose={onClose}
-                            onSearchClick={() => setShowSearch(!showSearch)}
-                        />
-                    </div>
+        <div className="fixed inset-0 z-[100] flex flex-col bg-slate-100 overflow-hidden">
+            {/* Top toolbar */}
+            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-10 shadow-sm">
+                <div className="flex-1 overflow-x-auto barakah-scrollbar pb-1">
+                    <EditorToolbar
+                        editor={editor}
+                        onExport={handleExport}
+                        onOpenTemplates={() => setShowTemplates(true)}
+                        folderId={folderId}
+                        onFolderChange={onFolderChange}
+                        folders={folders}
+                        backgroundColor={backgroundColor}
+                        onBackgroundColorChange={onBackgroundColorChange}
+                        isRecording={isRecording}
+                        onRecordingClick={onRecordingClick}
+                        isFocusMode={true}
+                        onToggleFocusMode={() => { /* always full screen */ }}
+                        onInsertTracker={handleInsertTracker}
+                        zoom={zoom}
+                        onZoomChange={handleZoomChange}
+                        onClose={onClose}
+                        onSearchClick={() => setShowSearch(!showSearch)}
+                    />
                 </div>
-            )}
 
-            {/* Main Editor Area */}
-            <div
-                className={cn(
-                    "flex-1 relative overflow-auto barakah-scrollbar bg-slate-50",
-                    isFocusMode && "bg-white overflow-y-auto"
-                )}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onWheel={handleWheel}
-            >
-                {/* Vertical Scroll for Pages */}
-                <div className="flex flex-col items-center py-12 gap-12 relative min-h-full">
-                    <EditorContent editor={editor} className="relative z-0" />
-                </div>
+                {/* Page settings popover */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 shrink-0 mt-0.5" title="إعدادات الصفحة">
+                            <Settings2 size={16} />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-3" align="end" dir="rtl" sideOffset={8}>
+                        <div className="space-y-3">
+                            <h4 className="font-bold text-xs text-gray-700">إعدادات الصفحة</h4>
+
+                            {/* Orientation */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">اتجاه الصفحة</label>
+                                <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
+                                    <button
+                                        onClick={() => setOrientation('portrait')}
+                                        className={cn(
+                                            "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
+                                            orientation === 'portrait' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                        )}
+                                    >
+                                        <div className="w-3 h-4 border border-current rounded-sm" />
+                                        طولي
+                                    </button>
+                                    <button
+                                        onClick={() => setOrientation('landscape')}
+                                        className={cn(
+                                            "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
+                                            orientation === 'landscape' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                        )}
+                                    >
+                                        <div className="w-4 h-3 border border-current rounded-sm" />
+                                        عرضي
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Margins */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">هوامش الصفحة ({pageMargin} ملم)</label>
+                                <Slider
+                                    value={[pageMargin]}
+                                    min={5}
+                                    max={40}
+                                    step={1}
+                                    onValueChange={([val]) => setPageMargin(val)}
+                                />
+                                <div className="flex gap-1 mt-1">
+                                    {[{ label: 'ضيق', val: 10 }, { label: 'عادي', val: 20 }, { label: 'واسع', val: 30 }].map(p => (
+                                        <button
+                                            key={p.val}
+                                            onClick={() => setPageMargin(p.val)}
+                                            className={cn(
+                                                "flex-1 h-6 text-[10px] rounded",
+                                                pageMargin === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                            )}
+                                        >
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Ruling */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] text-gray-400">خطوط مسطرة</label>
+                                <button
+                                    onClick={() => setPageRuling(!pageRuling)}
+                                    className={cn(
+                                        "w-9 h-5 rounded-full transition-colors flex items-center px-0.5",
+                                        pageRuling ? "bg-indigo-500 justify-end" : "bg-gray-300 justify-start"
+                                    )}
+                                >
+                                    <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                                </button>
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             </div>
 
             {/* Search and Replace Bar */}
             {showSearch && (
-                <div className="sticky top-[52px] left-0 right-0 z-[105] bg-white/95 backdrop-blur-sm border-b border-indigo-50 p-2 flex flex-wrap items-center gap-2 shadow-sm animate-in slide-in-from-top duration-300">
+                <div className="bg-white border-b border-gray-100 p-2 flex flex-wrap items-center gap-2 shadow-sm animate-in slide-in-from-top duration-200 z-[105]">
                     <div className="relative flex-grow max-w-sm">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                         <Input
@@ -678,7 +684,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                             size="sm"
                             className="h-8 px-3 text-xs bg-indigo-600 hover:bg-indigo-700"
                             onClick={() => {
-                                // Basic logic: find and replace first instance
                                 if (editor && searchTerm) {
                                     const content = editor.getHTML();
                                     const newContent = content.replace(searchTerm, replaceTerm);
@@ -700,26 +705,27 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 </div>
             )}
 
-            {/* Toolbar Section - Bottom Position (Sticky) */}
-            {toolbarPosition === 'bottom' && (
-                <div className="px-2 py-2 bg-white border-t border-gray-100 flex items-center gap-2 shrink-0 z-20 sticky bottom-0 safe-area-bottom">
-                    <div className="flex-1 overflow-x-auto barakah-scrollbar no-scrollbar">
-                        <EditorToolbar
-                            editor={editor}
-                            onExport={handleExport}
-                            onOpenTemplates={() => setShowTemplates(true)}
-                            folderId={folderId}
-                            onFolderChange={onFolderChange}
-                            folders={folders}
-                            backgroundColor={backgroundColor}
-                            onBackgroundColorChange={onBackgroundColorChange}
-                            isRecording={isRecording}
-                            onRecordingClick={onRecordingClick}
-                            onInsertTracker={handleInsertTracker}
-                        />
-                    </div>
+            {/* Main editor area — scrollable pages */}
+            <div
+                ref={editorRef}
+                className="flex-1 overflow-auto bg-slate-100"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onWheel={handleWheel}
+            >
+                <div className="flex flex-col items-center py-8 gap-0 relative min-h-full">
+                    <EditorContent editor={editor} className="relative z-0 w-full" />
+
+                    {/* Add Page button below all pages */}
+                    <button
+                        onClick={handleAddPage}
+                        className="mt-6 mb-12 flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all text-sm font-medium shadow-sm"
+                    >
+                        <FilePlus size={16} />
+                        إضافة صفحة جديدة
+                    </button>
                 </div>
-            )}
+            </div>
 
             <TemplatesGallery
                 isOpen={showTemplates}

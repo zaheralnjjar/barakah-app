@@ -2,25 +2,36 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Move, GripHorizontal, Unlock, Lock, GripVertical } from 'lucide-react';
+import { GripVertical, Unlock, Lock, Palette, X } from 'lucide-react';
 import { ResizableBox } from 'react-resizable';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 import 'react-resizable/css/styles.css';
 
+const BG_COLORS = [
+    'transparent', '#ffffff', '#f8fafc', '#f0f9ff', '#f0fdf4', '#fefce8', '#fef2f2', '#faf5ff', '#fff7ed'
+];
+const BORDER_COLORS = [
+    'transparent', '#e5e7eb', '#9ca3af', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'
+];
+
 const SmartTemplateComponent = (props: any) => {
-    const { node, updateAttributes, selected, getPos } = props;
+    const { node, updateAttributes, selected, deleteNode } = props;
     const { html, config, left, top, isFloating, width } = node.attrs;
 
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [initialPos, setInitialPos] = useState({ left: left || 0, top: top || 0 });
 
-    // We use a ref to the DOM element to update position during drag for performance (avoiding re-renders)
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const bgColor = node.attrs.bgColor || 'transparent';
+    const borderColor = node.attrs.borderColor || 'transparent';
+    const borderWidth = node.attrs.borderWidth || 0;
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (!isFloating) return;
-
-        // Only start drag if left click
         if (e.button !== 0) return;
 
         e.preventDefault();
@@ -38,8 +49,6 @@ const SmartTemplateComponent = (props: any) => {
             if (contentRef.current) {
                 const dx = e.clientX - dragStart.x;
                 const dy = e.clientY - dragStart.y;
-
-                // Visual update only
                 contentRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
             }
         };
@@ -49,17 +58,10 @@ const SmartTemplateComponent = (props: any) => {
             if (contentRef.current) {
                 const dx = e.clientX - dragStart.x;
                 const dy = e.clientY - dragStart.y;
-
-                // Commit new position
                 const newLeft = initialPos.left + dx;
                 const newTop = initialPos.top + dy;
 
-                updateAttributes({
-                    left: newLeft,
-                    top: newTop
-                });
-
-                // Reset transform as the new position essentially "moves" the element to the transform target
+                updateAttributes({ left: newLeft, top: newTop });
                 contentRef.current.style.transform = 'none';
             }
         };
@@ -75,10 +77,7 @@ const SmartTemplateComponent = (props: any) => {
 
     const toggleFloating = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // If enabling floating, set initial position to something visible (e.g., current scroll + 50px)
-        // For simplicity, we default to 50, 50 relative to editor
         const newFloatingState = !isFloating;
-
         updateAttributes({
             isFloating: newFloatingState,
             left: newFloatingState ? 50 : 0,
@@ -96,6 +95,10 @@ const SmartTemplateComponent = (props: any) => {
         updateAttributes({ width: size.width, height: size.height });
     };
 
+    const showControls = selected || false;
+    const [isHovered, setIsHovered] = useState(false);
+    const controlsVisible = showControls || isHovered;
+
     return (
         <NodeViewWrapper
             ref={contentRef}
@@ -105,34 +108,103 @@ const SmartTemplateComponent = (props: any) => {
                 position: isFloating ? 'absolute' : 'relative',
                 left: isFloating ? `${left}px` : 'auto',
                 top: isFloating ? `${top}px` : 'auto',
-                zIndex: isFloating ? 50 : 1, // Higher z-index when floating
+                zIndex: isFloating ? 50 : 1,
                 transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
                 borderRadius: '8px',
-                userSelect: 'none' // Prevent text selection inside while dragging setup
+                userSelect: 'none'
             }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Controls Overlay - Visible on Hover or Selection */}
-            {/* We render controls OUTSIDE the content flow so they don't affect layout */}
+            {/* Mini toolbar */}
             <div
-                className={`absolute top-1 right-1 z-50 flex items-center gap-1 p-1 rounded-md shadow-sm border border-gray-200 transition-all bg-white/90 backdrop-blur-sm ${selected ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto'}`}
+                className={cn(
+                    "absolute -top-8 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
+                    controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
+                )}
                 contentEditable={false}
             >
-                {/* Drag Handle */}
                 <div
                     onMouseDown={handleMouseDown}
-                    className={`drag-handle p-0.5 rounded flex items-center justify-center transition-colors ${isFloating ? 'cursor-grab active:cursor-grabbing hover:bg-gray-100 text-gray-400' : 'cursor-not-allowed hover:bg-red-50 text-gray-300'}`}
-                    title={isFloating ? "اسحب للتحريك" : "فعل الوضع الحر للتحريك"}
+                    className={cn(
+                        "drag-handle p-1 rounded flex items-center justify-center transition-colors",
+                        isFloating ? 'cursor-grab active:cursor-grabbing hover:bg-gray-100 text-gray-400' : 'cursor-not-allowed text-gray-300'
+                    )}
                 >
                     <GripVertical size={14} />
                 </div>
 
-                {/* Toggle Float Button */}
                 <button
                     onClick={toggleFloating}
-                    className={`p-1 rounded flex items-center justify-center transition-colors hover:bg-gray-100 ${isFloating ? 'text-green-600' : 'text-gray-400'}`}
-                    title={isFloating ? "تثبيت في النص (إلغاء وضع الحر)" : "تفعيل الوضع الحر (تحريك في أي مكان)"}
+                    className={cn("p-1 rounded transition-colors hover:bg-gray-100", isFloating ? 'text-green-600' : 'text-gray-400')}
+                    title={isFloating ? "تثبيت في النص" : "وضع حر"}
                 >
-                    {isFloating ? <Lock size={14} /> : <Unlock size={14} />}
+                    {isFloating ? <Lock size={13} /> : <Unlock size={13} />}
+                </button>
+
+                {/* Color/border customization */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button className="p-1 hover:bg-gray-100 rounded text-gray-500" onClick={(e) => e.stopPropagation()}>
+                            <Palette size={13} />
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-3" align="end" dir="rtl" sideOffset={8}>
+                        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                            <h4 className="font-bold text-xs text-gray-600">تخصيص القالب</h4>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">لون الخلفية</label>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    {BG_COLORS.map(c => (
+                                        <button
+                                            key={c}
+                                            onClick={() => updateAttributes({ bgColor: c })}
+                                            className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", bgColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                            style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}
+                                        >
+                                            {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">لون الحد</label>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    {BORDER_COLORS.map(c => (
+                                        <button
+                                            key={c}
+                                            onClick={() => updateAttributes({ borderColor: c })}
+                                            className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", borderColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                            style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}
+                                        >
+                                            {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">سماكة الحد ({borderWidth}px)</label>
+                                <Slider
+                                    value={[borderWidth]}
+                                    min={0}
+                                    max={4}
+                                    step={0.5}
+                                    onValueChange={([val]) => updateAttributes({ borderWidth: val })}
+                                />
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+
+                <div className="w-px h-4 bg-gray-200 mx-0.5" />
+                <button
+                    onClick={(e) => { e.stopPropagation(); deleteNode(); }}
+                    className="p-1 hover:bg-red-50 hover:text-red-500 rounded text-gray-500 transition-colors"
+                >
+                    <X size={13} />
                 </button>
             </div>
 
@@ -146,21 +218,19 @@ const SmartTemplateComponent = (props: any) => {
                     maxConstraints={[2000, 4000]}
                     resizeHandles={['se']}
                     handle={(handleAxis, ref) => {
-                        if (!selected) return <div ref={ref} className="hidden" />;
+                        if (!controlsVisible) return <div ref={ref} className="hidden" />;
                         return (
                             <div
                                 ref={ref}
-                                className="absolute bottom-0 right-0 w-4 h-4 bg-white border border-gray-300 shadow-sm z-[60] flex items-center justify-center cursor-se-resize hover:border-indigo-500 hover:bg-indigo-50 rounded-br-lg rounded-tl-lg pointer-events-auto"
+                                className="absolute bottom-0 right-0 w-3 h-3 bg-indigo-500 rounded-full shadow-sm z-[60] cursor-se-resize"
                                 style={{ transform: 'translate(50%, 50%)' }}
                                 onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <div className="w-1.5 h-1.5 border-r border-b border-gray-400" />
-                            </div>
+                            />
                         );
                     }}
                 >
                     <div
-                        className="smart-layout-container outline-none"
+                        className="smart-layout-container outline-none rounded-lg transition-all"
                         data-smart-template-config={encodeURIComponent(JSON.stringify(config || []))}
                         style={{
                             display: 'flex',
@@ -172,7 +242,11 @@ const SmartTemplateComponent = (props: any) => {
                             minHeight: `${boxHeight / scale}px`,
                             pointerEvents: isDragging ? 'none' : 'auto',
                             transform: `scale(${scale})`,
-                            transformOrigin: 'top right'
+                            transformOrigin: 'top right',
+                            backgroundColor: bgColor === 'transparent' ? 'transparent' : bgColor,
+                            borderColor: borderColor === 'transparent' ? 'transparent' : borderColor,
+                            borderWidth: `${borderWidth}px`,
+                            borderStyle: borderWidth > 0 ? 'solid' : 'none',
                         }}
                     >
                         {/* Inner content from template */}
@@ -187,10 +261,8 @@ const SmartTemplateComponent = (props: any) => {
 export const SmartTemplateNode = Node.create({
     name: 'smartTemplateNode',
     group: 'block',
-    atom: true, // Treated as a single unit
-    draggable: true, // Allow standard ProseMirror dragging for non-floating state? 
-    // Actually, if we want custom react dragging, we should set this to false or handle it carefully.
-    // But for 'floating' mode, we handle drag ourselves.
+    atom: true,
+    draggable: true,
 
     addAttributes() {
         return {
@@ -244,12 +316,21 @@ export const SmartTemplateNode = Node.create({
                     style: `width: ${attributes.width}%`,
                 }),
             },
+            height: {
+                default: 200,
+            },
+            baseWidth: {
+                default: 400,
+            },
             isFloating: {
                 default: false,
                 renderHTML: (attributes) => ({
                     style: `position: ${attributes.isFloating ? 'absolute' : 'relative'}`,
                 }),
-            }
+            },
+            bgColor: { default: 'transparent' },
+            borderColor: { default: 'transparent' },
+            borderWidth: { default: 0 },
         };
     },
 
@@ -260,7 +341,6 @@ export const SmartTemplateNode = Node.create({
                 getAttrs: (element: string | HTMLElement) => {
                     if (typeof element === 'string') return {};
 
-                    // Recover HTML from attribute if possible, fallback to innerHTML
                     const htmlAttr = element.getAttribute('data-smart-template-html');
                     let htmlContent = '';
                     if (htmlAttr) {
@@ -283,7 +363,6 @@ export const SmartTemplateNode = Node.create({
                     return {
                         html: htmlContent,
                         config: config,
-                        // If style has position absolute, preserve it
                         isFloating: element.style.position === 'absolute',
                         left: parseFloat(element.style.left || '0'),
                         top: parseFloat(element.style.top || '0'),
@@ -298,8 +377,6 @@ export const SmartTemplateNode = Node.create({
     },
 
     renderHTML({ HTMLAttributes }) {
-        // We render as a div with the class to ensure it looks right if the extension is missing (fallback)
-        // But for the editor, NodeView takes over.
         return ['div', mergeAttributes(HTMLAttributes, { class: 'smart-layout-container' })];
     },
 

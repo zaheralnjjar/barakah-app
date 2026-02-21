@@ -44,6 +44,8 @@ export const PageExtension = Node.create({
             background: null,
             backgroundColor: '#ffffff',
             zoom: 100,
+            orientation: 'portrait',
+            margin: 20,
         };
     },
 });
