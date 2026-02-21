@@ -124,7 +124,7 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                 type: values.type,
                 icon: values.icon,
                 color: values.color,
-                folder_id: values.folder_id === "none" ? undefined : values.folder_id,
+                folder_id: (values.folder_id === "none" || !values.folder_id) ? undefined : values.folder_id,
                 settings: processedSettings,
             });
 
