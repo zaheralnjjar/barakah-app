@@ -288,14 +288,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             setPageBackground(content);
             setPageRuling(false);
         } else {
-            // Auto-wrap template in a text box
             const { x, y } = coords || calculateNextTextBoxPosition();
-            (editor as any).chain().focus().insertTextBox({
-                content,
-                x,
-                y,
-                width: 400,
-                height: 560 // A4 vertical aspect (roughly 1:1.4)
+            editor.chain().focus().insertContentAt(editor.state.doc.content.size, {
+                type: 'smartTemplateNode',
+                attrs: {
+                    html: content,
+                    left: x,
+                    top: y,
+                    isFloating: true
+                }
             }).run();
         }
     };
@@ -309,21 +310,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const handleTrackerSelect = (trackers: { id: string; label: string; type: string; color?: string; icon?: string }[], coords?: { x: number; y: number }) => {
         if (!editor || trackers.length === 0) return;
 
-        // Auto-wrap tracker in a text box
         const { x, y } = coords || calculateNextTextBoxPosition();
-        (editor as any).chain().focus().insertTextBox({
-            x,
-            y,
-            width: 400,
-            height: 560, // A4 vertical aspect
-            content: [
-                {
-                    type: 'trackerEmbed',
-                    attrs: {
-                        trackers: trackers
-                    }
-                }
-            ]
+        editor.chain().focus().insertContentAt(editor.state.doc.content.size, {
+            type: 'trackerEmbed',
+            attrs: {
+                trackers: trackers,
+                x: x,
+                y: y
+            }
         }).run();
     };
 

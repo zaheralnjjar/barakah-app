@@ -37,13 +37,13 @@ export const TextBoxExtension = Node.create({
                 default: 0,
             },
             width: {
-                default: 400,
+                default: 150,
             },
             baseWidth: {
-                default: 400,
+                default: 150,
             },
             height: {
-                default: 560,
+                default: 50,
             },
             backgroundColor: {
                 default: '#ffffff',
@@ -93,9 +93,9 @@ export const TextBoxExtension = Node.create({
                     attrs: {
                         x: attributes.x ?? 50,
                         y: attributes.y ?? 150,
-                        width: attributes.width ?? 400,
-                        height: attributes.height ?? 560,
-                        baseWidth: attributes.width ?? 400,
+                        width: attributes.width ?? 150,
+                        height: attributes.height ?? 50,
+                        baseWidth: attributes.width ?? 150,
                         ...attributes,
                     },
                     content: parsedContent || [

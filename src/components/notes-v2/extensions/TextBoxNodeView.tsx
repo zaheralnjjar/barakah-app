@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NodeViewWrapper, NodeViewContent, NodeViewProps } from '@tiptap/react';
 import Draggable from 'react-draggable';
-import { GripVertical, X, Palette, Maximize2, MoreHorizontal, FilePlus } from 'lucide-react';
+import { ResizableBox } from 'react-resizable';
+import { GripVertical, X, Palette, Maximize2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import 'react-resizable/css/styles.css';
 
 export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const { node, updateAttributes, deleteNode, selected, editor } = props;
@@ -15,13 +17,13 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     // Attributes
     const x = node.attrs.x || 0;
     const y = node.attrs.y || 0;
-    const width = node.attrs.width || 794;
-    const height = node.attrs.height || 1123;
+    const width = node.attrs.width || 150;
+    const height = node.attrs.height || 50;
     const backgroundColor = node.attrs.backgroundColor || '#ffffff';
     const borderColor = node.attrs.borderColor || '#e2e8f0';
     const borderWidth = node.attrs.borderWidth || 1;
     const borderStyle = node.attrs.borderStyle || 'solid';
-    const baseWidth = node.attrs.baseWidth || 794;
+    const baseWidth = node.attrs.baseWidth || 150;
     const scale = width / baseWidth;
     const editorZoom = (editor.storage as any).textBox?.zoom || 100;
     const dragScale = editorZoom / 100;
@@ -100,20 +102,6 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                                 <GripVertical size={14} />
                             </div>
                             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                                {/* New Page Button */}
-                                <button
-                                    onClick={() => {
-                                        editor.chain().focus().insertTextBox({
-                                            x: x,
-                                            y: y + height + 50,
-                                        }).run();
-                                    }}
-                                    className="p-0.5 hover:bg-gray-200 rounded text-gray-500"
-                                    title="صفحة جديدة"
-                                >
-                                    <FilePlus size={12} />
-                                </button>
-
                                 {/* Style Settings Popover */}
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -204,18 +192,27 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                         </div>
 
                         {/* Editor Content Area */}
-                        <div
-                            style={{
-                                transform: `scale(${scale})`,
-                                transformOrigin: 'top left', // Better scaling anchor
-                                width: `${baseWidth}px`,
-                                height: 'auto',
-                                minHeight: `${height / scale}px`,
-                            }}
-                            className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto"
+                        <ResizableBox
+                            width={width}
+                            height={height}
+                            onResizeStop={handleResize}
+                            minConstraints={[50, 20]} // Allow going down to 20px
+                            maxConstraints={[1000, 2000]}
+                            resizeHandles={['se', 'e', 's', 'sw', 'w', 'nw', 'n', 'ne']}
                         >
-                            <NodeViewContent className="min-h-full" />
-                        </div>
+                            <div
+                                style={{
+                                    transform: `scale(${scale})`,
+                                    transformOrigin: 'top right', // Content alignment in RTL
+                                    width: `${baseWidth}px`,
+                                    height: 'auto',
+                                    minHeight: `${height / scale}px`,
+                                }}
+                                className="flex-grow p-4 outline-none custom-scrollbar overflow-y-auto"
+                            >
+                                <NodeViewContent className="min-h-full" />
+                            </div>
+                        </ResizableBox>
                     </div>
                 </div>
             </Draggable>
