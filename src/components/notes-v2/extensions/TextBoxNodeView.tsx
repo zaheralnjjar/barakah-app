@@ -12,6 +12,7 @@ import 'react-resizable/css/styles.css';
 export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
     const { node, updateAttributes, deleteNode, selected, editor } = props;
     const [isHovered, setIsHovered] = useState(false);
+    const nodeRef = useRef<HTMLDivElement>(null);
 
     // Attributes
     const x = node.attrs.x || 0;
@@ -61,6 +62,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
             }}
         >
             <Draggable
+                nodeRef={nodeRef}
                 handle=".drag-handle"
                 position={dragPos}
                 onStop={handleStop}
@@ -68,6 +70,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                 scale={dragScale}
             >
                 <div
+                    ref={nodeRef}
                     className={cn(
                         "absolute group transition-shadow rounded-lg overflow-visible",
                         selected ? "ring-2 ring-indigo-500 ring-offset-2" : "",
@@ -112,6 +115,7 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                         >
                             {/* Toolbar / Drag Handle (Visible on Hover/Select) */}
                             <div
+                                contentEditable={false}
                                 className={cn(
                                     "drag-handle h-8 min-h-[32px] w-full cursor-move flex items-center justify-between px-2 transition-opacity bg-gray-50 border-b border-gray-100",
                                     (isHovered || selected) ? "opacity-100" : "opacity-30 hover:opacity-100"
