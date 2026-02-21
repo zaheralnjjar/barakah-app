@@ -224,7 +224,7 @@ export function TrackerCard({
                         )}
 
                         {/* Log Entry for Scale/Time/Select/Others */}
-                        {(tracker.type === 'scale' || tracker.type === 'time' || tracker.type === 'select' || tracker.type === 'mood' || tracker.type === 'time_range') && (
+                        {(tracker.type === 'scale' || tracker.type === 'time' || tracker.type === 'select' || tracker.type === 'mood' || tracker.type === 'time_range' || tracker.type === 'checklist' || tracker.type === 'text') && (
                             <Button
                                 variant="secondary"
                                 size="sm"

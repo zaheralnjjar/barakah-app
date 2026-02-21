@@ -67,7 +67,7 @@ export const EditorModalV2: React.FC<EditorModalV2Props> = ({ isOpen, onClose })
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-[80vw] max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0 bg-transparent border-0 shadow-none">
+            <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] flex flex-col p-0 gap-0 bg-transparent border-0 shadow-none">
 
                 {/* Header / Meta inputs */}
                 <div className="bg-white/95 backdrop-blur rounded-t-2xl p-4 flex gap-4 items-center border-b shadow-sm">

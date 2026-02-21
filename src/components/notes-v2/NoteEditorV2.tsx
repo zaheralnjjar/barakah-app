@@ -123,7 +123,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
     const [showTemplates, setShowTemplates] = useState(false);
-    const [editorWidth, setEditorWidth] = useState<number | string>('70%');
+    const [editorWidth, setEditorWidth] = useState<number | string>('90%');
     const [zoom, setZoom] = useState(100); // Zoom percentage (50-130)
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
@@ -396,13 +396,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     return (
         <div className={cn(
-            "flex flex-col overflow-hidden border border-white shadow-xl transition-all duration-500",
+            "flex flex-col overflow-hidden transition-all duration-500",
             isFocusMode
-                ? "fixed inset-0 z-[100] h-screen w-screen rounded-none bg-white p-4 md:p-8"
-                : "h-full rounded-3xl bg-slate-50/50",
-            !isMobile && "mx-auto" // Center on Desktop
+                ? "fixed inset-0 z-[100] h-[100dvh] w-[100dvw] rounded-none bg-white p-4 md:p-8"
+                : "h-full rounded-2xl bg-white/90 border border-indigo-50/50 shadow-sm",
+            !isMobile && !isFocusMode && "mx-auto" // Center on Desktop when not in focus
         )}
-            style={{ width: isMobile ? '100%' : `${editorWidth}` }}
+            style={{ width: isFocusMode ? '100%' : (isMobile ? '100%' : `${editorWidth}`) }}
         >
             {/* Removed Focus Mode Background */}
             {/* Toolbar Section - Top Position */}
