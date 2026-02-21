@@ -131,7 +131,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         const day = now.getDate();
-        // @ts-ignore
+        // @ts-expect-error type missing
         const month = months[now.getMonth()];
         const time = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
 

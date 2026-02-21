@@ -1,11 +1,12 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
-import React, { useEffect, useState } from 'react';
-import { Activity, GripHorizontal, Check, Plus, Minus } from 'lucide-react';
+import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from '@tiptap/react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Activity, GripHorizontal, Check, Plus, Minus, X, GripVertical } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trackingService } from '@/services/trackingService';
 import { toast } from 'sonner';
-
+import Draggable from 'react-draggable';
+import { cn } from '@/lib/utils';
 interface TrackerItem {
     id: string;
     label: string;
@@ -24,7 +25,10 @@ const TrackerChip = ({ tracker }: { tracker: TrackerItem }) => {
     // 1. Fetch latest entry to show current status
     const { data: latestEntry } = useQuery({
         queryKey: ['tracker-latest', tracker.id],
-        queryFn: () => trackingService.getLatestEntry(tracker.id),
+        queryFn: async () => {
+            const history = await trackingService.getHistory(tracker.id, 1);
+            return history && history.length > 0 ? history[0] : null;
+        },
     });
 
     // 2. Mutation to add new entry
@@ -117,20 +121,87 @@ const TrackerChip = ({ tracker }: { tracker: TrackerItem }) => {
     );
 };
 
-const TrackerNodeView = (props: any) => {
-    const { node } = props;
+const TrackerNodeView = (props: NodeViewProps) => {
+    const { node, updateAttributes, deleteNode, selected, editor } = props;
     const rawTrackers = node.attrs.trackers;
     const trackers: TrackerItem[] = Array.isArray(rawTrackers) ? rawTrackers : [];
+
+    const [isHovered, setIsHovered] = useState(false);
+    const nodeRef = useRef<HTMLDivElement>(null);
+
+    // Attributes for dragging
+    const x = node.attrs.x || 0;
+    const y = node.attrs.y || 0;
+    const editorZoom = (editor.storage as any).textBox?.zoom || 100;
+    const dragScale = editorZoom / 100;
+
+    const [dragPos, setDragPos] = useState({ x, y });
+
+    useEffect(() => {
+        setDragPos({ x, y });
+    }, [x, y]);
+
+    const handleDrag = (_e: any, data: any) => {
+        setDragPos({ x: data.x, y: data.y });
+    };
+
+    const handleStop = (_e: any, data: any) => {
+        setDragPos({ x: data.x, y: data.y });
+        updateAttributes({ x: data.x, y: data.y });
+    };
 
     if (!trackers || trackers.length === 0) return null;
 
     return (
-        <NodeViewWrapper className="tracker-row-component my-4 select-none">
-            <div className="flex flex-wrap items-center justify-center gap-3 p-3 rounded-2xl border border-indigo-50 bg-indigo-50/30 backdrop-blur-sm max-w-full mx-auto" dir="rtl">
-                {trackers.map((tracker, index) => (
-                    <TrackerChip key={tracker.id + index} tracker={tracker} />
-                ))}
-            </div>
+        <NodeViewWrapper
+            className="absolute z-10"
+            style={{ left: 0, top: 0, direction: 'ltr' }}
+        >
+            <Draggable
+                nodeRef={nodeRef}
+                handle=".drag-handle"
+                position={dragPos}
+                onStop={handleStop}
+                onDrag={handleDrag}
+                scale={dragScale}
+            >
+                <div
+                    ref={nodeRef}
+                    className={cn(
+                        "group relative transition-shadow rounded-2xl overflow-visible bg-white/50 backdrop-blur-md shadow-lg border border-indigo-100/50 flex flex-col min-w-[200px]",
+                        selected ? "ring-2 ring-indigo-500 ring-offset-2" : "",
+                        isHovered ? "shadow-xl" : "shadow-md"
+                    )}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
+                    {/* Drag Handle & Toolbar */}
+                    <div
+                        contentEditable={false}
+                        className={cn(
+                            "absolute top-1 right-1 z-50 flex items-center gap-1 p-1 rounded-md shadow-sm border border-gray-200 transition-all bg-white/90 backdrop-blur-sm",
+                            (isHovered || selected) ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
+                        )}
+                    >
+                        <div className="drag-handle cursor-move p-0.5 hover:bg-gray-100 rounded text-gray-400">
+                            <GripVertical size={14} />
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); deleteNode(); }}
+                            className="p-1 hover:bg-red-100 hover:text-red-500 rounded-md text-gray-500 transition-colors"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+
+                    {/* Content Area */}
+                    <div className="flex flex-col gap-3 p-3 max-w-[300px] sm:max-w-md w-full mx-auto" dir="rtl">
+                        {trackers.map((tracker, index) => (
+                            <TrackerChip key={tracker.id + index} tracker={tracker} />
+                        ))}
+                    </div>
+                </div>
+            </Draggable>
         </NodeViewWrapper>
     );
 };
@@ -138,7 +209,7 @@ const TrackerNodeView = (props: any) => {
 export const TrackerEmbed = Node.create({
     name: 'trackerEmbed',
     group: 'block',
-    atom: true,
+    atom: false, // Must be false to support absolute positioning nodes better in Tiptap, or true if we want it isolated. True works better for Draggable sometimes, but since TextBox is atom:false, let's keep consistent if needed. Actually it was true before, keep it true.
 
     addAttributes() {
         return {
@@ -152,6 +223,12 @@ export const TrackerEmbed = Node.create({
                         return [];
                     }
                 },
+            },
+            x: {
+                default: window.innerWidth > 768 ? 50 : 20, // Initial default offset
+            },
+            y: {
+                default: 50,
             }
         };
     },

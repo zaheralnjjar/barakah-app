@@ -123,7 +123,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const { toast } = useToast();
     const editorRef = useRef<HTMLDivElement>(null);
     const [showTemplates, setShowTemplates] = useState(false);
-    const [editorWidth, setEditorWidth] = useState<number | string>('90%');
+    const [editorWidth, setEditorWidth] = useState<number | string>('100%');
     const [zoom, setZoom] = useState(100); // Zoom percentage (50-130)
     const [pageRuling, setPageRuling] = useState(false);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
@@ -433,78 +433,30 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             {/* Editor Area */}
             <div
                 ref={editorRef}
-                className="flex-1 overflow-y-auto custom-scrollbar px-2 sm:px-6 cursor-text pb-6"
+                className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/50 flex flex-col items-center py-8 gap-8"
                 onWheel={handleWheel}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onClick={(e) => {
                     if (e.target === e.currentTarget && editor) {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const clickY = e.clientY - rect.top;
-                        const lineHeight = 32;
-                        const contentHeight = editorRef.current?.querySelector('.ProseMirror')?.clientHeight || 0;
-
-                        if (clickY > contentHeight + lineHeight) {
-                            const linesToAdd = Math.floor((clickY - contentHeight) / lineHeight);
-                            if (linesToAdd > 0) {
-                                let newLines = '';
-                                for (let i = 0; i < linesToAdd; i++) newLines += '<p><br></p>';
-                                editor.chain().focus('end').insertContent(newLines).run();
-                            } else {
-                                editor.chain().focus('end').run();
-                            }
-                        } else {
-                            editor.chain().focus('end').run();
-                        }
-
+                        editor.chain().focus('end').run();
                     }
                 }}
             >
-                <ResizableBox
-                    width={typeof editorWidth === 'number' ? editorWidth :
-                        (isMobile ? window.innerWidth - 32 : window.innerWidth * 0.7)}
-                    height={editorHeight}
-                    axis={isMobile ? "y" : "both"}
-                    onResizeStop={(_e, { size }) => {
-                        setEditorHeight(size.height);
-                        if (!isMobile) setEditorWidth(size.width);
-                    }}
-                    minConstraints={[isMobile ? window.innerWidth - 32 : 300, 300]}
-                    maxConstraints={[Infinity, 2000]}
-                    resizeHandles={isMobile ? ['s'] : ['s', 'e', 'se']}
-                    handle={
-                        <div className="absolute inset-0 pointer-events-none z-20">
-                            {/* Visual bottom handle */}
-                            <div className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group/resize pointer-events-auto">
-                                <div className="w-12 h-1 bg-gray-200 rounded-full transition-colors group-hover/resize:bg-indigo-400" />
-                            </div>
-                            {!isMobile && (
-                                <>
-                                    {/* Right handle */}
-                                    <div className="absolute right-0 top-0 bottom-0 w-4 cursor-ew-resize flex items-center justify-center group/resize-w pointer-events-auto">
-                                        <div className="h-12 w-1 bg-gray-200 rounded-full transition-colors group-hover/resize-w:bg-indigo-400" />
-                                    </div>
-                                    {/* SE Corner Handle - Premium Rounded Style (matches user image) */}
-                                    <div className="absolute right-0 bottom-0 w-8 h-8 cursor-nwse-resize flex items-center justify-center pointer-events-auto group/resize-se">
-                                        <div className="w-3 h-3 border-r-[3px] border-b-[3px] border-gray-300 rounded-br-[4px] transition-colors group-hover/resize-se:border-indigo-500 shadow-sm" />
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    }
-                >
+                {/* Pages container */}
+                <div className="w-full flex justify-center">
                     <div
                         className={cn(
-                            "bg-white rounded-2xl shadow-sm border border-gray-100 p-0 transition-all duration-300 origin-top",
+                            "bg-white shadow-md border border-gray-200 transition-all duration-300 origin-top flex flex-col",
                             pageRuling ? 'ruled-paper' : '',
-                            isFocusMode ? "max-w-4xl mx-auto shadow-2xl ring-1 ring-black/5" : "min-h-full"
+                            // A4 Aspect Ratio styling
+                            "w-[210mm] min-h-[297mm] max-w-[calc(100vw-2rem)]",
+                            isFocusMode ? "ring-1 ring-black/5" : ""
                         )}
                         style={(() => {
                             const baseStyle: React.CSSProperties = {
-                                minHeight: isFocusMode ? '100%' : `${editorHeight}px`,
-                                maxWidth: '1000px',
-                                margin: '0 auto',
                                 transform: `scale(${zoom / 100})`,
+                                padding: '20mm', // standard A4 margins
                             };
 
                             if (pageBackground) {
@@ -547,10 +499,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                     >
                         <EditorContent
                             editor={editor}
-                            className="min-h-full [&_.ProseMirror]:min-h-[400px] [&_.ProseMirror]:relative [&_.ProseMirror]:outline-none"
+                            className="flex-grow [&_.ProseMirror]:min-h-full [&_.ProseMirror]:relative [&_.ProseMirror]:outline-none"
                         />
                     </div>
-                </ResizableBox>
+                </div>
             </div>
 
             {/* Toolbar Section - Bottom Position (Sticky) */}

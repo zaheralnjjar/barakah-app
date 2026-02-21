@@ -2,7 +2,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Move, GripHorizontal, Unlock, Lock } from 'lucide-react';
+import { Move, GripHorizontal, Unlock, Lock, GripVertical } from 'lucide-react';
 
 const SmartTemplateComponent = (props: any) => {
     const { node, updateAttributes, selected, getPos } = props;
@@ -106,23 +106,22 @@ const SmartTemplateComponent = (props: any) => {
             {/* Controls Overlay - Visible on Hover or Selection */}
             {/* We render controls OUTSIDE the content flow so they don't affect layout */}
             <div
-                className={`absolute -top-10 left-0 flex gap-2 z-[60] p-1.5 rounded-lg bg-white shadow-lg border border-gray-100 transition-opacity duration-200 ${selected || isFloating ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                className={`absolute top-1 right-1 z-50 flex items-center gap-1 p-1 rounded-md shadow-sm border border-gray-200 transition-all bg-white/90 backdrop-blur-sm ${selected ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto'}`}
                 contentEditable={false}
             >
                 {/* Drag Handle */}
                 <div
                     onMouseDown={handleMouseDown}
-                    className={`p-1.5 rounded-md text-white shadow-sm flex items-center justify-center gap-1.5 transition-colors ${isFloating ? 'bg-blue-600 hover:bg-blue-700 cursor-grab active:cursor-grabbing' : 'bg-gray-300 cursor-not-allowed'}`}
+                    className={`drag-handle p-0.5 rounded flex items-center justify-center transition-colors ${isFloating ? 'cursor-grab active:cursor-grabbing hover:bg-gray-100 text-gray-400' : 'cursor-not-allowed hover:bg-red-50 text-gray-300'}`}
                     title={isFloating ? "اسحب للتحريك" : "فعل الوضع الحر للتحريك"}
                 >
-                    <Move size={14} />
-                    {isFloating && <span className="text-[10px] font-bold">تحريك</span>}
+                    <GripVertical size={14} />
                 </div>
 
                 {/* Toggle Float Button */}
                 <button
                     onClick={toggleFloating}
-                    className={`p-1.5 rounded-md text-white shadow-sm transition-colors flex items-center justify-center ${isFloating ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-500 hover:bg-gray-600'}`}
+                    className={`p-1 rounded flex items-center justify-center transition-colors hover:bg-gray-100 ${isFloating ? 'text-green-600' : 'text-gray-400'}`}
                     title={isFloating ? "تثبيت في النص (إلغاء وضع الحر)" : "تفعيل الوضع الحر (تحريك في أي مكان)"}
                 >
                     {isFloating ? <Lock size={14} /> : <Unlock size={14} />}
