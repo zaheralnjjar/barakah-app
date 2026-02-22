@@ -1,5 +1,5 @@
 // Basic Tracker Definition
-export type TrackerType = 'numeric' | 'boolean' | 'scale' | 'checklist' | 'select' | 'mood' | 'time_range' | 'time';
+export type TrackerType = 'numeric' | 'boolean' | 'scale' | 'checklist' | 'select' | 'mood' | 'time_range' | 'time' | 'text';
 
 export interface TrackerFolder {
     id: string;
@@ -24,8 +24,10 @@ export interface Tracker {
         unit?: string; // e.g. "cups", "km"
         min?: number; // Scale min
         max?: number; // Scale max
+        step?: number;
         options?: string[]; // For select/checklist
         chart_type?: string; // "line", "bar", "area", "pie"
+        show_on_dashboard?: boolean;
     };
     created_at?: string;
 }

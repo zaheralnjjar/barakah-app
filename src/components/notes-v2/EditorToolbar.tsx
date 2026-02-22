@@ -221,7 +221,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                                                     `}
                                                     style={{ fontFamily: font.value }}
                                                 >
-                                                    {font.name}
+                                                    <span>{font.name}</span>
+                                                    <span className="text-gray-400 text-xs opacity-60 ml-2 whitespace-nowrap hidden sm:inline-block">أبجد هوز</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -455,41 +456,21 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <TooltipContent side="bottom" sideOffset={5}>إدراج مربع نص</TooltipContent>
             </Tooltip>
 
-            {/* New Page Button */}
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <button
-                        onClick={() => (editor as any).chain().focus().insertTextBox({
-                            width: 794,
-                            height: 1123,
-                            baseWidth: 794,
-                        }).run()}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600"
-                    >
-                        <FilePlus className="w-4 h-4" />
-                    </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={5}>إضافة صفحة جديدة</TooltipContent>
-            </Tooltip>
-
+            {/* New Page Button removed per user request */}
             <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 
             {/* Mic & Export Actions */}
             <div className="flex items-center gap-1 mr-auto lg:mr-0">
                 {onClose && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={onClose}
-                                className="h-8 w-8 sm:h-9 sm:w-9 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl shrink-0"
-                            >
-                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 rtl:rotate-0" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">خروج من المحرر</TooltipContent>
-                    </Tooltip>
+                    <Button
+                        variant="default"
+                        size="sm"
+                        onClick={onClose}
+                        className="h-11 md:h-9 px-3 gap-1.5 bg-emerald-500 hover:bg-emerald-600 border border-emerald-600/20 text-white rounded-lg ms-1 shrink-0 shadow-sm transition-all shadow-emerald-500/20 hover:shadow-emerald-500/30 font-medium"
+                    >
+                        <Check className="w-4 h-4" />
+                        <span className="text-xs md:text-sm pl-1">حفظ وإغلاق</span>
+                    </Button>
                 )}
 
                 <div className="w-px h-6 bg-gray-200 mx-1 shrink-0" />

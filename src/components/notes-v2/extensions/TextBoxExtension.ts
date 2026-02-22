@@ -88,22 +88,36 @@ export const TextBoxExtension = Node.create({
                     parsedContent = DOMParser.fromSchema(editor.schema).parse(element).toJSON().content;
                 }
 
-                // Find the last page node and insert inside it
-                const { doc } = editor.state;
-                let lastPagePos = -1;
-                let lastPageNode: any = null;
+                const { doc, selection } = editor.state;
+                const cursorPos = selection.$anchor.pos;
+
+                let isInsidePage = false;
                 doc.descendants((node, pos) => {
                     if (node.type.name === 'page') {
-                        lastPagePos = pos;
-                        lastPageNode = node;
+                        const endPos = pos + node.nodeSize;
+                        if (cursorPos >= pos && cursorPos <= endPos) {
+                            isInsidePage = true;
+                        }
                     }
                     return true;
                 });
 
-                // Position just before the closing of the page node
-                const insertPos = (lastPagePos >= 0 && lastPageNode)
-                    ? lastPagePos + lastPageNode.nodeSize - 1
-                    : doc.content.size;
+                let insertPos = cursorPos;
+
+                if (!isInsidePage) {
+                    let lastPagePos = -1;
+                    let lastPageNode: any = null;
+                    doc.descendants((node, pos) => {
+                        if (node.type.name === 'page') {
+                            lastPagePos = pos;
+                            lastPageNode = node;
+                        }
+                        return true;
+                    });
+                    insertPos = (lastPagePos >= 0 && lastPageNode)
+                        ? lastPagePos + lastPageNode.nodeSize - 1
+                        : doc.content.size;
+                }
 
                 return chain()
                     .focus()

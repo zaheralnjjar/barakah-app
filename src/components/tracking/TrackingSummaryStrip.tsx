@@ -46,7 +46,14 @@ export function TrackingSummaryStrip() {
 
     if (!trackers || trackers.length === 0) return null;
 
-    const visibleTrackers = trackers.filter(t => !hiddenTrackerIds.includes(t.id));
+    // Filter trackers that are pinned to dashboard via their settings
+    const pinnedTrackers = trackers.filter(t => t.settings?.show_on_dashboard === true);
+
+    // If no pinned trackers, we can show a default set or none. 
+    // Let's show pinned ones, and still respect the local hidden list for extra control.
+    const visibleTrackers = pinnedTrackers.filter(t => !hiddenTrackerIds.includes(t.id));
+
+    if (visibleTrackers.length === 0 && !showSettings) return null;
 
     return (
         <div className="w-full mb-3 animate-in fade-in slide-in-from-top-4 duration-700">
@@ -121,8 +128,8 @@ export function TrackingSummaryStrip() {
                     open={!!detailsTracker}
                     onOpenChange={(open) => !open && setDetailsTracker(null)}
                     onAddEntry={() => {
-                        setEntryDialogTracker(detailsTracker);
                         setDetailsTracker(null);
+                        setTimeout(() => setEntryDialogTracker(detailsTracker), 50);
                     }}
                 />
             )}

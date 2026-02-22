@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
 import Index from "./pages/Index";
@@ -164,6 +164,53 @@ const PermissionRequester = () => {
 
 
 
+const GlobalEventNavigator = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleOpenQuickNote = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?._fromNav) return;
+
+      if (!location.pathname.includes('notes-v2')) {
+        navigate('/notes-v2', { state: { createNew: true, detail } });
+      } else {
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { ...detail, _fromNav: true } }));
+      }
+    };
+
+    const handleOpenDistraction = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!location.pathname.includes('notes-v2')) {
+        navigate('/notes-v2', { state: { createNew: true, detail: { type: 'quick_note', tag: 'تشتت' } } });
+      } else {
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', tag: 'تشتت', _fromNav: true } }));
+      }
+    };
+
+    const handleGlobalVoice = () => {
+      if (!location.pathname.includes('notes-v2')) {
+        navigate('/notes-v2', { state: { createNew: true, detail: { type: 'quick_note', autoStartRecording: true } } });
+      } else {
+        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', autoStartRecording: true, _fromNav: true } }));
+      }
+    };
+
+    window.addEventListener('open-quick-note', handleOpenQuickNote);
+    window.addEventListener('open-distraction-dialog', handleOpenDistraction);
+    window.addEventListener('open-global-voice-recorder', handleGlobalVoice);
+
+    return () => {
+      window.removeEventListener('open-quick-note', handleOpenQuickNote);
+      window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
+      window.removeEventListener('open-global-voice-recorder', handleGlobalVoice);
+    };
+  }, [navigate, location.pathname]);
+
+  return null;
+};
+
 const App = () => {
   // Watch sync removed - watch app deleted
   // Initialize keyboard shortcuts
@@ -173,44 +220,6 @@ const App = () => {
 
   // Global QuickNote - now handled by UnifiedNotesLayout inline (no dialog)
 
-  useEffect(() => {
-    const handleOpenQuickNote = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      // Skip if this event was re-dispatched after navigation (meant for UnifiedNotesLayout)
-      if (detail?._fromNav) return;
-      // Navigate to notes page - UnifiedNotesLayout will handle creating the note
-      const currentHash = window.location.hash;
-      if (!currentHash.includes('notes-v2')) {
-        // Navigate to notes-v2 first, then re-dispatch after a short delay
-        window.location.hash = '#/notes-v2';
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { ...detail, _fromNav: true } }));
-        }, 500);
-      }
-      // If already on notes-v2, the UnifiedNotesLayout listener handles it
-    };
-
-    const handleOpenDistraction = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      // Navigate to notes and create a distraction note
-      window.location.hash = '#/notes-v2';
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', tag: 'تشتت' } }));
-      }, 500);
-    };
-
-    window.addEventListener('open-quick-note', handleOpenQuickNote);
-    // Legacy support if anything still uses open-global-voice-recorder
-    window.addEventListener('open-global-voice-recorder', (e) => {
-      window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note', autoStartRecording: true } }));
-    });
-    window.addEventListener('open-distraction-dialog', handleOpenDistraction);
-
-    return () => {
-      window.removeEventListener('open-quick-note', handleOpenQuickNote);
-      window.removeEventListener('open-distraction-dialog', handleOpenDistraction);
-    }
-  }, []);
 
   const handleAddNote = () => window.dispatchEvent(new CustomEvent('open-quick-note', { detail: { type: 'quick_note' } }));
   const handleVoiceNote = () => {
@@ -231,6 +240,7 @@ const App = () => {
         <Sonner />
         <ErrorBoundary>
           <HashRouter>
+            <GlobalEventNavigator />
             <GlobalSearchDialog />
 
             <Routes>

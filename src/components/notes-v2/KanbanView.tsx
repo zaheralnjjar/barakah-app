@@ -41,15 +41,15 @@ export const KanbanView: React.FC<KanbanViewProps> = ({ onOpenNote, onOpenFolder
 
     return (
         <ScrollArea className="w-full whitespace-nowrap rounded-md border-0">
-            <div className="flex w-max space-x-4 p-4" dir="rtl">
+            <div className="flex w-max gap-4 p-4 snap-x snap-mandatory" dir="rtl">
                 {columns.map((column) => {
                     const columnNotes = getNotesForColumn(column.id);
                     return (
-                        <div key={column.id} className="w-72 shrink-0 flex flex-col gap-3">
+                        <div key={column.id} className="w-[85vw] sm:w-72 shrink-0 flex flex-col gap-3 snap-start">
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-2">
-                                    <column.icon className={`w-4 h-4 text-${column.color}-500`} />
-                                    <h3 className="font-bold text-sm text-gray-700 truncate max-w-[150px]">
+                                    <column.icon className={`w-5 h-5 text-${column.color}-500`} />
+                                    <h3 className="font-bold text-base text-gray-700 truncate max-w-[160px]">
                                         {column.title}
                                     </h3>
                                     <Badge variant="secondary" className="text-[10px] h-4 px-1">

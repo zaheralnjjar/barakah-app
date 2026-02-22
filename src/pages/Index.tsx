@@ -7,7 +7,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Bot, Users, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import NewMuslimsManager from '@/components/NewMuslims/NewMuslimsManager';
+const NewMuslimsManager = lazy(() => import('@/components/NewMuslims/NewMuslimsManager'));
 
 // Error Boundary and Loading
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -17,19 +17,19 @@ import PageLoading from '@/components/PageLoading';
 const FinancialController = lazy(() => import('@/components/agents/FinancialController'));
 const LogisticsManager = lazy(() => import('@/components/agents/LogisticsManager'));
 const CalendarSection = lazy(() => import('@/components/CalendarSection'));
-import InteractiveMap from '@/components/InteractiveMap';
+const InteractiveMap = lazy(() => import('@/components/InteractiveMap'));
 const SettingsPanel = lazy(() => import('@/components/SettingsPanel'));
 const PrayerManager = lazy(() => import('@/components/PrayerManager'));
 
 // Regular imports for critical path components
 import InitializationWizard from '@/components/InitializationWizard';
-import SmartDashboard from '@/components/SmartDashboard';
+const SmartDashboard = lazy(() => import('@/components/SmartDashboard'));
 import AuthForm from '@/components/AuthForm';
 import AppointmentManager from '@/components/AppointmentManager';
 import DailyCalendar from '@/components/DailyCalendar';
 
 import SideNavBar from '@/components/SideNavBar';
-import ReportGenerator from '@/components/ReportGenerator';
+const ReportGenerator = lazy(() => import('@/components/ReportGenerator'));
 import { isAndroid } from '@/utils/platformDetection';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { getDaysUntil } from '@/utils/dateUtils';
@@ -356,10 +356,14 @@ const Index = () => {
 
             <div className="w-full">
               <TabsContent value="dashboard" className="animate-fade-in space-y-4 data-[state=active]:block">
-                <SmartDashboard
-                  onNavigateToTab={setActiveTab}
-                  onOpenVoiceRecorder={() => window.dispatchEvent(new Event('open-global-voice-recorder'))}
-                />
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoading message="جاري تحميل لوحة التحكم..." />}>
+                    <SmartDashboard
+                      onNavigateToTab={setActiveTab}
+                      onOpenVoiceRecorder={() => window.dispatchEvent(new Event('open-global-voice-recorder'))}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
               </TabsContent>
 
               <TabsContent value="calendar" className="animate-fade-in data-[state=active]:block">
@@ -412,7 +416,9 @@ const Index = () => {
 
               <TabsContent value="map" className="animate-fade-in data-[state=active]:block">
                 <ErrorBoundary>
-                  <InteractiveMap />
+                  <Suspense fallback={<PageLoading message="جاري تحميل الخريطة..." />}>
+                    <InteractiveMap />
+                  </Suspense>
                 </ErrorBoundary>
               </TabsContent>
 
@@ -433,10 +439,12 @@ const Index = () => {
 
 
         {/* Report Generator */}
-        <ReportGenerator
-          isOpen={showReportGenerator}
-          onClose={() => setShowReportGenerator(false)}
-        />
+        <Suspense fallback={null}>
+          <ReportGenerator
+            isOpen={showReportGenerator}
+            onClose={() => setShowReportGenerator(false)}
+          />
+        </Suspense>
 
         {/* Notes Manager Removed */}
 

@@ -1,0 +1,371 @@
+--------- beginning of main
+02-22 01:51:15.772 22596 22596 E Capacitor/Console: File: https://localhost/assets/useSystemModes-Cye9khz-.js - Line 1 - Msg: Error fetching system modes: [object Object]
+02-22 01:51:26.306 22596 22596 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:51:26.308 22596 22596 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:51:26.321 22596 22596 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:51:26.327 22596 22596 V Capacitor: callback: 115039355, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:51:26.611 22596 22596 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:51:32.051 22596 22596 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:51:32.052 22596 22596 V Capacitor: callback: 115039356, pluginId: LocalNotifications, methodName: getPending, methodData: {}
+02-22 01:51:32.436 22596 22596 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:51:32.439 22596 22596 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:51:32.440 22596 22596 V Capacitor: callback: 115039357, pluginId: LocalNotifications, methodName: cancel, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:51:32.458 22596 22596 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:51:32.459 22596 22596 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:51:32.461 22596 22596 V Capacitor: callback: 115039358, pluginId: LocalNotifications, methodName: schedule, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"2026-02-22T08:06:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"2026-02-22T09:35:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"2026-02-22T16:07:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"2026-02-22T19:47:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"2026-02-22T22:39:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"2026-02-23T00:02:00.000Z"},"sound":"adhan.wav","channelId":"prayers"}]}
+02-22 01:51:34.212 22596 22596 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6}]}
+02-22 01:51:34.213 22596 22596 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Scheduled 6 enhanced notifications
+02-22 01:52:04.516 27802 27802 D Capacitor: Starting BridgeActivity
+02-22 01:52:04.529 27802 27802 D Capacitor: Registering plugin instance: CapacitorCookies
+02-22 01:52:04.531 27802 27802 D Capacitor: Registering plugin instance: WebView
+02-22 01:52:04.532 27802 27802 D Capacitor: Registering plugin instance: CapacitorHttp
+02-22 01:52:04.534 27802 27802 D Capacitor: Registering plugin instance: SystemBars
+02-22 01:52:04.535 27802 27802 D Capacitor: Registering plugin instance: SpeechRecognition
+02-22 01:52:04.536 27802 27802 D Capacitor: Registering plugin instance: App
+02-22 01:52:04.537 27802 27802 D Capacitor: Registering plugin instance: Filesystem
+02-22 01:52:04.539 27802 27802 D Capacitor: Registering plugin instance: Geolocation
+02-22 01:52:04.552 27802 27802 D Capacitor: Registering plugin instance: LocalNotifications
+02-22 01:52:04.556 27802 27802 D Capacitor: Registering plugin instance: Preferences
+02-22 01:52:04.557 27802 27802 D Capacitor: Registering plugin instance: Share
+02-22 01:52:04.559 27802 27802 D Capacitor: Registering plugin instance: StatusBar
+02-22 01:52:04.563 27802 27802 D Capacitor: Registering plugin instance: GoogleAuth
+02-22 01:52:04.564 27802 27802 D Capacitor: Registering plugin instance: CapacitorCalendar
+02-22 01:52:04.597 27802 27802 W Capacitor: Unable to read file at path public/plugins
+02-22 01:52:04.601 27802 27802 D Capacitor: Loading app at https://localhost
+02-22 01:52:04.640 27802 27848 D Capacitor: Handling local request: https://localhost/
+02-22 01:52:04.642 27802 27802 D Capacitor: App started
+02-22 01:52:04.644 27802 27802 D Capacitor: App resumed
+02-22 01:52:04.913 27802 27854 D Capacitor: Handling local request: https://localhost/assets/vendor-react-B_gcmcd5.js
+02-22 01:52:04.913 27802 27926 D Capacitor: Handling local request: https://localhost/assets/index-C_NhxOPM.js
+02-22 01:52:04.924 27802 27853 D Capacitor: Handling local request: https://localhost/assets/vendor-ui-_dOx35ds.js
+02-22 01:52:04.924 27802 27845 D Capacitor: Handling local request: https://localhost/assets/vendor-charts-0o8-uZQP.js
+02-22 01:52:04.925 27802 27847 D Capacitor: Handling local request: https://localhost/assets/feature-prayer-ClllBzLh.js
+02-22 01:52:04.969 27802 27848 D Capacitor: Handling local request: https://localhost/assets/vendor-map-4OpOJyLs.js
+02-22 01:52:04.974 27802 27854 D Capacitor: Handling local request: https://localhost/assets/feature-map-C_PdHq0A.js
+02-22 01:52:04.975 27802 27853 D Capacitor: Handling local request: https://localhost/assets/feature-map-Dgihpmma.css
+02-22 01:52:04.976 27802 27847 D Capacitor: Handling local request: https://localhost/assets/index-DcZRGF01.css
+02-22 01:52:05.557 27802 27802 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:52:05.557 27802 27802 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:52:05.568 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:05.568 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:05.568 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:05.570 27802 27802 V Capacitor: callback: 46233400, pluginId: App, methodName: getLaunchUrl, methodData: {}
+02-22 01:52:05.571 27802 27802 V Capacitor: callback: 46233401, pluginId: App, methodName: addListener, methodData: {"eventName":"appUrlOpen"}
+02-22 01:52:05.571 27802 27802 V Capacitor: callback: 46233402, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:52:05.612 27802 27802 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:52:05.612 27802 27802 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:52:05.613 27802 27845 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:52:05.618 27802 27848 D Capacitor: Handling local request: https://localhost/assets/NewMuslimsManager-BnUvvW9d.js
+02-22 01:52:05.619 27802 27848 D Capacitor: Handling local request: https://localhost/assets/useSystemModes-Cye9khz-.js
+02-22 01:52:05.620 27802 27848 D Capacitor: Handling local request: https://localhost/assets/CalendarSettingsDialog-BGPsJAvu.js
+02-22 01:52:05.620 27802 27852 D Capacitor: Handling local request: https://localhost/assets/ar-SA-BybinRQO.js
+02-22 01:52:05.621 27802 27845 D Capacitor: Handling local request: https://localhost/assets/SmartDashboard-DdItvtrd.js
+02-22 01:52:05.674 27802 27845 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:52:05.976 27802 27802 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-DdItvtrd.js - Line 50 - Msg: Dashboard fetching events from Sun Feb 22 2026 01:52:05 GMT-0300 (توقيت الأرجنتين الرسمي) to Sun Mar 01 2026 01:52:05 GMT-0300 (توقيت الأرجنتين الرسمي)
+02-22 01:52:05.977 27802 27802 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-DdItvtrd.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:52:05.977 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:06.031 27802 27802 V Capacitor: callback: 46233403, pluginId: CapacitorCalendar, methodName: checkPermission, methodData: {"scope":"readCalendar"}
+02-22 01:52:06.292 27802 27802 I Capacitor/Console: File:  - Line 333 - Msg: {"result":"granted"}
+02-22 01:52:06.292 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:06.300 27802 27802 V Capacitor: callback: 46233404, pluginId: CapacitorCalendar, methodName: listEventsInRange, methodData: {"from":1771735925763,"to":1772340725763}
+02-22 01:52:06.479 27802 27802 I Capacitor/Console: File:  - Line 333 - Msg: {"result":[]}
+02-22 01:52:06.480 27802 27802 I Capacitor/Console: File: https://localhost/assets/CalendarSettingsDialog-BGPsJAvu.js - Line 2 - Msg: [CalendarService] Found 0 raw events.
+02-22 01:52:06.480 27802 27802 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-DdItvtrd.js - Line 50 - Msg: Dashboard found events: 0
+02-22 01:52:06.542 27802 27802 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 672 - Msg: Requesting permissions on Native...
+02-22 01:52:07.080 27802 27802 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 672 - Msg: Microphone granted
+02-22 01:52:07.934 27802 27802 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 672 - Msg: Camera granted
+02-22 01:52:07.943 27802 27802 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:07.944 27802 27802 V Capacitor: callback: 46233405, pluginId: LocalNotifications, methodName: checkPermissions, methodData: {}
+02-22 01:52:07.967 27802 27802 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:52:07.967 27802 27802 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 672 - Msg: LocalNotifications permission: granted
+02-22 01:52:09.148 27802 27802 I Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 672 - Msg: Location granted [object GeolocationPosition]
+02-22 01:52:09.153 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 43 - Msg: Error loading tasks [object Object]
+02-22 01:52:09.497 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Error fetching medications [object Object]
+02-22 01:52:09.556 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 450 - Msg: Supabase fetch error: [object Object]
+02-22 01:52:09.695 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Note creation error: [object Object]
+02-22 01:52:09.695 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: [object Object]
+02-22 01:52:09.695 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 478 - Msg: Error creating note from quick-note event: [object Object]
+02-22 01:52:09.696 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 450 - Msg: Error fetching BNA rate: TypeError: Failed to fetch
+02-22 01:52:11.157 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Error fetching folders: [object Object]
+02-22 01:52:12.556 27802 27802 E Capacitor/Console: File: https://localhost/assets/feature-prayer-ClllBzLh.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:14.848 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Error fetching folders: [object Object]
+02-22 01:52:14.877 27802 27802 E Capacitor/Console: File: https://localhost/assets/feature-prayer-ClllBzLh.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:17.944 27802 27802 E Capacitor/Console: File: https://localhost/assets/index-C_NhxOPM.js - Line 47 - Msg: Error fetching folders: [object Object]
+02-22 01:52:21.201 28850 28850 D Capacitor: Starting BridgeActivity
+02-22 01:52:21.216 28850 28850 D Capacitor: Registering plugin instance: CapacitorCookies
+02-22 01:52:21.218 28850 28850 D Capacitor: Registering plugin instance: WebView
+02-22 01:52:21.220 28850 28850 D Capacitor: Registering plugin instance: CapacitorHttp
+02-22 01:52:21.221 28850 28850 D Capacitor: Registering plugin instance: SystemBars
+02-22 01:52:21.223 28850 28850 D Capacitor: Registering plugin instance: SpeechRecognition
+02-22 01:52:21.224 28850 28850 D Capacitor: Registering plugin instance: App
+02-22 01:52:21.226 28850 28850 D Capacitor: Registering plugin instance: Filesystem
+02-22 01:52:21.228 28850 28850 D Capacitor: Registering plugin instance: Geolocation
+02-22 01:52:21.247 28850 28850 D Capacitor: Registering plugin instance: LocalNotifications
+02-22 01:52:21.251 28850 28850 D Capacitor: Registering plugin instance: Preferences
+02-22 01:52:21.253 28850 28850 D Capacitor: Registering plugin instance: Share
+02-22 01:52:21.255 28850 28850 D Capacitor: Registering plugin instance: StatusBar
+02-22 01:52:21.259 28850 28850 D Capacitor: Registering plugin instance: GoogleAuth
+02-22 01:52:21.261 28850 28850 D Capacitor: Registering plugin instance: CapacitorCalendar
+02-22 01:52:21.305 28850 28850 W Capacitor: Unable to read file at path public/plugins
+02-22 01:52:21.308 28850 28850 D Capacitor: Loading app at https://localhost
+02-22 01:52:21.342 28850 29063 D Capacitor: Handling local request: https://localhost/
+02-22 01:52:21.346 28850 28850 D Capacitor: App started
+02-22 01:52:21.349 28850 28850 D Capacitor: App resumed
+02-22 01:52:21.503 28850 29067 D Capacitor: Handling local request: https://localhost/assets/index-DcfKzSYT.js
+02-22 01:52:21.508 28850 29070 D Capacitor: Handling local request: https://localhost/assets/vendor-react-B_gcmcd5.js
+02-22 01:52:21.526 28850 29060 D Capacitor: Handling local request: https://localhost/assets/vendor-ui-_dOx35ds.js
+02-22 01:52:21.547 28850 29062 D Capacitor: Handling local request: https://localhost/assets/vendor-charts-0o8-uZQP.js
+02-22 01:52:21.664 28850 29069 D Capacitor: Handling local request: https://localhost/assets/feature-prayer-BqmvJuzw.js
+02-22 01:52:21.676 28850 29063 D Capacitor: Handling local request: https://localhost/assets/vendor-map-4OpOJyLs.js
+02-22 01:52:21.677 28850 29067 D Capacitor: Handling local request: https://localhost/assets/feature-map-BN_lRHMh.js
+02-22 01:52:21.677 28850 29070 D Capacitor: Handling local request: https://localhost/assets/index-DcZRGF01.css
+02-22 01:52:21.678 28850 29060 D Capacitor: Handling local request: https://localhost/assets/feature-map-Dgihpmma.css
+02-22 01:52:22.633 28850 28850 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:52:22.634 28850 28850 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:52:22.645 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:22.646 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:22.646 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:22.647 28850 28850 V Capacitor: callback: 54782037, pluginId: App, methodName: getLaunchUrl, methodData: {}
+02-22 01:52:22.648 28850 28850 V Capacitor: callback: 54782038, pluginId: App, methodName: addListener, methodData: {"eventName":"appUrlOpen"}
+02-22 01:52:22.649 28850 28850 V Capacitor: callback: 54782039, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:52:22.671 28850 29060 D Capacitor: Handling local request: https://localhost/assets/SmartDashboard-YC1OhofO.js
+02-22 01:52:22.672 28850 29067 D Capacitor: Handling local request: https://localhost/assets/NewMuslimsManager-CC8o299c.js
+02-22 01:52:22.673 28850 29063 D Capacitor: Handling local request: https://localhost/assets/useSystemModes-VxuWNgcq.js
+02-22 01:52:22.679 28850 29063 D Capacitor: Handling local request: https://localhost/assets/ar-SA-C7KZzdVa.js
+02-22 01:52:22.680 28850 29062 D Capacitor: Handling local request: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js
+02-22 01:52:22.753 28850 29060 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:52:22.771 28850 29060 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:52:23.173 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:52:23.173 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:52:23.174 28850 28850 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard fetching events from Sun Feb 22 2026 01:52:22 GMT-0300 (توقيت الأرجنتين الرسمي) to Sun Mar 01 2026 01:52:22 GMT-0300 (توقيت الأرجنتين الرسمي)
+02-22 01:52:23.174 28850 28850 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:52:23.175 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:23.231 28850 28850 V Capacitor: callback: 54782040, pluginId: CapacitorCalendar, methodName: checkPermission, methodData: {"scope":"readCalendar"}
+02-22 01:52:23.485 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"result":"granted"}
+02-22 01:52:23.485 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:23.621 28850 28850 V Capacitor: callback: 54782041, pluginId: CapacitorCalendar, methodName: listEventsInRange, methodData: {"from":1771735942864,"to":1772340742864}
+02-22 01:52:23.632 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Requesting permissions on Native...
+02-22 01:52:23.653 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"result":[]}
+02-22 01:52:23.653 28850 28850 I Capacitor/Console: File: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js - Line 2 - Msg: [CalendarService] Found 0 raw events.
+02-22 01:52:23.654 28850 28850 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard found events: 0
+02-22 01:52:23.850 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Microphone granted
+02-22 01:52:24.558 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Camera granted
+02-22 01:52:24.574 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:24.574 28850 28850 V Capacitor: callback: 54782042, pluginId: LocalNotifications, methodName: checkPermissions, methodData: {}
+02-22 01:52:24.588 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:52:24.588 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: LocalNotifications permission: granted
+02-22 01:52:26.724 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Location granted [object GeolocationPosition]
+02-22 01:52:27.072 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:27.901 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:29.383 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:29.600 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:29.806 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:29.867 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:29.874 28850 28850 V Capacitor: callback: 54782043, pluginId: LocalNotifications, methodName: getPending, methodData: {}
+02-22 01:52:29.971 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:52:29.972 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:29.981 28850 28850 V Capacitor: callback: 54782044, pluginId: LocalNotifications, methodName: cancel, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:52:30.018 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:30.090 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:52:30.090 28850 28850 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:52:30.092 28850 28850 V Capacitor: callback: 54782045, pluginId: LocalNotifications, methodName: schedule, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"2026-02-22T08:06:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"2026-02-22T09:35:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"2026-02-22T16:07:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"2026-02-22T19:47:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"2026-02-22T22:39:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"2026-02-23T00:02:00.000Z"},"sound":"adhan.wav","channelId":"prayers"}]}
+02-22 01:52:30.196 28850 28850 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6}]}
+02-22 01:52:30.196 28850 28850 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 47 - Msg: Scheduled 6 enhanced notifications
+02-22 01:52:30.205 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:30.373 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:30.555 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:30.902 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:31.110 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:31.900 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:32.096 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:32.326 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:32.570 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:32.797 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:33.037 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:33.268 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:33.414 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:33.585 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:33.804 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:34.075 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:34.440 28850 28850 E Capacitor/Console: File: https://localhost/assets/feature-prayer-BqmvJuzw.js - Line 1020 - Msg: TypeError: Failed to fetch
+02-22 01:52:34.926 28850 28850 E Capacitor/Console: File: https://localhost/assets/useSystemModes-VxuWNgcq.js - Line 1 - Msg: Error fetching system modes: [object Object]
+02-22 01:52:34.926 28850 28850 E Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 444 - Msg: Error fetching trackers: [object Object]
+02-22 01:52:42.205 28850 28850 E Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 43 - Msg: Error loading tasks [object Object]
+02-22 01:52:42.721 28850 28850 E Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 43 - Msg: Error fetching habits [object Object]
+02-22 01:54:12.473 31366 31366 D Capacitor: Starting BridgeActivity
+02-22 01:54:12.487 31366 31366 D Capacitor: Registering plugin instance: CapacitorCookies
+02-22 01:54:12.490 31366 31366 D Capacitor: Registering plugin instance: WebView
+02-22 01:54:12.492 31366 31366 D Capacitor: Registering plugin instance: CapacitorHttp
+02-22 01:54:12.493 31366 31366 D Capacitor: Registering plugin instance: SystemBars
+02-22 01:54:12.495 31366 31366 D Capacitor: Registering plugin instance: SpeechRecognition
+02-22 01:54:12.496 31366 31366 D Capacitor: Registering plugin instance: App
+02-22 01:54:12.497 31366 31366 D Capacitor: Registering plugin instance: Filesystem
+02-22 01:54:12.499 31366 31366 D Capacitor: Registering plugin instance: Geolocation
+02-22 01:54:12.515 31366 31366 D Capacitor: Registering plugin instance: LocalNotifications
+02-22 01:54:12.519 31366 31366 D Capacitor: Registering plugin instance: Preferences
+02-22 01:54:12.520 31366 31366 D Capacitor: Registering plugin instance: Share
+02-22 01:54:12.522 31366 31366 D Capacitor: Registering plugin instance: StatusBar
+02-22 01:54:12.526 31366 31366 D Capacitor: Registering plugin instance: GoogleAuth
+02-22 01:54:12.528 31366 31366 D Capacitor: Registering plugin instance: CapacitorCalendar
+02-22 01:54:12.548 31366 31366 W Capacitor: Unable to read file at path public/plugins
+02-22 01:54:12.552 31366 31366 D Capacitor: Loading app at https://localhost
+02-22 01:54:12.588 31366 31366 D Capacitor: App started
+02-22 01:54:12.591 31366 31366 D Capacitor: App resumed
+02-22 01:54:12.616 31366 31811 D Capacitor: Handling local request: https://localhost/
+02-22 01:54:12.887 31366 31820 D Capacitor: Handling local request: https://localhost/assets/index-DcfKzSYT.js
+02-22 01:54:12.890 31366 31889 D Capacitor: Handling local request: https://localhost/assets/vendor-react-B_gcmcd5.js
+02-22 01:54:12.896 31366 31954 D Capacitor: Handling local request: https://localhost/assets/vendor-ui-_dOx35ds.js
+02-22 01:54:12.905 31366 32155 D Capacitor: Handling local request: https://localhost/assets/vendor-charts-0o8-uZQP.js
+02-22 01:54:12.906 31366 32151 D Capacitor: Handling local request: https://localhost/assets/feature-prayer-BqmvJuzw.js
+02-22 01:54:12.912 31366 31805 D Capacitor: Handling local request: https://localhost/assets/vendor-map-4OpOJyLs.js
+02-22 01:54:12.995 31366 31889 D Capacitor: Handling local request: https://localhost/assets/feature-map-BN_lRHMh.js
+02-22 01:54:12.995 31366 31820 D Capacitor: Handling local request: https://localhost/assets/feature-map-Dgihpmma.css
+02-22 01:54:12.997 31366 31954 D Capacitor: Handling local request: https://localhost/assets/index-DcZRGF01.css
+02-22 01:54:13.738 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:54:13.739 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:54:13.750 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:13.753 31366 31366 V Capacitor: callback: 113559806, pluginId: App, methodName: getLaunchUrl, methodData: {}
+02-22 01:54:13.753 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:13.754 31366 31366 V Capacitor: callback: 113559807, pluginId: App, methodName: addListener, methodData: {"eventName":"appUrlOpen"}
+02-22 01:54:13.754 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:13.755 31366 31366 V Capacitor: callback: 113559808, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:54:13.786 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:54:13.790 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:54:13.800 31366 31805 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:54:13.807 31366 31805 D Capacitor: Handling local request: https://localhost/favicon.ico
+02-22 01:54:14.219 31366 31811 D Capacitor: Handling local request: https://localhost/assets/amiri-latin-400-normal-Czk41Rjn.woff2
+02-22 01:54:14.706 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Requesting permissions on Native...
+02-22 01:54:15.043 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Microphone granted
+02-22 01:54:15.564 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Camera granted
+02-22 01:54:15.566 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:15.566 31366 31366 V Capacitor: callback: 113559809, pluginId: LocalNotifications, methodName: checkPermissions, methodData: {}
+02-22 01:54:15.567 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:54:15.567 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: LocalNotifications permission: granted
+02-22 01:54:16.560 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 672 - Msg: Location granted [object GeolocationPosition]
+02-22 01:54:17.609 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:17.610 31366 31366 V Capacitor: callback: 113559810, pluginId: Preferences, methodName: set, methodData: {"key":"widget_prayers","value":"[{\"name\":\"fajr\",\"nameAr\":\"الفجر\",\"time\":\"05:06\",\"timestamp\":\"2026-02-22T08:06:00.000Z\"},{\"name\":\"sunrise\",\"nameAr\":\"الشروق\",\"time\":\"06:35\",\"timestamp\":\"2026-02-22T09:35:00.000Z\"},{\"name\":\"dhuhr\",\"nameAr\":\"الظهر\",\"time\":\"13:07\",\"timestamp\":\"2026-02-22T16:07:00.000Z\"},{\"name\":\"asr\",\"nameAr\":\"العصر\",\"time\":\"16:47\",\"timestamp\":\"2026-02-22T19:47:00.000Z\"},{\"name\":\"maghrib\",\"nameAr\":\"المغرب\",\"time\":\"19:39\",\"timestamp\":\"2026-02-22T22:39:00.000Z\"},{\"name\":\"isha\",\"nameAr\":\"العشاء\",\"time\":\"21:02\",\"timestamp\":\"2026-02-23T00:02:00.000Z\"}]"}
+02-22 01:54:17.610 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:17.611 31366 31366 V Capacitor: callback: 113559811, pluginId: Preferences, methodName: set, methodData: {"key":"widget_prayers","value":"[{\"name\":\"fajr\",\"nameAr\":\"الفجر\",\"time\":\"05:06\",\"timestamp\":\"2026-02-22T08:06:00.000Z\"},{\"name\":\"sunrise\",\"nameAr\":\"الشروق\",\"time\":\"06:35\",\"timestamp\":\"2026-02-22T09:35:00.000Z\"},{\"name\":\"dhuhr\",\"nameAr\":\"الظهر\",\"time\":\"13:07\",\"timestamp\":\"2026-02-22T16:07:00.000Z\"},{\"name\":\"asr\",\"nameAr\":\"العصر\",\"time\":\"16:47\",\"timestamp\":\"2026-02-22T19:47:00.000Z\"},{\"name\":\"maghrib\",\"nameAr\":\"المغرب\",\"time\":\"19:39\",\"timestamp\":\"2026-02-22T22:39:00.000Z\"},{\"name\":\"isha\",\"nameAr\":\"العشاء\",\"time\":\"21:02\",\"timestamp\":\"2026-02-23T00:02:00.000Z\"}]"}
+02-22 01:54:17.612 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:54:17.612 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:54:22.614 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:22.615 31366 31366 V Capacitor: callback: 113559812, pluginId: LocalNotifications, methodName: getPending, methodData: {}
+02-22 01:54:22.643 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:54:22.643 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:22.645 31366 31366 V Capacitor: callback: 113559813, pluginId: LocalNotifications, methodName: cancel, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:54:22.658 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:54:22.659 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:22.660 31366 31366 V Capacitor: callback: 113559814, pluginId: LocalNotifications, methodName: schedule, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"2026-02-22T08:06:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"2026-02-22T09:35:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"2026-02-22T16:07:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"2026-02-22T19:47:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"2026-02-22T22:39:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"2026-02-23T00:02:00.000Z"},"sound":"adhan.wav","channelId":"prayers"}]}
+02-22 01:54:22.697 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6}]}
+02-22 01:54:22.697 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 47 - Msg: Scheduled 6 enhanced notifications
+02-22 01:54:31.777 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:31.780 31366 31366 V Capacitor: callback: 113559815, pluginId: LocalNotifications, methodName: getPending, methodData: {}
+02-22 01:54:31.786 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:54:31.786 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:31.788 31366 31366 V Capacitor: callback: 113559816, pluginId: LocalNotifications, methodName: cancel, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:54:31.796 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:54:31.797 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:31.798 31366 31366 V Capacitor: callback: 113559817, pluginId: LocalNotifications, methodName: schedule, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"2026-02-22T08:06:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"2026-02-22T09:35:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"2026-02-22T16:07:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"2026-02-22T19:47:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"2026-02-22T22:39:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"2026-02-23T00:02:00.000Z"},"sound":"adhan.wav","channelId":"prayers"}]}
+02-22 01:54:31.830 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6}]}
+02-22 01:54:31.831 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 47 - Msg: Scheduled 6 enhanced notifications
+02-22 01:54:44.555 31366 31811 D Capacitor: Handling local request: https://localhost/assets/SmartDashboard-YC1OhofO.js
+02-22 01:54:44.557 31366 31805 D Capacitor: Handling local request: https://localhost/assets/NewMuslimsManager-CC8o299c.js
+02-22 01:54:44.558 31366 31805 D Capacitor: Handling local request: https://localhost/assets/useSystemModes-VxuWNgcq.js
+02-22 01:54:44.558 31366 31805 D Capacitor: Handling local request: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js
+02-22 01:54:44.559 31366 31820 D Capacitor: Handling local request: https://localhost/assets/ar-SA-C7KZzdVa.js
+02-22 01:54:44.690 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard fetching events from Sun Feb 22 2026 01:54:44 GMT-0300 (توقيت الأرجنتين الرسمي) to Sun Mar 01 2026 01:54:44 GMT-0300 (توقيت الأرجنتين الرسمي)
+02-22 01:54:44.690 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:54:44.691 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:44.691 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:54:44.692 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:54:44.693 31366 31366 V Capacitor: callback: 113559818, pluginId: CapacitorCalendar, methodName: checkPermission, methodData: {"scope":"readCalendar"}
+02-22 01:54:44.872 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":"granted"}
+02-22 01:54:44.872 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:44.990 31366 31366 V Capacitor: callback: 113559819, pluginId: CapacitorCalendar, methodName: listEventsInRange, methodData: {"from":1771736084687,"to":1772340884687}
+02-22 01:54:45.025 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":[]}
+02-22 01:54:45.026 31366 31366 I Capacitor/Console: File: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js - Line 2 - Msg: [CalendarService] Found 0 raw events.
+02-22 01:54:45.029 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard found events: 0
+02-22 01:54:49.908 31366 31805 D Capacitor: Handling local request: https://localhost/assets/amiri-arabic-400-normal-D0NIBXga.woff2
+02-22 01:54:50.238 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:54:50.239 31366 31366 V Capacitor: callback: 113559820, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:54:50.242 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:55:48.307 31366 31366 W Capacitor/Console: File: https://localhost/assets/vendor-ui-_dOx35ds.js - Line 53 - Msg: Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+02-22 01:55:50.429 31366 31366 E Capacitor/Console: File: https://localhost/#/notes-v2 - Line 0 - Msg: Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+02-22 01:55:50.429 31366 31366 E Capacitor/Console: Element with focus: div
+02-22 01:55:50.429 31366 31366 E Capacitor/Console: Ancestor with aria-hidden: 
+02-22 01:57:40.746 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:57:40.747 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:57:40.747 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:40.748 31366 31366 V Capacitor: callback: 113559821, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:57:40.769 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:57:41.409 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard fetching events from Sun Feb 22 2026 01:57:41 GMT-0300 (توقيت الأرجنتين الرسمي) to Sun Mar 01 2026 01:57:41 GMT-0300 (توقيت الأرجنتين الرسمي)
+02-22 01:57:41.409 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:57:41.416 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:41.418 31366 31366 V Capacitor: callback: 113559822, pluginId: CapacitorCalendar, methodName: checkPermission, methodData: {"scope":"readCalendar"}
+02-22 01:57:41.431 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":"granted"}
+02-22 01:57:41.431 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:41.432 31366 31366 V Capacitor: callback: 113559823, pluginId: CapacitorCalendar, methodName: listEventsInRange, methodData: {"from":1771736261408,"to":1772341061408}
+02-22 01:57:41.497 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":[]}
+02-22 01:57:41.497 31366 31366 I Capacitor/Console: File: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js - Line 2 - Msg: [CalendarService] Found 0 raw events.
+02-22 01:57:41.497 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard found events: 0
+02-22 01:57:41.840 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:41.840 31366 31366 V Capacitor: callback: 113559824, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:57:41.841 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:57:46.289 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:46.290 31366 31366 V Capacitor: callback: 113559825, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:57:46.292 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:57:56.491 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:57:56.491 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:57:56.491 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:56.500 31366 31366 V Capacitor: callback: 113559826, pluginId: LocalNotifications, methodName: requestPermissions, methodData: {}
+02-22 01:57:56.502 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+02-22 01:57:56.944 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard fetching events from Sun Feb 22 2026 01:57:56 GMT-0300 (توقيت الأرجنتين الرسمي) to Sun Mar 01 2026 01:57:56 GMT-0300 (توقيت الأرجنتين الرسمي)
+02-22 01:57:56.945 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:57:56.953 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:56.954 31366 31366 V Capacitor: callback: 113559827, pluginId: CapacitorCalendar, methodName: checkPermission, methodData: {"scope":"readCalendar"}
+02-22 01:57:56.974 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":"granted"}
+02-22 01:57:56.974 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:56.974 31366 31366 V Capacitor: callback: 113559828, pluginId: CapacitorCalendar, methodName: listEventsInRange, methodData: {"from":1771736276944,"to":1772341076944}
+02-22 01:57:57.014 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"result":[]}
+02-22 01:57:57.014 31366 31366 I Capacitor/Console: File: https://localhost/assets/CalendarSettingsDialog-BvBk3oem.js - Line 2 - Msg: [CalendarService] Found 0 raw events.
+02-22 01:57:57.014 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 50 - Msg: Dashboard found events: 0
+02-22 01:57:57.131 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:57:57.133 31366 31366 V Capacitor: callback: 113559829, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:57:57.140 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.680 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.681 31366 31366 V Capacitor: callback: 113559830, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.695 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.695 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.702 31366 31366 V Capacitor: callback: 113559831, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.706 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.774 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.775 31366 31366 V Capacitor: callback: 113559832, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.776 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.843 31366 31366 I Capacitor/Console: File: https://localhost/assets/SmartDashboard-YC1OhofO.js - Line 1 - Msg: Starting location watch for reminders...
+02-22 01:58:01.843 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.843 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: DOING IT HERE FOR ORIGIN: https://localhost/
+02-22 01:58:01.843 31366 31366 D Capacitor: onGeolocationPermissionsShowPrompt: has required permission
+02-22 01:58:01.844 31366 31366 V Capacitor: callback: 113559833, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.851 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.918 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.919 31366 31366 V Capacitor: callback: 113559834, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.924 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:01.980 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:01.981 31366 31366 V Capacitor: callback: 113559835, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:01.983 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:02.037 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:02.038 31366 31366 V Capacitor: callback: 113559836, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:02.039 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:02.107 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:02.108 31366 31366 V Capacitor: callback: 113559837, pluginId: Preferences, methodName: set, methodData: {"key":"widget_tasks","value":"[{\"id\":\"51cfcf4d-fcf2-4158-9818-e84fbbeda280\",\"title\":\"ترتيب\",\"description\":null,\"deadline\":\"2026-01-30\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null},{\"id\":\"25f07919-9913-4d33-8c53-3173611859df\",\"title\":\"ااا\",\"description\":\"\",\"deadline\":\"2026-02-11\",\"subtasks\":[],\"progress\":0,\"priority\":\"high\",\"type\":\"task\",\"linkedAppointmentId\":null,\"isPreparatoryFor\":null,\"reminderBeforeAppointment\":null,\"location\":null,\"latitude\":null,\"longitude\":null}]"}
+02-22 01:58:02.111 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:02.227 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:02.229 31366 31366 V Capacitor: callback: 113559838, pluginId: LocalNotifications, methodName: getPending, methodData: {}
+02-22 01:58:02.233 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:58:02.233 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:02.234 31366 31366 V Capacitor: callback: 113559839, pluginId: LocalNotifications, methodName: cancel, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"Sun Feb 22 05:06:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"Sun Feb 22 06:35:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"Sun Feb 22 13:07:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"Sun Feb 22 16:47:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"Sun Feb 22 19:39:00 GMT-03:00 2026","count":1,"repeats":false}},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"Sun Feb 22 21:02:00 GMT-03:00 2026","count":1,"repeats":false}}]}
+02-22 01:58:02.239 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+02-22 01:58:02.240 31366 31366 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+02-22 01:58:02.241 31366 31366 V Capacitor: callback: 113559840, pluginId: LocalNotifications, methodName: schedule, methodData: {"notifications":[{"id":1,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الفجر","schedule":{"at":"2026-02-22T08:06:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":2,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الشروق","schedule":{"at":"2026-02-22T09:35:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":3,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة الظهر","schedule":{"at":"2026-02-22T16:07:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":4,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العصر","schedule":{"at":"2026-02-22T19:47:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":5,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة المغرب","schedule":{"at":"2026-02-22T22:39:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":6,"title":"حان وقت الصلاة","body":"حان الآن موعد صلاة العشاء","schedule":{"at":"2026-02-23T00:02:00.000Z"},"sound":"adhan.wav","channelId":"prayers"},{"id":7,"title":"وقت الدواء 💊","body":"حان موعد تناول: غو","schedule":{"at":"2026-02-22T11:00:00.000Z"},"channelId":"medications"}]}
+02-22 01:58:02.257 31366 31366 I Capacitor/Console: File:  - Line 333 - Msg: {"notifications":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":6},{"id":7}]}
+02-22 01:58:02.257 31366 31366 I Capacitor/Console: File: https://localhost/assets/index-DcfKzSYT.js - Line 47 - Msg: Scheduled 7 enhanced notifications

@@ -120,12 +120,30 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
 
     // Handle initial intent (e.g. create new note from sidebar)
     useEffect(() => {
-        const createNewIntent = (location.state as any)?.createNew;
+        const state = location.state as any;
+        const createNewIntent = state?.createNew;
+        const detail = state?.detail;
+
         if (createNewIntent) {
             const createAndOpen = async () => {
-                const newNote = await createNote({});
-                if (newNote) {
-                    handleSelectNote(newNote);
+                const folderId = detail?.folderId || activeFolderId || null;
+                const tag = detail?.tag;
+
+                try {
+                    const newNote = await createNote({
+                        folder_id: folderId,
+                        tags: tag ? [tag] : []
+                    });
+                    if (newNote) {
+                        handleSelectNote(newNote);
+                        if (detail?.autoStartRecording) {
+                            setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('start-voice-recording', { detail: { noteId: newNote.id } }));
+                            }, 500);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to create note from intent", e);
                 }
             };
             createAndOpen();

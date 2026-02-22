@@ -159,7 +159,7 @@ const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
                                     />
                                     {/* Text - on BOTTOM */}
                                     <span style={{
-                                        fontSize: '11px',
+                                        fontSize: '13px',
                                         fontWeight: isActive ? 600 : 500,
                                         color: iconColor,
                                         whiteSpace: 'nowrap'
@@ -200,7 +200,7 @@ const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
                                     />
                                     {/* Text - on BOTTOM */}
                                     <span style={{
-                                        fontSize: '11px',
+                                        fontSize: '13px',
                                         fontWeight: 500,
                                         color: item.color,
                                         whiteSpace: 'nowrap'
@@ -286,8 +286,8 @@ const SmartBottomBar: React.FC<SmartBottomBarProps> = ({
                             <div
                                 key={index}
                                 className={`flex items-center justify-between p-3 rounded-xl transition-all ${prayer.isNext
-                                        ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 shadow-sm'
-                                        : 'bg-gray-50 border border-gray-100'
+                                    ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 shadow-sm'
+                                    : 'bg-gray-50 border border-gray-100'
                                     }`}
                             >
                                 <span className={`font-semibold text-base ${prayer.isNext ? 'text-amber-700' : 'text-gray-700'}`}>

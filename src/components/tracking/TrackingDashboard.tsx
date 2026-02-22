@@ -220,7 +220,7 @@ export function TrackingDashboard() {
                                     </div>
 
                                     <CollapsibleContent>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6 pt-2">
                                             {folderTrackers.map(tracker => (
                                                 <TrackerCardWrapper
                                                     key={tracker.id}
@@ -251,7 +251,7 @@ export function TrackingDashboard() {
                                         غير مصنف
                                     </h2>
                                 )}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                                     {uncategorizedTrackers.map(tracker => (
                                         <TrackerCardWrapper
                                             key={tracker.id}
@@ -305,8 +305,8 @@ export function TrackingDashboard() {
                     open={!!detailsTracker}
                     onOpenChange={(open) => !open && setDetailsTracker(null)}
                     onAddEntry={() => {
-                        setEntryDialogTracker(detailsTracker);
                         setDetailsTracker(null); // Close details to avoid stacking issues
+                        setTimeout(() => setEntryDialogTracker(detailsTracker), 50);
                     }}
                 />
             )}

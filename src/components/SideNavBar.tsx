@@ -116,7 +116,6 @@ const SideNavBar: React.FC<SideNavBarProps> = ({
                         `}
                     >
                         <Icon className={`${isMobile ? 'w-10 h-10' : 'w-6 h-6'} transition-colors`} />
-                        {/* Labels Removed for Mobile as requested */}
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side={isMobile ? "top" : "left"} className="bg-gray-900 text-white text-xs px-2 py-1 rounded-lg">

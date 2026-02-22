@@ -61,16 +61,10 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
             const { data, error } = await supabase
                 .from('quick_notes')
                 .insert([{
-                    title,
-                    folder_id: (folder_id === 'trash' || folder_id === 'all') ? null : folder_id,
+                    title: title || 'ملاحظة جديدة',
+                    folder_id: (folder_id === 'trash' || folder_id === 'all' || folder_id === 'bookmarked') ? null : folder_id,
                     content,
                     color: color || '#ffffff',
-                    background_color: background_color || color || '#ffffff',
-                    font_family: font_family || 'Inherit',
-                    font_size: font_size || 'normal',
-                    text_color: text_color || '#000000',
-                    is_bold: is_bold || false,
-                    text_align: text_align || 'right',
                     tags: tags,
                     user_id: userId,
                     is_pinned: false
@@ -78,8 +72,15 @@ export const useNotesV2 = (folderId?: string | null, searchQuery?: string) => {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (error) {
+                console.error("Note creation error:", error);
+                throw error;
+            }
             return data;
+        },
+        onError: (error: any) => {
+            console.error(error);
+            toast({ title: 'فشل إنشاء الملاحظة', description: error.message || 'حدث خطأ غير معروف', variant: 'destructive' });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quick_notes'] });

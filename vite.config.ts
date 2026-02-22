@@ -218,7 +218,7 @@ export default defineConfig(({ mode }) => {
       componentTagger(),
       cdnPrefixImages(),
       VitePWA({
-        disable: true, // Temporarily disabled to fix build issues
+        disable: true, // PWA temporarily disabled - needs workbox config fix before enabling
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
         manifest: {

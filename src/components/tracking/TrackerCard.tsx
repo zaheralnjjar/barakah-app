@@ -149,7 +149,7 @@ export function TrackerCard({
                     <div onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/10 shrink-0">
                                     <MoreHorizontal className="w-4 h-4 text-gray-500" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -157,6 +157,19 @@ export function TrackerCard({
                                 <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
                                     <Pencil className="w-4 h-4 ml-2" />
                                     تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={async () => {
+                                    try {
+                                        const currentSettings = tracker.settings || {};
+                                        await trackingService.updateTracker(tracker.id, {
+                                            settings: { ...currentSettings, show_on_dashboard: !currentSettings.show_on_dashboard }
+                                        } as any);
+                                        toast.success(currentSettings.show_on_dashboard ? "تم إزالة التثبيت من الرئيسية" : "تم التثبيت على الرئيسية");
+                                        queryClient.invalidateQueries({ queryKey: ["trackers"] });
+                                    } catch (e) { toast.error("فشل التثبيت"); }
+                                }}>
+                                    <Plus className="w-4 h-4 ml-2" />
+                                    {tracker.settings?.show_on_dashboard ? "إزالة من الرئيسية" : "تثبيت على الرئيسية"}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={handleArchive}>
                                     <Archive className="w-4 h-4 ml-2" />

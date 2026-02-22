@@ -31,14 +31,16 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
     const margin = storage.margin ?? 20;
     const pageBorder = storage.border || 'none';
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
     // A4 dimensions in px (at 96dpi: 210mm ≈ 794px, 297mm ≈ 1123px)
     const pageWidthPx = orientation === 'portrait' ? 794 : 1123;
     const pageHeightPx = orientation === 'portrait' ? 1123 : 794;
-    const scale = zoom / 100;
+    const scale = isMobile ? 1 : zoom / 100;
 
     // The rendered dimensions after scale
-    const renderedWidth = pageWidthPx * scale;
-    const renderedHeight = pageHeightPx * scale;
+    const renderedWidth = isMobile ? '100%' : `${pageWidthPx * scale}px`;
+    const renderedHeight = isMobile ? 'calc(100vh - 180px)' : `${pageHeightPx * scale}px`;
 
     // Generate background based on layout type
     const getLayoutBackground = (): React.CSSProperties => {
@@ -74,34 +76,36 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
 
     return (
         <NodeViewWrapper
-            className="page-node-view flex justify-center"
+            className={cn("page-node-view flex justify-center", isMobile ? "px-2" : "")}
             style={{
                 // Reserve exact space for the scaled page + gap
                 width: '100%',
-                marginBottom: '40px',
+                marginBottom: isMobile ? '16px' : '40px',
                 paddingTop: '0px',
             }}
         >
             <div
                 style={{
-                    width: `${renderedWidth}px`,
-                    minHeight: `${renderedHeight}px`,
+                    width: renderedWidth as any,
+                    minHeight: renderedHeight as any,
                     position: 'relative',
                 }}
             >
                 {/* The actual A4 page */}
                 <div
                     className={cn(
-                        "bg-white shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition-colors duration-300 relative",
+                        "bg-white transition-colors duration-300 relative",
+                        !isMobile && "shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
                         pageBorder === 'none' && "border border-gray-200/80",
+                        isMobile && "rounded-2xl shadow-sm"
                     )}
                     style={(() => {
                         const baseStyle: React.CSSProperties = {
-                            width: `${pageWidthPx}px`,
-                            minHeight: `${pageHeightPx}px`,
-                            padding: `${margin}mm`,
+                            width: isMobile ? '100%' : `${pageWidthPx}px`,
+                            minHeight: isMobile ? 'calc(100vh - 180px)' : `${pageHeightPx}px`,
+                            padding: isMobile ? `20px 16px` : `${margin}mm`,
                             backgroundColor: backgroundColor,
-                            transform: `scale(${scale})`,
+                            transform: isMobile ? 'none' : `scale(${scale})`,
                             transformOrigin: 'top center',
                         };
 
@@ -134,7 +138,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     <div
                         contentEditable={false}
                         className="absolute top-2 border-b border-gray-100/80 pb-1 flex justify-between text-[10px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: `${margin}mm`, right: `${margin}mm` }}
+                        style={{ left: isMobile ? '16px' : `${margin}mm`, right: isMobile ? '16px' : `${margin}mm` }}
                     >
                         <input
                             type="text"
@@ -163,7 +167,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     <div
                         contentEditable={false}
                         className="absolute bottom-2 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[10px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: `${margin}mm`, right: `${margin}mm` }}
+                        style={{ left: isMobile ? '16px' : `${margin}mm`, right: isMobile ? '16px' : `${margin}mm` }}
                     >
                         <span>صفحة {pageNumber}</span>
                         <input

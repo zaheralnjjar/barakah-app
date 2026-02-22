@@ -750,40 +750,67 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     return (
         <div className="h-full w-full flex flex-col bg-slate-100 overflow-hidden" dir="rtl">
-            {/* Category strip */}
-            <div className="bg-white border-b border-gray-100 px-3 py-1 flex items-center gap-1 overflow-x-auto shrink-0 z-[21]" onMouseDown={e => e.preventDefault()}>
-                <button
-                    onClick={() => handleCategoryChange(null)}
-                    className={cn(
-                        "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 border",
-                        !noteCategory
-                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                            : "bg-white text-gray-500 border-gray-100 hover:border-indigo-200"
-                    )}
-                >
-                    <FileText className="w-3 h-3" />
-                    <span>ملاحظة</span>
-                </button>
-                {CATEGORIES.map(cat => (
-                    <button
-                        key={cat.id}
-                        onClick={() => handleCategoryChange(noteCategory === cat.id ? null : cat.id)}
-                        className={cn(
-                            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all shrink-0 border",
-                            noteCategory === cat.id
-                                ? `${cat.activeBg} text-white border-transparent shadow-sm`
-                                : `bg-white ${cat.color} border-gray-100 hover:${cat.bg}`
-                        )}
-                    >
-                        <cat.icon className="w-3 h-3" />
-                        <span>{cat.label}</span>
-                    </button>
-                ))}
-            </div>
-
             {/* Top toolbar - onMouseDown preventDefault keeps text selection */}
-            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-start gap-2 shrink-0 z-[20] shadow-sm relative" onMouseDown={e => { if ((e.target as HTMLElement).closest('input, select, [role="slider"]')) return; e.preventDefault(); }}>
-                <div className="flex-1 overflow-x-auto overflow-y-visible pb-1" style={{ scrollbarWidth: 'thin' }}>
+            <div className="bg-white border-b border-gray-200 px-3 py-1.5 flex items-center gap-2 shrink-0 z-[20] shadow-sm relative" onMouseDown={e => { if ((e.target as HTMLElement).closest('input, select, [role="slider"]')) return; e.preventDefault(); }}>
+                {/* Category Picker */}
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button
+                            className={cn(
+                                "flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 border outline-none",
+                                !noteCategory
+                                    ? "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    : (() => {
+                                        const activeCat = CATEGORIES.find(c => c.id === noteCategory);
+                                        return activeCat ? `${activeCat.activeBg} text-white border-transparent` : "";
+                                    })()
+                            )}
+                        >
+                            <span className="truncate max-w-[80px]">
+                                {!noteCategory ? 'بدون تصنيف' : CATEGORIES.find(c => c.id === noteCategory)?.label || 'بدون تصنيف'}
+                            </span>
+                            {!noteCategory ? (
+                                <FileText className="w-3.5 h-3.5" />
+                            ) : (
+                                (() => {
+                                    const Icon = CATEGORIES.find(c => c.id === noteCategory)?.icon || FileText;
+                                    return <Icon className="w-3.5 h-3.5" />;
+                                })()
+                            )}
+                        </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="start" className="w-36 p-1.5 flex flex-col gap-1 z-[60]">
+                        <button
+                            onClick={() => handleCategoryChange(null)}
+                            className={cn(
+                                "flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] font-medium transition-all w-full text-right",
+                                !noteCategory ? "bg-indigo-50 text-indigo-600" : "hover:bg-gray-100 text-gray-600"
+                            )}
+                        >
+                            <span>بدون تصنيف</span>
+                            <FileText className="w-3 h-3" />
+                        </button>
+                        {CATEGORIES.map(cat => (
+                            <button
+                                key={cat.id}
+                                onClick={() => handleCategoryChange(noteCategory === cat.id ? null : cat.id)}
+                                className={cn(
+                                    "flex items-center justify-between px-2 py-1.5 rounded-md text-[11px] font-medium transition-all w-full text-right",
+                                    noteCategory === cat.id
+                                        ? `${cat.activeBg} text-white`
+                                        : `hover:${cat.bg} ${cat.color}`
+                                )}
+                            >
+                                <span>{cat.label}</span>
+                                <cat.icon className="w-3 h-3" />
+                            </button>
+                        ))}
+                    </PopoverContent>
+                </Popover>
+
+                <div className="w-px h-6 bg-gray-200 shrink-0" />
+
+                <div className="flex-1 overflow-x-auto overflow-y-visible" style={{ scrollbarWidth: 'thin' }}>
                     <EditorToolbar
                         editor={editor}
                         onExport={handleExport}
