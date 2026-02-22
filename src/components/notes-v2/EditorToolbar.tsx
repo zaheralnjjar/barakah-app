@@ -169,10 +169,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             {/* Folder Selection */}
             {onFolderChange && (
                 <>
-                    <div className={cn("flex items-center", isMobile ? "max-w-[90px]" : "min-w-[100px] max-w-[140px]")}>
+                    <div className={cn("flex items-center", isMobile ? "max-w-[70px]" : "min-w-[100px] max-w-[140px]")}>
                         <Select value={folderId || 'none'} onValueChange={(val) => onFolderChange(val === 'none' ? null : val)}>
-                            <SelectTrigger className="h-8 text-[10px] sm:text-xs bg-gray-50 border-0 shadow-none hover:bg-gray-100 focus:ring-0 px-1.5 rounded-lg">
-                                <FolderOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-1 text-gray-500" />
+                            <SelectTrigger className={cn(
+                                "h-8 sm:h-8 bg-gray-50 border-0 shadow-none hover:bg-gray-100 focus:ring-0 px-1.5 rounded-lg",
+                                isMobile ? "text-[9px]" : "text-[10px] sm:text-xs"
+                            )}>
+                                <FolderOpen className={cn("text-gray-500", isMobile ? "w-2.5 h-2.5 ml-0.5" : "w-3 h-3 sm:w-3.5 sm:h-3.5 ml-1")} />
                                 <SelectValue placeholder="المجلد" />
                             </SelectTrigger>
                             <SelectContent dir="rtl">
@@ -597,30 +600,18 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     return (
         <TooltipProvider delayDuration={300}>
             <div className={cn(
-                "bg-white/95 backdrop-blur-md border border-white/20 shadow-sm rounded-xl sticky top-0 z-10 transition-all p-1 flex flex-col gap-1",
-                isMobile && "pt-[max(8mm,env(safe-area-inset-top))]"
+                "bg-white/95 backdrop-blur-md border-b shadow-sm sticky top-0 z-50 transition-all px-1",
+                isMobile ? "pt-[max(12mm,env(safe-area-inset-top))]" : "pt-1"
             )}>
-
-                {/* DESKTOP LAYOUT: Single Row (Compressed) */}
-                {!isMobile && (
-                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 px-1">
-                        {GroupFORMATTING}
-                        <div className="w-px h-5 bg-gray-200 shrink-0 mx-1" />
-                        {GroupTOOLS}
-                    </div>
-                )}
-
-                {/* MOBILE LAYOUT: 2 Rows (Stacked & Wrapped) */}
-                {isMobile && (
-                    <div className="flex flex-col gap-1.5 p-1">
-                        <div className="flex items-center flex-wrap gap-1 pb-1.5 border-b border-gray-50">
-                            {GroupFORMATTING}
-                        </div>
-                        <div className="flex items-center flex-wrap gap-1 pt-1">
-                            {GroupTOOLS}
-                        </div>
-                    </div>
-                )}
+                {/* Unified Toolbar Flow - Always Horizontal Scroll on Mobile */}
+                <div className={cn(
+                    "flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 px-1",
+                    isMobile ? "h-14" : "h-12"
+                )}>
+                    {GroupFORMATTING}
+                    <div className="w-px h-5 bg-gray-200 shrink-0 mx-1" />
+                    {GroupTOOLS}
+                </div>
             </div>
         </TooltipProvider >
     );

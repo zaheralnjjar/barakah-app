@@ -52,6 +52,7 @@ export const trackingService = {
                 user_id: user.id,
                 tracker_id: dto.tracker_id,
                 value: dto.value,
+                data: dto.data || {},
                 date: dto.date ? dto.date.toISOString() : new Date().toISOString(),
                 note: dto.note
             })

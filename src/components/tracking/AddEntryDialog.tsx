@@ -76,9 +76,9 @@ export function AddEntryDialog({ tracker, open, onOpenChange }: AddEntryDialogPr
             queryClient.invalidateQueries({ queryKey: ["tracker-entries", tracker.id] });
             queryClient.invalidateQueries({ queryKey: ["tracker-latest", tracker.id] });
             queryClient.invalidateQueries({ queryKey: ["trackers"] }); // To update summary potentially
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error adding entry:", error);
-            toast.error("فشل إضافة السجل - راجع سجل الأخطاء");
+            toast.error(`فشل إضافة السجل: ${error.message || 'خطأ غير معروف'}`, { id: 'add-entry' });
         }
     }
 

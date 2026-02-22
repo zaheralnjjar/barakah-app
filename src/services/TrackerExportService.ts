@@ -29,7 +29,7 @@ export class TrackerExportService {
             });
 
             toast.success('تم تجهيز الملف بنجاح', { id: 'exporting' });
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error sharing file:', error);
 
             // Fallback for web or if share fails
@@ -39,8 +39,8 @@ export class TrackerExportService {
                 link.download = fileName;
                 link.click();
                 toast.success('تم تحميل الملف (Web Fallback)', { id: 'exporting' });
-            } catch (e) {
-                toast.error('فشل تصدير الملف. يرجى التأكد من صلاحيات التطبيق.', { id: 'exporting' });
+            } catch (e: any) {
+                toast.error(`فشل تصدير الملف: ${error.message || 'خطأ في النظام'}`, { id: 'exporting' });
             }
         }
     }
@@ -60,7 +60,8 @@ export class TrackerExportService {
         XLSX.utils.book_append_sheet(workbook, worksheet, 'البيانات');
 
         const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-        const fileName = `${tracker.name}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+        const safeName = tracker.name.replace(/[/\\?%*:|"<>]/g, '-');
+        const fileName = `${safeName}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
 
         await this.shareFile(wbout, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
@@ -120,7 +121,8 @@ export class TrackerExportService {
         });
 
         const pdfOutput = doc.output('datauristring').split(',')[1];
-        const fileName = `${tracker.name}_Report.pdf`;
+        const safeName = tracker.name.replace(/[/\\?%*:|"<>]/g, '-');
+        const fileName = `${safeName}_Report.pdf`;
 
         await this.shareFile(pdfOutput, fileName, 'application/pdf');
     }
