@@ -1027,12 +1027,12 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             {/* Main editor area — scrollable pages */}
             <div
                 ref={editorRef}
-                className="flex-1 overflow-auto bg-slate-100"
+                className="flex-1 overflow-auto bg-white"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onWheel={handleWheel}
             >
-                <div className="flex flex-col items-center py-8 gap-0 relative min-h-full">
+                <div className={cn("flex-1 flex flex-col items-center gap-0 relative min-h-full", isMobile ? "py-0" : "py-8")}>
                     <EditorContent editor={editor} className="relative z-0 w-full" />
 
                     {/* Add Page button below all pages */}

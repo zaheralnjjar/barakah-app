@@ -76,11 +76,11 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
 
     return (
         <NodeViewWrapper
-            className={cn("page-node-view flex justify-center", isMobile ? "px-[0.5mm]" : "")}
+            className={cn("page-node-view flex justify-center", isMobile ? "px-0" : "")}
             style={{
                 // Reserve exact space for the scaled page + gap
                 width: '100%',
-                marginBottom: isMobile ? '16px' : '40px',
+                marginBottom: isMobile ? '0px' : '40px',
                 paddingTop: '0px',
             }}
         >
@@ -96,8 +96,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     className={cn(
                         "bg-white transition-colors duration-300 relative",
                         !isMobile && "shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
-                        pageBorder === 'none' && "border border-gray-200/80",
-                        isMobile && "rounded-2xl shadow-sm"
+                        pageBorder === 'none' && !isMobile && "border border-gray-200/80",
+                        isMobile && ""
                     )}
                     style={(() => {
                         const baseStyle: React.CSSProperties = {
