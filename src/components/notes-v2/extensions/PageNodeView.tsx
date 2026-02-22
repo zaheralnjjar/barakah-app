@@ -59,6 +59,13 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                 backgroundAttachment: 'local',
             };
         }
+        if (pageLayout === 'squared') {
+            return {
+                backgroundImage: `linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)`,
+                backgroundSize: `${sp}px ${sp}px`,
+                backgroundAttachment: 'local',
+            };
+        }
         return {};
     };
 
@@ -69,6 +76,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
             case 'double': return { border: '4px double #6b7280' };
             case 'dashed': return { border: '2px dashed #9ca3af' };
             case 'thick': return { border: '4px solid #4b5563' };
+            case 'classic': return { border: 'double 4px #4b5563', outline: 'solid 1px #4b5563', outlineOffset: '2px' };
+            case 'elegant': return { border: '1px solid #d4af37', boxShadow: '0 0 0 2px #ffffff, 0 0 0 3px #d4af37' };
             case 'decorative': return { border: '4px double #6366f1', boxShadow: 'inset 0 0 0 4px #ffffff, inset 0 0 0 6px #a5b4fc' };
             default: return {};
         }
@@ -87,6 +96,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
             <div
                 style={{
                     width: renderedWidth as any,
+                    height: renderedWidth === '100%' ? 'auto' : renderedHeight as any,
                     minHeight: renderedHeight as any,
                     position: 'relative',
                 }}
@@ -102,8 +112,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     style={(() => {
                         const baseStyle: React.CSSProperties = {
                             width: isMobile ? '100%' : `${pageWidthPx}px`,
+                            height: isMobile ? 'auto' : `${pageHeightPx}px`,
                             minHeight: isMobile ? 'calc(100vh - 180px)' : `${pageHeightPx}px`,
-                            padding: isMobile ? `2px 0.5mm` : `${margin}mm`,
                             backgroundColor: backgroundColor,
                             transform: isMobile ? 'none' : `scale(${scale})`,
                             transformOrigin: 'top center',
@@ -134,11 +144,16 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         return baseStyle;
                     })()}
                 >
-                    {/* Header */}
+                    {/* Header - Above the margin boundary */}
                     <div
                         contentEditable={false}
-                        className="absolute top-1 border-b border-gray-100/80 pb-0.5 flex justify-between text-[9px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: isMobile ? '0.5mm' : `${margin}mm`, right: isMobile ? '0.5mm' : `${margin}mm`, top: isMobile ? '2px' : '8px' }}
+                        className="absolute flex justify-between text-[9px] text-gray-400 font-medium z-10 select-none opacity-60 hover:opacity-100 transition-opacity"
+                        style={{
+                            left: isMobile ? '0.5mm' : `${margin}mm`,
+                            right: isMobile ? '0.5mm' : `${margin}mm`,
+                            top: isMobile ? '0px' : `${Math.max(2, margin - 10)}mm`,
+                            height: '15px'
+                        }}
                     >
                         <input
                             type="text"
@@ -150,18 +165,18 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         <span>{new Date().toLocaleDateString('ar-SA')}</span>
                     </div>
 
-                    {/* Inner bordered area (borders inside margins) */}
+                    {/* Main content area that follows the margin and border settings */}
                     <div
                         style={{
                             ...getBorderStyle(),
                             ...getLayoutBackground(),
-                            minHeight: '200px',
-                            maxHeight: isMobile ? 'calc(100vh - 240px)' : '850px',
-                            padding: pageBorder !== 'none' ? '12px' : '8px',
-                            marginTop: '32px',
-                            marginBottom: '40px',
+                            position: 'absolute',
+                            top: isMobile ? '2px' : `${margin}mm`,
+                            bottom: isMobile ? '2mm' : `${margin}mm`,
+                            left: isMobile ? '0.5mm' : `${margin}mm`,
+                            right: isMobile ? '0.5mm' : `${margin}mm`,
+                            padding: pageBorder !== 'none' ? '12px' : '0px',
                             overflow: 'hidden',
-                            position: 'relative',
                             wordBreak: 'break-word',
                             overflowWrap: 'break-word',
                         }}
@@ -169,11 +184,16 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl" />
                     </div>
 
-                    {/* Footer */}
+                    {/* Footer - Below the margin boundary */}
                     <div
                         contentEditable={false}
-                        className="absolute bottom-2 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[9px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: isMobile ? '2mm' : `${margin}mm`, right: isMobile ? '2mm' : `${margin}mm` }}
+                        className="absolute flex justify-between items-center text-[9px] text-gray-400 font-medium z-10 select-none opacity-60 hover:opacity-100 transition-opacity"
+                        style={{
+                            left: isMobile ? '2mm' : `${margin}mm`,
+                            right: isMobile ? '2mm' : `${margin}mm`,
+                            bottom: isMobile ? '0px' : `${Math.max(2, margin - 8)}mm`,
+                            height: '15px'
+                        }}
                     >
                         <span>صفحة {pageNumber}</span>
                         <input

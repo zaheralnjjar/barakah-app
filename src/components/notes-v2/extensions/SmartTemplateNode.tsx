@@ -108,6 +108,29 @@ const SmartTemplateComponent = (props: any) => {
     const [isHovered, setIsHovered] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false);
     const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+
+    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.type === 'checkbox') {
+            setTimeout(() => {
+                if (contentRef.current) {
+                    const inputs = contentRef.current.querySelectorAll('input[type="checkbox"]');
+                    inputs.forEach((input: any) => {
+                        if (input.checked) input.setAttribute('checked', 'checked');
+                        else input.removeAttribute('checked');
+                    });
+                    const newHtml = contentRef.current.innerHTML;
+                    updateAttributes({ html: newHtml });
+                }
+            }, 0);
+        }
+    };
+
+    const handleContentClick = (e: React.MouseEvent) => {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) {
+            e.stopPropagation();
+        }
+    };
+
     const controlsVisible = showControls || isHovered || popoverOpen;
 
     useEffect(() => {
@@ -226,7 +249,13 @@ const SmartTemplateComponent = (props: any) => {
                     borderStyle: borderWidth > 0 ? 'solid' : 'none',
                 }}
             >
-                <div className="w-full pointer-events-none" dangerouslySetInnerHTML={{ __html: html }} />
+                <div
+                    ref={contentRef}
+                    className="w-full"
+                    dangerouslySetInnerHTML={{ __html: html }}
+                    onChange={handleCheckboxChange}
+                    onClick={handleContentClick}
+                />
             </div>
 
             {/* Resize handle */}

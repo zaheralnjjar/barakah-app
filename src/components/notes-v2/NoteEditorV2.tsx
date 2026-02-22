@@ -173,7 +173,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const editorRef = useRef<HTMLDivElement>(null);
     const [showTemplates, setShowTemplates] = useState(false);
     const [zoom, setZoom] = useState(100);
-    const [pageLayout, setPageLayout] = useState<'blank' | 'ruled' | 'dotted'>('blank');
+    const [pageLayout, setPageLayout] = useState<'blank' | 'ruled' | 'dotted' | 'squared'>('blank');
     const [rulingSpacing, setRulingSpacing] = useState(32); // px between lines/dots
     const [noteCategory, setNoteCategory] = useState<string | null>(initialCategory || null);
     const [pageBackground, setPageBackground] = useState<string | null>(null);
@@ -184,7 +184,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     // Page settings
     const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
     const [pageMargin, setPageMargin] = useState(20); // mm
-    const [pageBorder, setPageBorder] = useState<'none' | 'simple' | 'double' | 'dashed' | 'thick' | 'decorative'>('none');
+    const [pageBorder, setPageBorder] = useState<'none' | 'simple' | 'double' | 'dashed' | 'thick' | 'decorative' | 'classic' | 'elegant'>('none');
 
     const getSuggestionItems = ({ query }: { query: string }) => {
         return [
@@ -904,6 +904,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                         { id: 'blank' as const, label: 'فارغ', icon: '☐' },
                                         { id: 'ruled' as const, label: 'مسطر', icon: '☰' },
                                         { id: 'dotted' as const, label: 'نقطي', icon: '⠿' },
+                                        { id: 'squared' as const, label: 'شبكي', icon: '▦' },
                                     ]).map(lt => (
                                         <button
                                             key={lt.id}
@@ -958,6 +959,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                         { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
                                         { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
                                         { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
+                                        { id: 'classic' as const, label: 'كلاسيك', preview: 'border-gray-600 border-double border-[3px] ring-1 ring-gray-600 ring-offset-1' },
+                                        { id: 'elegant' as const, label: 'أنيق', preview: 'border-[#d4af37] ring-1 ring-[#d4af37] ring-offset-1' },
                                         { id: 'decorative' as const, label: 'زخرفي', preview: 'border-indigo-400 border-double border-[3px]' },
                                     ]).map(b => (
                                         <button

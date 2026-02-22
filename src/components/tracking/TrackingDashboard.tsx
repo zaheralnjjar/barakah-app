@@ -60,6 +60,16 @@ export function TrackingDashboard() {
 
     const uncategorizedTrackers = (trackers || []).filter(t => !t.folder_id);
 
+    // Group uncategorized by type for unification
+    const uncategorizedByLabels: Record<string, Tracker[]> = {
+        'numeric': uncategorizedTrackers.filter(t => t.type === 'numeric'),
+        'boolean': uncategorizedTrackers.filter(t => t.type === 'boolean'),
+        'checklist': uncategorizedTrackers.filter(t => t.type === 'checklist'),
+        'scale': uncategorizedTrackers.filter(t => t.type === 'scale' || t.type === 'mood'),
+        'time': uncategorizedTrackers.filter(t => t.type === 'time' || t.type === 'time_range'),
+        'others': uncategorizedTrackers.filter(t => !['numeric', 'boolean', 'checklist', 'scale', 'mood', 'time', 'time_range'].includes(t.type))
+    };
+
     const toggleSelectionMode = () => {
         setIsSelectionMode(!isSelectionMode);
         setSelectedTrackers(new Set());
@@ -260,27 +270,64 @@ export function TrackingDashboard() {
 
                         {/* Uncategorized Section */}
                         {(uncategorizedTrackers.length > 0 || (folders?.length === 0 && !isLoading)) && (
-                            <section className="space-y-4">
+                            <section className="space-y-6">
                                 {folders?.length > 0 && (
                                     <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
                                         غير مصنف
                                     </h2>
                                 )}
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-                                    {uncategorizedTrackers.map(tracker => (
-                                        <TrackerCardWrapper
-                                            key={tracker.id}
-                                            tracker={tracker}
-                                            onOpenEntry={() => setEntryDialogTracker(tracker)}
-                                            onOpenDetails={() => setDetailsTracker(tracker)}
-                                            isSelectionMode={isSelectionMode}
-                                            isSelected={selectedTrackers.has(tracker.id)}
-                                            onToggleSelection={() => toggleTrackerSelection(tracker.id)}
-                                        />
-                                    ))}
 
-                                    {/* Add New Tracker Card (Visible only when not in selection mode) */}
-                                    {!isSelectionMode && (
+                                {Object.entries(uncategorizedByLabels).map(([label, trackersInLabel]) => {
+                                    if (trackersInLabel.length === 0) return null;
+                                    const labelNames: Record<string, string> = {
+                                        'numeric': 'رقمي',
+                                        'boolean': 'نعم/لا',
+                                        'checklist': 'قوائم',
+                                        'scale': 'مقاييس ومزاج',
+                                        'time': 'وقت ومجال',
+                                        'others': 'أخرى'
+                                    };
+
+                                    return (
+                                        <div key={label} className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">{labelNames[label] || label}</span>
+                                                <div className="h-px flex-1 bg-gray-100 dark:bg-gray-800" />
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                                                {trackersInLabel.map(tracker => (
+                                                    <TrackerCardWrapper
+                                                        key={tracker.id}
+                                                        tracker={tracker}
+                                                        onOpenEntry={() => setEntryDialogTracker(tracker)}
+                                                        onOpenDetails={() => setDetailsTracker(tracker)}
+                                                        isSelectionMode={isSelectionMode}
+                                                        isSelected={selectedTrackers.has(tracker.id)}
+                                                        onToggleSelection={() => toggleTrackerSelection(tracker.id)}
+                                                    />
+                                                ))}
+                                                {/* Add New Tracker Card (only in 'others' or if it's the only group) */}
+                                                {label === 'others' && !isSelectionMode && (
+                                                    <CreateTrackerDialog>
+                                                        <button className="group relative flex flex-col items-center justify-center w-full h-[180px] rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-primary hover:bg-primary/5 transition-all duration-300">
+                                                            <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
+                                                                <Plus className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
+                                                            </div>
+                                                            <span className="mt-4 text-sm font-bold text-gray-500 group-hover:text-primary transition-colors">
+                                                                متتبع جديد
+                                                            </span>
+                                                        </button>
+                                                    </CreateTrackerDialog>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Special case: If all categorized but user wants to add new one, or if no trackers at all */}
+                                {uncategorizedTrackers.length === 0 && !isSelectionMode && (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                                         <CreateTrackerDialog>
                                             <button className="group relative flex flex-col items-center justify-center w-full h-[180px] rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-primary hover:bg-primary/5 transition-all duration-300">
                                                 <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
@@ -291,8 +338,8 @@ export function TrackingDashboard() {
                                                 </span>
                                             </button>
                                         </CreateTrackerDialog>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 

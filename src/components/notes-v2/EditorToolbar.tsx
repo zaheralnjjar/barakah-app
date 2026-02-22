@@ -469,10 +469,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                         variant="default"
                         size="sm"
                         onClick={onClose}
-                        className="h-11 md:h-9 px-3 gap-1.5 bg-emerald-500 hover:bg-emerald-600 border border-emerald-600/20 text-white rounded-lg ms-1 shrink-0 shadow-sm transition-all shadow-emerald-500/20 hover:shadow-emerald-500/30 font-medium"
+                        className={cn(
+                            "h-10 w-10 md:h-9 md:w-auto md:px-3 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 border border-emerald-600/20 text-white rounded-lg ms-1 shrink-0 shadow-sm transition-all shadow-emerald-500/20 hover:shadow-emerald-500/30 font-medium p-0 md:p-2",
+                            isMobile ? "rounded-full" : ""
+                        )}
+                        title="حفظ وإغلاق"
                     >
-                        <Check className="w-4 h-4" />
-                        <span className="text-xs md:text-sm pl-1">حفظ وإغلاق</span>
+                        <Check className="w-5 h-5 md:w-4 md:h-4" />
+                        {!isMobile && <span className="text-xs md:text-sm pl-1">حفظ وإغلاق</span>}
                     </Button>
                 )}
 
@@ -508,24 +512,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                     <TooltipContent side="bottom" sideOffset={5}>تصدير الملاحظة</TooltipContent>
                 </Tooltip>
 
-                {onToggleFocusMode && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                onClick={onToggleFocusMode}
-                                className={cn(
-                                    "p-1.5 rounded-lg transition-all",
-                                    isFocusMode ? "bg-indigo-100 text-indigo-600" : "hover:bg-gray-100 text-gray-600"
-                                )}
-                            >
-                                {isFocusMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={5}>
-                            {isFocusMode ? 'إنهاء وضع التركيز' : 'وضع التركيز'}
-                        </TooltipContent>
-                    </Tooltip>
-                )}
 
                 <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 

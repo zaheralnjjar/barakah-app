@@ -5,11 +5,11 @@ import { SidebarTree } from '@/components/notes-v2/SidebarTree';
 import { FolderGrid } from '@/components/notes-v2/FolderGrid';
 import { NoteList } from '@/components/notes-v2/NoteList';
 import { NoteEditorV2 } from '@/components/notes-v2/NoteEditorV2';
-import { KanbanView } from '@/components/notes-v2/KanbanView';
+
 import { NotesSettingsDialog } from '@/components/notes-v2/NotesSettingsDialog';
 import { CreateFolderDialog } from '@/components/notes-v2/CreateFolderDialog';
 import { Button } from '@/components/ui/button';
-import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid, Library, Search, Cloud, Trash2, Share2, CheckSquare } from 'lucide-react';
+import { Settings, Menu, ChevronRight, Plus, FolderPlus, FilePlus, LayoutGrid, Library, Search, Cloud, Trash2, Share2, CheckSquare, List } from 'lucide-react';
 import { useNotesV2, NoteV2 } from '@/hooks/useNotesV2';
 import { useFolders } from '@/hooks/useFolders';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +27,7 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
     const [isSidebarHovered, setIsSidebarHovered] = useState(false);
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
     const [activeNote, setActiveNote] = useState<NoteV2 | null>(null);
-    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'editor' | 'kanban'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list' | 'editor'>('grid');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [showCreateFolder, setShowCreateFolder] = useState(false);
     const [showReportGenerator, setShowReportGenerator] = useState(false);
@@ -378,20 +378,23 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                                             <Button
                                                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                                                 size="sm"
-                                                onClick={() => setViewMode('grid')}
+                                                onClick={() => {
+                                                    setViewMode('grid');
+                                                    setActiveFolderId(null);
+                                                }}
                                                 className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
                                             >
-                                                <LayoutGrid className="w-3 h-3 sm:hidden" />
-                                                <span className="hidden sm:inline">مجلدات</span>
+                                                <LayoutGrid className="w-3 h-3 sm:ml-1" />
+                                                <span className="hidden sm:inline">المكتبة</span>
                                             </Button>
                                             <Button
-                                                variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                                                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                                                 size="sm"
-                                                onClick={() => setViewMode('kanban')}
-                                                className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}`}
+                                                onClick={() => setViewMode('list')}
+                                                className={`h-7 px-2 text-[10px] rounded-md ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
                                             >
-                                                <Menu className="w-3 h-3 sm:ml-1" />
-                                                <span className="hidden sm:inline">كنبان</span>
+                                                <List className="w-3 h-3 sm:ml-1" />
+                                                <span className="hidden sm:inline">كل الملاحظات</span>
                                             </Button>
                                         </div>
 
@@ -442,23 +445,6 @@ export const UnifiedNotesLayout: React.FC<UnifiedNotesLayoutProps> = ({ isStanda
                     "flex-1 overflow-hidden relative bg-gray-50/30",
                     viewMode !== 'editor' && "p-4"
                 )}>
-                    {/* View: Kanban */}
-                    {viewMode === 'kanban' && !searchQuery && !activeNote && (
-                        <div className="h-full animate-in fade-in duration-300">
-                            <KanbanView
-                                onOpenNote={handleSelectNote}
-                                onOpenFolder={(f) => handleSelectFolder(f.id)}
-                                onRequestCreateNote={(folderId) => {
-                                    window.dispatchEvent(new CustomEvent('open-quick-note', {
-                                        detail: {
-                                            type: 'quick_note',
-                                            folderId: folderId || null
-                                        }
-                                    }));
-                                }}
-                            />
-                        </div>
-                    )}
 
                     {/* View: Folder Grid */}
                     {viewMode === 'grid' && !searchQuery && activeFolderId !== 'bookmarked' && (
