@@ -598,7 +598,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         <TooltipProvider delayDuration={300}>
             <div className={cn(
                 "bg-white/95 backdrop-blur-md border border-white/20 shadow-sm rounded-xl sticky top-0 z-10 transition-all p-1 flex flex-col gap-1",
-                isMobile && "pt-[6mm]"
+                isMobile && "pt-[max(8mm,env(safe-area-inset-top))]"
             )}>
 
                 {/* DESKTOP LAYOUT: Single Row (Compressed) */}

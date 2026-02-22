@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { toast } from 'sonner';
 
 export class TrackerExportService {
     /**
@@ -13,6 +14,8 @@ export class TrackerExportService {
      */
     private static async shareFile(base64Data: string, fileName: string, mimeType: string) {
         try {
+            toast.loading('جاري تجهيز الملف...', { id: 'exporting' });
+
             const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: base64Data,
@@ -24,13 +27,21 @@ export class TrackerExportService {
                 url: savedFile.uri,
                 dialogTitle: 'مشاركة الملف'
             });
+
+            toast.success('تم تجهيز الملف بنجاح', { id: 'exporting' });
         } catch (error) {
             console.error('Error sharing file:', error);
-            // Fallback for web if needed
-            const link = document.createElement('a');
-            link.href = `data:${mimeType};base64,${base64Data}`;
-            link.download = fileName;
-            link.click();
+
+            // Fallback for web or if share fails
+            try {
+                const link = document.createElement('a');
+                link.href = `data:${mimeType};base64,${base64Data}`;
+                link.download = fileName;
+                link.click();
+                toast.success('تم تحميل الملف (Web Fallback)', { id: 'exporting' });
+            } catch (e) {
+                toast.error('فشل تصدير الملف. يرجى التأكد من صلاحيات التطبيق.', { id: 'exporting' });
+            }
         }
     }
 

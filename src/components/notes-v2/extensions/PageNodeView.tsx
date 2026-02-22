@@ -156,11 +156,14 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                             ...getBorderStyle(),
                             ...getLayoutBackground(),
                             minHeight: '200px',
-                            maxHeight: isMobile ? 'calc(100vh - 220px)' : '900px',
+                            maxHeight: isMobile ? 'calc(100vh - 240px)' : '850px',
                             padding: pageBorder !== 'none' ? '12px' : '8px',
-                            marginTop: '24px',
+                            marginTop: '32px',
+                            marginBottom: '40px',
                             overflow: 'hidden',
                             position: 'relative',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
                         }}
                     >
                         <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl" />
@@ -169,8 +172,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     {/* Footer */}
                     <div
                         contentEditable={false}
-                        className="absolute bottom-1 border-t border-gray-100/80 pt-0.5 flex justify-between items-center text-[9px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: isMobile ? '0.5mm' : `${margin}mm`, right: isMobile ? '0.5mm' : `${margin}mm` }}
+                        className="absolute bottom-2 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[9px] text-gray-400 font-medium z-10 select-none"
+                        style={{ left: isMobile ? '2mm' : `${margin}mm`, right: isMobile ? '2mm' : `${margin}mm` }}
                     >
                         <span>صفحة {pageNumber}</span>
                         <input

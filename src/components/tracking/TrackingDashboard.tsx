@@ -320,8 +320,11 @@ export function TrackingDashboard() {
                     open={!!detailsTracker}
                     onOpenChange={(open) => !open && setDetailsTracker(null)}
                     onAddEntry={() => {
-                        setDetailsTracker(null); // Close details to avoid stacking issues
-                        setTimeout(() => setEntryDialogTracker(detailsTracker), 50);
+                        const t = detailsTracker;
+                        setDetailsTracker(null);
+                        setTimeout(() => {
+                            setEntryDialogTracker(t);
+                        }, 100);
                     }}
                 />
             )}
