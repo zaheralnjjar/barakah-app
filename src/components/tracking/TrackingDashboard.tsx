@@ -14,6 +14,15 @@ import { Tracker, TrackerFolder } from "@/types/tracking";
 import { TrackingReportDialog } from "./TrackingReportDialog";
 import { TrackerBundlesDialog } from "./TrackerBundlesDialog";
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Settings2, FileText as FileTextIcon, Package, FolderPlus as FolderPlusIcon, CheckSquare } from "lucide-react";
+
 export function TrackingDashboard() {
     const queryClient = useQueryClient();
     const [entryDialogTracker, setEntryDialogTracker] = useState<Tracker | null>(null);
@@ -69,7 +78,6 @@ export function TrackingDashboard() {
     const handleBulkDelete = async () => {
         if (selectedTrackers.size === 0) return;
 
-        // Count how many trackers are selected
         const count = selectedTrackers.size;
 
         if (confirm(`هل أنت متأكد من حذف ${count} متتبع؟`)) {
@@ -78,7 +86,6 @@ export function TrackingDashboard() {
                 queryClient.invalidateQueries({ queryKey: ['trackers'] });
                 setIsSelectionMode(false);
                 setSelectedTrackers(new Set());
-                // Use a generic success toast or rely on UI update
             } catch (error) {
                 console.error("Error deleting trackers:", error);
                 alert("حدث خطأ أثناء الحذف");
@@ -86,15 +93,11 @@ export function TrackingDashboard() {
         }
     };
 
-    // Function to delete folder (if needed later, or can be added to UI)
     const handleDeleteFolder = async (folderId: string) => {
         if (confirm("هل أنت متأكد من حذف المجلد؟ سيتم نقل المتتبعات بداخله إلى غير المصنف.")) {
             try {
-                // First update trackers to remove folder_id
                 const folderTrackers = trackersByFolder[folderId] || [];
                 await Promise.all(folderTrackers.map(t => trackingService.updateTracker(t.id, { folder_id: null } as any)));
-
-                // Then delete folder
                 await trackingService.deleteFolder(folderId);
                 queryClient.invalidateQueries({ queryKey: ['tracker-folders'] });
                 queryClient.invalidateQueries({ queryKey: ['trackers'] });
@@ -106,21 +109,22 @@ export function TrackingDashboard() {
     };
 
     return (
-        <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="p-4 md:p-8 space-y-6 animate-in fade-in duration-500">
 
             {/* Header */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 flex-row-reverse">
                 <div className="text-right w-full md:w-auto">
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">المتابعة</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">راقب عاداتك وأهدافك.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white">المتابعة</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">راقب عاداتك وأهدافك.</p>
                 </div>
+
                 <div className="flex items-center gap-2 flex-wrap justify-end w-full md:w-auto">
                     {isSelectionMode ? (
                         <>
                             <Button
                                 variant="outline"
                                 onClick={toggleSelectionMode}
-                                className="rounded-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                className="rounded-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-9"
                             >
                                 إلغاء
                             </Button>
@@ -128,35 +132,46 @@ export function TrackingDashboard() {
                                 variant="destructive"
                                 onClick={handleBulkDelete}
                                 disabled={selectedTrackers.size === 0}
-                                className="rounded-full shadow-sm"
+                                className="rounded-full shadow-sm h-9"
                             >
                                 حذف المحدد ({selectedTrackers.size})
                             </Button>
                         </>
                     ) : (
-                        <div className="flex gap-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={toggleSelectionMode}
-                                className="text-gray-500 hover:text-gray-900"
-                            >
-                                تحديد
-                            </Button>
-                            <CreateFolderDialog>
-                                <Button variant="outline" size="sm" className="hidden md:flex">
-                                    <FolderPlus className="w-4 h-4 ml-2" />
-                                    مجلد
-                                </Button>
-                            </CreateFolderDialog>
-                            <TrackerBundlesDialog />
-                            <TrackingReportDialog trackers={trackers || []} />
+                        <div className="flex items-center gap-2">
                             <CreateTrackerDialog>
-                                <Button size="lg" className="rounded-full shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90 flex-row-reverse">
-                                    <Plus className="w-5 h-5 ml-2" />
-                                    متتبع جديد
+                                <Button size="sm" className="rounded-full shadow-md bg-primary hover:bg-primary/90 h-10 px-4">
+                                    <Plus className="w-4 h-4 ml-1.5" />
+                                    <span>متتبع جديد</span>
                                 </Button>
                             </CreateTrackerDialog>
+
+                            <DropdownMenu dir="rtl">
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-10 w-10 rounded-full border-gray-200 shadow-sm hover:bg-gray-50">
+                                        <Settings2 className="w-4 h-4 text-gray-600" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-gray-100">
+                                    <DropdownMenuItem onClick={toggleSelectionMode} className="rounded-xl py-2.5 flex items-center gap-2 text-gray-600">
+                                        <CheckSquare className="w-4 h-4" />
+                                        <span>تحديد وحذف</span>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator className="my-1" />
+
+                                    <CreateFolderDialog>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-xl py-2.5 flex items-center gap-2 text-gray-600">
+                                            <FolderPlusIcon className="w-4 h-4" />
+                                            <span>مجلد جديد</span>
+                                        </DropdownMenuItem>
+                                    </CreateFolderDialog>
+
+                                    <TrackerBundlesDialog />
+
+                                    <TrackingReportDialog trackers={trackers || []} />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     )}
                 </div>

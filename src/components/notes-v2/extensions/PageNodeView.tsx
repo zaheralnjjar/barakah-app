@@ -155,12 +155,15 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         style={{
                             ...getBorderStyle(),
                             ...getLayoutBackground(),
-                            minHeight: '95%',
-                            padding: pageBorder !== 'none' ? '8px' : '0',
-                            marginTop: '20px',
+                            minHeight: '200px',
+                            maxHeight: isMobile ? 'calc(100vh - 220px)' : '900px',
+                            padding: pageBorder !== 'none' ? '12px' : '8px',
+                            marginTop: '24px',
+                            overflow: 'hidden',
+                            position: 'relative',
                         }}
                     >
-                        <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl min-h-[200px]" />
+                        <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl" />
                     </div>
 
                     {/* Footer */}
