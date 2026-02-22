@@ -29,38 +29,38 @@ ALTER TABLE public.trackers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tracker_entries ENABLE ROW LEVEL SECURITY;
 
 -- Policies for Trackers
-CREATE POLICY "Users can view their own trackers" 
-ON public.trackers FOR SELECT 
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert their own trackers" 
-ON public.trackers FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own trackers" 
-ON public.trackers FOR UPDATE 
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own trackers" 
-ON public.trackers FOR DELETE 
-USING (auth.uid() = user_id);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own trackers') THEN
+        CREATE POLICY "Users can view their own trackers" ON public.trackers FOR SELECT USING (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert their own trackers') THEN
+        CREATE POLICY "Users can insert their own trackers" ON public.trackers FOR INSERT WITH CHECK (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update their own trackers') THEN
+        CREATE POLICY "Users can update their own trackers" ON public.trackers FOR UPDATE USING (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete their own trackers') THEN
+        CREATE POLICY "Users can delete their own trackers" ON public.trackers FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Policies for Entries
-CREATE POLICY "Users can view their own entries" 
-ON public.tracker_entries FOR SELECT 
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert their own entries" 
-ON public.tracker_entries FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own entries" 
-ON public.tracker_entries FOR UPDATE 
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own entries" 
-ON public.tracker_entries FOR DELETE 
-USING (auth.uid() = user_id);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own entries') THEN
+        CREATE POLICY "Users can view their own entries" ON public.tracker_entries FOR SELECT USING (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can insert their own entries') THEN
+        CREATE POLICY "Users can insert their own entries" ON public.tracker_entries FOR INSERT WITH CHECK (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update their own entries') THEN
+        CREATE POLICY "Users can update their own entries" ON public.tracker_entries FOR UPDATE USING (auth.uid() = user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete their own entries') THEN
+        CREATE POLICY "Users can delete their own entries" ON public.tracker_entries FOR DELETE USING (auth.uid() = user_id);
+    END IF;
+END $$;
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_trackers_user_id ON public.trackers(user_id);

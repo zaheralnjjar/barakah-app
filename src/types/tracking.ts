@@ -28,6 +28,8 @@ export interface Tracker {
         options?: string[]; // For select/checklist
         chart_type?: string; // "line", "bar", "area", "pie"
         show_on_dashboard?: boolean;
+        start_date?: string;
+        end_date?: string;
     };
     created_at?: string;
 }
@@ -55,6 +57,8 @@ export interface CreateTrackerDTO {
         unit?: string;
         step?: number;
         chart_type?: string;
+        start_date?: string;
+        end_date?: string;
     };
 }
 

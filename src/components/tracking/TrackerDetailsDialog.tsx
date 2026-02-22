@@ -1,10 +1,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tracker, TrackerEntry } from "@/types/tracking";
-import { Area, AreaChart, Bar, BarChart, Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from "recharts";
+import {
+    Area, AreaChart, Bar, BarChart, Line, LineChart,
+    CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+    ReferenceLine, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from "recharts";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { TrackerExportService } from "@/services/TrackerExportService";
 
 interface TrackerDetailsDialogProps {
     tracker: Tracker | null;
@@ -23,31 +28,38 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
         .map(e => ({
             date: format(new Date(e.date), "MMM d"),
             value: e.value,
-            note: e.note
+            shortDate: format(new Date(e.date), "dd/MM")
         }));
 
-    const goal = tracker.settings.goal || 0;
-
-    // Calculate basic stats for the "middle" chart/indicator
-    const last7Days = entries.slice(0, 7).reverse(); // Last 7 entries (approx)
-    // Create specific data for the mini-chart
+    const last7Days = entries.slice(0, 7).reverse();
     const miniChartData = last7Days.map(e => ({
         value: e.value,
         fullDate: e.date
     }));
 
+    // Data for Radar chart (e.g. for checklist/mood analysis)
+    const radarData = entries.slice(0, 20).reduce((acc: any[], curr) => {
+        const dayName = format(new Date(curr.date), 'EEEE');
+        const existing = acc.find(a => a.subject === dayName);
+        if (existing) {
+            existing.A = (existing.A + curr.value) / 2;
+        } else {
+            acc.push({ subject: dayName, A: curr.value, fullMark: 100 });
+        }
+        return acc;
+    }, []);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl w-full overflow-hidden text-right p-0 gap-0 bg-white dark:bg-[#1a1b1e] border-none shadow-2xl rounded-3xl" dir="rtl">
 
-                {/* Header Section with Color Background */}
+                {/* Header Section */}
                 <div className="relative overflow-hidden mb-0">
                     <div
                         className="absolute inset-0 opacity-10"
                         style={{ backgroundColor: tracker.color }}
                     />
-                    <div className="p-6 pb-8 pt-8">
+                    <div className="p-6 pb-4 pt-8">
                         <DialogHeader className="text-right space-y-4">
                             <div className="flex items-center justify-between flex-row-reverse">
                                 <div className="flex items-center gap-4 flex-row-reverse">
@@ -59,9 +71,26 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                     </div>
                                     <div className="text-right">
                                         <DialogTitle className="text-2xl font-bold">{tracker.name}</DialogTitle>
-                                        <DialogDescription className="text-base text-gray-500">
-                                            {tracker.type === 'checklist' ? 'سجل المتابعة' : 'التاريخ والتقدم'}
-                                        </DialogDescription>
+                                        <div className="flex gap-2 mt-1">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-[10px] gap-1 px-2 border-green-100 hover:bg-green-50 text-green-600"
+                                                onClick={() => TrackerExportService.exportToExcel(tracker, entries)}
+                                            >
+                                                <FileSpreadsheet className="w-3 h-3" />
+                                                تصدير Excel
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-[10px] gap-1 px-2 border-red-100 hover:bg-red-50 text-red-600"
+                                                onClick={() => TrackerExportService.exportToPDF(tracker, entries)}
+                                            >
+                                                <FileText className="w-3 h-3" />
+                                                تصدير PDF
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                                 <Button onClick={onAddEntry} size="icon" className="h-10 w-10 rounded-full shadow-md" style={{ backgroundColor: tracker.color }}>
@@ -74,70 +103,76 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
 
                 <div className="p-6 space-y-8 bg-white dark:bg-[#1a1b1e]">
 
-                    {/* Main Chart Section - The "Middle" Chart requested */}
-                    <div className="flex items-center justify-between gap-6">
-                        {/* Left Side: Stats */}
-                        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl min-w-[100px]">
-                            <span className="text-3xl font-bold" style={{ color: tracker.color }}>
-                                {entries.length > 0 ? entries[0].value : 0}
-                            </span>
-                            <span className="text-xs text-gray-400 mt-1 uppercase tracking-wider">الحالي</span>
-                        </div>
+                    {/* Main Chart Section */}
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between gap-6">
+                            <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl min-w-[80px]">
+                                <span className="text-2xl font-bold" style={{ color: tracker.color }}>
+                                    {entries.length > 0 ? entries[0].value : 0}
+                                </span>
+                                <span className="text-[10px] text-gray-400 uppercase">الحالي</span>
+                            </div>
 
-                        {/* Center: The Mini Chart (Middle Area) */}
-                        <div className="flex-1 h-[80px] w-full relative">
-                            {miniChartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    {(!tracker.settings?.chart_type || tracker.settings.chart_type === 'area') ? (
-                                        <AreaChart data={miniChartData}>
-                                            <defs>
-                                                <linearGradient id={`grad-mini-${tracker.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={tracker.color || "#000"} stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor={tracker.color || "#000"} stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <Area
-                                                type="monotone"
-                                                dataKey="value"
-                                                stroke={tracker.color || "#000"}
-                                                strokeWidth={2}
-                                                fill={`url(#grad-mini-${tracker.id})`}
-                                                animationDuration={1000}
-                                            />
-                                        </AreaChart>
-                                    ) : tracker.settings.chart_type === 'bar' ? (
-                                        <BarChart data={miniChartData}>
-                                            <Bar
-                                                dataKey="value"
-                                                fill={tracker.color || "#000"}
-                                                radius={[4, 4, 0, 0]}
-                                                animationDuration={1000}
-                                            />
-                                        </BarChart>
-                                    ) : (
-                                        <LineChart data={miniChartData}>
-                                            <Line
-                                                type="monotone"
-                                                dataKey="value"
-                                                stroke={tracker.color || "#000"}
-                                                strokeWidth={2}
-                                                dot={{ r: 3, fill: tracker.color || "#000" }}
-                                                animationDuration={1000}
-                                            />
-                                        </LineChart>
-                                    )}
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full w-full flex items-center justify-center text-gray-300 text-sm italic border rounded-xl border-dashed">
-                                    لا توجد بيانات كافية
-                                </div>
-                            )}
-                        </div>
+                            <div className="flex-1 h-[120px] w-full relative">
+                                {entries.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        {(!tracker.settings?.chart_type || tracker.settings.chart_type === 'area') ? (
+                                            <AreaChart data={chartData}>
+                                                <defs>
+                                                    <linearGradient id={`grad-${tracker.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor={tracker.color || "#3B82F6"} stopOpacity={0.4} />
+                                                        <stop offset="95%" stopColor={tracker.color || "#3B82F6"} stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                                <XAxis dataKey="shortDate" hide />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                    labelStyle={{ display: 'none' }}
+                                                />
+                                                <Area
+                                                    type="monotone"
+                                                    dataKey="value"
+                                                    stroke={tracker.color || "#3B82F6"}
+                                                    strokeWidth={3}
+                                                    fill={`url(#grad-${tracker.id})`}
+                                                    animationDuration={1500}
+                                                />
+                                            </AreaChart>
+                                        ) : tracker.settings.chart_type === 'radar' ? (
+                                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                                <PolarGrid />
+                                                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+                                                <Radar
+                                                    name={tracker.name}
+                                                    dataKey="A"
+                                                    stroke={tracker.color}
+                                                    fill={tracker.color}
+                                                    fillOpacity={0.6}
+                                                />
+                                            </RadarChart>
+                                        ) : (
+                                            <BarChart data={chartData}>
+                                                <Bar
+                                                    dataKey="value"
+                                                    fill={tracker.color || "#3B82F6"}
+                                                    radius={[6, 6, 0, 0]}
+                                                    animationDuration={1500}
+                                                />
+                                            </BarChart>
+                                        )}
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full w-full flex items-center justify-center text-gray-300 text-xs italic border rounded-xl border-dashed">
+                                        لا توجد بيانات كافية للرسم
+                                    </div>
+                                )}
+                            </div>
 
-                        {/* Right Side: Stats */}
-                        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl min-w-[100px]">
-                            <span className="text-3xl font-bold">{entries.length}</span>
-                            <span className="text-xs text-gray-400 mt-1 uppercase tracking-wider">السجلات</span>
+                            <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl min-w-[80px]">
+                                <span className="text-2xl font-bold">{entries.length}</span>
+                                <span className="text-[10px] text-gray-400 uppercase">السجلات</span>
+                            </div>
                         </div>
                     </div>
 

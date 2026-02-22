@@ -31,6 +31,8 @@ const formSchema = z.object({
         options: z.string().optional(), // Newline separated for input
         allowCustom: z.string().optional(), // Checkbox state
         chart_type: z.string().optional(),
+        start_date: z.string().optional(),
+        end_date: z.string().optional(),
     }).optional(),
 });
 
@@ -114,6 +116,12 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
             }
             if (values.settings?.chart_type) {
                 processedSettings.chart_type = values.settings.chart_type;
+            }
+            if (values.settings?.start_date) {
+                processedSettings.start_date = values.settings.start_date;
+            }
+            if (values.settings?.end_date) {
+                processedSettings.end_date = values.settings.end_date;
             }
 
             console.log("Creating tracker with values:", values);
@@ -251,6 +259,37 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                                 </FormItem>
                             )}
                         />
+
+                        {/* Date Range Selection */}
+                        <div className="grid grid-cols-2 gap-4 border p-3 rounded-lg bg-gray-50/50">
+                            <FormField
+                                control={form.control}
+                                name="settings.start_date"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">تاريخ البدء</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} className="h-8 text-xs" />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="settings.end_date"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">تاريخ الانتهاء</FormLabel>
+                                        <FormControl>
+                                            <Input type="date" {...field} className="h-8 text-xs" />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="col-span-2 text-[10px] text-gray-500 text-right">
+                                حدد فترة زمنية (اختياري) لمتابعة هدف معين لفترة محددة.
+                            </div>
+                        </div>
 
                         {/* Type Specific Settings */}
                         {(selectedType === 'numeric' || selectedType === 'scale') && (

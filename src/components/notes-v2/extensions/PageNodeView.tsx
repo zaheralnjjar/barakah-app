@@ -76,7 +76,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
 
     return (
         <NodeViewWrapper
-            className={cn("page-node-view flex justify-center", isMobile ? "px-2" : "")}
+            className={cn("page-node-view flex justify-center", isMobile ? "px-[0.5mm]" : "")}
             style={{
                 // Reserve exact space for the scaled page + gap
                 width: '100%',
@@ -103,7 +103,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                         const baseStyle: React.CSSProperties = {
                             width: isMobile ? '100%' : `${pageWidthPx}px`,
                             minHeight: isMobile ? 'calc(100vh - 180px)' : `${pageHeightPx}px`,
-                            padding: isMobile ? `20px 16px` : `${margin}mm`,
+                            padding: isMobile ? `2px 0.5mm` : `${margin}mm`,
                             backgroundColor: backgroundColor,
                             transform: isMobile ? 'none' : `scale(${scale})`,
                             transformOrigin: 'top center',
@@ -137,8 +137,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     {/* Header */}
                     <div
                         contentEditable={false}
-                        className="absolute top-2 border-b border-gray-100/80 pb-1 flex justify-between text-[10px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: isMobile ? '16px' : `${margin}mm`, right: isMobile ? '16px' : `${margin}mm` }}
+                        className="absolute top-1 border-b border-gray-100/80 pb-0.5 flex justify-between text-[9px] text-gray-400 font-medium z-10 select-none"
+                        style={{ left: isMobile ? '0.5mm' : `${margin}mm`, right: isMobile ? '0.5mm' : `${margin}mm`, top: isMobile ? '2px' : '8px' }}
                     >
                         <input
                             type="text"
@@ -166,8 +166,8 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     {/* Footer */}
                     <div
                         contentEditable={false}
-                        className="absolute bottom-2 border-t border-gray-100/80 pt-1 flex justify-between items-center text-[10px] text-gray-400 font-medium z-10 select-none"
-                        style={{ left: isMobile ? '16px' : `${margin}mm`, right: isMobile ? '16px' : `${margin}mm` }}
+                        className="absolute bottom-1 border-t border-gray-100/80 pt-0.5 flex justify-between items-center text-[9px] text-gray-400 font-medium z-10 select-none"
+                        style={{ left: isMobile ? '0.5mm' : `${margin}mm`, right: isMobile ? '0.5mm' : `${margin}mm` }}
                     >
                         <span>صفحة {pageNumber}</span>
                         <input
