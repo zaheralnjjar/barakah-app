@@ -160,14 +160,16 @@ const SmartTemplateComponent = (props: any) => {
             data-drag-handle=""
             style={{
                 position: isFloating ? 'absolute' : 'relative',
-                left: isFloating ? `${left}px` : 'auto',
-                top: isFloating ? `${top}px` : 'auto',
+                left: isFloating ? 0 : 'auto',
+                top: isFloating ? 0 : 'auto',
+                width: isFloating ? (templateWidth === 'auto' ? '100%' : `${templateWidth}px`) : (templateWidth === 'auto' ? 'auto' : `${templateWidth}px`),
+                height: isFloating ? 0 : 'auto',
                 zIndex: isFloating ? 50 : 1,
-                width: templateWidth === 'auto' ? 'auto' : `${templateWidth}px`,
                 maxWidth: '100%',
-                display: 'inline-block',
+                display: isFloating ? 'block' : 'inline-block',
                 transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
                 userSelect: 'none',
+                direction: 'rtl',
             }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
@@ -257,6 +259,9 @@ const SmartTemplateComponent = (props: any) => {
                 data-smart-template-config={encodeURIComponent(JSON.stringify(config || []))}
                 style={{
                     width: '100%',
+                    position: isFloating ? 'absolute' : 'relative',
+                    left: isFloating ? `${left}px` : 'auto',
+                    top: isFloating ? `${top}px` : 'auto',
                     pointerEvents: isDragging ? 'none' : 'auto',
                     backgroundColor: bgColor === 'transparent' ? 'transparent' : bgColor,
                     borderColor: borderColor === 'transparent' ? 'transparent' : borderColor,

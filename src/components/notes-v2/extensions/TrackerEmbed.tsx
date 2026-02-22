@@ -229,7 +229,16 @@ const TrackerNodeView = (props: NodeViewProps) => {
     const showControls = isHovered || selected || popoverOpen;
 
     return (
-        <NodeViewWrapper className="absolute z-10" style={{ left: 0, top: 0, direction: 'ltr' }}>
+        <NodeViewWrapper
+            className="absolute z-10"
+            style={{
+                left: 0,
+                top: 0,
+                width: width,
+                height: 0,
+                direction: 'ltr'
+            }}
+        >
             <Draggable
                 nodeRef={nodeRef}
                 handle=".drag-handle"
