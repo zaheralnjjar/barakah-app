@@ -605,7 +605,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             )}>
                 {/* Unified Toolbar Flow - Always Horizontal Scroll on Mobile */}
                 <div className={cn(
-                    "flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 px-1",
+                    "flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 px-1 whitespace-nowrap",
                     isMobile ? "h-14" : "h-12"
                 )}>
                     {GroupFORMATTING}
