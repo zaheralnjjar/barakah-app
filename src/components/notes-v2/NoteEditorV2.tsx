@@ -647,18 +647,22 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             setPageLayout('blank');
         } else {
             const insertPos = getInsertPosInsidePage();
-            editor.chain().focus().insertContentAt(insertPos, {
-                type: 'smartTemplateNode',
-                attrs: {
-                    html: content,
-                    left: 0,
-                    top: 0,
-                    width: 400,
-                    baseWidth: 400,
-                    height: 200,
-                    isFloating: false
-                }
-            }).run();
+            if (editor) {
+                const pos = calculateNextTextBoxPosition();
+                const insertPos = getInsertPosInsidePage();
+                editor.chain().focus().insertContentAt(insertPos, {
+                    type: 'smartTemplateNode',
+                    attrs: {
+                        html: content,
+                        left: pos.x,
+                        top: pos.y,
+                        width: 400,
+                        baseWidth: 400,
+                        height: 200,
+                        isFloating: true
+                    }
+                }).run();
+            }
         }
     };
 
@@ -670,14 +674,15 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
 
     const handleTrackerSelect = (trackers: { id: string; label: string; type: string; color?: string; icon?: string }[], coords?: { x: number; y: number }) => {
         if (!editor || trackers.length === 0) return;
+        const pos = calculateNextTextBoxPosition();
         trackers.forEach((tracker, index) => {
             const insertPos = getInsertPosInsidePage();
             editor.chain().focus().insertContentAt(insertPos, {
                 type: 'trackerEmbed',
                 attrs: {
                     trackers: [tracker],
-                    x: 0,
-                    y: 0,
+                    x: pos.x + (index * 20),
+                    y: pos.y + (index * 20),
                     displayMode: 'chip'
                 }
             }).run();

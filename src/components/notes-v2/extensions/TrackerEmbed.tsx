@@ -394,10 +394,38 @@ export const TrackerEmbed = Node.create({
         };
     },
 
-    parseHTML() { return [{ tag: 'tracker-embed' }]; },
+    parseHTML() {
+        return [
+            {
+                tag: 'div[data-type="tracker-embed"]',
+                getAttrs: (element: HTMLElement | string) => {
+                    if (typeof element === 'string') return {};
+                    return {
+                        trackers: JSON.parse(element.getAttribute('data-trackers') || '[]'),
+                        x: parseInt(element.getAttribute('data-x') || '50', 10),
+                        y: parseInt(element.getAttribute('data-y') || '50', 10),
+                        width: parseInt(element.getAttribute('data-width') || '280', 10),
+                        displayMode: element.getAttribute('data-mode') || 'chip',
+                        bgColor: element.getAttribute('data-bg-color') || 'transparent',
+                        borderColor: element.getAttribute('data-border-color') || 'transparent',
+                        borderWidth: parseFloat(element.getAttribute('data-border-width') || '0'),
+                    };
+                },
+            },
+        ];
+    },
+
     renderHTML({ HTMLAttributes }) {
-        return ['tracker-embed', mergeAttributes(HTMLAttributes, {
-            'trackers': JSON.stringify(HTMLAttributes.trackers)
+        return ['div', mergeAttributes(HTMLAttributes, {
+            'data-type': 'tracker-embed',
+            'data-trackers': JSON.stringify(HTMLAttributes.trackers),
+            'data-x': HTMLAttributes.x,
+            'data-y': HTMLAttributes.y,
+            'data-width': HTMLAttributes.width,
+            'data-mode': HTMLAttributes.displayMode,
+            'data-bg-color': HTMLAttributes.bgColor,
+            'data-border-color': HTMLAttributes.borderColor,
+            'data-border-width': HTMLAttributes.borderWidth,
         })];
     },
 

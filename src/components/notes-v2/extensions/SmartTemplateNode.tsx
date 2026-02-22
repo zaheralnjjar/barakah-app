@@ -2,7 +2,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GripVertical, Palette, X } from 'lucide-react';
+import { GripVertical, Palette, X, Layout } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -15,8 +15,11 @@ const BORDER_COLORS = [
 ];
 
 const SmartTemplateComponent = (props: any) => {
-    const { node, updateAttributes, selected, deleteNode } = props;
+    const { node, updateAttributes, selected, deleteNode, editor } = props;
     const { html, config, left, top, isFloating, width } = node.attrs;
+
+    const editorZoom = (editor.storage as any).textBox?.zoom || 100;
+    const dragScale = editorZoom / 100;
 
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -45,8 +48,8 @@ const SmartTemplateComponent = (props: any) => {
 
         const handleMouseMove = (e: MouseEvent) => {
             if (contentRef.current) {
-                const dx = e.clientX - dragStart.x;
-                const dy = e.clientY - dragStart.y;
+                const dx = (e.clientX - dragStart.x) / dragScale;
+                const dy = (e.clientY - dragStart.y) / dragScale;
                 contentRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
             }
         };
@@ -54,8 +57,8 @@ const SmartTemplateComponent = (props: any) => {
         const handleMouseUp = (e: MouseEvent) => {
             setIsDragging(false);
             if (contentRef.current) {
-                const dx = e.clientX - dragStart.x;
-                const dy = e.clientY - dragStart.y;
+                const dx = (e.clientX - dragStart.x) / dragScale;
+                const dy = (e.clientY - dragStart.y) / dragScale;
                 const newLeft = initialPos.left + dx;
                 const newTop = initialPos.top + dy;
 
@@ -90,13 +93,13 @@ const SmartTemplateComponent = (props: any) => {
     useEffect(() => {
         if (!isResizing) return;
         const onMove = (e: MouseEvent) => {
-            const dx = resizeStart.current.x - e.clientX; // RTL: drag left = wider
+            const dx = (resizeStart.current.x - e.clientX) / dragScale; // RTL: drag left = wider
             const newW = Math.max(100, resizeStart.current.startWidth + dx);
             if (contentRef.current) contentRef.current.style.width = `${newW}px`;
         };
         const onUp = (e: MouseEvent) => {
             setIsResizing(false);
-            const dx = resizeStart.current.x - e.clientX;
+            const dx = (resizeStart.current.x - e.clientX) / dragScale;
             updateAttributes({ width: Math.max(100, resizeStart.current.startWidth + dx) });
         };
         window.addEventListener('mousemove', onMove);
@@ -184,9 +187,21 @@ const SmartTemplateComponent = (props: any) => {
                         "drag-handle p-1 rounded flex items-center justify-center transition-colors",
                         isFloating ? 'cursor-grab active:cursor-grabbing hover:bg-gray-100 text-gray-400' : 'cursor-not-allowed text-gray-300'
                     )}
+                    title={isFloating ? "سحب للتحريك" : "يجب تفعيل الوضع العائم للتحريك"}
                 >
                     <GripVertical size={14} />
                 </div>
+
+                <button
+                    onClick={(e) => { e.stopPropagation(); updateAttributes({ isFloating: !isFloating }); }}
+                    className={cn(
+                        "p-1 rounded transition-colors",
+                        isFloating ? "bg-indigo-50 text-indigo-600" : "text-gray-500 hover:bg-gray-100"
+                    )}
+                    title={isFloating ? "تحويل إلى الوضع المضمن" : "تحويل إلى الوضع العائم"}
+                >
+                    <Layout size={13} className={isFloating ? "rotate-180" : ""} />
+                </button>
 
                 <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                     <PopoverTrigger asChild>
@@ -350,47 +365,49 @@ export const SmartTemplateNode = Node.create({
     parseHTML() {
         return [
             {
-                tag: 'div.smart-layout-container',
-                getAttrs: (element: string | HTMLElement) => {
+                tag: 'div[data-type="smart-template"]',
+                getAttrs: (element: HTMLElement | string) => {
                     if (typeof element === 'string') return {};
 
-                    const htmlAttr = element.getAttribute('data-smart-template-html');
-                    let htmlContent = '';
-                    if (htmlAttr) {
-                        try {
-                            htmlContent = decodeURIComponent(htmlAttr);
-                        } catch (e) {
-                            htmlContent = element.innerHTML;
-                        }
-                    } else {
-                        htmlContent = element.innerHTML;
-                    }
-
-                    const configStr = element.getAttribute('data-smart-template-config');
+                    const htmlContent = element.getAttribute('data-html') || element.innerHTML;
+                    const configStr = element.getAttribute('data-config');
                     let config = [];
                     try {
                         if (configStr) config = JSON.parse(decodeURIComponent(configStr));
                     } catch (e) {
                         console.error("Failed to parse config", e);
                     }
+
                     return {
                         html: htmlContent,
                         config: config,
-                        isFloating: element.style.position === 'absolute',
-                        left: parseFloat(element.style.left || '0'),
-                        top: parseFloat(element.style.top || '0'),
-                        width: element.style.width ? parseFloat(element.style.width) : 100,
+                        isFloating: element.getAttribute('data-is-floating') === 'true',
+                        left: parseFloat(element.getAttribute('data-left') || '0'),
+                        top: parseFloat(element.getAttribute('data-top') || '0'),
+                        width: parseFloat(element.getAttribute('data-width') || '400'),
+                        bgColor: element.getAttribute('data-bg-color') || 'transparent',
+                        borderColor: element.getAttribute('data-border-color') || 'transparent',
+                        borderWidth: parseFloat(element.getAttribute('data-border-width') || '0'),
                     };
                 }
-            },
-            {
-                tag: 'smart-template-block',
             }
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(HTMLAttributes, { class: 'smart-layout-container' })];
+        return ['div', mergeAttributes(HTMLAttributes, {
+            'data-type': 'smart-template',
+            'data-html': HTMLAttributes.html,
+            'data-config': encodeURIComponent(JSON.stringify(HTMLAttributes.config || [])),
+            'data-is-floating': HTMLAttributes.isFloating,
+            'data-left': HTMLAttributes.left,
+            'data-top': HTMLAttributes.top,
+            'data-width': HTMLAttributes.width,
+            'data-bg-color': HTMLAttributes.bgColor,
+            'data-border-color': HTMLAttributes.borderColor,
+            'data-border-width': HTMLAttributes.borderWidth,
+            'class': `smart-template-container ${HTMLAttributes.isFloating ? 'is-floating' : ''}`
+        })];
     },
 
     addNodeView() {
