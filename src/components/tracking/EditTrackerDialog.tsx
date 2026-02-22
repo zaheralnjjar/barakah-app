@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tracker, CreateTrackerDTO } from "@/types/tracking";
@@ -23,6 +23,7 @@ const formSchema = z.object({
     unit: z.string().optional(),
     min: z.string().optional(),
     max: z.string().optional(),
+    quick_add_increment: z.string().optional(),
     settings: z.object({
         chart_type: z.string().optional(),
     }).optional()
@@ -53,6 +54,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
             unit: tracker.settings.unit,
             min: tracker.settings.min?.toString(),
             max: tracker.settings.max?.toString(),
+            quick_add_increment: tracker.quick_add_increment?.toString() || "",
         },
     });
 
@@ -68,6 +70,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                 unit: tracker.settings.unit,
                 min: tracker.settings.min?.toString(),
                 max: tracker.settings.max?.toString(),
+                quick_add_increment: tracker.quick_add_increment?.toString() || "",
             });
         }
     }, [open, tracker, form]);
@@ -79,6 +82,7 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                 icon: values.icon,
                 color: values.color,
                 folder_id: values.folder_id === "none" ? null : values.folder_id,
+                quick_add_increment: values.quick_add_increment ? Number(values.quick_add_increment) : null,
                 type: tracker.type, // Type usually shouldn't change easily as it breaks history
                 settings: {
                     ...tracker.settings,
@@ -214,6 +218,24 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
                                     />
                                 )}
                             </div>
+                        )}
+
+                        {(tracker.type === 'numeric' || tracker.type === 'scale') && (
+                            <FormField
+                                control={form.control}
+                                name="quick_add_increment"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>قيمة الإضافة السريعة (+)</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" placeholder="مثال: 5، 1000" {...field} />
+                                        </FormControl>
+                                        <FormDescription className="text-xs">
+                                            سيظهر زر للإضافة السريعة بهذه القيمة.
+                                        </FormDescription>
+                                    </FormItem>
+                                )}
+                            />
                         )}
 
                         {(tracker.type === 'numeric' || tracker.type === 'scale') && (

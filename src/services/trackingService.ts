@@ -31,6 +31,7 @@ export const trackingService = {
                 icon: dto.icon,
                 color: dto.color,
                 settings: dto.settings || {},
+                quick_add_increment: dto.quick_add_increment,
                 order_index: 999,
                 folder_id: dto.folder_id
             })
@@ -94,6 +95,7 @@ export const trackingService = {
                 icon: updates.icon,
                 color: updates.color,
                 settings: updates.settings,
+                quick_add_increment: updates.quick_add_increment,
                 folder_id: updates.folder_id
             })
             .eq('id', id)

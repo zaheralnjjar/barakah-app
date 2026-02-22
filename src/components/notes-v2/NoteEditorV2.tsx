@@ -48,6 +48,7 @@ import {
     Heart,
     Users,
     Home,
+    Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,7 +185,11 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     // Page settings
     const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
     const [pageMargin, setPageMargin] = useState(20); // mm
-    const [pageBorder, setPageBorder] = useState<'none' | 'simple' | 'double' | 'dashed' | 'thick' | 'decorative' | 'classic' | 'elegant'>('none');
+    const [pageBorder, setPageBorder] = useState<'none' | 'simple' | 'double' | 'dashed' | 'thick' | 'dotted' | 'double-thick' | 'outlined'>('none');
+    const [pageBorderColor, setPageBorderColor] = useState<string>('#6b7280');
+    const [pageBorderWidth, setPageBorderWidth] = useState<number>(2);
+    const [cornerRadius, setCornerRadius] = useState<number>(0);
+    const [pageBgColor, setPageBgColor] = useState<string>('#ffffff');
 
     const getSuggestionItems = ({ query }: { query: string }) => {
         return [
@@ -257,6 +262,29 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).run();
                     setShowTemplates(true);
+                },
+            },
+            {
+                title: 'صورة',
+                description: 'إدراج صورة من جهازك',
+                icon: <ImageIcon size={18} />,
+                command: ({ editor, range }: any) => {
+                    editor.chain().focus().deleteRange(range).run();
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e: any) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const src = e.target?.result as string;
+                                editor.chain().focus().setImage({ src }).run();
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
                 },
             },
             {
@@ -398,6 +426,10 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 (editor.storage as any).page.orientation = orientation;
                 (editor.storage as any).page.margin = pageMargin;
                 (editor.storage as any).page.border = pageBorder;
+                (editor.storage as any).page.borderColor = pageBorderColor;
+                (editor.storage as any).page.borderWidth = pageBorderWidth;
+                (editor.storage as any).page.cornerRadius = cornerRadius;
+                (editor.storage as any).page.pageBgColor = pageBgColor;
             }
             // Force re-render of ALL page nodes by updating a dummy attribute
             const { tr } = editor.state;
@@ -416,7 +448,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 editor.view.dispatch(tr);
             }
         }
-    }, [zoom, pageLayout, rulingSpacing, pageBackground, backgroundColor, orientation, pageMargin, pageBorder, editor]);
+    }, [zoom, pageLayout, rulingSpacing, pageBackground, backgroundColor, orientation, pageMargin, pageBorder, pageBorderColor, pageBorderWidth, cornerRadius, pageBgColor, editor]);
 
     const calculateNextTextBoxPosition = () => {
         if (!editor) return { x: 80, y: 150 };
@@ -688,7 +720,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         }, 100);
     };
 
-    const handleExport = async (type: 'image' | 'pdf' | 'word' | 'text') => {
+    const handleExport = async (type: 'image' | 'pdf' | 'word' | 'html' | 'text') => {
         if (!editor) return;
         try {
             if (type === 'text') {
@@ -702,32 +734,131 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 URL.revokeObjectURL(url);
                 toast({ title: 'تم تصدير الملف النصي' });
             } else if (type === 'pdf' || type === 'image') {
-                const element = editorRef.current;
-                if (element) {
-                    // @ts-ignore
-                    const canvas = await html2canvas(element, {
-                        scale: 2,
-                        backgroundColor: pageBackground ? null : backgroundColor,
-                        useCORS: true
-                    } as any);
+                if (type === 'image') {
+                    const pmElement = document.querySelector('.ProseMirror') as HTMLElement;
+                    if (pmElement) {
+                        const originalOverflow = pmElement.style.overflow;
+                        const originalHeight = pmElement.style.height;
 
-                    if (type === 'image') {
+                        pmElement.style.overflow = 'visible';
+                        pmElement.style.height = 'auto';
+
+                        // @ts-ignore
+                        const canvas = await html2canvas(pmElement, {
+                            scale: 2,
+                            backgroundColor: pageBackground ? null : backgroundColor,
+                            useCORS: true,
+                            windowWidth: pmElement.scrollWidth,
+                            windowHeight: pmElement.scrollHeight,
+                            y: pmElement.getBoundingClientRect().top + window.scrollY,
+                        } as any);
+
+                        pmElement.style.overflow = originalOverflow;
+                        pmElement.style.height = originalHeight;
+
                         const link = document.createElement('a');
                         link.download = `Note-${Date.now()}.png`;
                         link.href = canvas.toDataURL();
                         link.click();
                         toast({ title: 'تم تصدير الصورة' });
-                    } else {
-                        const imgData = canvas.toDataURL('image/png');
-                        const pdf = new jsPDF(orientation === 'landscape' ? 'l' : 'p', 'mm', 'a4');
-                        const pdfWidth = pdf.internal.pageSize.getWidth();
-                        const imgProps = pdf.getImageProperties(imgData);
-                        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                        pdf.save(`Note-${Date.now()}.pdf`);
-                        toast({ title: 'تم تصدير ملف PDF' });
                     }
+                } else if (type === 'pdf') {
+                    // Multi-page PDF Export
+                    const pages = document.querySelectorAll('.page-node-view');
+                    if (pages.length === 0) return;
+
+                    const pdf = new jsPDF(orientation === 'landscape' ? 'l' : 'p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                    for (let i = 0; i < pages.length; i++) {
+                        const pageElement = (pages[i] as HTMLElement).firstElementChild as HTMLElement; // Target the inner div to avoid margins
+                        if (!pageElement) continue;
+
+                        // @ts-ignore
+                        const canvas = await html2canvas(pageElement, {
+                            scale: 2,
+                            backgroundColor: pageBackground ? null : pageBgColor,
+                            useCORS: true,
+                        } as any);
+
+                        const imgData = canvas.toDataURL('image/png');
+                        const imgProps = pdf.getImageProperties(imgData);
+
+                        // Calculate dimensions to fit perfectly within A4 keeping aspect ratio
+                        const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+                        const finalWidth = imgProps.width * ratio;
+                        const finalHeight = imgProps.height * ratio;
+
+                        // Center horizontally and vertically
+                        const imgX = (pdfWidth - finalWidth) / 2;
+                        const imgY = (pdfHeight - finalHeight) / 2;
+
+                        if (i > 0) {
+                            pdf.addPage();
+                        }
+
+                        pdf.addImage(imgData, 'PNG', imgX, imgY, finalWidth, finalHeight);
+                    }
+
+                    pdf.save(`Note-${Date.now()}.pdf`);
+                    toast({ title: 'تم تصدير ملف PDF' });
                 }
+            } else if (type === 'html' || type === 'word') {
+                const htmlContent = editor.getHTML();
+
+                let finalContent = htmlContent;
+                let mimeType = 'text/html';
+                let extension = 'html';
+
+                if (type === 'word') {
+                    let wordBody = '';
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    const pages = doc.querySelectorAll('div[data-type="page"]');
+
+                    if (pages.length > 0) {
+                        pages.forEach((page, index) => {
+                            let borderStyle = pageBorder === 'none' ? 'none' : `${pageBorderWidth}px solid ${pageBorderColor}`;
+                            wordBody += `<div style="padding: ${pageMargin}mm; background-color: ${pageBgColor}; border: ${borderStyle}; min-height: 297mm; border-radius: 8px;">`;
+                            wordBody += page.innerHTML;
+                            wordBody += `</div>`;
+                            if (index < pages.length - 1) {
+                                wordBody += `<br clear="all" style="page-break-before:always" />`;
+                            }
+                        });
+                    } else {
+                        wordBody = htmlContent;
+                    }
+
+                    finalContent = `
+                        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                        <head>
+                        <meta charset='utf-8'>
+                        <title>Export</title>
+                        <style>
+                            body { font-family: 'Arial', 'Segoe UI', sans-serif; direction: rtl; }
+                            p { margin: 0 0 10px 0; line-height: 1.6; }
+                            table { border-collapse: collapse; width: 100%; }
+                            td, th { border: 1px solid #ccc; padding: 8px; }
+                        </style>
+                        </head>
+                        <body dir="rtl">
+                        ${wordBody}
+                        </body></html>
+                    `;
+                    mimeType = 'application/msword';
+                    extension = 'doc';
+                }
+
+                const blob = new Blob([finalContent], { type: `${mimeType};charset=utf-8` });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Note-${Date.now()}.${extension}`;
+                link.click();
+                URL.revokeObjectURL(url);
+                toast({ title: `تم التصدير كملف ${extension.toUpperCase()}` });
             }
         } catch (e) {
             console.error(e);
@@ -896,6 +1027,19 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                 </div>
                             </div>
 
+                            {/* Page Background Color */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] text-gray-400">لون خلفية الصفحة (الداخلي)</label>
+                                <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
+                                    <input
+                                        type="color"
+                                        value={pageBgColor}
+                                        onChange={(e) => setPageBgColor(e.target.value)}
+                                        className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Page Layout */}
                             <div className="space-y-1">
                                 <label className="text-[10px] text-gray-400">تخطيط الصفحة</label>
@@ -949,35 +1093,78 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                                 </div>
                             )}
 
-                            {/* Page Border */}
+                            {/* Border Style */}
                             <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">حدود الصفحة</label>
-                                <div className="grid grid-cols-3 gap-1">
-                                    {([
-                                        { id: 'none' as const, label: 'بدون', preview: 'border-transparent' },
-                                        { id: 'simple' as const, label: 'بسيط', preview: 'border-gray-400' },
-                                        { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
-                                        { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
-                                        { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
-                                        { id: 'classic' as const, label: 'كلاسيك', preview: 'border-gray-600 border-double border-[3px] ring-1 ring-gray-600 ring-offset-1' },
-                                        { id: 'elegant' as const, label: 'أنيق', preview: 'border-[#d4af37] ring-1 ring-[#d4af37] ring-offset-1' },
-                                        { id: 'decorative' as const, label: 'زخرفي', preview: 'border-indigo-400 border-double border-[3px]' },
-                                    ]).map(b => (
-                                        <button
-                                            key={b.id}
-                                            onClick={() => setPageBorder(b.id)}
-                                            className={cn(
-                                                "h-10 rounded flex flex-col items-center justify-center gap-0.5 transition-all",
-                                                pageBorder === b.id ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50 hover:bg-gray-100"
-                                            )}
-                                        >
-                                            <div className={cn("w-5 h-6 rounded-sm border-2", b.preview)} />
-                                            <span className="text-[8px] text-gray-500">{b.label}</span>
-                                        </button>
-                                    ))}
+                                <label className="text-[10px] text-gray-400">نمط إطار الصفحة</label>
+                                <div className="max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                                    <div className="grid grid-cols-3 gap-2 pb-2">
+                                        {([
+                                            { id: 'none' as const, label: 'بدون', preview: 'border-transparent' },
+                                            { id: 'simple' as const, label: 'بسيط', preview: 'border-gray-400' },
+                                            { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
+                                            { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
+                                            { id: 'dotted' as const, label: 'منقط', preview: 'border-gray-400 border-dotted' },
+                                            { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
+                                            { id: 'double-thick' as const, label: 'مزدوج سميك', preview: 'border-gray-700 border-double border-[4px]' },
+                                            { id: 'outlined' as const, label: 'محدد', preview: 'border-gray-600 border-solid border-[2px] outline outline-1 outline-gray-400 outline-offset-1' },
+                                        ]).map(b => (
+                                            <button key={b.id} onClick={() => setPageBorder(b.id as any)} className={cn("h-10 rounded flex flex-col items-center justify-center gap-0.5 transition-all text-gray-700 font-medium", pageBorder === b.id ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50 hover:bg-gray-100")}>
+                                                <div className={cn("w-4 h-5 rounded-sm border-2", b.preview)} />
+                                                <span className="text-[8px] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center px-0.5">{b.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* Border Radius */}
+                            {pageBorder !== 'none' && (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-gray-400">زاوية الإطار ({cornerRadius}px)</label>
+                                    <Slider
+                                        value={[cornerRadius]}
+                                        min={0}
+                                        max={64}
+                                        step={2}
+                                        onValueChange={([val]) => setCornerRadius(val)}
+                                    />
+                                </div>
+                            )}
                         </div>
+
+                        {/* Border Color & Width */}
+                        {pageBorder !== 'none' && (
+                            <div className="flex gap-2">
+                                <div className="space-y-1 flex-1">
+                                    <label className="text-[10px] text-gray-400">لون الإطار</label>
+                                    <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
+                                        <input
+                                            type="color"
+                                            value={pageBorderColor}
+                                            onChange={(e) => setPageBorderColor(e.target.value)}
+                                            className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1 flex-1">
+                                    <label className="text-[10px] text-gray-400">سماكة الإطار (px)</label>
+                                    <div className="flex gap-1 h-8">
+                                        {[1, 2, 4, 8].map(w => (
+                                            <button
+                                                key={w}
+                                                onClick={() => setPageBorderWidth(w)}
+                                                className={cn(
+                                                    "flex-1 rounded text-[10px] flex items-center justify-center border",
+                                                    pageBorderWidth === w ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                )}
+                                            >
+                                                {w}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </PopoverContent>
                 </Popover>
             </div>
@@ -1025,12 +1212,14 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         </Button>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Main editor area — scrollable pages */}
             <div
                 ref={editorRef}
-                className="flex-1 overflow-auto bg-white"
+                className="flex-1 overflow-auto"
+                style={{ backgroundColor: isMobile ? '#ffffff' : (backgroundColor || '#f1f5f9') }}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onWheel={handleWheel}
@@ -1060,6 +1249,6 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 onClose={() => setShowTrackerDialog(false)}
                 onSelect={handleTrackerSelect}
             />
-        </div>
+        </div >
     );
 };

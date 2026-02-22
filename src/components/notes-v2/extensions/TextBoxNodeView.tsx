@@ -318,6 +318,6 @@ export const TextBoxNodeView: React.FC<NodeViewProps> = (props) => {
                     </ResizableBox>
                 </div>
             </Draggable>
-        </NodeViewWrapper>
+        </NodeViewWrapper >
     );
 };

@@ -19,6 +19,7 @@ export interface Tracker {
     order_index: number;
     folder_id?: string | null;
     is_archived: boolean;
+    quick_add_increment?: number | null;
     settings: {
         goal?: number; // For numeric/scale
         unit?: string; // e.g. "cups", "km"
@@ -49,6 +50,7 @@ export interface CreateTrackerDTO {
     icon?: string;
     color?: string;
     folder_id?: string;
+    quick_add_increment?: number | null;
     settings?: {
         min?: number;
         max?: number;

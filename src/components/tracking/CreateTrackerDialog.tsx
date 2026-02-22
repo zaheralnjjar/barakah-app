@@ -22,6 +22,7 @@ const formSchema = z.object({
     icon: z.string().optional(),
     color: z.string().optional(),
     folder_id: z.string().optional(),
+    quick_add_increment: z.string().optional(),
     settings: z.object({
         min: z.string().optional(), // Inputs are strings initially
         max: z.string().optional(),
@@ -80,6 +81,7 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
             icon: "⚡️",
             color: "#3B82F6",
             folder_id: defaultFolderId || "none",
+            quick_add_increment: "",
             settings: {},
         },
     });
@@ -93,6 +95,7 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                 icon: "⚡️",
                 color: "#3B82F6",
                 folder_id: defaultFolderId || "none",
+                quick_add_increment: "",
                 settings: {},
             });
         }
@@ -132,6 +135,7 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                 type: values.type,
                 icon: values.icon,
                 color: values.color,
+                quick_add_increment: values.quick_add_increment ? Number(values.quick_add_increment) : null,
                 folder_id: (values.folder_id === "none" || !values.folder_id) ? undefined : values.folder_id,
                 settings: processedSettings,
             });
@@ -348,6 +352,21 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                                         />
                                     </>
                                 )}
+                                <FormField
+                                    control={form.control}
+                                    name="quick_add_increment"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>قيمة الإضافة السريعة (+)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="مثال: 5، 1000" {...field} />
+                                            </FormControl>
+                                            <FormDescription className="text-xs">
+                                                سيظهر زر للإضافة السريعة بهذه القيمة.
+                                            </FormDescription>
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                         )}
 

@@ -6,6 +6,7 @@ import {
     ReferenceLine, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Plus, Download, FileSpreadsheet, FileText } from "lucide-react";
@@ -177,11 +178,51 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                     </div>
 
 
+                    {/* Quick Log & Actions */}
+                    <div className="bg-gray-50 dark:bg-gray-900/40 p-5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center justify-between mb-4 flex-row-reverse">
+                            <h3 className="font-bold text-lg text-right">تسجيل سريع</h3>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1 px-3 text-red-600 hover:bg-red-50"
+                                    onClick={() => TrackerExportService.exportToPDF(tracker, entries)}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    PDF
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1 px-3 text-green-600 hover:bg-green-50"
+                                    onClick={() => TrackerExportService.exportToExcel(tracker, entries)}
+                                >
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                    Excel
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 items-end flex-row-reverse">
+                            <Button
+                                onClick={onAddEntry}
+                                className="h-10 px-6 rounded-xl font-bold shadow-lg transition-transform active:scale-95"
+                                style={{ backgroundColor: tracker.color }}
+                            >
+                                سجل الآن
+                            </Button>
+                            <p className="text-xs text-gray-400 text-right flex-1 leading-relaxed">
+                                يمكنك إضافة مدخلات جديدة لمتابعة تقدمك اليومي أو إضافة ملاحظات سريعة.
+                            </p>
+                        </div>
+                    </div>
+
                     {/* History List */}
                     <div>
-                        <h3 className="font-bold text-lg mb-4 text-right flex items-center gap-2">
-                            <span className="w-1 h-6 rounded-full" style={{ backgroundColor: tracker.color }}></span>
+                        <h3 className="font-bold text-lg mb-4 text-right flex items-center gap-2 flex-row-reverse">
                             آخر السجلات
+                            <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: tracker.color }}></span>
                         </h3>
                         <ScrollArea className="h-[250px] pr-4 -mr-4" dir="rtl">
                             <div className="space-y-3 pl-4">
@@ -212,7 +253,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                                 )}
                                             </div>
                                             <div className="text-xs text-gray-400 mt-1">
-                                                {format(new Date(entry.date), "PPP p")}
+                                                {format(new Date(entry.date), "PPP p", { locale: ar })}
                                             </div>
                                             {entry.note && (
                                                 <p className="text-sm text-gray-500 mt-2 bg-white dark:bg-gray-800 p-2 rounded-lg inline-block border border-dashed text-right">

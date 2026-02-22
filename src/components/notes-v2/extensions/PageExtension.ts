@@ -47,9 +47,14 @@ export const PageExtension = Node.create({
             ruling: false,
             background: null,
             backgroundColor: '#ffffff',
+            pageBgColor: '#ffffff',
             zoom: 100,
             orientation: 'portrait',
             margin: 20,
+            border: 'none',
+            borderColor: '#6b7280',
+            borderWidth: 2,
+            cornerRadius: 0,
         };
     },
 });

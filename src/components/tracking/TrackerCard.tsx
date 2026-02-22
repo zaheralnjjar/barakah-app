@@ -214,8 +214,8 @@ export function TrackerCard({
                                 className="rounded-full w-10 h-10 shadow-sm hover:scale-105 transition-transform bg-white dark:bg-gray-800"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const step = tracker.settings.step || 1;
-                                    onQuickAdd(currentValue + step);
+                                    const increment = tracker.quick_add_increment || tracker.settings.step || 1;
+                                    onQuickAdd(currentValue + increment);
                                 }}
                             >
                                 <Plus className="w-5 h-5 text-gray-700 dark:text-gray-200" />

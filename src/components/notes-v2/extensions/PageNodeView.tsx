@@ -26,10 +26,14 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
     const pageLayout = storage.layout || 'blank'; // 'blank' | 'ruled' | 'dotted'
     const rulingSpacing = storage.rulingSpacing || 32;
     const pageBackground = storage.background || null;
-    const backgroundColor = storage.backgroundColor || '#ffffff';
+    const pageOuterColor = storage.backgroundColor || '#ffffff';
+    const backgroundColor = storage.pageBgColor || '#ffffff';
     const orientation = storage.orientation || 'portrait';
     const margin = storage.margin ?? 20;
     const pageBorder = storage.border || 'none';
+    const borderColor = storage.borderColor || '#6b7280';
+    const borderWidth = storage.borderWidth || 2;
+    const cornerRadius = storage.cornerRadius || 0;
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -71,15 +75,21 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
 
     // Generate border style
     const getBorderStyle = (): React.CSSProperties => {
+        const w = Math.max(1, borderWidth);
+        const c = borderColor;
+        const radius = `${cornerRadius}px`;
+
+        const baseStyle: React.CSSProperties = { borderRadius: radius };
+
         switch (pageBorder) {
-            case 'simple': return { border: '2px solid #9ca3af' };
-            case 'double': return { border: '4px double #6b7280' };
-            case 'dashed': return { border: '2px dashed #9ca3af' };
-            case 'thick': return { border: '4px solid #4b5563' };
-            case 'classic': return { border: 'double 4px #4b5563', outline: 'solid 1px #4b5563', outlineOffset: '2px' };
-            case 'elegant': return { border: '1px solid #d4af37', boxShadow: '0 0 0 2px #ffffff, 0 0 0 3px #d4af37' };
-            case 'decorative': return { border: '4px double #6366f1', boxShadow: 'inset 0 0 0 4px #ffffff, inset 0 0 0 6px #a5b4fc' };
-            default: return {};
+            case 'simple': return { ...baseStyle, border: `${w}px solid ${c}` };
+            case 'double': return { ...baseStyle, border: `${Math.max(3, w * 2)}px double ${c}` };
+            case 'dashed': return { ...baseStyle, border: `${w}px dashed ${c}` };
+            case 'dotted': return { ...baseStyle, border: `${w}px dotted ${c}` };
+            case 'thick': return { ...baseStyle, border: `${w * 2 + 1}px solid ${c}` };
+            case 'double-thick': return { ...baseStyle, border: `${Math.max(5, w * 3)}px double ${c}` };
+            case 'outlined': return { ...baseStyle, border: `${w}px solid ${c}`, outline: `1px solid ${c}`, outlineOffset: `-${w + 2}px` };
+            default: return baseStyle;
         }
     };
 
@@ -114,7 +124,7 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                             width: isMobile ? '100%' : `${pageWidthPx}px`,
                             height: isMobile ? 'auto' : `${pageHeightPx}px`,
                             minHeight: isMobile ? 'calc(100vh - 180px)' : `${pageHeightPx}px`,
-                            backgroundColor: backgroundColor,
+                            backgroundColor: pageOuterColor,
                             transform: isMobile ? 'none' : `scale(${scale})`,
                             transformOrigin: 'top center',
                         };
@@ -169,19 +179,26 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
                     <div
                         style={{
                             ...getBorderStyle(),
-                            ...getLayoutBackground(),
                             position: 'absolute',
                             top: isMobile ? '2px' : `${margin}mm`,
                             bottom: isMobile ? '2mm' : `${margin}mm`,
                             left: isMobile ? '0.5mm' : `${margin}mm`,
                             right: isMobile ? '0.5mm' : `${margin}mm`,
-                            padding: pageBorder !== 'none' ? '12px' : '0px',
                             overflow: 'hidden',
                             wordBreak: 'break-word',
                             overflowWrap: 'break-word',
                         }}
                     >
-                        <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl" />
+                        <div style={{
+                            ...getLayoutBackground(),
+                            backgroundColor: backgroundColor,
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            zIndex: 0
+                        }}></div>
+                        <div style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%', padding: pageBorder !== 'none' ? '12px' : '0px' }}>
+                            <NodeViewContent className="flex-grow prose prose-lg max-w-none focus:outline-none text-gray-700 leading-relaxed dir-rtl" />
+                        </div>
                     </div>
 
                     {/* Footer - Below the margin boundary */}

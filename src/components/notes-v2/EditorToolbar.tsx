@@ -60,7 +60,7 @@ import {
 interface EditorToolbarProps {
     editor: Editor | null;
     onOpenTemplates?: () => void;
-    onExport?: (type: 'image' | 'pdf' | 'word' | 'text') => void;
+    onExport?: (type: 'image' | 'pdf' | 'word' | 'html' | 'text') => void;
     onClose?: () => void;
 
     // External Controls Integration
@@ -146,6 +146,24 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     onSearchClick
 }) => {
     if (!editor) return null;
+
+    const handleImageUpload = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e: any) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const src = e.target?.result as string;
+                    editor.chain().focus().setImage({ src }).run();
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
 
     const addTimeSeparator = () => {
         const now = new Date();
@@ -432,6 +450,11 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                 <TooltipContent side="bottom" sideOffset={5}>القوالب الجاهزة</TooltipContent>
             </Tooltip>
 
+            <Tooltip>
+                <TooltipTrigger asChild><button onClick={handleImageUpload} className="p-1.5 rounded-lg hover:bg-gray-100 text-indigo-600"><ImageIcon className="w-4 h-4" /></button></TooltipTrigger>
+                <TooltipContent side="bottom" sideOffset={5}>إدراج صورة</TooltipContent>
+            </Tooltip>
+
 
 
             {/* Tracker Button */}
@@ -505,6 +528,8 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
                             <PopoverContent className="w-40 p-1" align="end">
                                 <button onClick={() => onExport?.('image')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">صورة</button>
                                 <button onClick={() => onExport?.('pdf')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">PDF</button>
+                                <button onClick={() => onExport?.('word')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">Word (.doc)</button>
+                                <button onClick={() => onExport?.('html')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">صفحة HTML</button>
                                 <button onClick={() => onExport?.('text')} className="w-full text-right px-3 py-2 text-sm hover:bg-gray-50 rounded-md">نص (Txt)</button>
                             </PopoverContent>
                         </Popover>
