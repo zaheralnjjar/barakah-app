@@ -18,11 +18,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
     name: z.string().min(1, "الاسم مطلوب"),
-    type: z.enum(["numeric", "scale", "boolean", "select", "checklist", "mood", "time_range", "time"] as const),
+    type: z.enum(["numeric", "scale", "boolean", "select", "checklist", "mood", "time_range", "time", "text"] as const),
     icon: z.string().optional(),
     color: z.string().optional(),
-    folder_id: z.string().optional(),
-    quick_add_increment: z.string().optional(),
+    folder_id: z.string().optional().nullable(),
+    quick_add_increment: z.string().optional().nullable(),
     settings: z.object({
         min: z.string().optional(), // Inputs are strings initially
         max: z.string().optional(),
@@ -36,22 +36,6 @@ const formSchema = z.object({
         end_date: z.string().optional(),
     }).optional(),
 });
-
-// ...
-
-<SelectContent dir="rtl">
-    <SelectItem value="numeric">رقمي (عدد، كمية)</SelectItem>
-    <SelectItem value="scale">مقياس (1-5، 1-10)</SelectItem>
-    <SelectItem value="boolean">نعم/لا (إنجاز)</SelectItem>
-    <SelectItem value="select">قائمة اختيار (خيارات محددة)</SelectItem>
-    <SelectItem value="checklist">قائمة تحقق (قائمة مهام)</SelectItem>
-    <SelectItem value="time">وقت (مدة)</SelectItem>
-    <SelectItem value="text">نص (ملاحظات)</SelectItem>
-</SelectContent>
-
-// ...
-
-
 
 interface CreateTrackerDialogProps {
     children?: React.ReactNode;
@@ -105,12 +89,20 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
+            // Helper to parse numbers safely
+            const safeNumber = (val: any) => {
+                if (val === undefined || val === null || val === "") return undefined;
+                const n = Number(val);
+                return isNaN(n) ? undefined : n;
+            };
+
             // Process settings to numbers/arrays
             const processedSettings: any = { ...values.settings };
-            if (values.settings?.min) processedSettings.min = Number(values.settings.min);
-            if (values.settings?.max) processedSettings.max = Number(values.settings.max);
-            if (values.settings?.step) processedSettings.step = Number(values.settings.step);
-            if (values.settings?.goal) processedSettings.goal = Number(values.settings.goal);
+            if (values.settings?.min) processedSettings.min = safeNumber(values.settings.min);
+            if (values.settings?.max) processedSettings.max = safeNumber(values.settings.max);
+            if (values.settings?.step) processedSettings.step = safeNumber(values.settings.step);
+            if (values.settings?.goal) processedSettings.goal = safeNumber(values.settings.goal);
+
             if (values.settings?.options) {
                 processedSettings.options = values.settings.options.split('\n').map(s => s.trim()).filter(Boolean);
             }
@@ -130,12 +122,14 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
             console.log("Creating tracker with values:", values);
             console.log("Processed settings:", processedSettings);
 
+            const quickAddNum = safeNumber(values.quick_add_increment);
+
             await trackingService.createTracker({
                 name: values.name,
                 type: values.type,
                 icon: values.icon,
                 color: values.color,
-                quick_add_increment: values.quick_add_increment ? Number(values.quick_add_increment) : null,
+                quick_add_increment: quickAddNum,
                 folder_id: (values.folder_id === "none" || !values.folder_id) ? undefined : values.folder_id,
                 settings: processedSettings,
             });
@@ -144,9 +138,10 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
             setOpen(false);
             form.reset();
             queryClient.invalidateQueries({ queryKey: ["trackers"] });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create tracker:", error);
-            toast.error("فشل إنشاء المتعقب (تأكد من صحة البيانات)");
+            const errorMsg = error.message || "فشل إنشاء المتعقب (تأكد من صحة البيانات)";
+            toast.error(errorMsg);
         }
     }
 
@@ -249,8 +244,11 @@ export function CreateTrackerDialog({ children, defaultFolderId }: CreateTracker
                                             <SelectItem value="scale">مقياس (1-5، 1-10)</SelectItem>
                                             <SelectItem value="boolean">نعم/لا (إنجاز)</SelectItem>
                                             <SelectItem value="select">قائمة اختيار (خيارات محددة)</SelectItem>
+                                            <SelectItem value="checklist">قائمة تحقق (قائمة مهام)</SelectItem>
                                             <SelectItem value="mood">الحالة المزاجية (وجوه تعبيرية)</SelectItem>
                                             <SelectItem value="time_range">نطاق زمني (من - إلى)</SelectItem>
+                                            <SelectItem value="time">وقت (مدة)</SelectItem>
+                                            <SelectItem value="text">نص (ملاحظات)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormDescription className="text-right">

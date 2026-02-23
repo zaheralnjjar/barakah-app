@@ -3,7 +3,9 @@ import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import Draggable from 'react-draggable';
 import { ResizableBox } from 'react-resizable';
 import { cn } from '@/lib/utils';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2, ChevronUp, ChevronDown, Minus, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
 import 'react-resizable/css/styles.css';
 
 export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
@@ -19,6 +21,10 @@ export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
     const editorZoom = (editor.storage as any).page?.zoom || 100;
     const dragScale = editorZoom / 100;
 
+    const [isDragging, setIsDragging] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
+
     useEffect(() => {
         setDragPos({ x, y });
     }, [x, y]);
@@ -28,13 +34,41 @@ export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
         updateAttributes({ x: data.x, y: data.y });
     };
 
-    const handleResize = (e: any, { size }: any) => {
+    const handleResize = (e: any, { handle, size: newSize }: any) => {
         e.stopPropagation();
-        updateAttributes({ width: size.width, height: size.height });
+
+        let newWidth = Math.max(40, newSize.width);
+        let newHeight = Math.max(40, newSize.height);
+        let newX = x;
+        let newY = y;
+
+        if (e.shiftKey) {
+            const ratio = (width || size || 120) / (height || size || 120);
+            if (handle === 'e' || handle === 'w' || (Math.abs(newWidth - currentWidth) > Math.abs(newHeight - currentHeight))) {
+                newHeight = newWidth / ratio;
+            } else {
+                newWidth = newHeight * ratio;
+            }
+        }
+
+        if (handle.includes('w')) {
+            newX = x - (newWidth - currentWidth);
+        }
+        if (handle.includes('n')) {
+            newY = y - (newHeight - currentHeight);
+        }
+
+        setDragPos({ x: newX, y: newY });
+        updateAttributes({
+            width: newWidth,
+            height: newHeight,
+            x: newX,
+            y: newY
+        });
     };
 
-    const [isDragging, setIsDragging] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
+    const showControls = isHovered || selected || isDragging;
+    const toMM = (px: number) => Math.round(px * 0.264583);
 
     return (
         <NodeViewWrapper
@@ -57,10 +91,15 @@ export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
             >
                 <div
                     ref={nodeRef}
-                    className="absolute group transition-transform"
+                    className={cn(
+                        "absolute group",
+                        !isDragging && !isResizing && "transition-transform"
+                    )}
                     style={{
                         transform: `rotate(${rotation}deg)`,
-                        willChange: isDragging ? 'transform' : 'auto',
+                        willChange: (isDragging || isResizing) ? 'transform' : 'auto',
+                        paddingBottom: '60px',
+                        marginBottom: '-60px',
                     }}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
@@ -68,31 +107,41 @@ export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
                     <ResizableBox
                         width={currentWidth}
                         height={currentHeight}
-                        onResizeStop={handleResize}
+                        onResizeStart={() => setIsResizing(true)}
+                        onResizeStop={(e, data) => {
+                            setIsResizing(false);
+                            handleResize(e, data);
+                        }}
+                        onResize={handleResize}
                         minConstraints={[40, 40]}
                         maxConstraints={[1200, 1200]}
-                        resizeHandles={['se', 's', 'e']}
+                        resizeHandles={['s', 'e', 'w', 'n', 'sw', 'nw', 'se', 'ne']}
                         className={cn(
                             "relative drag-handle cursor-move",
-                            (isHovered || selected || isDragging) ? "ring-2 ring-emerald-500/50 rounded-lg outline outline-1 outline-dashed outline-emerald-300" : ""
+                            (showControls) ? "ring-2 ring-emerald-500/50 rounded-lg outline outline-1 outline-dashed outline-emerald-300 shadow-xl" : ""
                         )}
                         handle={(handleAxis, ref) => {
-                            if (!isHovered && !selected) return <div ref={ref} className="hidden" />;
+                            if (!showControls) return <div ref={ref} className="hidden" />;
 
-                            if (handleAxis === 'se') {
-                                return (
-                                    <div ref={ref} className="absolute bottom-0 right-0 w-3 h-3 translate-x-1/2 translate-y-1/2 cursor-se-resize z-[60]">
-                                        <div className="w-full h-full bg-emerald-500 rounded-full shadow-sm" />
-                                    </div>
-                                );
-                            }
-                            if (handleAxis === 's') {
-                                return <div ref={ref} className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-6 h-2 cursor-s-resize z-[60] rounded-full bg-white border border-gray-300 shadow-sm hover:border-emerald-400" />;
-                            }
-                            if (handleAxis === 'e') {
-                                return <div ref={ref} className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2 h-6 cursor-e-resize z-[60] rounded-full bg-white border border-gray-300 shadow-sm hover:border-emerald-400" />;
-                            }
-                            return <div ref={ref} className="hidden" />;
+                            const handleClasses: Record<string, string> = {
+                                's': 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize',
+                                'e': 'top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize',
+                                'se': 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+                                'sw': 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+                                'nw': 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+                                'ne': 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+                                'w': 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize',
+                                'n': 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize',
+                            };
+
+                            const cls = handleClasses[handleAxis];
+                            if (!cls) return <div ref={ref} className="hidden" />;
+
+                            return (
+                                <div ref={ref} className={cn("absolute w-3.5 h-3.5 z-[60] group/handle flex items-center justify-center", cls)}>
+                                    <div className="w-2.5 h-2.5 bg-[#4B96FF] border-2 border-white rounded-full shadow-md group-hover/handle:scale-125 transition-transform" />
+                                </div>
+                            );
                         }}
                     >
                         <img
@@ -103,44 +152,70 @@ export const StickerNodeView: React.FC<NodeViewProps> = (props) => {
                             style={{ opacity: currentOpacity, transition: 'opacity 0.2s' }}
                         />
 
-                        {/* Controls on Hover */}
+                        {isResizing && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-[10px] px-2 py-1 rounded-full border border-white/20 backdrop-blur-md z-[110] font-mono whitespace-nowrap shadow-2xl animate-in fade-in zoom-in duration-200">
+                                {toMM(currentWidth)}mm × {toMM(currentHeight)}mm
+                            </div>
+                        )}
+
+                        {/* Floating Pill Toolbar — Bottom Center */}
                         <div
                             className={cn(
-                                "absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 backdrop-blur-sm border border-gray-100 shadow-xl p-1 rounded-xl z-[100] transition-opacity cursor-default",
-                                (isHovered && !isDragging) || selected ? "opacity-100" : "opacity-0 pointer-events-none"
+                                "absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl px-2 py-1.5 rounded-full z-[100] transition-all cursor-default dir-rtl",
+                                showControls && !isResizing ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
                             )}
                             onMouseDown={(e) => e.stopPropagation()}
                         >
+                            <div className="w-6 h-6 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                                <span className="text-[10px] font-bold text-emerald-600">S</span>
+                            </div>
+
+                            <div className="w-px h-4 bg-gray-100 mx-1" />
+
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600" title="إعدادات الملصق">
+                                        <div className="w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-[8px] font-bold">{Math.round(currentOpacity * 100)}%</div>
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-3 shadow-2xl border-none rounded-2xl bg-white/95 backdrop-blur-xl">
+                                    <div className="space-y-4">
+                                        <div className="text-[10px] font-black text-emerald-400 uppercase tracking-tight">إعدادات الملصق</div>
+                                        <div className="space-y-2">
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">الشفافية ({Math.round(currentOpacity * 100)}%)</div>
+                                            <Slider
+                                                value={[currentOpacity * 100]}
+                                                min={10}
+                                                max={100}
+                                                step={1}
+                                                onValueChange={([val]) => updateAttributes({ opacity: val / 100 })}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                            <div className="text-[10px] font-bold text-gray-400">الترتيب</div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => updateAttributes({ zIndex: (zIndex || 50) + 1 })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronUp size={14} /></button>
+                                                <button onClick={() => updateAttributes({ zIndex: Math.max(1, (zIndex || 50) - 1) })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronDown size={14} /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
                             <button
                                 onClick={() => updateAttributes({ rotation: (rotation + 45) % 360 })}
-                                className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
+                                className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-full transition-colors"
                                 title="تدوير"
                             >
-                                <RotateCcw size={14} />
+                                <RotateCcw size={15} />
                             </button>
-                            <div className="w-px h-4 bg-gray-200 mx-0.5" />
-                            <button
-                                onClick={() => updateAttributes({ opacity: Math.max(0.1, currentOpacity - 0.2) })}
-                                className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors text-xs font-bold"
-                                title="شفافية أقل"
-                            >
-                                -
-                            </button>
-                            <span className="text-[10px] text-gray-500 font-mono w-6 text-center">{Math.round(currentOpacity * 100)}%</span>
-                            <button
-                                onClick={() => updateAttributes({ opacity: Math.min(1, currentOpacity + 0.2) })}
-                                className="p-1.5 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors text-xs font-bold"
-                                title="شفافية أكثر"
-                            >
-                                +
-                            </button>
-                            <div className="w-px h-4 bg-gray-200 mx-0.5" />
+
                             <button
                                 onClick={() => deleteNode()}
-                                className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                                className="p-1.5 hover:bg-red-50 text-red-500 rounded-full transition-colors"
                                 title="حذف"
                             >
-                                <Trash2 size={14} />
+                                <Trash2 size={15} />
                             </button>
                         </div>
                     </ResizableBox>

@@ -90,6 +90,11 @@ interface LocalStoreState {
     autoSyncEnabled: boolean;
     lastSyncTime: string | null;
 
+    // Editor Favorites
+    favoriteColors: string[];
+    favoriteFonts: { name: string; value: string }[];
+    favoriteSizes: number[];
+
     // Actions
     setPrayerSchedule: (schedule: PrayerSchedule) => void;
     setUserLocation: (location: UserLocation) => void;
@@ -103,6 +108,12 @@ interface LocalStoreState {
     setSectionOrder: (order: string[]) => void;
     setAutoSyncEnabled: (enabled: boolean) => void;
     setLastSyncTime: (time: string) => void;
+
+    // Editor Actions
+    toggleFavoriteColor: (color: string) => void;
+    toggleFavoriteFont: (font: { name: string; value: string }) => void;
+    toggleFavoriteSize: (size: number) => void;
+
     reset: () => void;
 }
 
@@ -142,6 +153,26 @@ export const useLocalStore = create<LocalStoreState>()(
             sectionOrder: defaultSectionOrder,
             autoSyncEnabled: false,
             lastSyncTime: null,
+
+            // Editor Favorites Defaults
+            favoriteColors: ['#43a047', '#1b5e20', '#1976d2', '#d32f2f'],
+            favoriteFonts: [
+                { name: 'كايرو', value: 'Cairo' },
+                { name: 'أميري', value: 'Amiri' },
+                { name: 'تجوّل', value: 'Tajawal' },
+                { name: 'عارف رقعة', value: 'Aref Ruqaa' },
+                { name: 'ريم كوفي', value: 'Reem Kufi' },
+                { name: 'الإسكندرية', value: 'Alexandria' },
+                { name: 'المراعي', value: 'Almarai' },
+                { name: 'كوفام', value: 'Kufam' },
+                { name: 'ريدكس', value: 'Readex Pro' },
+                { name: 'المسيري', value: 'El Messiri' },
+                { name: 'يدوي-عفوي', value: 'Playpen Sans Arabic' },
+                { name: 'فني-مرح', value: 'Marhey' },
+                { name: 'فني-فرشاة', value: 'Vibes' },
+                { name: 'فني-يدوي', value: 'Rakkas' }
+            ],
+            favoriteSizes: [14, 18, 24, 32, 48],
 
             // Actions
             setPrayerSchedule: (schedule) => set({
@@ -196,6 +227,24 @@ export const useLocalStore = create<LocalStoreState>()(
             setAutoSyncEnabled: (enabled) => set({ autoSyncEnabled: enabled }),
 
             setLastSyncTime: (time) => set({ lastSyncTime: time }),
+
+            toggleFavoriteColor: (color) => set((state) => ({
+                favoriteColors: state.favoriteColors.includes(color)
+                    ? state.favoriteColors.filter(c => c !== color)
+                    : [...state.favoriteColors, color]
+            })),
+
+            toggleFavoriteFont: (font) => set((state) => ({
+                favoriteFonts: state.favoriteFonts.find(f => f.value === font.value)
+                    ? state.favoriteFonts.filter(f => f.value !== font.value)
+                    : [...state.favoriteFonts, font]
+            })),
+
+            toggleFavoriteSize: (size) => set((state) => ({
+                favoriteSizes: state.favoriteSizes.includes(size)
+                    ? state.favoriteSizes.filter(s => s !== size)
+                    : [...state.favoriteSizes, size]
+            })),
 
             reset: () => set({
                 prayerSchedule: null,

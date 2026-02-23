@@ -65,37 +65,36 @@ export function TrackingReportDialog({ trackers }: { trackers: Tracker[] }) {
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <FileText className="w-4 h-4" />
-                    التقرير الشامل
+                    Exportar Reporte
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col p-0" dir="rtl">
                 <DialogHeader className="p-6 pb-2 text-right">
-                    <DialogTitle className="text-right text-2xl">تقرير المتابعة الشامل</DialogTitle>
+                    <DialogTitle className="text-right text-2xl">Informe Integral de Seguimiento</DialogTitle>
                     <DialogDescription className="text-right">
-                        ملخص أداءك لجميع العادات والأهداف خلال الـ 30 يوماً الماضية.
+                        Resumen de su desempeño para todos los hábitos y metas en los últimos 30 días.
                     </DialogDescription>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 p-6 pt-2">
                     {isLoading ? (
-                        <div className="flex justify-center py-20">جارِ تحميل البيانات...</div>
+                        <div className="flex justify-center py-20">Cargando datos...</div>
                     ) : (
                         <div className="space-y-6">
                             {/* Summary Cards */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
-                                    <h3 className="text-blue-600 font-bold mb-1">إجمالي المتتبعات</h3>
+                                    <h3 className="text-blue-600 font-bold mb-1">Total de Rastreadores</h3>
                                     <p className="text-3xl font-bold">{trackers.length}</p>
                                 </div>
                                 <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-100 dark:border-green-800">
-                                    <h3 className="text-green-600 font-bold mb-1">معدل الالتزام</h3>
+                                    <h3 className="text-green-600 font-bold mb-1">Tasa de Compromiso</h3>
                                     <p className="text-3xl font-bold">
-                                        {/* Placeholder logic for total consistency */}
                                         85%
                                     </p>
                                 </div>
                                 <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800">
-                                    <h3 className="text-purple-600 font-bold mb-1">أفضل عادة</h3>
+                                    <h3 className="text-purple-600 font-bold mb-1">Mejor Hábito</h3>
                                     <p className="text-lg font-bold truncate">
                                         {trackers[0]?.name || "-"}
                                     </p>
@@ -104,7 +103,7 @@ export function TrackingReportDialog({ trackers }: { trackers: Tracker[] }) {
 
                             {/* Detailed List */}
                             <div className="space-y-4">
-                                <h3 className="font-bold text-lg border-b pb-2">تفاصيل العادات</h3>
+                                <h3 className="font-bold text-lg border-b pb-2">Detalles de Hábitos</h3>
                                 {trackers.map(tracker => {
                                     const entries = allEntries?.[tracker.id] || [];
                                     const stats = calculateStats(tracker, entries);
@@ -121,18 +120,18 @@ export function TrackingReportDialog({ trackers }: { trackers: Tracker[] }) {
                                                 <div>
                                                     <h4 className="font-bold">{tracker.name}</h4>
                                                     <p className="text-xs text-gray-500">
-                                                        {stats.entriesCount} سجل في آخر 30 يوم
+                                                        {stats.entriesCount} registros en los últimos 30 días
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-6 text-sm">
                                                 <div className="text-center">
-                                                    <p className="text-gray-500 text-xs mb-1">المجموع</p>
+                                                    <p className="text-gray-500 text-xs mb-1">Total</p>
                                                     <p className="font-bold">{stats.totalValue} {tracker.settings.unit}</p>
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-gray-500 text-xs mb-1">المعدل</p>
+                                                    <p className="text-gray-500 text-xs mb-1">Promedio</p>
                                                     <p className="font-bold">{stats.average}</p>
                                                 </div>
                                             </div>

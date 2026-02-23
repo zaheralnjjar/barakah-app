@@ -6,7 +6,7 @@ import {
     ReferenceLine, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from "recharts";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { es } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Plus, Download, FileSpreadsheet, FileText } from "lucide-react";
@@ -80,7 +80,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                                 onClick={() => TrackerExportService.exportToExcel(tracker, entries)}
                                             >
                                                 <FileSpreadsheet className="w-3 h-3" />
-                                                تصدير Excel
+                                                Exportar a Excel
                                             </Button>
                                             <Button
                                                 variant="outline"
@@ -89,7 +89,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                                 onClick={() => TrackerExportService.exportToPDF(tracker, entries)}
                                             >
                                                 <FileText className="w-3 h-3" />
-                                                تصدير PDF
+                                                Exportar a PDF
                                             </Button>
                                         </div>
                                     </div>
@@ -181,7 +181,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                     {/* Quick Log & Actions */}
                     <div className="bg-gray-50 dark:bg-gray-900/40 p-5 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
                         <div className="flex items-center justify-between mb-4 flex-row-reverse">
-                            <h3 className="font-bold text-lg text-right">تسجيل سريع</h3>
+                            <h3 className="font-bold text-lg text-right">Registro Rápido</h3>
                             <div className="flex gap-2">
                                 <Button
                                     variant="ghost"
@@ -213,7 +213,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                 سجل الآن
                             </Button>
                             <p className="text-xs text-gray-400 text-right flex-1 leading-relaxed">
-                                يمكنك إضافة مدخلات جديدة لمتابعة تقدمك اليومي أو إضافة ملاحظات سريعة.
+                                Puedes agregar nuevas entradas para seguir tu progreso diario o añadir notas rápidas.
                             </p>
                         </div>
                     </div>
@@ -221,14 +221,14 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                     {/* History List */}
                     <div>
                         <h3 className="font-bold text-lg mb-4 text-right flex items-center gap-2 flex-row-reverse">
-                            آخر السجلات
+                            Últimos Registros
                             <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: tracker.color }}></span>
                         </h3>
                         <ScrollArea className="h-[250px] pr-4 -mr-4" dir="rtl">
                             <div className="space-y-3 pl-4">
                                 {entries.length === 0 && (
                                     <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                                        <p>لا توجد سجلات بعد.</p>
+                                        <p>No hay registros aún.</p>
                                     </div>
                                 )}
                                 {entries.map(entry => (
@@ -253,7 +253,7 @@ export function TrackerDetailsDialog({ tracker, entries, open, onOpenChange, onA
                                                 )}
                                             </div>
                                             <div className="text-xs text-gray-400 mt-1">
-                                                {format(new Date(entry.date), "PPP p", { locale: ar })}
+                                                {format(new Date(entry.date), "PPP p", { locale: es })}
                                             </div>
                                             {entry.note && (
                                                 <p className="text-sm text-gray-500 mt-2 bg-white dark:bg-gray-800 p-2 rounded-lg inline-block border border-dashed text-right">

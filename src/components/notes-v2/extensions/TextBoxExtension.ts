@@ -57,6 +57,12 @@ export const TextBoxExtension = Node.create({
             borderStyle: {
                 default: 'solid',
             },
+            opacity: {
+                default: 1,
+            },
+            zIndex: {
+                default: 10,
+            },
         };
     },
 
@@ -76,6 +82,7 @@ export const TextBoxExtension = Node.create({
                         borderColor: element.getAttribute('data-border-color') || '#e2e8f0',
                         borderWidth: parseFloat(element.getAttribute('data-border-width') || '1'),
                         borderStyle: element.getAttribute('data-border-style') || 'solid',
+                        opacity: parseFloat(element.getAttribute('data-opacity') || '1'),
                         zIndex: parseInt(element.getAttribute('data-z-index') || '10', 10),
                     };
                 },
@@ -95,6 +102,7 @@ export const TextBoxExtension = Node.create({
             'data-border-color': HTMLAttributes.borderColor,
             'data-border-width': HTMLAttributes.borderWidth,
             'data-border-style': HTMLAttributes.borderStyle,
+            'data-opacity': HTMLAttributes.opacity,
             'data-z-index': HTMLAttributes.zIndex,
         }), 0];
     },
@@ -162,7 +170,6 @@ export const TextBoxExtension = Node.create({
                             content: parsedContent || [
                                 {
                                     type: 'paragraph',
-                                    content: [{ type: 'text', text: 'اكتب هنا...' }]
                                 }
                             ]
                         },

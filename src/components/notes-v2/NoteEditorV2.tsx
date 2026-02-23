@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -14,9 +15,11 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableCell } from '@tiptap/extension-table-cell';
+import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
 import { EditorToolbar } from './EditorToolbar';
 import { SlashCommand, renderItems } from './extensions/SlashCommand';
 import { StickerExtension } from './extensions/StickerExtension';
+import { useLocalStore } from '@/stores/useLocalStore';
 import { NoteLinkExtension } from './extensions/NoteLinkExtension';
 import { TemplatesGallery } from './TemplatesGallery';
 import {
@@ -48,7 +51,8 @@ import {
     Heart,
     Users,
     Home,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Type
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,11 +65,18 @@ import { cn } from '@/lib/utils';
 import { useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { TrackerEmbed } from './extensions/TrackerEmbed';
 import { TextBoxExtension } from './extensions/TextBoxExtension';
 import { PageExtension } from './extensions/PageExtension';
 import { TrackerSelectionDialog } from './TrackerSelectionDialog';
+import { ShapeExtension } from './extensions/ShapeExtension';
 
 const FontSize = Extension.create({
     name: 'fontSize',
@@ -182,6 +193,44 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const [replaceTerm, setReplaceTerm] = useState('');
     const [showSearch, setShowSearch] = useState(false);
     const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
+    const [showFavorites, setShowFavorites] = useState(false);
+
+    const {
+        favoriteColors: favColors,
+        favoriteFonts: favFonts,
+        favoriteSizes: favSizes,
+        toggleFavoriteColor,
+        toggleFavoriteFont,
+        toggleFavoriteSize
+    } = useLocalStore();
+
+    // Magic Hover Preview States
+    const [originalAttrs, setOriginalAttrs] = useState<{ color?: string, font?: string, size?: string }>({});
+    const [isPreviewing, setIsPreviewing] = useState(false);
+
+    const startPreview = () => {
+        if (!editor || isPreviewing) return;
+        const attrs = editor.getAttributes('textStyle');
+        setOriginalAttrs({
+            color: attrs.color,
+            font: attrs.fontFamily,
+            size: attrs.fontSize
+        });
+        setIsPreviewing(true);
+    };
+
+    const stopPreview = (apply = false) => {
+        if (!editor || !isPreviewing) return;
+        if (!apply) {
+            // Restore original on mouse leave if not clicked
+            editor.chain().focus().setMark('textStyle', {
+                color: originalAttrs.color,
+                fontFamily: originalAttrs.font,
+                fontSize: originalAttrs.size
+            }).run();
+        }
+        setIsPreviewing(false);
+    };
 
     // Page settings
     const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -241,7 +290,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 command: ({ editor, range }: any) => {
                     editor.chain().focus().deleteRange(range).insertTextBox().run();
                     setTimeout(() => {
-                        const boxes = document.querySelectorAll('[data-type="textBox"]');
+                        const boxes = document.querySelectorAll('[data-type="text-box"]');
                         const lastBox = boxes[boxes.length - 1];
                         if (lastBox) lastBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }, 100);
@@ -387,6 +436,8 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
             }),
             StickerExtension,
             SmartTemplateNode,
+            ShapeExtension,
+            BubbleMenuExtension,
         ],
         content: (() => {
             if (initialContent && initialContent !== '<p></p>') {
@@ -1004,213 +1055,219 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                         onZoomChange={handleZoomChange}
                         onClose={onClose}
                         onSearchClick={() => setShowSearch(!showSearch)}
+                        favColors={favColors}
+                        favFonts={favFonts}
+                        favSizes={favSizes}
+                        onToggleFavColor={toggleFavoriteColor}
+                        onToggleFavFont={toggleFavoriteFont}
+                        onToggleFavSize={toggleFavoriteSize}
+                        extraTools={
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 shrink-0 mt-0.5" title="إعدادات الصفحة">
+                                        <Settings2 size={16} />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-3" align="end" dir="rtl" sideOffset={8}>
+                                    <div className="space-y-3">
+                                        <h4 className="font-bold text-xs text-gray-700">إعدادات الصفحة</h4>
+
+                                        {/* Orientation */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-400">اتجاه الصفحة</label>
+                                            <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
+                                                <button
+                                                    onClick={() => setOrientation('portrait')}
+                                                    className={cn(
+                                                        "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
+                                                        orientation === 'portrait' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                                    )}
+                                                >
+                                                    <div className="w-3 h-4 border border-current rounded-sm" />
+                                                    طولي
+                                                </button>
+                                                <button
+                                                    onClick={() => setOrientation('landscape')}
+                                                    className={cn(
+                                                        "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
+                                                        orientation === 'landscape' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                                    )}
+                                                >
+                                                    <div className="w-4 h-3 border border-current rounded-sm" />
+                                                    عرضي
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Margins */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-400">هوامش الصفحة ({pageMargin} ملم)</label>
+                                            <Slider
+                                                value={[pageMargin]}
+                                                min={5}
+                                                max={40}
+                                                step={1}
+                                                onValueChange={([val]) => setPageMargin(val)}
+                                            />
+                                            <div className="flex gap-1 mt-1">
+                                                {[{ label: 'ضيق', val: 10 }, { label: 'عادي', val: 20 }, { label: 'واسع', val: 30 }].map(p => (
+                                                    <button
+                                                        key={p.val}
+                                                        onClick={() => setPageMargin(p.val)}
+                                                        className={cn(
+                                                            "flex-1 h-6 text-[10px] rounded",
+                                                            pageMargin === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                                        )}
+                                                    >
+                                                        {p.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Page Background Color */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-400">لون خلفية الصفحة (الداخلي)</label>
+                                            <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
+                                                <input
+                                                    type="color"
+                                                    value={pageBgColor}
+                                                    onChange={(e) => setPageBgColor(e.target.value)}
+                                                    className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Page Layout */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-400">تخطيط الصفحة</label>
+                                            <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
+                                                {([
+                                                    { id: 'blank' as const, label: 'فارغ', icon: '☐' },
+                                                    { id: 'ruled' as const, label: 'مسطر', icon: '☰' },
+                                                    { id: 'dotted' as const, label: 'نقطي', icon: '⠿' },
+                                                    { id: 'squared' as const, label: 'شبكي', icon: '▦' },
+                                                ]).map(lt => (
+                                                    <button
+                                                        key={lt.id}
+                                                        onClick={() => setPageLayout(lt.id)}
+                                                        className={cn(
+                                                            "flex-1 h-7 rounded text-[10px] flex items-center justify-center gap-0.5",
+                                                            pageLayout === lt.id ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
+                                                        )}
+                                                    >
+                                                        <span className="text-sm">{lt.icon}</span>
+                                                        {lt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Spacing - only shown when layout is not blank */}
+                                        {pageLayout !== 'blank' && (
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-gray-400">تباعد {pageLayout === 'ruled' ? 'السطور' : 'النقاط'} ({rulingSpacing}px)</label>
+                                                <Slider
+                                                    value={[rulingSpacing]}
+                                                    min={16}
+                                                    max={64}
+                                                    step={2}
+                                                    onValueChange={([val]) => setRulingSpacing(val)}
+                                                />
+                                                <div className="flex gap-1 mt-1">
+                                                    {[{ label: 'ضيق', val: 20 }, { label: 'عادي', val: 32 }, { label: 'واسع', val: 48 }].map(p => (
+                                                        <button
+                                                            key={p.val}
+                                                            onClick={() => setRulingSpacing(p.val)}
+                                                            className={cn(
+                                                                "flex-1 h-6 text-[10px] rounded",
+                                                                rulingSpacing === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                                            )}
+                                                        >
+                                                            {p.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Border Style */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] text-gray-400">نمط إطار الصفحة</label>
+                                            <div className="max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                                                <div className="grid grid-cols-3 gap-2 pb-2">
+                                                    {([
+                                                        { id: 'none' as const, label: 'بدون', preview: 'border-transparent' },
+                                                        { id: 'simple' as const, label: 'بسيط', preview: 'border-gray-400' },
+                                                        { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
+                                                        { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
+                                                        { id: 'dotted' as const, label: 'منقط', preview: 'border-gray-400 border-dotted' },
+                                                        { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
+                                                        { id: 'double-thick' as const, label: 'مزدوج سميك', preview: 'border-gray-700 border-double border-[4px]' },
+                                                        { id: 'outlined' as const, label: 'محدد', preview: 'border-gray-600 border-solid border-[2px] outline outline-1 outline-gray-400 outline-offset-1' },
+                                                    ]).map(b => (
+                                                        <button key={b.id} onClick={() => setPageBorder(b.id as any)} className={cn("h-10 rounded flex flex-col items-center justify-center gap-0.5 transition-all text-gray-700 font-medium", pageBorder === b.id ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50 hover:bg-gray-100")}>
+                                                            <div className={cn("w-4 h-5 rounded-sm border-2", b.preview)} />
+                                                            <span className="text-[8px] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center px-0.5">{b.label}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Border Radius */}
+                                        {pageBorder !== 'none' && (
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] text-gray-400">زاوية الإطار ({cornerRadius}px)</label>
+                                                <Slider
+                                                    value={[cornerRadius]}
+                                                    min={0}
+                                                    max={64}
+                                                    step={2}
+                                                    onValueChange={([val]) => setCornerRadius(val)}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Border Color & Width */}
+                                    {pageBorder !== 'none' && (
+                                        <div className="flex gap-2">
+                                            <div className="space-y-1 flex-1">
+                                                <label className="text-[10px] text-gray-400">لون الإطار</label>
+                                                <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
+                                                    <input
+                                                        type="color"
+                                                        value={pageBorderColor}
+                                                        onChange={(e) => setPageBorderColor(e.target.value)}
+                                                        className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1 flex-1">
+                                                <label className="text-[10px] text-gray-400">سماكة الإطار (px)</label>
+                                                <div className="flex gap-1 h-8">
+                                                    {[1, 2, 4, 8].map(w => (
+                                                        <button
+                                                            key={w}
+                                                            onClick={() => setPageBorderWidth(w)}
+                                                            className={cn(
+                                                                "flex-1 rounded text-[10px] flex items-center justify-center border",
+                                                                pageBorderWidth === w ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            {w}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </PopoverContent>
+                            </Popover>
+                        }
                     />
                 </div>
-
-                {/* Page settings popover */}
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <button className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 shrink-0 mt-0.5" title="إعدادات الصفحة">
-                            <Settings2 size={16} />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-3" align="end" dir="rtl" sideOffset={8}>
-                        <div className="space-y-3">
-                            <h4 className="font-bold text-xs text-gray-700">إعدادات الصفحة</h4>
-
-                            {/* Orientation */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">اتجاه الصفحة</label>
-                                <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
-                                    <button
-                                        onClick={() => setOrientation('portrait')}
-                                        className={cn(
-                                            "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
-                                            orientation === 'portrait' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
-                                        )}
-                                    >
-                                        <div className="w-3 h-4 border border-current rounded-sm" />
-                                        طولي
-                                    </button>
-                                    <button
-                                        onClick={() => setOrientation('landscape')}
-                                        className={cn(
-                                            "flex-1 h-8 rounded text-xs flex items-center justify-center gap-1",
-                                            orientation === 'landscape' ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
-                                        )}
-                                    >
-                                        <div className="w-4 h-3 border border-current rounded-sm" />
-                                        عرضي
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Margins */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">هوامش الصفحة ({pageMargin} ملم)</label>
-                                <Slider
-                                    value={[pageMargin]}
-                                    min={5}
-                                    max={40}
-                                    step={1}
-                                    onValueChange={([val]) => setPageMargin(val)}
-                                />
-                                <div className="flex gap-1 mt-1">
-                                    {[{ label: 'ضيق', val: 10 }, { label: 'عادي', val: 20 }, { label: 'واسع', val: 30 }].map(p => (
-                                        <button
-                                            key={p.val}
-                                            onClick={() => setPageMargin(p.val)}
-                                            className={cn(
-                                                "flex-1 h-6 text-[10px] rounded",
-                                                pageMargin === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                            )}
-                                        >
-                                            {p.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Page Background Color */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">لون خلفية الصفحة (الداخلي)</label>
-                                <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
-                                    <input
-                                        type="color"
-                                        value={pageBgColor}
-                                        onChange={(e) => setPageBgColor(e.target.value)}
-                                        className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Page Layout */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">تخطيط الصفحة</label>
-                                <div className="flex gap-1 bg-gray-50 p-1 rounded-md">
-                                    {([
-                                        { id: 'blank' as const, label: 'فارغ', icon: '☐' },
-                                        { id: 'ruled' as const, label: 'مسطر', icon: '☰' },
-                                        { id: 'dotted' as const, label: 'نقطي', icon: '⠿' },
-                                        { id: 'squared' as const, label: 'شبكي', icon: '▦' },
-                                    ]).map(lt => (
-                                        <button
-                                            key={lt.id}
-                                            onClick={() => setPageLayout(lt.id)}
-                                            className={cn(
-                                                "flex-1 h-7 rounded text-[10px] flex items-center justify-center gap-0.5",
-                                                pageLayout === lt.id ? "bg-white shadow-sm text-indigo-600 font-bold" : "text-gray-500 hover:bg-gray-100"
-                                            )}
-                                        >
-                                            <span className="text-sm">{lt.icon}</span>
-                                            {lt.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Spacing - only shown when layout is not blank */}
-                            {pageLayout !== 'blank' && (
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-gray-400">تباعد {pageLayout === 'ruled' ? 'السطور' : 'النقاط'} ({rulingSpacing}px)</label>
-                                    <Slider
-                                        value={[rulingSpacing]}
-                                        min={16}
-                                        max={64}
-                                        step={2}
-                                        onValueChange={([val]) => setRulingSpacing(val)}
-                                    />
-                                    <div className="flex gap-1 mt-1">
-                                        {[{ label: 'ضيق', val: 20 }, { label: 'عادي', val: 32 }, { label: 'واسع', val: 48 }].map(p => (
-                                            <button
-                                                key={p.val}
-                                                onClick={() => setRulingSpacing(p.val)}
-                                                className={cn(
-                                                    "flex-1 h-6 text-[10px] rounded",
-                                                    rulingSpacing === p.val ? "bg-indigo-50 text-indigo-600 font-bold" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                                                )}
-                                            >
-                                                {p.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Border Style */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">نمط إطار الصفحة</label>
-                                <div className="max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                                    <div className="grid grid-cols-3 gap-2 pb-2">
-                                        {([
-                                            { id: 'none' as const, label: 'بدون', preview: 'border-transparent' },
-                                            { id: 'simple' as const, label: 'بسيط', preview: 'border-gray-400' },
-                                            { id: 'double' as const, label: 'مزدوج', preview: 'border-gray-500 border-double' },
-                                            { id: 'dashed' as const, label: 'متقطع', preview: 'border-gray-400 border-dashed' },
-                                            { id: 'dotted' as const, label: 'منقط', preview: 'border-gray-400 border-dotted' },
-                                            { id: 'thick' as const, label: 'سميك', preview: 'border-gray-600 border-[3px]' },
-                                            { id: 'double-thick' as const, label: 'مزدوج سميك', preview: 'border-gray-700 border-double border-[4px]' },
-                                            { id: 'outlined' as const, label: 'محدد', preview: 'border-gray-600 border-solid border-[2px] outline outline-1 outline-gray-400 outline-offset-1' },
-                                        ]).map(b => (
-                                            <button key={b.id} onClick={() => setPageBorder(b.id as any)} className={cn("h-10 rounded flex flex-col items-center justify-center gap-0.5 transition-all text-gray-700 font-medium", pageBorder === b.id ? "bg-indigo-50 ring-2 ring-indigo-300" : "bg-gray-50 hover:bg-gray-100")}>
-                                                <div className={cn("w-4 h-5 rounded-sm border-2", b.preview)} />
-                                                <span className="text-[8px] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center px-0.5">{b.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Border Radius */}
-                            {pageBorder !== 'none' && (
-                                <div className="space-y-1">
-                                    <label className="text-[10px] text-gray-400">زاوية الإطار ({cornerRadius}px)</label>
-                                    <Slider
-                                        value={[cornerRadius]}
-                                        min={0}
-                                        max={64}
-                                        step={2}
-                                        onValueChange={([val]) => setCornerRadius(val)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Border Color & Width */}
-                        {pageBorder !== 'none' && (
-                            <div className="flex gap-2">
-                                <div className="space-y-1 flex-1">
-                                    <label className="text-[10px] text-gray-400">لون الإطار</label>
-                                    <div className="flex bg-gray-50 p-1 rounded-md h-8 items-center justify-between">
-                                        <input
-                                            type="color"
-                                            value={pageBorderColor}
-                                            onChange={(e) => setPageBorderColor(e.target.value)}
-                                            className="w-full h-full p-0 border-0 bg-transparent cursor-pointer"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1 flex-1">
-                                    <label className="text-[10px] text-gray-400">سماكة الإطار (px)</label>
-                                    <div className="flex gap-1 h-8">
-                                        {[1, 2, 4, 8].map(w => (
-                                            <button
-                                                key={w}
-                                                onClick={() => setPageBorderWidth(w)}
-                                                className={cn(
-                                                    "flex-1 rounded text-[10px] flex items-center justify-center border",
-                                                    pageBorderWidth === w ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : "bg-white border-gray-200 text-gray-500 hover:bg-gray-50"
-                                                )}
-                                            >
-                                                {w}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </PopoverContent>
-                </Popover>
             </div>
 
             {/* Search and Replace Bar */}
@@ -1271,6 +1328,115 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 <div className={cn("flex-1 flex flex-col items-center gap-0 relative min-h-full", isMobile ? "py-0" : "py-8")}>
                     <EditorContent editor={editor} className="relative z-0 w-full" />
 
+                    {/* Selection Bubble Menu (Horizontal Favorites) */}
+                    {editor && (
+                        <BubbleMenu
+                            editor={editor}
+                            shouldShow={({ from, to }) => {
+                                return from !== to;
+                            }}
+                            className="flex items-center gap-2 p-2 bg-white/95 backdrop-blur-xl border border-gray-100 shadow-[0_10px_35px_rgba(0,0,0,0.15)] rounded-[1.2rem] z-[10000]"
+                        >
+                            <TooltipProvider delayDuration={0}>
+                                <div className="flex items-center gap-2 px-1 border-e border-gray-100/80" onMouseLeave={() => stopPreview(false)}>
+                                    {favColors.map(color => (
+                                        <Tooltip key={color}>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    onMouseEnter={() => {
+                                                        startPreview();
+                                                        editor.chain().focus().setColor(color).run();
+                                                    }}
+                                                    onClick={() => stopPreview(true)}
+                                                    className="w-[1.15rem] h-[1.15rem] rounded-full border border-white hover:scale-125 transition-all shadow-sm active:scale-95"
+                                                    style={{ backgroundColor: color }}
+                                                />
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-white/90 text-[8px] font-black py-0.5 px-1.5 border-none shadow-sm text-gray-500">
+                                                {color}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ))}
+
+                                    {/* Color customizer */}
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button className="flex items-center justify-center w-[1.15rem] h-[1.15rem] rounded-full border border-dashed border-gray-300 text-gray-400 hover:text-indigo-500 hover:border-indigo-400 transition-colors">
+                                                <Palette size={10} />
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-52 p-3 dir-rtl border-none shadow-2xl rounded-2xl bg-white/95 backdrop-blur-xl">
+                                            <div className="text-[9px] font-black text-indigo-400 mb-2 uppercase tracking-tight">إدارة الألوان المفضلة</div>
+                                            <div className="grid grid-cols-5 gap-1.5">
+                                                {['#000000', '#4b5563', '#9ca3af', '#ffffff', '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#78350f', '#1e293b', '#b91c1c', '#15803d', '#1d4ed8'].map(c => (
+                                                    <button
+                                                        key={c}
+                                                        onClick={() => toggleFavoriteColor(c)}
+                                                        className={cn(
+                                                            "w-7 h-7 rounded-full border-2 transition-all hover:scale-110 relative group",
+                                                            favColors.includes(c) ? "border-indigo-500 shadow-sm" : "border-white shadow-none opacity-60"
+                                                        )}
+                                                        style={{ backgroundColor: c }}
+                                                    >
+                                                        {favColors.includes(c) && (
+                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                <div className="w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 px-1.5 border-e border-gray-100/80" onMouseLeave={() => stopPreview(false)}>
+                                    {favFonts.map(font => (
+                                        <Tooltip key={font.value}>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    onMouseEnter={() => {
+                                                        startPreview();
+                                                        editor.chain().focus().setFontFamily(font.value).run();
+                                                    }}
+                                                    onClick={() => stopPreview(true)}
+                                                    className="w-7 h-7 rounded-lg bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 flex items-center justify-center transition-all border border-indigo-50 shadow-sm active:scale-95 group"
+                                                >
+                                                    <span className="text-[10px] font-bold" style={{ fontFamily: font.value }}>ت</span>
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-indigo-600 text-white font-black text-[9px] py-0.5 px-2 border-none shadow-md">
+                                                {font.name}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-center gap-1.5 px-1.5" onMouseLeave={() => stopPreview(false)}>
+                                    {favSizes.map(size => (
+                                        <Tooltip key={size}>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    onMouseEnter={() => {
+                                                        startPreview();
+                                                        editor.chain().focus().setFontSize(size.toString()).run();
+                                                    }}
+                                                    onClick={() => stopPreview(true)}
+                                                    className="w-7 h-7 rounded-lg bg-white hover:bg-amber-500 hover:text-white text-gray-600 flex items-center justify-center transition-all border border-gray-100 shadow-sm active:scale-95"
+                                                >
+                                                    <span className="text-[10px] font-bold">{size}</span>
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-amber-500 text-white font-black text-[9px] py-0.5 px-2 border-none shadow-md">
+                                                {size}px
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    ))}
+                                </div>
+                            </TooltipProvider>
+                        </BubbleMenu>
+                    )}
+
                     {/* Add Page button below all pages */}
                     <button
                         onClick={handleAddPage}
@@ -1287,12 +1453,13 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 onClose={() => setShowTemplates(false)}
                 onSelectTemplate={handleSelectTemplate}
             />
-
             <TrackerSelectionDialog
                 isOpen={showTrackerDialog}
                 onClose={() => setShowTrackerDialog(false)}
                 onSelect={handleTrackerSelect}
             />
+
+
         </div >
     );
 };

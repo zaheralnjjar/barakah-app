@@ -1,11 +1,12 @@
-
 import { Node, mergeAttributes } from '@tiptap/core';
-import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GripVertical, Palette, X, Layout } from 'lucide-react';
+import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from '@tiptap/react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Palette, ChevronUp, ChevronDown, Trash2, Settings2, Sparkles, Cpu, Activity } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import Draggable from 'react-draggable';
+import { ResizableBox } from 'react-resizable';
 
 const BG_COLORS = [
     'transparent', '#ffffff', '#f8fafc', '#f0f9ff', '#f0fdf4', '#fefce8', '#fef2f2', '#faf5ff', '#fff7ed'
@@ -14,356 +15,284 @@ const BORDER_COLORS = [
     'transparent', '#e5e7eb', '#9ca3af', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'
 ];
 
-const SmartTemplateComponent = (props: any) => {
-    const { node, updateAttributes, selected, deleteNode, editor } = props;
-    const { html, config, left, top, isFloating, width } = node.attrs;
-
-    const editorZoom = (editor.storage as any).textBox?.zoom || 100;
-    const dragScale = editorZoom / 100;
-
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [initialPos, setInitialPos] = useState({ left: left || 0, top: top || 0 });
-
-    const contentRef = useRef<HTMLDivElement>(null);
-
-    const bgColor = node.attrs.bgColor || 'transparent';
-    const borderColor = node.attrs.borderColor || 'transparent';
-    const borderWidth = node.attrs.borderWidth || 0;
-
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        if (!isFloating) return;
-        if (e.button !== 0) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-        setInitialPos({ left: node.attrs.left || 0, top: node.attrs.top || 0 });
-    }, [isFloating, node.attrs.left, node.attrs.top]);
-
-    useEffect(() => {
-        if (!isDragging) return;
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (contentRef.current) {
-                const dx = (e.clientX - dragStart.x) / dragScale;
-                const dy = (e.clientY - dragStart.y) / dragScale;
-                contentRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
-            }
-        };
-
-        const handleMouseUp = (e: MouseEvent) => {
-            setIsDragging(false);
-            if (contentRef.current) {
-                const dx = (e.clientX - dragStart.x) / dragScale;
-                const dy = (e.clientY - dragStart.y) / dragScale;
-                const newLeft = initialPos.left + dx;
-                const newTop = initialPos.top + dy;
-
-                updateAttributes({ left: newLeft, top: newTop });
-                contentRef.current.style.transform = 'none';
-            }
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, dragStart, initialPos, updateAttributes]);
-
-    const templateWidth = node.attrs.width || 'auto';
-
-    // Resize by dragging handle
-    const [isResizing, setIsResizing] = useState(false);
-    const resizeStart = useRef({ x: 0, startWidth: 0 });
-
-    const handleResizeStart = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const currentWidth = contentRef.current?.offsetWidth || 300;
-        resizeStart.current = { x: e.clientX, startWidth: currentWidth };
-        setIsResizing(true);
-    }, []);
-
-    useEffect(() => {
-        if (!isResizing) return;
-        const onMove = (e: MouseEvent) => {
-            const dx = (resizeStart.current.x - e.clientX) / dragScale; // RTL: drag left = wider
-            const newW = Math.max(100, resizeStart.current.startWidth + dx);
-            if (contentRef.current) contentRef.current.style.width = `${newW}px`;
-        };
-        const onUp = (e: MouseEvent) => {
-            setIsResizing(false);
-            const dx = (resizeStart.current.x - e.clientX) / dragScale;
-            updateAttributes({ width: Math.max(100, resizeStart.current.startWidth + dx) });
-        };
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
-        return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [isResizing, updateAttributes]);
-
-    const showControls = selected || false;
+const SmartTemplateNodeView = (props: NodeViewProps) => {
+    const { node, updateAttributes, deleteNode, selected, editor } = props;
     const [isHovered, setIsHovered] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false);
-    const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
+    const [isResizing, setIsResizing] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const nodeRef = useRef<HTMLDivElement>(null);
 
-    const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.type === 'checkbox') {
-            setTimeout(() => {
-                if (contentRef.current) {
-                    const inputs = contentRef.current.querySelectorAll('input[type="checkbox"]');
-                    inputs.forEach((input: any) => {
-                        if (input.checked) input.setAttribute('checked', 'checked');
-                        else input.removeAttribute('checked');
-                    });
-                    const newHtml = contentRef.current.innerHTML;
-                    updateAttributes({ html: newHtml });
-                }
-            }, 0);
-        }
-    };
+    // Attributes
+    const x = node.attrs.x || 0;
+    const y = node.attrs.y || 0;
+    const width = node.attrs.width || 300;
+    const height = node.attrs.height || 200;
+    const backgroundColor = node.attrs.backgroundColor || 'transparent';
+    const borderColor = node.attrs.borderColor || 'transparent';
+    const borderWidth = node.attrs.borderWidth || 0;
+    const opacity = node.attrs.opacity ?? 1;
+    const zIndex = node.attrs.zIndex || 50;
+    const templateName = node.attrs.templateName || 'قالب ذكي';
 
-    const handleContentClick = (e: React.MouseEvent) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLButtonElement) {
-            e.stopPropagation();
-        }
-    };
+    const editorZoom = (editor.storage as any).page?.zoom || 100;
+    const dragScale = editorZoom / 100;
 
-    const controlsVisible = showControls || isHovered || popoverOpen;
+    const [dragPos, setDragPos] = useState({ x, y });
 
     useEffect(() => {
-        return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
-    }, []);
+        setDragPos({ x, y });
+    }, [x, y]);
 
-    const handleMouseEnter = () => {
-        if (hoverTimeout.current) { clearTimeout(hoverTimeout.current); hoverTimeout.current = null; }
-        setIsHovered(true);
+    const handleStop = (_e: any, data: any) => {
+        setIsDragging(false);
+        setDragPos({ x: data.x, y: data.y });
+        updateAttributes({ x: data.x, y: data.y });
     };
 
-    const handleMouseLeave = () => {
-        if (popoverOpen) return;
-        hoverTimeout.current = setTimeout(() => setIsHovered(false), 300);
+    const handleResize = (e: any, { handle, size: newSize }: any) => {
+        e.stopPropagation();
+        let newWidth = Math.max(150, newSize.width);
+        let newHeight = Math.max(100, newSize.height);
+        let newX = x;
+        let newY = y;
+
+        if (handle.includes('w')) {
+            newX = x - (newWidth - width);
+        }
+        if (handle.includes('n')) {
+            newY = y - (newHeight - height);
+        }
+
+        setDragPos({ x: newX, y: newY });
+        updateAttributes({
+            width: newWidth,
+            height: newHeight,
+            x: newX,
+            y: newY
+        });
     };
+
+    const showControls = isHovered || selected || popoverOpen || isDragging;
+    const toMM = (px: number) => Math.round(px * 0.264583);
 
     return (
         <NodeViewWrapper
-            ref={contentRef}
-            className={cn(
-                "smart-template-node-view group",
-                selected && "ring-2 ring-indigo-500 ring-offset-1"
-            )}
-            data-drag-handle=""
+            className="absolute z-10"
             style={{
-                position: isFloating ? 'absolute' : 'relative',
-                left: isFloating ? 0 : 'auto',
-                top: isFloating ? 0 : 'auto',
-                width: isFloating ? (templateWidth === 'auto' ? '100%' : `${templateWidth}px`) : (templateWidth === 'auto' ? 'auto' : `${templateWidth}px`),
-                height: isFloating ? 0 : 'auto',
-                zIndex: isFloating ? 50 : 1,
-                maxWidth: '100%',
-                display: isFloating ? 'block' : 'inline-block',
-                transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
-                userSelect: 'none',
-                direction: 'rtl',
+                left: 0,
+                top: 0,
+                width: width,
+                height: 0,
+                zIndex: isDragging ? 9999 : zIndex,
+                direction: 'ltr'
             }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
         >
-            {/* Mini toolbar */}
-            <div
-                className={cn(
-                    "absolute -top-8 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
-                    controlsVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
-                )}
-                contentEditable={false}
-                onMouseEnter={handleMouseEnter}
+            <Draggable
+                nodeRef={nodeRef}
+                handle=".drag-handle"
+                position={dragPos}
+                onStart={() => setIsDragging(true)}
+                onStop={handleStop}
+                onDrag={(_e, data) => setDragPos({ x: data.x, y: data.y })}
+                scale={dragScale}
             >
                 <div
-                    onMouseDown={handleMouseDown}
+                    ref={nodeRef}
                     className={cn(
-                        "drag-handle p-1 rounded flex items-center justify-center transition-colors",
-                        isFloating ? 'cursor-grab active:cursor-grabbing hover:bg-gray-100 text-gray-400' : 'cursor-not-allowed text-gray-300'
+                        "absolute group",
+                        !isDragging && !isResizing && "transition-transform"
                     )}
-                    title={isFloating ? "سحب للتحريك" : "يجب تفعيل الوضع العائم للتحريك"}
+                    style={{
+                        paddingBottom: '60px',
+                        marginBottom: '-60px',
+                        willChange: (isDragging || isResizing) ? 'transform' : 'auto',
+                    }}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => { if (!popoverOpen) setIsHovered(false); }}
                 >
-                    <GripVertical size={14} />
-                </div>
-
-                <button
-                    onClick={(e) => { e.stopPropagation(); updateAttributes({ isFloating: !isFloating }); }}
-                    className={cn(
-                        "p-1 rounded transition-colors",
-                        isFloating ? "bg-indigo-50 text-indigo-600" : "text-gray-500 hover:bg-gray-100"
-                    )}
-                    title={isFloating ? "تحويل إلى الوضع المضمن" : "تحويل إلى الوضع العائم"}
-                >
-                    <Layout size={13} className={isFloating ? "rotate-180" : ""} />
-                </button>
-
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <button className="p-1 hover:bg-gray-100 rounded text-gray-500" onClick={(e) => e.stopPropagation()}>
-                            <Palette size={13} />
-                        </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-52 p-3" align="end" dir="rtl" sideOffset={8}>
-                        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                            <h4 className="font-bold text-xs text-gray-600">تخصيص القالب</h4>
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">لون الخلفية</label>
-                                <div className="flex gap-1.5 flex-wrap">
-                                    {BG_COLORS.map(c => (
-                                        <button key={c} onClick={() => updateAttributes({ bgColor: c })}
-                                            className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", bgColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
-                                            style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}>
-                                            {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
-                                        </button>
-                                    ))}
+                    <ResizableBox
+                        width={width}
+                        height={height}
+                        onResizeStart={() => setIsResizing(true)}
+                        onResizeStop={(e, data) => { setIsResizing(false); handleResize(e, data); }}
+                        onResize={handleResize}
+                        minConstraints={[150, 100]}
+                        maxConstraints={[1200, 1200]}
+                        resizeHandles={['s', 'e', 'w', 'n', 'sw', 'nw', 'se', 'ne']}
+                        className={cn(
+                            "relative drag-handle",
+                            showControls ? "ring-2 ring-indigo-500/50 rounded-xl shadow-xl" : ""
+                        )}
+                        handle={(handleAxis, ref) => {
+                            if (!showControls) return <div ref={ref} className="hidden" />;
+                            const handleClasses: Record<string, string> = {
+                                's': 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize',
+                                'e': 'top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize',
+                                'se': 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+                                'sw': 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+                                'nw': 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+                                'ne': 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+                                'w': 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize',
+                                'n': 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize',
+                            };
+                            const cls = handleClasses[handleAxis];
+                            return (
+                                <div ref={ref} className={cn("absolute w-3.5 h-3.5 z-[60] group/handle flex items-center justify-center", cls)}>
+                                    <div className="w-2.5 h-2.5 bg-[#4B96FF] border-2 border-white rounded-full shadow-md group-hover/handle:scale-125 transition-transform" />
+                                </div>
+                            );
+                        }}
+                    >
+                        <div
+                            className="w-full h-full rounded-xl overflow-hidden pointer-events-auto flex flex-col"
+                            style={{
+                                backgroundColor: backgroundColor === 'transparent' ? 'white' : backgroundColor,
+                                borderColor: borderColor === 'transparent' ? '#E5E7EB' : borderColor,
+                                borderWidth: `${borderWidth || 1}px`,
+                                borderStyle: 'solid',
+                                opacity: opacity,
+                            }}
+                            dir="rtl"
+                        >
+                            <div className="bg-indigo-50/50 px-3 py-2 border-b border-indigo-100 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2 text-indigo-600">
+                                    <Sparkles size={16} />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider">{templateName}</span>
+                                </div>
+                                <div className="flex gap-1.5">
+                                    <div className="w-2 h-2 rounded-full bg-indigo-200" />
+                                    <div className="w-2 h-2 rounded-full bg-indigo-100" />
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">لون الحد</label>
-                                <div className="flex gap-1.5 flex-wrap">
-                                    {BORDER_COLORS.map(c => (
-                                        <button key={c} onClick={() => updateAttributes({ borderColor: c })}
-                                            className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", borderColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
-                                            style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}>
-                                            {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
-                                        </button>
-                                    ))}
+
+                            <div className="flex-1 p-4 flex flex-col items-center justify-center gap-3 text-center">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100">
+                                    <Cpu size={24} />
                                 </div>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">سماكة الحد ({borderWidth}px)</label>
-                                <Slider value={[borderWidth]} min={0} max={4} step={0.5} onValueChange={([val]) => updateAttributes({ borderWidth: val })} />
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-bold text-gray-800">جاري معالجة البيانات...</h3>
+                                    <p className="text-[10px] text-gray-500 leading-relaxed max-w-[180px]">
+                                        سيقوم الذكاء الاصطناعي بتوليد المحتوى بناءً على سياق الصفحة الحالية
+                                    </p>
+                                </div>
+                                <button className="mt-2 px-4 py-1.5 bg-indigo-600 text-white text-[11px] font-bold rounded-lg shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95">
+                                    توليد الآن
+                                </button>
                             </div>
                         </div>
-                    </PopoverContent>
-                </Popover>
 
-                <div className="w-px h-4 bg-gray-200 mx-0.5" />
-                <button onClick={(e) => { e.stopPropagation(); deleteNode(); }}
-                    className="p-1 hover:bg-red-50 hover:text-red-500 rounded text-gray-500 transition-colors">
-                    <X size={13} />
-                </button>
-            </div>
+                        {isResizing && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-[10px] px-2 py-1 rounded-full border border-white/20 backdrop-blur-md z-[110] font-mono whitespace-nowrap shadow-2xl animate-in fade-in zoom-in duration-200">
+                                {toMM(width)}mm × {toMM(height)}mm
+                            </div>
+                        )}
 
-            {/* Template content - tight wrapper */}
-            <div
-                className="smart-layout-container outline-none rounded-lg"
-                data-smart-template-config={encodeURIComponent(JSON.stringify(config || []))}
-                style={{
-                    width: '100%',
-                    position: isFloating ? 'absolute' : 'relative',
-                    left: isFloating ? `${left}px` : 'auto',
-                    top: isFloating ? `${top}px` : 'auto',
-                    pointerEvents: isDragging ? 'none' : 'auto',
-                    backgroundColor: bgColor === 'transparent' ? 'transparent' : bgColor,
-                    borderColor: borderColor === 'transparent' ? 'transparent' : borderColor,
-                    borderWidth: `${borderWidth}px`,
-                    borderStyle: borderWidth > 0 ? 'solid' : 'none',
-                }}
-            >
-                <div
-                    ref={contentRef}
-                    className="w-full"
-                    dangerouslySetInnerHTML={{ __html: html }}
-                    onChange={handleCheckboxChange}
-                    onClick={handleContentClick}
-                />
-            </div>
+                        {/* Floating Pill Toolbar — Bottom Center */}
+                        <div
+                            className={cn(
+                                "absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl px-2 py-1.5 rounded-full z-[100] transition-all cursor-default dir-rtl",
+                                showControls && !isResizing ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                            )}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                                    <Cpu size={13} />
+                                </div>
+                                <div className="w-4 h-4 rounded-full border border-gray-200 shadow-inner" style={{ backgroundColor: backgroundColor || '#fff' }} />
+                            </div>
 
-            {/* Resize handle */}
-            {controlsVisible && (
-                <div
-                    onMouseDown={handleResizeStart}
-                    className="absolute bottom-0 left-0 w-3 h-3 bg-indigo-500 rounded-full shadow-sm z-[60] cursor-nw-resize"
-                    style={{ transform: 'translate(-50%, 50%)' }}
-                    contentEditable={false}
-                />
-            )}
+                            <div className="w-px h-4 bg-gray-100 mx-1" />
+
+                            <button
+                                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
+                            >
+                                <Settings2 size={16} />
+                            </button>
+
+                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <button className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500">
+                                        <Palette size={16} />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-3 shadow-2xl border-none rounded-2xl bg-white/95 backdrop-blur-xl" align="center" dir="rtl" sideOffset={12}>
+                                    <div className="space-y-4">
+                                        <div className="text-[10px] font-black text-indigo-400 uppercase tracking-tight">إعدادات القالب</div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">لون الخلفية</label>
+                                            <div className="grid grid-cols-6 gap-2">
+                                                {BG_COLORS.map(c => (
+                                                    <button key={c} onClick={() => updateAttributes({ backgroundColor: c })}
+                                                        className={cn("w-6 h-6 rounded-full border border-gray-100 transition-transform hover:scale-110", backgroundColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                                        style={{ backgroundColor: c === 'transparent' ? '#eee' : c }}>
+                                                        {c === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">لون الحدود</label>
+                                            <div className="grid grid-cols-6 gap-2">
+                                                {BORDER_COLORS.map(c => (
+                                                    <button key={c} onClick={() => updateAttributes({ borderColor: c, borderWidth: c === 'transparent' ? 0 : Math.max(1, borderWidth) })}
+                                                        className={cn("w-6 h-6 rounded-full border border-gray-100 transition-transform hover:scale-110", borderColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                                        style={{ backgroundColor: c === 'transparent' ? '#eee' : c }}>
+                                                        {c === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">الشفافية ({Math.round(opacity * 100)}%)</label>
+                                            <Slider value={[opacity * 100]} min={10} max={100} step={1} onValueChange={([val]) => updateAttributes({ opacity: val / 100 })} />
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                            <div className="text-[10px] font-bold text-gray-400">الترتيب</div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => updateAttributes({ zIndex: zIndex + 1 })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronUp size={14} /></button>
+                                                <button onClick={() => updateAttributes({ zIndex: Math.max(1, zIndex - 1) })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronDown size={14} /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            <button onClick={() => deleteNode()} className="p-1.5 hover:bg-red-50 text-red-500 rounded-full transition-colors">
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    </ResizableBox>
+                </div>
+            </Draggable>
         </NodeViewWrapper>
     );
 };
 
 export const SmartTemplateNode = Node.create({
-    name: 'smartTemplateNode',
+    name: 'smartTemplate',
     group: 'block',
     atom: true,
-    draggable: true,
 
     addAttributes() {
         return {
-            html: {
-                default: '',
-                parseHTML: (element) => {
-                    const attr = element.getAttribute('data-smart-template-html');
-                    if (attr) return decodeURIComponent(attr);
-                    return element.innerHTML;
-                },
-                renderHTML: (attributes) => {
-                    if (!attributes.html) return {};
-                    return {
-                        'data-smart-template-html': encodeURIComponent(attributes.html),
-                    };
-                },
-            },
-            config: {
-                default: [],
-                parseHTML: (element) => {
-                    const attr = element.getAttribute('data-smart-template-config');
-                    if (!attr) return [];
-                    try {
-                        return JSON.parse(decodeURIComponent(attr));
-                    } catch (e) {
-                        return [];
-                    }
-                },
-                renderHTML: (attributes) => {
-                    if (!attributes.config || attributes.config.length === 0) return {};
-                    return {
-                        'data-smart-template-config': encodeURIComponent(JSON.stringify(attributes.config)),
-                    };
-                },
-            },
-            left: {
-                default: 0,
-                renderHTML: (attributes) => ({
-                    style: `left: ${attributes.left}px`,
-                }),
-            },
-            top: {
-                default: 0,
-                renderHTML: (attributes) => ({
-                    style: `top: ${attributes.top}px`,
-                }),
-            },
-            width: {
-                default: 400,
-                renderHTML: (attributes) => ({
-                    style: `width: ${attributes.width}px`,
-                }),
-            },
-            height: {
-                default: 200,
-            },
-            baseWidth: {
-                default: 400,
-            },
-            isFloating: {
-                default: false,
-                renderHTML: (attributes) => ({
-                    style: `position: ${attributes.isFloating ? 'absolute' : 'relative'}`,
-                }),
-            },
-            bgColor: { default: 'transparent' },
+            templateId: { default: null },
+            templateName: { default: 'قالب ذكي' },
+            x: { default: 100 },
+            y: { default: 100 },
+            width: { default: 300 },
+            height: { default: 200 },
+            backgroundColor: { default: 'transparent' },
             borderColor: { default: 'transparent' },
             borderWidth: { default: 0 },
+            opacity: { default: 1 },
+            zIndex: { default: 50 },
+            content: { default: null },
         };
     },
 
@@ -373,49 +302,42 @@ export const SmartTemplateNode = Node.create({
                 tag: 'div[data-type="smart-template"]',
                 getAttrs: (element: HTMLElement | string) => {
                     if (typeof element === 'string') return {};
-
-                    const htmlContent = element.getAttribute('data-html') || element.innerHTML;
-                    const configStr = element.getAttribute('data-config');
-                    let config = [];
-                    try {
-                        if (configStr) config = JSON.parse(decodeURIComponent(configStr));
-                    } catch (e) {
-                        console.error("Failed to parse config", e);
-                    }
-
                     return {
-                        html: htmlContent,
-                        config: config,
-                        isFloating: element.getAttribute('data-is-floating') === 'true',
-                        left: parseFloat(element.getAttribute('data-left') || '0'),
-                        top: parseFloat(element.getAttribute('data-top') || '0'),
-                        width: parseFloat(element.getAttribute('data-width') || '400'),
-                        bgColor: element.getAttribute('data-bg-color') || 'transparent',
-                        borderColor: element.getAttribute('data-border-color') || 'transparent',
-                        borderWidth: parseFloat(element.getAttribute('data-border-width') || '0'),
+                        templateId: element.getAttribute('data-id'),
+                        templateName: element.getAttribute('data-name'),
+                        x: parseInt(element.getAttribute('data-x') || '100', 10),
+                        y: parseInt(element.getAttribute('data-y') || '100', 10),
+                        width: parseInt(element.getAttribute('data-width') || '300', 10),
+                        height: parseInt(element.getAttribute('data-height') || '200', 10),
+                        backgroundColor: element.getAttribute('data-bg-color'),
+                        borderColor: element.getAttribute('data-border-color'),
+                        borderWidth: parseInt(element.getAttribute('data-border-width') || '0', 10),
+                        opacity: parseFloat(element.getAttribute('data-opacity') || '1'),
+                        zIndex: parseInt(element.getAttribute('data-z-index') || '50', 10),
                     };
-                }
-            }
+                },
+            },
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
         return ['div', mergeAttributes(HTMLAttributes, {
             'data-type': 'smart-template',
-            'data-html': HTMLAttributes.html,
-            'data-config': encodeURIComponent(JSON.stringify(HTMLAttributes.config || [])),
-            'data-is-floating': HTMLAttributes.isFloating,
-            'data-left': HTMLAttributes.left,
-            'data-top': HTMLAttributes.top,
+            'data-id': HTMLAttributes.templateId,
+            'data-name': HTMLAttributes.templateName,
+            'data-x': HTMLAttributes.x,
+            'data-y': HTMLAttributes.y,
             'data-width': HTMLAttributes.width,
-            'data-bg-color': HTMLAttributes.bgColor,
+            'data-height': HTMLAttributes.height,
+            'data-bg-color': HTMLAttributes.backgroundColor,
             'data-border-color': HTMLAttributes.borderColor,
             'data-border-width': HTMLAttributes.borderWidth,
-            'class': `smart-template-container ${HTMLAttributes.isFloating ? 'is-floating' : ''}`
+            'data-opacity': HTMLAttributes.opacity,
+            'data-z-index': HTMLAttributes.zIndex,
         })];
     },
 
     addNodeView() {
-        return ReactNodeViewRenderer(SmartTemplateComponent);
+        return ReactNodeViewRenderer(SmartTemplateNodeView);
     },
 });

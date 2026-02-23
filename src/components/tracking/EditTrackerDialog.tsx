@@ -77,19 +77,25 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
+            const safeNumber = (val: any) => {
+                if (val === undefined || val === null || val === "") return undefined;
+                const n = Number(val);
+                return isNaN(n) ? undefined : n;
+            };
+
             const updates: Partial<CreateTrackerDTO> = {
                 name: values.name,
                 icon: values.icon,
                 color: values.color,
                 folder_id: values.folder_id === "none" ? null : values.folder_id,
-                quick_add_increment: values.quick_add_increment ? Number(values.quick_add_increment) : null,
+                quick_add_increment: safeNumber(values.quick_add_increment),
                 type: tracker.type, // Type usually shouldn't change easily as it breaks history
                 settings: {
                     ...tracker.settings,
-                    goal: values.goal ? Number(values.goal) : undefined,
+                    goal: safeNumber(values.goal),
                     unit: values.unit,
-                    min: values.min ? Number(values.min) : undefined,
-                    max: values.max ? Number(values.max) : undefined,
+                    min: safeNumber(values.min),
+                    max: safeNumber(values.max),
                     chart_type: values.settings?.chart_type,
                 }
             };
@@ -99,9 +105,9 @@ export function EditTrackerDialog({ tracker, open, onOpenChange }: EditTrackerDi
             toast.success("تم تحديث المتتبع بنجاح");
             queryClient.invalidateQueries({ queryKey: ["trackers"] });
             onOpenChange(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("حدث خطأ أثناء التحديث");
+            toast.error(error.message || "حدث خطأ أثناء التحديث");
         }
     }
 

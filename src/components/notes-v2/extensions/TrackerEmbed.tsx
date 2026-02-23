@@ -1,7 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import React, { useEffect, useState, useRef } from 'react';
-import { Activity, Check, Plus, Minus, X, GripVertical, BarChart3, Layout, Palette } from 'lucide-react';
+import { Activity, Plus, Trash2, BarChart3, Layout, Palette, ChevronUp, ChevronDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trackingService } from '@/services/trackingService';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ import { ResizableBox } from 'react-resizable';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Slider } from '@/components/ui/slider';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 
 const BG_COLORS = [
     'transparent', '#ffffff', '#f8fafc', '#f0f9ff', '#f0fdf4', '#fefce8', '#fef2f2', '#faf5ff', '#fff7ed'
@@ -181,15 +181,21 @@ const TrackerNodeView = (props: NodeViewProps) => {
 
     const [isHovered, setIsHovered] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const nodeRef = useRef<HTMLDivElement>(null);
-    const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const x = node.attrs.x || 0;
     const y = node.attrs.y || 0;
+    const width = node.attrs.width || 280;
+    const height = node.attrs.height || 100;
     const bgColor = node.attrs.bgColor || 'transparent';
     const borderColor = node.attrs.borderColor || 'transparent';
     const borderWidth = node.attrs.borderWidth || 0;
-    const editorZoom = (editor.storage as any).textBox?.zoom || 100;
+    const zIndex = node.attrs.zIndex || 50;
+    const opacity = node.attrs.opacity ?? 1;
+
+    const editorZoom = (editor.storage as any).page?.zoom || 100;
     const dragScale = editorZoom / 100;
 
     const [dragPos, setDragPos] = useState({ x, y });
@@ -199,34 +205,38 @@ const TrackerNodeView = (props: NodeViewProps) => {
     }, [x, y]);
 
     const handleStop = (_e: any, data: any) => {
+        setIsDragging(false);
         setDragPos({ x: data.x, y: data.y });
         updateAttributes({ x: data.x, y: data.y });
     };
 
-    useEffect(() => {
-        return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
-    }, []);
-
-    const handleMouseEnter = () => {
-        if (hoverTimeout.current) { clearTimeout(hoverTimeout.current); hoverTimeout.current = null; }
-        setIsHovered(true);
-    };
-
-    const handleMouseLeave = () => {
-        if (popoverOpen) return;
-        hoverTimeout.current = setTimeout(() => setIsHovered(false), 300);
-    };
-
-    const width = node.attrs.width || 280;
-
-    const handleResize = (e: any, { size }: any) => {
+    const handleResize = (e: any, { handle, size: newSize }: any) => {
         e.stopPropagation();
-        updateAttributes({ width: size.width });
+        let newWidth = Math.max(200, newSize.width);
+        let newHeight = Math.max(60, newSize.height);
+        let newX = x;
+        let newY = y;
+
+        if (handle.includes('w')) {
+            newX = x - (newWidth - width);
+        }
+        if (handle.includes('n')) {
+            newY = y - (newHeight - height);
+        }
+
+        setDragPos({ x: newX, y: newY });
+        updateAttributes({
+            width: newWidth,
+            height: newHeight,
+            x: newX,
+            y: newY
+        });
     };
+
+    const showControls = isHovered || selected || popoverOpen || isDragging;
+    const toMM = (px: number) => Math.round(px * 0.264583);
 
     if (!trackers || trackers.length === 0) return null;
-
-    const showControls = isHovered || selected || popoverOpen;
 
     return (
         <NodeViewWrapper
@@ -236,6 +246,7 @@ const TrackerNodeView = (props: NodeViewProps) => {
                 top: 0,
                 width: width,
                 height: 0,
+                zIndex: isDragging ? 9999 : zIndex,
                 direction: 'ltr'
             }}
         >
@@ -243,140 +254,162 @@ const TrackerNodeView = (props: NodeViewProps) => {
                 nodeRef={nodeRef}
                 handle=".drag-handle"
                 position={dragPos}
+                onStart={() => setIsDragging(true)}
                 onStop={handleStop}
                 onDrag={(_e, data) => setDragPos({ x: data.x, y: data.y })}
                 scale={dragScale}
             >
                 <div
                     ref={nodeRef}
-                    className="group relative overflow-visible"
-                    style={{ paddingTop: '36px', marginTop: '-36px' }}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
+                    className={cn(
+                        "absolute group",
+                        !isDragging && !isResizing && "transition-transform"
+                    )}
+                    style={{
+                        paddingBottom: '60px',
+                        marginBottom: '-60px',
+                        willChange: (isDragging || isResizing) ? 'transform' : 'auto',
+                    }}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => { if (!popoverOpen) setIsHovered(false); }}
                 >
-                    {/* Mini toolbar */}
-                    <div
-                        contentEditable={false}
-                        onMouseEnter={handleMouseEnter}
-                        className={cn(
-                            "absolute top-0 right-0 z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-md border border-gray-200 bg-white shadow-md transition-all",
-                            showControls ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"
-                        )}
-                    >
-                        <div className="drag-handle cursor-move p-1 hover:bg-gray-100 rounded text-gray-400">
-                            <GripVertical size={14} />
-                        </div>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); updateAttributes({ displayMode: displayMode === 'chip' ? 'chart' : 'chip' }); }}
-                            className="p-1 hover:bg-indigo-50 hover:text-indigo-600 rounded text-gray-500 transition-colors"
-                            title={displayMode === 'chip' ? "عرض المخطط" : "عرض البطاقة"}
-                        >
-                            {displayMode === 'chip' ? <BarChart3 size={13} /> : <Layout size={13} />}
-                        </button>
-
-                        {/* Color/border customization */}
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <button className="p-1 hover:bg-gray-100 rounded text-gray-500" onClick={(e) => e.stopPropagation()}>
-                                    <Palette size={13} />
-                                </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-52 p-3" align="end" dir="rtl" sideOffset={8}>
-                                <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                                    <h4 className="font-bold text-xs text-gray-600">تخصيص المتتبع</h4>
-
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-gray-400">لون الخلفية</label>
-                                        <div className="flex gap-1.5 flex-wrap">
-                                            {BG_COLORS.map(c => (
-                                                <button
-                                                    key={c}
-                                                    onClick={() => updateAttributes({ bgColor: c })}
-                                                    className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", bgColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
-                                                    style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}
-                                                >
-                                                    {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-gray-400">لون الحد</label>
-                                        <div className="flex gap-1.5 flex-wrap">
-                                            {BORDER_COLORS.map(c => (
-                                                <button
-                                                    key={c}
-                                                    onClick={() => updateAttributes({ borderColor: c })}
-                                                    className={cn("w-5 h-5 rounded-full border border-gray-200 hover:scale-110 transition-transform", borderColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
-                                                    style={{ backgroundColor: c === 'transparent' ? '#fff' : c }}
-                                                >
-                                                    {c === 'transparent' && <div className="w-full h-full rotate-45 flex items-center justify-center"><div className="w-[1px] h-4 bg-red-400" /></div>}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] text-gray-400">سماكة الحد ({borderWidth}px)</label>
-                                        <Slider
-                                            value={[borderWidth]}
-                                            min={0}
-                                            max={4}
-                                            step={0.5}
-                                            onValueChange={([val]) => updateAttributes({ borderWidth: val })}
-                                        />
-                                    </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        <div className="w-px h-4 bg-gray-200 mx-0.5" />
-                        <button
-                            onClick={(e) => { e.stopPropagation(); deleteNode(); }}
-                            className="p-1 hover:bg-red-50 hover:text-red-500 rounded text-gray-500 transition-colors"
-                        >
-                            <X size={13} />
-                        </button>
-                    </div>
-
                     <ResizableBox
                         width={width}
-                        height={100}
-                        axis="x"
-                        onResizeStop={handleResize}
-                        minConstraints={[200, 100]}
-                        maxConstraints={[800, 400]}
-                        resizeHandles={['e', 'w']}
+                        height={height}
+                        onResizeStart={() => setIsResizing(true)}
+                        onResizeStop={(e, data) => { setIsResizing(false); handleResize(e, data); }}
+                        onResize={handleResize}
+                        minConstraints={[200, 60]}
+                        maxConstraints={[1200, 1200]}
+                        resizeHandles={['s', 'e', 'w', 'n', 'sw', 'nw', 'se', 'ne']}
+                        className={cn(
+                            "relative drag-handle",
+                            showControls ? "ring-2 ring-indigo-500/50 rounded-xl shadow-xl" : ""
+                        )}
                         handle={(handleAxis, ref) => {
                             if (!showControls) return <div ref={ref} className="hidden" />;
+                            const handleClasses: Record<string, string> = {
+                                's': 'bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-s-resize',
+                                'e': 'top-1/2 right-0 translate-x-1/2 -translate-y-1/2 cursor-e-resize',
+                                'se': 'bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize',
+                                'sw': 'bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize',
+                                'nw': 'top-0 left-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize',
+                                'ne': 'top-0 right-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize',
+                                'w': 'top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 cursor-w-resize',
+                                'n': 'top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-n-resize',
+                            };
+                            const cls = handleClasses[handleAxis];
                             return (
-                                <div
-                                    ref={ref}
-                                    className={cn(
-                                        "absolute bg-white border border-gray-300 shadow-sm z-[60] flex items-center justify-center transition-colors rounded-full",
-                                        handleAxis === 'w' ? "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 w-2 h-6 cursor-w-resize hover:border-indigo-400" : "",
-                                        handleAxis === 'e' ? "top-1/2 right-0 translate-x-1/2 -translate-y-1/2 w-2 h-6 cursor-e-resize hover:border-indigo-400" : ""
-                                    )}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                />
+                                <div ref={ref} className={cn("absolute w-3.5 h-3.5 z-[60] group/handle flex items-center justify-center", cls)}>
+                                    <div className="w-2.5 h-2.5 bg-[#4B96FF] border-2 border-white rounded-full shadow-md group-hover/handle:scale-125 transition-transform" />
+                                </div>
                             );
                         }}
                     >
                         <div
-                            className="flex flex-col gap-1.5 p-1 h-auto rounded-lg transition-all"
+                            className="w-full h-full rounded-xl overflow-hidden pointer-events-auto"
                             style={{
-                                width: `${width}px`,
                                 backgroundColor: bgColor === 'transparent' ? 'transparent' : bgColor,
                                 borderColor: borderColor === 'transparent' ? 'transparent' : borderColor,
                                 borderWidth: `${borderWidth}px`,
                                 borderStyle: borderWidth > 0 ? 'solid' : 'none',
+                                opacity: opacity,
                             }}
                             dir="rtl"
                         >
-                            {trackers.map((tracker, index) => (
-                                <TrackerChip key={tracker.id + index} tracker={tracker} displayMode={displayMode} />
-                            ))}
+                            <div className="p-1.5 flex flex-col gap-1.5 min-h-full">
+                                {trackers.map((tracker, index) => (
+                                    <TrackerChip key={tracker.id + index} tracker={tracker} displayMode={displayMode} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {isResizing && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-[10px] px-2 py-1 rounded-full border border-white/20 backdrop-blur-md z-[110] font-mono whitespace-nowrap shadow-2xl animate-in fade-in zoom-in duration-200">
+                                {toMM(width)}mm × {toMM(height)}mm
+                            </div>
+                        )}
+
+                        {/* Floating Pill Toolbar — Bottom Center */}
+                        <div
+                            className={cn(
+                                "absolute -bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl px-2 py-1.5 rounded-full z-[100] transition-all cursor-default dir-rtl",
+                                showControls && !isResizing ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                            )}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-6 h-6 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                                    <Activity size={13} className="text-indigo-600" />
+                                </div>
+                                <div className="w-4 h-4 rounded-full border border-gray-200 shadow-inner" style={{ backgroundColor: bgColor || '#fff' }} />
+                            </div>
+
+                            <div className="w-px h-4 bg-gray-100 mx-1" />
+
+                            <button
+                                onClick={() => updateAttributes({ displayMode: displayMode === 'chip' ? 'chart' : 'chip' })}
+                                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
+                                title={displayMode === 'chip' ? "عرض المخطط" : "عرض البطاقة"}
+                            >
+                                {displayMode === 'chip' ? <BarChart3 size={15} /> : <Layout size={15} />}
+                            </button>
+
+                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <button className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500">
+                                        <Palette size={15} />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-3 shadow-2xl border-none rounded-2xl bg-white/95 backdrop-blur-xl" align="center" dir="rtl" sideOffset={12}>
+                                    <div className="space-y-4">
+                                        <div className="text-[10px] font-black text-indigo-400 uppercase tracking-tight">إعدادات المتعقب</div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">لون المربع</label>
+                                            <div className="grid grid-cols-6 gap-2">
+                                                {BG_COLORS.map(c => (
+                                                    <button key={c} onClick={() => updateAttributes({ bgColor: c })}
+                                                        className={cn("w-6 h-6 rounded-full border border-gray-100 transition-transform hover:scale-110", bgColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                                        style={{ backgroundColor: c === 'transparent' ? '#eee' : c }}>
+                                                        {c === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">لون الحدود</label>
+                                            <div className="grid grid-cols-6 gap-2">
+                                                {BORDER_COLORS.map(c => (
+                                                    <button key={c} onClick={() => updateAttributes({ borderColor: c, borderWidth: c === 'transparent' ? 0 : Math.max(1, borderWidth) })}
+                                                        className={cn("w-6 h-6 rounded-full border border-gray-100 transition-transform hover:scale-110", borderColor === c && "ring-2 ring-indigo-500 ring-offset-1")}
+                                                        style={{ backgroundColor: c === 'transparent' ? '#eee' : c }}>
+                                                        {c === 'transparent' && <div className="w-full h-px bg-red-400 rotate-45" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-gray-400">الشفافية ({Math.round(opacity * 100)}%)</label>
+                                            <Slider value={[opacity * 100]} min={10} max={100} step={1} onValueChange={([val]) => updateAttributes({ opacity: val / 100 })} />
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                            <div className="text-[10px] font-bold text-gray-400">الترتيب</div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => updateAttributes({ zIndex: zIndex + 1 })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronUp size={14} /></button>
+                                                <button onClick={() => updateAttributes({ zIndex: Math.max(1, zIndex - 1) })} className="p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-500"><ChevronDown size={14} /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            <button onClick={() => deleteNode()} className="p-1.5 hover:bg-red-50 text-red-500 rounded-full transition-colors">
+                                <Trash2 size={15} />
+                            </button>
                         </div>
                     </ResizableBox>
                 </div>
@@ -396,10 +429,13 @@ export const TrackerEmbed = Node.create({
             x: { default: 50 },
             y: { default: 50 },
             width: { default: 280 },
+            height: { default: 100 },
             displayMode: { default: 'chip' },
             bgColor: { default: 'transparent' },
             borderColor: { default: 'transparent' },
             borderWidth: { default: 0 },
+            zIndex: { default: 50 },
+            opacity: { default: 1 },
         };
     },
 
@@ -414,10 +450,13 @@ export const TrackerEmbed = Node.create({
                         x: parseInt(element.getAttribute('data-x') || '50', 10),
                         y: parseInt(element.getAttribute('data-y') || '50', 10),
                         width: parseInt(element.getAttribute('data-width') || '280', 10),
+                        height: parseInt(element.getAttribute('data-height') || '100', 10),
                         displayMode: element.getAttribute('data-mode') || 'chip',
                         bgColor: element.getAttribute('data-bg-color') || 'transparent',
                         borderColor: element.getAttribute('data-border-color') || 'transparent',
                         borderWidth: parseFloat(element.getAttribute('data-border-width') || '0'),
+                        zIndex: parseInt(element.getAttribute('data-z-index') || '50', 10),
+                        opacity: parseFloat(element.getAttribute('data-opacity') || '1'),
                     };
                 },
             },
@@ -431,10 +470,13 @@ export const TrackerEmbed = Node.create({
             'data-x': HTMLAttributes.x,
             'data-y': HTMLAttributes.y,
             'data-width': HTMLAttributes.width,
+            'data-height': HTMLAttributes.height,
             'data-mode': HTMLAttributes.displayMode,
             'data-bg-color': HTMLAttributes.bgColor,
             'data-border-color': HTMLAttributes.borderColor,
             'data-border-width': HTMLAttributes.borderWidth,
+            'data-z-index': HTMLAttributes.zIndex,
+            'data-opacity': HTMLAttributes.opacity,
         })];
     },
 
