@@ -181,6 +181,7 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [replaceTerm, setReplaceTerm] = useState('');
     const [showSearch, setShowSearch] = useState(false);
+    const [isSettingsLoaded, setIsSettingsLoaded] = useState(false);
 
     // Page settings
     const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -411,7 +412,33 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
         },
     });
 
-    // Sync zoom, ruling, orientation, margin to extension storage
+    // Initialize state from document attributes on first load
+    useEffect(() => {
+        if (editor && !isSettingsLoaded && editor.state.doc.content.size > 0) {
+            let foundAttributes = false;
+            editor.state.doc.descendants((node) => {
+                if (node.type.name === 'page' && !foundAttributes) {
+                    const attrs = node.attrs;
+                    if (attrs.layout) setPageLayout(attrs.layout as any);
+                    if (attrs.rulingSpacing) setRulingSpacing(attrs.rulingSpacing);
+                    if (attrs.pageBgColor) setPageBgColor(attrs.pageBgColor);
+                    if (attrs.orientation) setOrientation(attrs.orientation as any);
+                    if (attrs.margin) setPageMargin(attrs.margin);
+                    if (attrs.border) setPageBorder(attrs.border as any);
+                    if (attrs.borderColor) setPageBorderColor(attrs.borderColor);
+                    if (attrs.borderWidth) setPageBorderWidth(attrs.borderWidth);
+                    if (attrs.cornerRadius !== undefined) setCornerRadius(attrs.cornerRadius);
+                    foundAttributes = true;
+                    return false;
+                }
+                return true;
+            });
+            if (foundAttributes) setIsSettingsLoaded(true);
+            else if (editor.state.doc.content.size > 0) setIsSettingsLoaded(true);
+        }
+    }, [editor, isSettingsLoaded]);
+
+    // Sync zoom, ruling, orientation, margin to extension storage AND node attributes
     useEffect(() => {
         if (editor) {
             if ((editor.storage as any).textBox) {
@@ -431,24 +458,36 @@ export const NoteEditorV2: React.FC<NoteEditorV2Props> = ({
                 (editor.storage as any).page.cornerRadius = cornerRadius;
                 (editor.storage as any).page.pageBgColor = pageBgColor;
             }
-            // Force re-render of ALL page nodes by updating a dummy attribute
-            const { tr } = editor.state;
-            let modified = false;
-            editor.state.doc.descendants((node, pos) => {
-                if (node.type.name === 'page') {
-                    tr.setNodeMarkup(pos, undefined, {
-                        ...node.attrs,
-                        _settingsVersion: Date.now(),
-                    });
-                    modified = true;
+
+            // Only update node attributes if settings have been initially loaded (to prevent overwriting with defaults)
+            if (isSettingsLoaded) {
+                const { tr } = editor.state;
+                let modified = false;
+                editor.state.doc.descendants((node, pos) => {
+                    if (node.type.name === 'page') {
+                        tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            layout: pageLayout,
+                            rulingSpacing: rulingSpacing,
+                            pageBgColor: pageBgColor,
+                            orientation: orientation,
+                            margin: pageMargin,
+                            border: pageBorder,
+                            borderColor: pageBorderColor,
+                            borderWidth: pageBorderWidth,
+                            cornerRadius: cornerRadius,
+                            _settingsVersion: Date.now(),
+                        });
+                        modified = true;
+                    }
+                    return true;
+                });
+                if (modified) {
+                    editor.view.dispatch(tr);
                 }
-                return true;
-            });
-            if (modified) {
-                editor.view.dispatch(tr);
             }
         }
-    }, [zoom, pageLayout, rulingSpacing, pageBackground, backgroundColor, orientation, pageMargin, pageBorder, pageBorderColor, pageBorderWidth, cornerRadius, pageBgColor, editor]);
+    }, [zoom, pageLayout, rulingSpacing, pageBackground, backgroundColor, orientation, pageMargin, pageBorder, pageBorderColor, pageBorderWidth, cornerRadius, pageBgColor, editor, isSettingsLoaded]);
 
     const calculateNextTextBoxPosition = () => {
         if (!editor) return { x: 80, y: 150 };

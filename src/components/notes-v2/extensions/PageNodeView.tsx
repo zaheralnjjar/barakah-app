@@ -20,20 +20,22 @@ export const PageNodeView: React.FC<NodeViewProps> = (props) => {
         pageNumber = count || 1;
     }
 
-    // Values from storage
+    // Values from attributes (persisted) or storage (live updates)
     const storage = (editor.storage as any).page || {};
     const zoom = storage.zoom || 100;
-    const pageLayout = storage.layout || 'blank'; // 'blank' | 'ruled' | 'dotted'
-    const rulingSpacing = storage.rulingSpacing || 32;
-    const pageBackground = storage.background || null;
+
+    // Prioritize node attributes for persistence, fall back to storage for live syncing
+    const pageLayout = node.attrs.layout || storage.layout || 'blank';
+    const rulingSpacing = node.attrs.rulingSpacing || storage.rulingSpacing || 32;
+    const pageBackground = storage.background || null; // Patterns remain in storage/props for now
     const pageOuterColor = storage.backgroundColor || '#ffffff';
-    const backgroundColor = storage.pageBgColor || '#ffffff';
-    const orientation = storage.orientation || 'portrait';
-    const margin = storage.margin ?? 20;
-    const pageBorder = storage.border || 'none';
-    const borderColor = storage.borderColor || '#6b7280';
-    const borderWidth = storage.borderWidth || 2;
-    const cornerRadius = storage.cornerRadius || 0;
+    const backgroundColor = node.attrs.pageBgColor || storage.pageBgColor || '#ffffff';
+    const orientation = node.attrs.orientation || storage.orientation || 'portrait';
+    const margin = node.attrs.margin ?? storage.margin ?? 20;
+    const pageBorder = node.attrs.border || storage.border || 'none';
+    const borderColor = node.attrs.borderColor || storage.borderColor || '#6b7280';
+    const borderWidth = node.attrs.borderWidth || storage.borderWidth || 2;
+    const cornerRadius = node.attrs.cornerRadius || storage.cornerRadius || 0;
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
